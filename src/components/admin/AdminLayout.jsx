@@ -312,14 +312,15 @@ const AdminLayout = () => {
 
         {/* ── Main Content ── */}
         <main id="main-content" className="flex-1 overflow-y-auto p-4 md:p-8 bg-surface">
-          <AnimatePresence mode="wait">
+          {/* No mode="wait" — wait mode can leave a blank gap until exit finishes (bad on first nav). */}
+          <AnimatePresence initial={false}>
             <motion.div
               key={location.pathname}
               className="max-w-7xl mx-auto"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
             >
               <Outlet />
             </motion.div>

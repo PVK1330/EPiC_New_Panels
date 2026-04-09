@@ -180,7 +180,11 @@ const AdminSidebar = ({ isOpen, onClose }) => {
                     <NavLink
                       key={item.to}
                       to={item.to}
-                      onClick={onClose}
+                      onClick={() => {
+                        // Let React Router commit navigation first; closing the drawer in the same tick
+                        // can race with Outlet remount and cause a blank main area (esp. on mobile).
+                        queueMicrotask(() => onClose());
+                      }}
                       end={item.to === "/admin/dashboard"}
                       className={({ isActive }) =>
                         `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 relative ${

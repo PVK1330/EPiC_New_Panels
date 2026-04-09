@@ -93,11 +93,21 @@ const TABLE_COLS = [
   "Case ID",
   "Candidate",
   "Business",
+  "Worker ID(s)",
   "Visa Type",
   "Priority",
   "Status",
   "Submitted",
   "Actions",
+];
+
+/** Mock caseworkers — ID selects name automatically */
+const CASE_WORKERS = [
+  { id: "CW-301", name: "Emily Davis" },
+  { id: "CW-302", name: "Mark Lee" },
+  { id: "CW-303", name: "Priya Sharma" },
+  { id: "CW-304", name: "Sarah Chen" },
+  { id: "CW-305", name: "James Okoye" },
 ];
 
 const emptyForm = {
@@ -114,13 +124,116 @@ const emptyForm = {
   targetSubmissionDate: "",
   lcaNumber: "",
   receiptNumber: "",
-  assignedCaseworkerName: "",
-  assignedCaseworkerId: "",
+  assignedCaseworkerIds: [],
   salaryOffered: 0,
   totalAmount: 0,
   paidAmount: 0,
   notes: "",
 };
+
+function caseworkerNamesFromIds(ids, options = CASE_WORKERS) {
+  return ids
+    .map((id) => options.find((w) => w.id === id)?.name)
+    .filter(Boolean);
+}
+
+function CaseworkerMultiSelect({ options, value, onChange, error }) {
+  const [open, setOpen] = useState(false);
+
+  const toggleId = (id) => {
+    if (value.includes(id)) {
+      onChange(value.filter((x) => x !== id));
+    } else if (value.length < 2) {
+      onChange([...value, id]);
+    }
+  };
+
+  const summaryText = value.length
+    ? value
+        .map((id) => {
+          const o = options.find((x) => x.id === id);
+          return o ? `${o.name} (${o.id})` : id;
+        })
+        .join(" · ")
+    : "";
+
+  return (
+    <div className="relative md:col-span-2 space-y-2">
+      <label className="text-sm font-medium text-gray-700">
+        Caseworker Assignment <span className="text-red-500">*</span>
+        <span className="text-gray-400 font-normal ml-1">(1–2 workers)</span>
+      </label>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-left text-sm bg-white border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary ${
+          error ? "border-red-400" : ""
+        }`}
+      >
+        <span
+          className={
+            value.length ? "text-gray-900 font-semibold" : "text-gray-400"
+          }
+        >
+          {value.length ? summaryText : "Choose caseworkers…"}
+        </span>
+        <span className="text-xs font-bold text-gray-400 tabular-nums shrink-0">
+          {value.length}/2
+        </span>
+      </button>
+      {open && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-[60] cursor-default bg-transparent"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute z-[70] left-0 right-0 mt-1 border border-gray-200 rounded-xl bg-white shadow-xl py-1 max-h-60 overflow-y-auto">
+            {options.map((o) => {
+              const checked = value.includes(o.id);
+              const disabled = !checked && value.length >= 2;
+              return (
+                <label
+                  key={o.id}
+                  className={`flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${
+                    disabled
+                      ? "opacity-40 cursor-not-allowed"
+                      : "cursor-pointer hover:bg-secondary/5"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="accent-secondary rounded border-gray-300"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={() => toggleId(o.id)}
+                  />
+                  <span className="font-semibold text-gray-800">{o.name}</span>
+                  <span className="text-xs font-mono text-gray-500 ml-auto">
+                    {o.id}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </>
+      )}
+      {value.length > 0 && (
+        <p className="text-xs text-gray-600 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
+          <span className="font-bold text-secondary">Assigned:</span>{" "}
+          {value
+            .map((id) => {
+              const o = options.find((x) => x.id === id);
+              return o ? `${o.name} — ${o.id}` : id;
+            })
+            .join(" · ")}
+        </p>
+      )}
+      {error && <span className="text-xs text-red-500">{error}</span>}
+    </div>
+  );
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -140,6 +253,7 @@ function CaseFormModal({
   onChange,
   onSubmit,
   onClose,
+  onCaseworkerIdsChange,
 }) {
   return (
     <motion.div
@@ -333,21 +447,11 @@ function CaseFormModal({
               Caseworker Assignment
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Assigned Caseworker Name"
-                name="assignedCaseworkerName"
-                value={formData.assignedCaseworkerName}
-                onChange={onChange}
-                error={errors.assignedCaseworkerName}
-                placeholder="Caseworker name"
-                required
-              />
-              <Input
-                label="Caseworker ID"
-                name="assignedCaseworkerId"
-                value={formData.assignedCaseworkerId}
-                onChange={onChange}
-                placeholder="Optional"
+              <CaseworkerMultiSelect
+                options={CASE_WORKERS}
+                value={formData.assignedCaseworkerIds || []}
+                onChange={onCaseworkerIdsChange}
+                error={errors.assignedCaseworkers}
               />
             </div>
           </div>
@@ -443,13 +547,20 @@ export default function AdminCases() {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
+  const handleCaseworkerIdsChange = (ids) => {
+    setFormData((prev) => ({ ...prev, assignedCaseworkerIds: ids }));
+    if (errors.assignedCaseworkers)
+      setErrors((prev) => ({ ...prev, assignedCaseworkers: "" }));
+  };
+
   const validate = () => {
     const e = {};
     if (!formData.candidateName.trim()) e.candidateName = "Required";
     if (!formData.businessName.trim()) e.businessName = "Required";
     if (!formData.visaType) e.visaType = "Required";
-    if (!formData.assignedCaseworkerName.trim())
-      e.assignedCaseworkerName = "Required";
+    const n = formData.assignedCaseworkerIds?.length || 0;
+    if (n < 1 || n > 2)
+      e.assignedCaseworkers = "Select 1 or 2 caseworkers";
     if (!formData.targetSubmissionDate) e.targetSubmissionDate = "Required";
     if (formData.totalAmount <= 0) e.totalAmount = "Must be > 0";
     setErrors(e);
@@ -461,6 +572,8 @@ export default function AdminCases() {
     if (!validate()) return;
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 800));
+    const cwIds = formData.assignedCaseworkerIds || [];
+    const cwNames = caseworkerNamesFromIds(cwIds, CASE_WORKERS);
     const newCase = {
       caseId: `#CAS-${String(cases.length + 1).padStart(3, "0")}`,
       candidate: formData.candidateName,
@@ -472,8 +585,10 @@ export default function AdminCases() {
       status: "Pending",
       submitted: new Date().toISOString().slice(0, 10),
       priority: formData.priority,
-      caseworker: formData.assignedCaseworkerName,
-      caseworkerId: formData.assignedCaseworkerId,
+      caseworker: cwNames.join(" · "),
+      caseworkerIds: cwIds,
+      caseworkerNames: cwNames,
+      caseworkerId: cwIds.join(", "),
       targetSubmissionDate: formData.targetSubmissionDate,
       lcaNumber: formData.lcaNumber,
       receiptNumber: formData.receiptNumber,
@@ -494,6 +609,15 @@ export default function AdminCases() {
 
   const openEdit = (c) => {
     setSelectedCase(c);
+    let assignedCaseworkerIds = [];
+    if (Array.isArray(c.caseworkerIds) && c.caseworkerIds.length) {
+      assignedCaseworkerIds = [...c.caseworkerIds];
+    } else if (typeof c.caseworkerId === "string" && c.caseworkerId.trim()) {
+      assignedCaseworkerIds = c.caseworkerId
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
     setFormData({
       candidateName: c.candidate,
       candidateId: c.candidateId || "",
@@ -508,8 +632,7 @@ export default function AdminCases() {
       targetSubmissionDate: c.targetSubmissionDate || "",
       lcaNumber: c.lcaNumber || "",
       receiptNumber: c.receiptNumber || "",
-      assignedCaseworkerName: c.caseworker,
-      assignedCaseworkerId: c.caseworkerId || "",
+      assignedCaseworkerIds,
       salaryOffered: c.salaryOffered || 0,
       totalAmount: c.totalAmount || 0,
       paidAmount: c.paidAmount || 0,
@@ -524,6 +647,8 @@ export default function AdminCases() {
     if (!validate()) return;
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 800));
+    const cwIds = formData.assignedCaseworkerIds || [];
+    const cwNames = caseworkerNamesFromIds(cwIds, CASE_WORKERS);
     setCases((prev) =>
       prev.map((c) =>
         c.caseId === selectedCase.caseId
@@ -542,8 +667,10 @@ export default function AdminCases() {
               nationality: formData.nationality,
               jobTitle: formData.jobTitle,
               department: formData.department,
-              caseworker: formData.assignedCaseworkerName,
-              caseworkerId: formData.assignedCaseworkerId,
+              caseworker: cwNames.join(" · "),
+              caseworkerIds: cwIds,
+              caseworkerNames: cwNames,
+              caseworkerId: cwIds.join(", "),
               salaryOffered: formData.salaryOffered,
               totalAmount: formData.totalAmount,
               paidAmount: formData.paidAmount,
@@ -661,6 +788,16 @@ export default function AdminCases() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                     {c.business}
                   </td>
+                  <td className="px-6 py-4 text-sm text-gray-700 max-w-[14rem]">
+                    <span className="font-mono text-xs font-semibold text-secondary">
+                      {Array.isArray(c.caseworkerIds) && c.caseworkerIds.length
+                        ? c.caseworkerIds.join(", ")
+                        : c.caseworkerId || "—"}
+                    </span>
+                    <span className="block text-[11px] text-gray-500 mt-0.5 truncate">
+                      {c.caseworker || "—"}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                     {c.visaType}
                   </td>
@@ -723,6 +860,7 @@ export default function AdminCases() {
             isLoading={isLoading}
             onChange={handleInputChange}
             onSubmit={handleAdd}
+            onCaseworkerIdsChange={handleCaseworkerIdsChange}
             onClose={() => {
               setAddOpen(false);
               setFormData(emptyForm);
@@ -742,6 +880,7 @@ export default function AdminCases() {
             isLoading={isLoading}
             onChange={handleInputChange}
             onSubmit={handleEdit}
+            onCaseworkerIdsChange={handleCaseworkerIdsChange}
             onClose={() => {
               setEditOpen(false);
               setFormData(emptyForm);

@@ -1,9 +1,24 @@
-import { useState, useMemo } from "react";
-import { FiEye, FiEdit2, FiTrash2, FiSearch, FiPlus, FiDownload, FiX, FiFolder } from "react-icons/fi";
+import { useState, useMemo, useEffect } from "react";
+import { FiEye, FiEdit2, FiTrash2, FiSearch, FiPlus, FiDownload, FiChevronDown, FiChevronUp, FiFolder } from "react-icons/fi";
 import { motion } from "framer-motion";
 import Modal from "../../components/Modal";
-import Input from "../../components/Input";
 import Button from "../../components/Button";
+import CandidateApplicationForm from "../../components/CandidateApplicationForm/CandidateApplicationForm";
+import {
+  APPLICATION_FIELD_LABELS,
+  getInitialApplicationFormData,
+  loadFieldVisibilityFromStorage,
+  saveFieldVisibilityToStorage,
+  loadCustomFieldDefinitionsFromStorage,
+  saveCustomFieldDefinitionsToStorage,
+  createCustomFieldDefinition,
+  CUSTOM_FIELD_TYPE_OPTIONS,
+} from "../../components/CandidateApplicationForm/initialFormState";
+import {
+  mapApplicationToCandidateRow,
+  candidateRowToApplicationForm,
+  pruneCustomResponsesToDefinitions,
+} from "../../components/CandidateApplicationForm/applicationFormMapping";
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
@@ -197,29 +212,6 @@ const fmtDate = (iso) => {
   return new Date(iso).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
 };
 
-const EMPTY_FORM = {
-  firstName: "",  lastName: "",       dob: "",                gender: "Prefer not to say",
-  nationality: "",countryOfBirth: "", email: "",              phone: "",
-  passportNumber:"",passportExpiry:"",niNumber: "",           brpNumber: "",
-  visaType: "Skilled Worker",         caseStatus: "On Track", visaExpiry: "",
-  rightToWork: "Pending",             jobTitle: "",           linkedBusiness: "Independent",
-  employmentStart: "",                paymentStatus: "Outstanding", feeAmount: "",
-  address: "",    city: "",           postcode: "",           country: "United Kingdom",
-};
-
-const REQUIRED_FIELDS = [
-  "firstName","lastName","email","phone","dob","nationality","passportNumber","passportExpiry",
-];
-
-// ─── Section label inside form ────────────────────────────────────────────────
-const Sect = ({ label }) => (
-  <div className="col-span-full mt-2 first:mt-0">
-    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-primary pb-1.5 border-b border-primary/20">
-      {label}
-    </p>
-  </div>
-);
-
 // ─── Component ────────────────────────────────────────────────────────────────
 const AdminCandidates = () => {
   const [candidates, setCandidates]     = useState(INITIAL_CANDIDATES);
@@ -228,9 +220,42 @@ const AdminCandidates = () => {
   const [statusFilter, setStatusFilter] = useState("All");
   const [payFilter, setPayFilter]       = useState("All");
   const [modal, setModal]               = useState({ type: null, data: null });
-  const [form, setForm]                 = useState(EMPTY_FORM);
-  const [errors, setErrors]             = useState({});
+  const [applicationForm, setApplicationForm] = useState(getInitialApplicationFormData);
+  const [fieldVisibility, setFieldVisibility] = useState(loadFieldVisibilityFromStorage);
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState(
+    loadCustomFieldDefinitionsFromStorage
+  );
+  const [fieldPanelOpen, setFieldPanelOpen]     = useState(false);
   const [detailTab, setDetailTab]       = useState("overview");
+
+  useEffect(() => {
+    saveFieldVisibilityToStorage(fieldVisibility);
+  }, [fieldVisibility]);
+
+  useEffect(() => {
+    saveCustomFieldDefinitionsToStorage(customFieldDefinitions);
+  }, [customFieldDefinitions]);
+
+  const toggleFieldVisibility = (key) => {
+    setFieldVisibility((prev) => ({
+      ...prev,
+      [key]: prev[key] === false,
+    }));
+  };
+
+  const addCustomFieldRow = () => {
+    setCustomFieldDefinitions((prev) => [...prev, createCustomFieldDefinition()]);
+  };
+
+  const updateCustomFieldRow = (id, patch) => {
+    setCustomFieldDefinitions((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, ...patch } : d))
+    );
+  };
+
+  const removeCustomFieldRow = (id) => {
+    setCustomFieldDefinitions((prev) => prev.filter((d) => d.id !== id));
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -244,63 +269,71 @@ const AdminCandidates = () => {
     });
   }, [candidates, search, visaFilter, statusFilter, payFilter]);
 
-  const openCreate = () => { setForm(EMPTY_FORM); setErrors({}); setModal({ type:"create", data:null }); };
-  const openEdit   = (c)  => {
-    setForm({
-      firstName: c.firstName,  lastName: c.lastName,      dob: c.dob,
-      gender: c.gender,        nationality: c.nationality, countryOfBirth: c.countryOfBirth,
-      email: c.email,          phone: c.phone,
-      passportNumber: c.passportNumber, passportExpiry: c.passportExpiry,
-      niNumber: c.niNumber,    brpNumber: c.brpNumber,
-      visaType: c.visaType,    caseStatus: c.caseStatus,   visaExpiry: c.visaExpiry,
-      rightToWork: c.rightToWork, jobTitle: c.jobTitle,   linkedBusiness: c.linkedBusiness,
-      employmentStart: c.employmentStart, paymentStatus: c.paymentStatus, feeAmount: c.feeAmount,
-      address: c.address,      city: c.city,               postcode: c.postcode, country: c.country,
-    });
-    setErrors({});
-    setModal({ type:"edit", data:c });
+  const openCreate = () => {
+    setApplicationForm(getInitialApplicationFormData());
+    setModal({ type: "create", data: null });
+  };
+  const openEdit = (c) => {
+    setApplicationForm(candidateRowToApplicationForm(c));
+    setModal({ type: "edit", data: c });
   };
   const openView   = (c)  => setModal({ type:"view",   data:c });
   const openDelete = (c)  => setModal({ type:"delete", data:c });
-  const closeModal = ()   => { setModal({ type:null, data:null }); setErrors({}); };
+  const closeModal = () => { setModal({ type: null, data: null }); };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
-    if (errors[name]) setErrors((p) => ({ ...p, [name]: "" }));
-  };
-
-  const validate = () => {
-    const errs = {};
-    REQUIRED_FIELDS.forEach((f) => {
-      if (!form[f]?.toString().trim()) errs[f] = "This field is required";
-    });
-    if (form.email && !/\S+@\S+\.\S+/.test(form.email)) errs.email = "Enter a valid email";
+  const validateApplication = (payload) => {
+    const errs = [];
+    if (!payload.firstName?.toString().trim()) errs.push("First name is required");
+    if (!payload.lastName?.toString().trim()) errs.push("Last name is required");
+    if (!payload.email?.toString().trim()) errs.push("Email is required");
+    else if (!/\S+@\S+\.\S+/.test(payload.email)) errs.push("Enter a valid email");
     return errs;
   };
 
-  const handleCreate = () => {
-    const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
-    const initials = [form.firstName[0], form.lastName[0]].join("").toUpperCase();
-    const avatarBg = AVATAR_COLORS[candidates.length % AVATAR_COLORS.length];
-    const dobDisplay = fmtDate(form.dob);
-    setCandidates((p) => [...p, { id: Date.now(), ...form, initials, avatarBg, dobDisplay }]);
-    closeModal();
-  };
-
-  const handleUpdate = () => {
-    const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
-    const dobDisplay = fmtDate(form.dob);
-    setCandidates((p) =>
-      p.map((c) =>
-        c.id !== modal.data.id ? c : {
-          ...c, ...form, dobDisplay,
-          initials: [form.firstName[0], form.lastName[0]].join("").toUpperCase(),
-        }
-      )
+  const handleApplicationSave = (payload) => {
+    const errs = validateApplication(payload);
+    if (errs.length) {
+      alert(errs.join("\n"));
+      return;
+    }
+    const rowExtras =
+      modal.type === "edit" && modal.data
+        ? {
+            caseStatus: modal.data.caseStatus,
+            rightToWork: modal.data.rightToWork,
+            jobTitle: modal.data.jobTitle,
+            linkedBusiness: modal.data.linkedBusiness,
+            employmentStart: modal.data.employmentStart,
+            paymentStatus: modal.data.paymentStatus,
+            feeAmount: modal.data.feeAmount,
+            city: modal.data.city,
+            postcode: modal.data.postcode,
+            country: modal.data.country,
+          }
+        : {};
+    const payloadClean = pruneCustomResponsesToDefinitions(
+      payload,
+      customFieldDefinitions
     );
+    const mapped = mapApplicationToCandidateRow(payloadClean, rowExtras);
+    const initials = [mapped.firstName?.[0] || "?", mapped.lastName?.[0] || "?"].join("").toUpperCase();
+    const avatarBg = AVATAR_COLORS[candidates.length % AVATAR_COLORS.length];
+
+    if (modal.type === "create") {
+      setCandidates((p) => [...p, { id: Date.now(), ...mapped, initials, avatarBg }]);
+    } else if (modal.type === "edit" && modal.data) {
+      setCandidates((p) =>
+        p.map((c) =>
+          c.id !== modal.data.id
+            ? c
+            : {
+                ...c,
+                ...mapped,
+                initials,
+              }
+        )
+      );
+    }
     closeModal();
   };
 
@@ -324,17 +357,116 @@ const AdminCandidates = () => {
           <h1 className="text-3xl font-black text-secondary tracking-tight">Clients / Candidates</h1>
           <p className="text-sm text-gray-500 mt-0.5">All registered clients and their case details</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
-            <FiDownload size={14} />
-            Export
+        <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setFieldPanelOpen((o) => !o)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-secondary bg-secondary/5 border border-secondary/20 rounded-xl hover:bg-secondary/10 transition-colors"
+          >
+            Application form fields
+            {fieldPanelOpen ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />}
           </button>
-          <Button onClick={openCreate} className="rounded-xl shadow-sm">
-            <FiPlus size={14} />
-            Add Client
-          </Button>
+          <div className="flex items-center gap-2">
+            <button className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
+              <FiDownload size={14} />
+              Export
+            </button>
+            <Button onClick={openCreate} className="rounded-xl shadow-sm">
+              <FiPlus size={14} />
+              Add Client
+            </Button>
+          </div>
         </div>
       </div>
+
+      {fieldPanelOpen && (
+        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm space-y-6">
+          <div>
+            <p className="text-sm font-bold text-gray-700 mb-3">
+              Choose which built-in application inputs are visible to candidates (and in the admin stepper). Preferences are saved in this browser.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[min(50vh,28rem)] overflow-y-auto pr-1">
+              {Object.entries(APPLICATION_FIELD_LABELS).map(([key, label]) => (
+                <label
+                  key={key}
+                  className="flex items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 accent-secondary shrink-0"
+                    checked={fieldVisibility[key] !== false}
+                    onChange={() => toggleFieldVisibility(key)}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 pt-5">
+            <p className="text-sm font-bold text-gray-800 mb-1">Custom fields</p>
+            <p className="text-xs text-gray-500 mb-3">
+              Add as many extra questions as you need (short text, long text, date, or number). They appear under &quot;Additional information&quot; on the last step for candidates and admins. Add multiple rows with &quot;Add another field&quot;.
+            </p>
+            <div className="space-y-2">
+              {customFieldDefinitions.map((def) => (
+                <div
+                  key={def.id}
+                  className="flex flex-col sm:flex-row sm:flex-wrap gap-2 items-stretch sm:items-end rounded-xl border border-gray-100 bg-gray-50/80 p-3"
+                >
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">
+                      Question label
+                    </label>
+                    <input
+                      type="text"
+                      value={def.label}
+                      onChange={(e) =>
+                        updateCustomFieldRow(def.id, { label: e.target.value })
+                      }
+                      placeholder="e.g. Previous UK employer name"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/25"
+                    />
+                  </div>
+                  <div className="w-full sm:w-40">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">
+                      Input type
+                    </label>
+                    <select
+                      value={def.type}
+                      onChange={(e) =>
+                        updateCustomFieldRow(def.id, { type: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/25"
+                    >
+                      {CUSTOM_FIELD_TYPE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeCustomFieldRow(def.id)}
+                    className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-600 hover:bg-red-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addCustomFieldRow}
+              className="mt-3 inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-secondary/40 bg-secondary/5 px-4 py-2.5 text-sm font-black text-secondary hover:bg-secondary/10"
+            >
+              <FiPlus size={16} />
+              Add another field
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* KPI Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -439,66 +571,27 @@ const AdminCandidates = () => {
         </div>
       </div>
 
-      {/* ── Create / Edit Modal ─────────────────────────────────────────────── */}
+      {/* ── Create / Edit Modal (same stepper + payload as candidate application) ─ */}
       <Modal
         open={isFormModal}
         onClose={closeModal}
         title={modal.type === "create" ? "Add New Client" : "Edit Client"}
-        maxWidthClass="max-w-2xl"
-        bodyClassName="px-5 py-5 sm:px-6"
-        footer={
-          <>
-            <Button variant="ghost" onClick={closeModal} className="rounded-xl">Cancel</Button>
-            <Button variant="primary" onClick={modal.type === "create" ? handleCreate : handleUpdate} className="rounded-xl">
-              {modal.type === "create" ? "Create Client" : "Update Client"}
-            </Button>
-          </>
-        }
+        maxWidthClass="max-w-5xl"
+        bodyClassName="px-4 py-4 sm:px-6 sm:py-5"
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
-
-          <Sect label="Personal Information" />
-          <Input label="First Name"      name="firstName"     value={form.firstName}     onChange={handleChange} placeholder="Priya"         required error={errors.firstName} />
-          <Input label="Last Name"       name="lastName"      value={form.lastName}      onChange={handleChange} placeholder="Sharma"        required error={errors.lastName} />
-          <Input label="Date of Birth"   name="dob"           value={form.dob}           onChange={handleChange} type="date"                 required error={errors.dob} />
-          <Input label="Gender"          name="gender"        value={form.gender}        onChange={handleChange} options={GENDER_OPTIONS} />
-          <Input label="Nationality"     name="nationality"   value={form.nationality}   onChange={handleChange} placeholder="e.g. Indian"   required error={errors.nationality} />
-          <Input label="Country of Birth"name="countryOfBirth"value={form.countryOfBirth}onChange={handleChange} placeholder="e.g. India" />
-          <Input label="Email Address"   name="email"         value={form.email}         onChange={handleChange} type="email" placeholder="priya@example.com" required error={errors.email} />
-          <Input label="Phone Number"    name="phone"         value={form.phone}         onChange={handleChange} type="tel"   placeholder="+44 7700 000000"   required error={errors.phone} />
-
-          <Sect label="Identity Documents" />
-          <Input label="Passport Number"        name="passportNumber" value={form.passportNumber} onChange={handleChange} placeholder="P4521893K"       required error={errors.passportNumber} />
-          <Input label="Passport Expiry Date"   name="passportExpiry" value={form.passportExpiry} onChange={handleChange} type="date"                  required error={errors.passportExpiry} />
-          <Input label="National Insurance No." name="niNumber"       value={form.niNumber}       onChange={handleChange} placeholder="AB 12 34 56 C" />
-          <Input label="BRP Number (if held)"   name="brpNumber"      value={form.brpNumber}      onChange={handleChange} placeholder="BRP00112233" />
-
-          <Sect label="Immigration Details" />
-          <Input label="Visa Type"         name="visaType"    value={form.visaType}    onChange={handleChange} options={VISA_TYPE_OPTIONS} required />
-          <Input label="Visa Expiry Date"  name="visaExpiry"  value={form.visaExpiry}  onChange={handleChange} type="date" />
-          <Input label="Case Status"       name="caseStatus"  value={form.caseStatus}  onChange={handleChange} options={CASE_STATUS_OPTIONS} />
-          <Input label="Right to Work"     name="rightToWork" value={form.rightToWork} onChange={handleChange} options={RTW_OPTIONS} />
-
-          <Sect label="Employment" />
-          <Input label="Job Title / Position" name="jobTitle"        value={form.jobTitle}        onChange={handleChange} placeholder="Software Engineer" />
-          <Input label="Linked Business / Sponsor" name="linkedBusiness" value={form.linkedBusiness} onChange={handleChange} options={SPONSOR_OPTIONS} />
-          <Input label="Employment Start Date"     name="employmentStart" value={form.employmentStart} onChange={handleChange} type="date" />
-
-          <Sect label="Payment" />
-          <Input label="Payment Status" name="paymentStatus" value={form.paymentStatus} onChange={handleChange} options={PAYMENT_OPTIONS} />
-          <Input label="Fee Amount"     name="feeAmount"     value={form.feeAmount}     onChange={handleChange} placeholder="£2,500" />
-
-          <Sect label="Address" />
-          <div className="col-span-full">
-            <Input label="Street Address" name="address"  value={form.address}  onChange={handleChange} placeholder="15 Maple Close" />
-          </div>
-          <Input label="City / Town" name="city"     value={form.city}     onChange={handleChange} placeholder="London" />
-          <Input label="Postcode"    name="postcode" value={form.postcode} onChange={handleChange} placeholder="E1 6RF" />
-          <div className="col-span-full">
-            <Input label="Country" name="country" value={form.country} onChange={handleChange} placeholder="United Kingdom" />
-          </div>
-
-        </div>
+        {isFormModal && (
+          <CandidateApplicationForm
+            key={modal.type === "create" ? "create" : String(modal.data?.id)}
+            variant="admin"
+            embedded
+            fieldVisibility={fieldVisibility}
+            customFieldDefinitions={customFieldDefinitions}
+            formData={applicationForm}
+            setFormData={setApplicationForm}
+            onAdminSubmit={handleApplicationSave}
+            onAdminCancel={closeModal}
+          />
+        )}
       </Modal>
 
       {/* ── View Modal ───────────────────────────────────────────────────────── */}
