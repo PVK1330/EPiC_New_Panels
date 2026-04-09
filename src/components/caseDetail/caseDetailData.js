@@ -1,0 +1,112 @@
+export const TAB_IDS = {
+  overview: "overview",
+  documents: "documents",
+  tasks: "tasks",
+  payments: "payments",
+  timeline: "timeline",
+  communication: "communication",
+  notes: "notes",
+  audit: "audit",
+};
+
+export const CASE_DETAIL_TABS = [
+  { id: TAB_IDS.overview, label: "Overview" },
+  { id: TAB_IDS.documents, label: "Documents" },
+  { id: TAB_IDS.tasks, label: "Tasks" },
+  { id: TAB_IDS.payments, label: "Payments" },
+  { id: TAB_IDS.timeline, label: "Timeline" },
+  { id: TAB_IDS.communication, label: "Communication" },
+  { id: TAB_IDS.notes, label: "Notes (Internal)" },
+  { id: TAB_IDS.audit, label: "Audit Log" },
+];
+
+export const DEFAULT_CASE_DETAIL = {
+  caseId: "VF-2841",
+  candidateName: "Priya Sharma",
+  statusChip: "On Track",
+  visaChip: "Skilled Worker",
+  subtitle: "TechNova Ltd · Assigned to Alice Patel · Target: 14 May 2026",
+  candidate: {
+    fullName: "Priya Sharma",
+    dob: "14 March 1992",
+    nationality: "Indian",
+    passport: "P7823412",
+    email: "p.sharma@email.com",
+    phone: "+44 7700 123456",
+  },
+  sponsor: {
+    company: "TechNova Ltd",
+    licenceNo: "TN-2024-0082",
+    licenceStatus: "Active",
+    licenceExpiry: "15 Mar 2027",
+    contact: "hr@technova.co.uk",
+    caseworker: "Alice Patel",
+  },
+  case: {
+    visaType: "Skilled Worker",
+    caseStatus: "On Track",
+    dateOpened: "10 Jan 2026",
+    targetDate: "14 May 2026",
+    visaExpiry: "12 Jan 2027",
+    paymentStatus: "Fully Paid",
+  },
+  progress: {
+    pct: 68,
+    documents: "8/10 ✓",
+    tasks: "5/8 pending",
+    payment: "£2,400 paid",
+    daysLeft: "37 days",
+  },
+  documents: [
+    { id: "d1", name: "Passport Copy", meta: "Uploaded by Alice Patel · 10 Jan 2026 · v2", status: "Approved", statusClass: "bg-green-100 text-green-800" },
+    { id: "d2", name: "Certificate of Sponsorship (CoS)", meta: "Uploaded by TechNova HR · 11 Jan 2026 · v1", status: "Approved", statusClass: "bg-green-100 text-green-800" },
+    { id: "d3", name: "English Language Certificate", meta: "Uploaded by Priya Sharma · 12 Jan 2026 · v1", status: "Under Review", statusClass: "bg-blue-100 text-blue-800", actions: "review" },
+    { id: "d4", name: "Bank Statements (3 months)", meta: "Required · Expiry: N/A", status: "Missing", statusClass: "bg-red-100 text-red-700" },
+    { id: "d5", name: "Tuberculosis Test Result", meta: "Required for Indian nationals", status: "Pending", statusClass: "bg-amber-100 text-amber-800" },
+  ],
+  tasks: [
+    { id: "t1", task: "Submit online application form", assigned: "Alice Patel", due: "15 Apr 2026", dueClass: "text-amber-600", priority: "High", priorityClass: "bg-red-100 text-red-700", status: "In Progress", statusClass: "bg-amber-100 text-amber-800", rowAction: "update" },
+    { id: "t2", task: "Request biometric appointment", assigned: "Priya Sharma", due: "30 Apr 2026", dueClass: "text-gray-500", priority: "Medium", priorityClass: "bg-amber-100 text-amber-800", status: "Pending", statusClass: "bg-gray-100 text-gray-600", rowAction: "update" },
+    { id: "t3", task: "Verify CoS reference number", assigned: "Alice Patel", due: "08 Apr 2026", dueClass: "text-green-600", priority: "High", priorityClass: "bg-red-100 text-red-700", status: "Done", statusClass: "bg-green-100 text-green-800", rowAction: "view" },
+    { id: "t4", task: "Upload bank statements", assigned: "Priya Sharma", due: "10 Apr 2026", dueClass: "text-red-500", priority: "Critical", priorityClass: "bg-red-100 text-red-700", status: "Overdue", statusClass: "bg-red-100 text-red-700", rowAction: "chase" },
+  ],
+  payments: {
+    total: "£2,400",
+    paid: "£2,400",
+    balance: "£0",
+    history: [
+      { date: "10 Jan 2026", amount: "£1,200", method: "Bank Transfer", invoice: "INV-2841-A" },
+      { date: "28 Jan 2026", amount: "£1,200", method: "Card", invoice: "INV-2841-B" },
+    ],
+    invoiceId: "INV-2841-B",
+  },
+  timeline: [
+    { id: "l1", dot: "done", time: "10 Jan 2026 · 09:14", desc: "Case created. Assigned to Alice Patel.", user: "by Sarah Anand (Admin)" },
+    { id: "l2", dot: "done", time: "11 Jan 2026 · 14:22", desc: "CoS document uploaded and verified.", user: "by TechNova HR (External)" },
+    { id: "l3", dot: "done", time: "12 Jan 2026 · 10:05", desc: "Initial payment of £1,200 received. Invoice INV-2841-A issued.", user: "by System (Auto)" },
+    { id: "l4", dot: "done", time: "28 Jan 2026 · 16:40", desc: "Second payment £1,200 received. Case fully paid.", user: "by System (Auto)" },
+    { id: "l5", dot: "active", time: "02 Apr 2026 · 11:30", desc: "Bank statements requested from candidate. Awaiting upload.", user: "by Alice Patel (Caseworker)" },
+    { id: "l6", dot: "warn", time: "10 Apr 2026 · Expected", desc: "Bank statements deadline.", user: "Upcoming" },
+  ],
+  threads: [
+    { id: "th1", name: "Priya Sharma (Client)", preview: "Please find the documents attached…", active: true },
+    { id: "th2", name: "TechNova HR", preview: "CoS has been issued, ref TN-2841", active: false },
+    { id: "th3", name: "Internal — Alice Patel", preview: "Need to chase bank statements", active: false },
+  ],
+  messages: [
+    { id: "m1", in: true, text: "Hi, I've uploaded my English certificate. Please let me know if anything else is needed.", time: "2 Apr · 10:15" },
+    { id: "m2", in: false, text: "Thank you Priya! We still need 3 months of bank statements urgently. Please upload by 10 April.", time: "2 Apr · 11:30" },
+    { id: "m3", in: true, text: "Understood, I'll get them uploaded today.", time: "2 Apr · 11:45" },
+  ],
+  internalNotes: [
+    { author: "Alice Patel", date: "2 Apr 2026", body: "Client has been slow to respond. May need to escalate if bank statements not received by 10 Apr. CoS looks fine." },
+    { author: "Sarah Anand", date: "28 Jan 2026", body: "High-priority client. Ensure SLA is maintained. Director referral from TechNova." },
+  ],
+  audit: [
+    { ts: "2026-04-02 11:30", user: "Alice Patel", action: "UPDATE", actionClass: "bg-blue-100 text-blue-800", module: "Tasks", oldVal: "Pending", newVal: "In Progress", newClass: "text-amber-600" },
+    { ts: "2026-01-28 16:40", user: "System", action: "PAYMENT", actionClass: "bg-green-100 text-green-800", module: "Finance", oldVal: "£1,200 paid", newVal: "£2,400 paid", newClass: "text-green-600" },
+    { ts: "2026-01-12 10:05", user: "System", action: "PAYMENT", actionClass: "bg-green-100 text-green-800", module: "Finance", oldVal: "£0 paid", newVal: "£1,200 paid", newClass: "text-green-600" },
+    { ts: "2026-01-11 14:22", user: "TechNova HR", action: "UPLOAD", actionClass: "bg-blue-100 text-blue-800", module: "Documents", oldVal: "—", newVal: "CoS Uploaded", newClass: "text-green-600" },
+    { ts: "2026-01-10 09:14", user: "Sarah Anand", action: "CREATE", actionClass: "bg-purple-100 text-purple-800", module: "Case", oldVal: "—", newVal: "#VF-2841 Created", newClass: "text-secondary" },
+  ],
+};

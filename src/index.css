@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+ 
+--font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary: #C8102E;
+  --color-primary-dark: #a50d25;
+  --color-primary-light: #e8304a;
+
+  --color-secondary: #004ca5;
+  --color-secondary-dark: #003880;
+  --color-secondary-light: #1a65c0;
+
+  --color-surface: #f0f4eb;
+  --color-sidebar: #ffffff;
+  --color-sidebar-hover: #23272f;
+}
+button{
+  cursor: pointer;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+  }
+}

@@ -1,0 +1,1364 @@
+import { useMemo, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Search,
+  Plus,
+  Download,
+  FileText,
+  Send,
+  Check,
+  Lock,
+  Eye,
+  Pencil,
+  MessageSquare,
+} from "lucide-react";
+import { useSelector } from "react-redux";
+import Modal from "../../components/Modal";
+
+const PAGE_SIZE = 7;
+
+/** Demo dataset — 24 cases */
+const CASES_DATA = [
+  { caseId: "#C-2401", candidate: "Ahmed Al-Rashid", business: "TechCorp Ltd", visa: "Tier 2", status: "on_track", target: "2026-04-18", priority: "high", payment: "paid" },
+  { caseId: "#C-2398", candidate: "Priya Sharma", business: "Nexus Group", visa: "Skilled Worker", status: "due_soon", target: "2026-04-12", priority: "medium", payment: "partial" },
+  { caseId: "#C-2391", candidate: "Carlos Mendes", business: "BuildRight Inc", visa: "Intra-Co", status: "overdue", target: "2026-04-03", priority: "critical", payment: "outstanding" },
+  { caseId: "#C-2389", candidate: "Mei Lin Chen", business: "Global Finance", visa: "Graduate", status: "on_track", target: "2026-05-02", priority: "low", payment: "paid" },
+  { caseId: "#C-2385", candidate: "Ivan Petrov", business: "EnviroTech", visa: "Tier 2", status: "on_track", target: "2026-05-15", priority: "low", payment: "paid" },
+  { caseId: "#C-2380", candidate: "Fatima Al-Zahra", business: "MediCare Group", visa: "Health & Care", status: "due_soon", target: "2026-04-20", priority: "medium", payment: "partial" },
+  { caseId: "#C-2376", candidate: "Rajesh Patel", business: "Innovate Corp", visa: "Skilled Worker", status: "on_track", target: "2026-06-01", priority: "low", payment: "paid" },
+  { caseId: "#C-2370", candidate: "Sofia Nielsen", business: "Nordic AI Ltd", visa: "Skilled Worker", status: "on_track", target: "2026-06-12", priority: "medium", payment: "paid" },
+  { caseId: "#C-2365", candidate: "James O'Connor", business: "Celtic Foods", visa: "Tier 2", status: "due_soon", target: "2026-04-25", priority: "high", payment: "partial" },
+  { caseId: "#C-2360", candidate: "Yuki Tanaka", business: "Tokyo Trade UK", visa: "Intra-Co", status: "on_track", target: "2026-07-01", priority: "low", payment: "paid" },
+  { caseId: "#C-2355", candidate: "Elena Popov", business: "EuroBuild", visa: "Skilled Worker", status: "overdue", target: "2026-03-28", priority: "critical", payment: "outstanding" },
+  { caseId: "#C-2350", candidate: "Marcus Webb", business: "Webb Legal", visa: "Graduate", status: "completed", target: "2026-03-01", priority: "low", payment: "paid" },
+  { caseId: "#C-2344", candidate: "Nomsa Dlamini", business: "HealthFirst", visa: "Health & Care", status: "on_track", target: "2026-05-30", priority: "medium", payment: "paid" },
+  { caseId: "#C-2339", candidate: "Lukas Meyer", business: "AutoParts DE UK", visa: "Tier 2", status: "on_track", target: "2026-06-20", priority: "low", payment: "partial" },
+  { caseId: "#C-2332", candidate: "Anna Kowalski", business: "PolskaBake", visa: "Skilled Worker", status: "due_soon", target: "2026-04-22", priority: "high", payment: "paid" },
+  { caseId: "#C-2328", candidate: "David Mensah", business: "AfriCommerce", visa: "Skilled Worker", status: "on_track", target: "2026-07-05", priority: "medium", payment: "paid" },
+  { caseId: "#C-2321", candidate: "Hannah Scott", business: "Scott Retail", visa: "Graduate", status: "overdue", target: "2026-04-01", priority: "high", payment: "outstanding" },
+  { caseId: "#C-2315", candidate: "Omar Farouk", business: "Desert Tech", visa: "Tier 2", status: "on_track", target: "2026-08-01", priority: "medium", payment: "paid" },
+  { caseId: "#C-2310", candidate: "Chloe Martin", business: "Martin Design", visa: "Skilled Worker", status: "completed", target: "2026-02-15", priority: "low", payment: "paid" },
+  { caseId: "#C-2304", candidate: "Diego Silva", business: "Silva Logistics", visa: "Intra-Co", status: "on_track", target: "2026-09-10", priority: "low", payment: "paid" },
+  { caseId: "#C-2299", candidate: "Grace Okonkwo", business: "Lagos Express UK", visa: "Skilled Worker", status: "due_soon", target: "2026-04-28", priority: "medium", payment: "partial" },
+  { caseId: "#C-2293", candidate: "Tom Bradley", business: "Bradley Farms", visa: "Tier 2", status: "on_track", target: "2026-10-01", priority: "low", payment: "paid" },
+  { caseId: "#C-2288", candidate: "Wang Lei", business: "Pacific Imports", visa: "Skilled Worker", status: "on_track", target: "2026-06-18", priority: "high", payment: "paid" },
+  { caseId: "#C-2281", candidate: "Isabelle Fortin", business: "Fortin Avocats UK", visa: "Graduate", status: "completed", target: "2026-01-20", priority: "low", payment: "paid" },
+];
+
+const STATUS_CHIPS = [
+  { id: "all", label: "All" },
+  { id: "active", label: "Active" },
+  { id: "due_soon", label: "Due soon" },
+  { id: "overdue", label: "Overdue" },
+  { id: "completed", label: "Completed" },
+];
+
+const VISA_OPTIONS = [
+  "All visa types",
+  "Tier 2",
+  "Skilled Worker",
+  "Graduate",
+  "Intra-Co",
+  "Health & Care",
+];
+
+const PRIORITY_OPTIONS = [
+  "All priorities",
+  "Critical",
+  "High",
+  "Medium",
+  "Low",
+];
+
+const NEW_CASE_VISA = VISA_OPTIONS.filter((v) => v !== "All visa types");
+
+const CASE_STATUS_EDIT = [
+  { value: "on_track", label: "On track" },
+  { value: "due_soon", label: "Due soon" },
+  { value: "overdue", label: "Overdue" },
+  { value: "completed", label: "Completed" },
+];
+
+const CASE_PAYMENT_EDIT = [
+  { value: "paid", label: "Paid" },
+  { value: "partial", label: "Partial" },
+  { value: "outstanding", label: "Outstanding" },
+];
+
+const emptyNewCaseForm = () => ({
+  candidate: "",
+  business: "",
+  visa: "Tier 2",
+  priority: "medium",
+  target: "",
+  notes: "",
+});
+
+const caseToEditForm = (c) => ({
+  candidate: c.candidate,
+  business: c.business,
+  visa: c.visa,
+  status: c.status,
+  target: c.target,
+  priority: c.priority,
+  payment: c.payment,
+});
+
+function formatTarget(iso) {
+  const d = new Date(iso + "T12:00:00");
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function badgeStatus(status) {
+  const m = {
+    on_track: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    due_soon: "bg-amber-50 text-amber-800 border-amber-200",
+    overdue: "bg-red-50 text-red-800 border-red-200",
+    completed: "bg-slate-100 text-slate-700 border-slate-200",
+  };
+  const labels = {
+    on_track: "On track",
+    due_soon: "Due soon",
+    overdue: "Overdue",
+    completed: "Completed",
+  };
+  return { className: m[status] || m.on_track, label: labels[status] || status };
+}
+
+function badgePriority(p) {
+  const m = {
+    critical: "bg-red-50 text-red-800 border-red-200",
+    high: "bg-red-50 text-red-800 border-red-200",
+    medium: "bg-amber-50 text-amber-800 border-amber-200",
+    low: "bg-gray-100 text-gray-700 border-gray-200",
+  };
+  return m[p] || m.low;
+}
+
+function badgePayment(p) {
+  const m = {
+    paid: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    partial: "bg-amber-50 text-amber-800 border-amber-200",
+    outstanding: "bg-red-50 text-red-800 border-red-200",
+  };
+  const labels = { paid: "Paid", partial: "Partial", outstanding: "Outstanding" };
+  return { className: m[p], label: labels[p] };
+}
+
+function badgeVisa(v) {
+  const isPurple = v === "Health & Care";
+  return isPurple
+    ? "bg-violet-50 text-violet-800 border-violet-200"
+    : "bg-sky-50 text-sky-800 border-sky-200";
+}
+
+function priorityLabel(p) {
+  return p.charAt(0).toUpperCase() + p.slice(1);
+}
+
+const Cases = () => {
+  const user = useSelector((state) => state.auth.user);
+  const navigate = useNavigate();
+  const [cases, setCases] = useState(() => [...CASES_DATA]);
+  const [search, setSearch] = useState("");
+  const [chip, setChip] = useState("all");
+  const [visaFilter, setVisaFilter] = useState("All visa types");
+  const [priorityFilter, setPriorityFilter] = useState("All priorities");
+  const [page, setPage] = useState(1);
+  const [detailCase, setDetailCase] = useState(null);
+  const [detailTab, setDetailTab] = useState("overview");
+  const [newCaseOpen, setNewCaseOpen] = useState(false);
+  const [newCaseForm, setNewCaseForm] = useState(emptyNewCaseForm);
+  const [newCaseErrors, setNewCaseErrors] = useState({});
+  const [editCaseId, setEditCaseId] = useState(null);
+  const [editCaseForm, setEditCaseForm] = useState(() => caseToEditForm(CASES_DATA[0]));
+  const [editCaseErrors, setEditCaseErrors] = useState({});
+
+  const openDetail = useCallback((c) => {
+    setNewCaseOpen(false);
+    setEditCaseId(null);
+    setDetailCase(c);
+    setDetailTab("overview");
+  }, []);
+
+  const closeDetail = useCallback(() => setDetailCase(null), []);
+
+  const openNewCaseModal = useCallback(() => {
+    setDetailCase(null);
+    setEditCaseId(null);
+    setNewCaseErrors({});
+    setNewCaseForm(emptyNewCaseForm());
+    setNewCaseOpen(true);
+  }, []);
+
+  const openCaseEdit = useCallback((c) => {
+    setNewCaseOpen(false);
+    setDetailCase(null);
+    setEditCaseErrors({});
+    setEditCaseId(c.caseId);
+    setEditCaseForm(caseToEditForm(c));
+  }, []);
+
+  const closeCaseEdit = useCallback(() => {
+    setEditCaseId(null);
+    setEditCaseErrors({});
+  }, []);
+
+  const submitCaseEdit = useCallback(() => {
+    const err = {};
+    if (!editCaseForm.candidate.trim()) err.candidate = "Required";
+    if (!editCaseForm.business.trim()) err.business = "Required";
+    if (!editCaseForm.target) err.target = "Required";
+    setEditCaseErrors(err);
+    if (Object.keys(err).length) return;
+
+    const next = {
+      candidate: editCaseForm.candidate.trim(),
+      business: editCaseForm.business.trim(),
+      visa: editCaseForm.visa,
+      status: editCaseForm.status,
+      target: editCaseForm.target,
+      priority: editCaseForm.priority,
+      payment: editCaseForm.payment,
+    };
+
+    setCases((prev) =>
+      prev.map((c) => (c.caseId === editCaseId ? { ...c, ...next } : c)),
+    );
+    setDetailCase((d) => (d && d.caseId === editCaseId ? { ...d, ...next } : d));
+    closeCaseEdit();
+  }, [editCaseId, editCaseForm, closeCaseEdit]);
+
+  const closeNewCaseModal = useCallback(() => {
+    setNewCaseOpen(false);
+    setNewCaseErrors({});
+    setNewCaseForm(emptyNewCaseForm());
+  }, []);
+
+  const submitNewCase = useCallback(() => {
+    const err = {};
+    if (!newCaseForm.candidate.trim()) err.candidate = "Required";
+    if (!newCaseForm.business.trim()) err.business = "Required";
+    if (!newCaseForm.target) err.target = "Required";
+    setNewCaseErrors(err);
+    if (Object.keys(err).length) return;
+
+    const nums = cases
+      .map((c) => parseInt(c.caseId.replace(/^#C-/, ""), 10))
+      .filter((n) => !Number.isNaN(n));
+    const maxId = nums.length ? Math.max(...nums) : 2400;
+    const caseId = `#C-${maxId + 1}`;
+    const priority = newCaseForm.priority.toLowerCase();
+
+    setCases((prev) => [
+      {
+        caseId,
+        candidate: newCaseForm.candidate.trim(),
+        business: newCaseForm.business.trim(),
+        visa: newCaseForm.visa,
+        status: "on_track",
+        target: newCaseForm.target,
+        priority,
+        payment: "outstanding",
+      },
+      ...prev,
+    ]);
+    closeNewCaseModal();
+    setPage(1);
+  }, [cases, newCaseForm, closeNewCaseModal]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return cases.filter((c) => {
+      if (q) {
+        const blob = `${c.caseId} ${c.candidate} ${c.business}`.toLowerCase();
+        if (!blob.includes(q)) return false;
+      }
+      if (chip === "active") {
+        if (!["on_track", "due_soon"].includes(c.status)) return false;
+      } else if (chip !== "all" && c.status !== chip) return false;
+
+      if (visaFilter !== "All visa types" && c.visa !== visaFilter) return false;
+      if (priorityFilter !== "All priorities") {
+        const pl = priorityFilter.toLowerCase();
+        if (c.priority !== pl) return false;
+      }
+      return true;
+    });
+  }, [cases, search, chip, visaFilter, priorityFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageClamped = Math.min(page, totalPages);
+  const pageSlice = useMemo(() => {
+    const p = Math.min(page, totalPages);
+    const start = (p - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page, totalPages]);
+
+  return (
+    <div className="space-y-6 pb-10 animate-in fade-in duration-500">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-black text-secondary tracking-tight">
+            All assigned cases
+          </h1>
+          <p className="text-sm font-bold text-gray-600 mt-1">
+            {cases.length} cases assigned to you
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => window.alert("Demo: export would download a CSV/spreadsheet.")}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 shadow-sm hover:bg-gray-50"
+          >
+            <Download size={18} />
+            Export
+          </button>
+          <button
+            type="button"
+            onClick={openNewCaseModal}
+            className="inline-flex items-center gap-2 rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
+          >
+            <Plus size={18} strokeWidth={2.5} />
+            New case
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
+          />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search cases, candidates…"
+            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {STATUS_CHIPS.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => {
+                setChip(c.id);
+                setPage(1);
+              }}
+              className={`rounded-full border px-3.5 py-1.5 text-xs font-black transition-colors ${chip === c.id
+                  ? "border-secondary bg-secondary/10 text-secondary"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <select
+            value={visaFilter}
+            onChange={(e) => {
+              setVisaFilter(e.target.value);
+              setPage(1);
+            }}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+          >
+            {VISA_OPTIONS.map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
+          </select>
+          <select
+            value={priorityFilter}
+            onChange={(e) => {
+              setPriorityFilter(e.target.value);
+              setPage(1);
+            }}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+          >
+            {PRIORITY_OPTIONS.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1000px]">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50">
+                {[
+                  "Case ID",
+                  "Candidate name",
+                  "Business name",
+                  "Visa type",
+                  "Status",
+                  "Target date",
+                  "Priority",
+                  "Payment",
+                  "Actions",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="py-3 px-4 text-left text-[10px] font-black uppercase tracking-wider text-gray-500 whitespace-nowrap"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {pageSlice.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center text-sm font-bold text-gray-500">
+                    No cases match your filters.
+                  </td>
+                </tr>
+              ) : (
+                pageSlice.map((c) => {
+                  const st = badgeStatus(c.status);
+                  const pay = badgePayment(c.payment);
+                  return (
+                    <tr
+                      key={c.caseId}
+                      className="hover:bg-gray-50/80 cursor-pointer transition-colors"
+                      onClick={() => openDetail(c)}
+                    >
+                      <td className="py-3 px-4">
+                        <span className="font-mono text-xs font-black text-secondary">
+                          {c.caseId}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-sm font-bold text-gray-900">
+                        {c.candidate}
+                      </td>
+                      <td className="py-3 px-4 text-sm font-bold text-gray-600">
+                        {c.business}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeVisa(c.visa)}`}
+                        >
+                          {c.visa}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${st.className}`}
+                        >
+                          {st.label}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-sm font-bold text-gray-600 tabular-nums whitespace-nowrap">
+                        {formatTarget(c.target)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgePriority(c.priority)}`}
+                        >
+                          {priorityLabel(c.priority)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${pay.className}`}
+                        >
+                          {pay.label}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openDetail(c)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-gray-600 hover:border-secondary/40 hover:text-secondary transition-colors"
+                            title="View case"
+                          >
+                            <Eye size={14} />
+                            <span className="hidden sm:inline">View</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openCaseEdit(c)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-secondary hover:bg-secondary/5 transition-colors"
+                            title="Edit case"
+                          >
+                            <Pencil size={14} />
+                            <span className="hidden sm:inline">Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/caseworker/messages?caseId=${encodeURIComponent(c.caseId)}`,
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-gray-600 hover:border-primary/40 hover:text-primary transition-colors"
+                            title="Message candidate"
+                          >
+                            <MessageSquare size={14} />
+                            <span className="hidden sm:inline">Message</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/80">
+          <p className="text-xs font-bold text-gray-500 tabular-nums">
+            Showing {(pageClamped - 1) * PAGE_SIZE + 1}–
+            {Math.min(pageClamped * PAGE_SIZE, filtered.length)} of {filtered.length}{" "}
+            cases
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={pageClamped <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
+            >
+              ←
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+              <button
+                key={num}
+                type="button"
+                onClick={() => setPage(num)}
+                className={`min-w-[2rem] rounded-lg border px-2 py-1 text-xs font-black ${pageClamped === num
+                    ? "border-secondary bg-secondary/10 text-secondary"
+                    : "border-gray-200 text-gray-600 hover:bg-white"
+                  }`}
+              >
+                {num}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={pageClamped >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
+            >
+              →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <Modal
+        open={newCaseOpen}
+        onClose={closeNewCaseModal}
+        title="New case"
+        titleId="new-case-modal-title"
+        maxWidthClass="max-w-lg"
+        bodyClassName="p-4 sm:p-6"
+      >
+        <div className="space-y-4">
+          <p className="text-sm font-bold text-gray-600">
+            Add a case intake record. This demo saves the row locally until the API is connected.
+          </p>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Candidate name
+            </label>
+            <input
+              type="text"
+              value={newCaseForm.candidate}
+              onChange={(e) =>
+                setNewCaseForm((f) => ({ ...f, candidate: e.target.value }))
+              }
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.candidate ? "border-red-300" : "border-gray-200"
+                }`}
+              placeholder="Full name"
+            />
+            {newCaseErrors.candidate && (
+              <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.candidate}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Business / sponsor name
+            </label>
+            <input
+              type="text"
+              value={newCaseForm.business}
+              onChange={(e) =>
+                setNewCaseForm((f) => ({ ...f, business: e.target.value }))
+              }
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.business ? "border-red-300" : "border-gray-200"
+                }`}
+              placeholder="Employer or sponsor"
+            />
+            {newCaseErrors.business && (
+              <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.business}</p>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Visa type
+              </label>
+              <select
+                value={newCaseForm.visa}
+                onChange={(e) =>
+                  setNewCaseForm((f) => ({ ...f, visa: e.target.value }))
+                }
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              >
+                {NEW_CASE_VISA.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Priority
+              </label>
+              <select
+                value={newCaseForm.priority}
+                onChange={(e) =>
+                  setNewCaseForm((f) => ({ ...f, priority: e.target.value }))
+                }
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              >
+                {["low", "medium", "high", "critical"].map((p) => (
+                  <option key={p} value={p}>
+                    {priorityLabel(p)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Target submission date
+            </label>
+            <input
+              type="date"
+              value={newCaseForm.target}
+              onChange={(e) =>
+                setNewCaseForm((f) => ({ ...f, target: e.target.value }))
+              }
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.target ? "border-red-300" : "border-gray-200"
+                }`}
+            />
+            {newCaseErrors.target && (
+              <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.target}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Internal notes <span className="font-bold normal-case text-gray-400">(optional)</span>
+            </label>
+            <textarea
+              value={newCaseForm.notes}
+              onChange={(e) =>
+                setNewCaseForm((f) => ({ ...f, notes: e.target.value }))
+              }
+              rows={3}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary resize-y"
+              placeholder="Anything the team should know…"
+            />
+          </div>
+          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={closeNewCaseModal}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitNewCase}
+              className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
+            >
+              Create case
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!editCaseId}
+        onClose={closeCaseEdit}
+        title={editCaseId ? `Edit case ${editCaseId}` : ""}
+        titleId="case-edit-modal-title"
+        maxWidthClass="max-w-lg"
+        bodyClassName="p-4 sm:p-6"
+      >
+        <div className="space-y-4">
+          <p className="text-sm font-bold text-gray-600">
+            Update case details. Changes apply locally in this demo until the API is connected.
+          </p>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Candidate name
+            </label>
+            <input
+              type="text"
+              value={editCaseForm.candidate}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, candidate: e.target.value }))
+              }
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.candidate ? "border-red-300" : "border-gray-200"
+                }`}
+            />
+            {editCaseErrors.candidate && (
+              <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.candidate}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Business / sponsor name
+            </label>
+            <input
+              type="text"
+              value={editCaseForm.business}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, business: e.target.value }))
+              }
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.business ? "border-red-300" : "border-gray-200"
+                }`}
+            />
+            {editCaseErrors.business && (
+              <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.business}</p>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Visa type
+              </label>
+              <select
+                value={editCaseForm.visa}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, visa: e.target.value }))
+                }
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              >
+                {NEW_CASE_VISA.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Status
+              </label>
+              <select
+                value={editCaseForm.status}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, status: e.target.value }))
+                }
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              >
+                {CASE_STATUS_EDIT.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Target submission date
+              </label>
+              <input
+                type="date"
+                value={editCaseForm.target}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, target: e.target.value }))
+                }
+                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.target ? "border-red-300" : "border-gray-200"
+                  }`}
+              />
+              {editCaseErrors.target && (
+                <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.target}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Priority
+              </label>
+              <select
+                value={editCaseForm.priority}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, priority: e.target.value }))
+                }
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              >
+                {["low", "medium", "high", "critical"].map((p) => (
+                  <option key={p} value={p}>
+                    {priorityLabel(p)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Payment
+            </label>
+            <select
+              value={editCaseForm.payment}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, payment: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            >
+              {CASE_PAYMENT_EDIT.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={closeCaseEdit}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitCaseEdit}
+              className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
+            >
+              Save changes
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!detailCase}
+        onClose={closeDetail}
+        title={detailCase ? `Case ${detailCase.caseId}` : ""}
+        titleId="case-detail-modal-title"
+        maxWidthClass="max-w-4xl"
+        bodyClassName="p-0"
+      >
+        {detailCase && (
+          <>
+            <div className="shrink-0 border-b border-gray-100 px-4 sm:px-6 py-4 bg-gray-50/80 flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p
+                  id="case-detail-modal-heading"
+                  className="text-lg font-black text-gray-900"
+                >
+                  {detailCase.candidate}
+                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span
+                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeStatus(detailCase.status).className}`}
+                  >
+                    {badgeStatus(detailCase.status).label}
+                  </span>
+                  <span
+                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgePriority(detailCase.priority)}`}
+                  >
+                    {priorityLabel(detailCase.priority)} priority
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => openCaseEdit(detailCase)}
+                className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/5"
+              >
+                Edit case
+              </button>
+            </div>
+
+            <div className="shrink-0 flex gap-0 overflow-x-auto border-b border-gray-100 bg-gray-50/50 px-2 no-scrollbar">
+              {[
+                { id: "overview", label: "Overview" },
+                { id: "documents", label: "Documents" },
+                { id: "tasks", label: "Tasks" },
+                { id: "payments", label: "Payments" },
+                { id: "comms", label: "Communication" },
+                { id: "notes", label: "Notes" },
+                { id: "timeline", label: "Timeline" },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setDetailTab(t.id)}
+                  className={`shrink-0 border-b-2 px-3 sm:px-4 py-3 text-xs font-black transition-colors whitespace-nowrap ${detailTab === t.id
+                      ? "border-secondary text-secondary"
+                      : "border-transparent text-gray-500 hover:text-gray-800"
+                    }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6">
+              {detailTab === "overview" && (
+                <OverviewTab c={detailCase} userName={user?.name || "You"} />
+              )}
+              {detailTab === "documents" && <DocumentsTab />}
+              {detailTab === "tasks" && <TasksTab />}
+              {detailTab === "payments" && <PaymentsTab />}
+              {detailTab === "comms" && <CommsTab candidate={detailCase.candidate} />}
+              {detailTab === "notes" && <NotesTab userName={user?.name || "Caseworker"} />}
+              {detailTab === "timeline" && <TimelineTab candidate={detailCase.candidate} />}
+            </div>
+          </>
+        )}
+      </Modal>
+    </div>
+  );
+};
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+        {label}
+      </p>
+      <div className="text-sm font-bold text-gray-900">{children}</div>
+    </div>
+  );
+}
+
+function OverviewTab({ c, userName }) {
+  const st = badgeStatus(c.status);
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2 pb-4 border-b border-gray-100">
+        <button
+          type="button"
+          className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white"
+        >
+          Update status
+        </button>
+        <button
+          type="button"
+          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700"
+        >
+          Add note
+        </button>
+        <button
+          type="button"
+          className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-800"
+        >
+          Flag case
+        </button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <Field label="Case ID">
+          <span className="font-mono text-secondary">{c.caseId}</span>
+        </Field>
+        <Field label="Candidate name">{c.candidate}</Field>
+        <Field label="Sponsor name">{c.business}</Field>
+        <Field label="Visa type">{c.visa} (General)</Field>
+        <Field label="Case status">
+          <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${st.className}`}>
+            {st.label}
+          </span>
+        </Field>
+        <Field label="Assigned to">{userName} (You)</Field>
+        <Field label="Start date">1 Mar 2026</Field>
+        <Field label="Target submission">{formatTarget(c.target)}</Field>
+        <Field label="Decision date">
+          <span className="text-gray-500">Pending</span>
+        </Field>
+        <Field label="Priority">
+          <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgePriority(c.priority)}`}>
+            {priorityLabel(c.priority)}
+          </span>
+        </Field>
+      </div>
+      <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">
+          Case progress
+        </p>
+        <div className="flex justify-between text-center gap-1">
+          {["Onboarded", "Documents", "Drafting", "Review", "Submitted"].map(
+            (label, i) => {
+              const done = i < 2;
+              const current = i === 2;
+              return (
+                <div key={label} className="flex-1 relative">
+                  {i > 0 && (
+                    <div
+                      className={`absolute left-0 right-1/2 top-[14px] h-0.5 -translate-x-1/2 ${i <= 2 ? "bg-emerald-500" : "bg-gray-200"
+                        }`}
+                      style={{ width: "50%" }}
+                    />
+                  )}
+                  <div
+                    className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black ${done
+                        ? "bg-emerald-500 text-white"
+                        : current
+                          ? "border-2 border-secondary bg-secondary/15 text-secondary"
+                          : "border-2 border-gray-200 bg-white text-gray-400"
+                      }`}
+                  >
+                    {done ? <Check size={14} /> : current ? "●" : ""}
+                  </div>
+                  <p
+                    className={`mt-1 text-[10px] font-bold ${current ? "text-secondary" : "text-gray-500"
+                      }`}
+                  >
+                    {label}
+                  </p>
+                </div>
+              );
+            },
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DocumentsTab() {
+  const rows = [
+    { name: "Passport copy", meta: "Uploaded Apr 1 · Expires Jun 2028", badge: "Approved", tone: "green" },
+    { name: "Right to work proof", meta: "Uploaded Apr 3", badge: "Under review", tone: "blue" },
+    { name: "English language cert", meta: "Not yet uploaded", badge: "Missing", tone: "red" },
+  ];
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
+          Upload document
+        </button>
+        <button type="button" className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700">
+          Request document
+        </button>
+      </div>
+      <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">
+        Candidate documents
+      </p>
+      {rows.map((r) => (
+        <div
+          key={r.name}
+          className="flex flex-wrap items-center gap-3 border-b border-gray-100 pb-3"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+            <FileText size={18} className="text-secondary" />
+          </div>
+          <div className="flex-1 min-w-[140px]">
+            <p className="text-sm font-bold text-gray-900">{r.name}</p>
+            <p className="text-[11px] font-bold text-gray-500">{r.meta}</p>
+          </div>
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${r.tone === "green"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                : r.tone === "red"
+                  ? "bg-red-50 text-red-800 border-red-200"
+                  : "bg-sky-50 text-sky-800 border-sky-200"
+              }`}
+          >
+            {r.badge}
+          </span>
+          <button
+            type="button"
+            className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black text-gray-600"
+          >
+            View
+          </button>
+        </div>
+      ))}
+      <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 pt-2">
+        Sponsor documents
+      </p>
+      {["Certificate of sponsorship", "Job offer letter"].map((name) => (
+        <div
+          key={name}
+          className="flex flex-wrap items-center gap-3 border-b border-gray-100 pb-3"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100">
+            <FileText size={18} className="text-secondary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-gray-900">{name}</p>
+            <p className="text-[11px] text-gray-500">Uploaded Mar 28 · by sponsor HR</p>
+          </div>
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-800">
+            Approved
+          </span>
+          <button
+            type="button"
+            className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black"
+          >
+            View
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TasksTab() {
+  const items = [
+    { done: true, title: "Request passport copy", sub: "Completed Apr 1", prio: "high" },
+    { done: true, title: "Collect sponsor documents", sub: "Completed Apr 3", prio: "high" },
+    { done: false, title: "Request English language certificate", sub: "Due Apr 10", prio: "high" },
+    { done: false, title: "Draft visa application form", sub: "Due Apr 14", prio: "med" },
+    { done: false, title: "Submit application to UKVI", sub: "Due Apr 18", prio: "high" },
+  ];
+  return (
+    <div className="space-y-3">
+      <button type="button" className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
+        Create task
+      </button>
+      {items.map((t, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 rounded-xl p-3 hover:bg-gray-50 border border-transparent hover:border-gray-100"
+        >
+          <div
+            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 ${t.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-gray-300"
+              }`}
+          >
+            {t.done ? <Check size={10} strokeWidth={3} /> : null}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-900">{t.title}</p>
+            <p className="text-[11px] text-gray-500">{t.sub}</p>
+          </div>
+          <span
+            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${t.prio === "high"
+                ? "bg-red-50 text-red-700"
+                : "bg-amber-50 text-amber-700"
+              }`}
+          >
+            {t.prio === "high" ? "High" : "Med"}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PaymentsTab() {
+  return (
+    <div className="space-y-5">
+      <div className="flex items-start gap-2 rounded-xl border border-secondary/20 bg-secondary/5 px-3 py-2.5 text-xs font-bold text-gray-600">
+        <Lock size={16} className="text-secondary shrink-0 mt-0.5" />
+        Finance data is read-only. Contact Finance to make changes.
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {[
+          { label: "Total fee", value: "£3,500", color: "text-gray-900" },
+          { label: "Paid", value: "£3,500", color: "text-emerald-600" },
+          { label: "Outstanding", value: "£0", color: "text-gray-500" },
+        ].map((b) => (
+          <div
+            key={b.label}
+            className="rounded-xl border border-gray-100 bg-gray-50/80 p-4 text-center"
+          >
+            <p className="text-[10px] font-black uppercase text-gray-500">{b.label}</p>
+            <p className={`text-xl font-black mt-1 ${b.color}`}>{b.value}</p>
+          </div>
+        ))}
+      </div>
+      <p className="text-[10px] font-black uppercase text-gray-500">Payment history</p>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-200 text-left text-[10px] font-black uppercase text-gray-500">
+            <th className="py-2 pr-2">Date</th>
+            <th className="py-2 pr-2">Description</th>
+            <th className="py-2 text-right">Amount</th>
+            <th className="py-2 pl-2">Status</th>
+          </tr>
+        </thead>
+        <tbody className="font-bold text-gray-800">
+          <tr className="border-b border-gray-100">
+            <td className="py-2 pr-2">1 Mar 2026</td>
+            <td className="py-2 pr-2">Initial deposit</td>
+            <td className="py-2 text-right tabular-nums">£1,750</td>
+            <td className="py-2 pl-2">
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-800">
+                Paid
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td className="py-2 pr-2">15 Mar 2026</td>
+            <td className="py-2 pr-2">Final payment</td>
+            <td className="py-2 text-right tabular-nums">£1,750</td>
+            <td className="py-2 pl-2">
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-800">
+                Paid
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function CommsTab({ candidate }) {
+  const initial = candidate
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <button type="button" className="rounded-lg border border-secondary bg-secondary/10 px-3 py-1.5 text-xs font-black text-secondary">
+          Candidate chat
+        </button>
+        <button type="button" className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-black text-gray-600">
+          Sponsor chat
+        </button>
+      </div>
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-[10px] font-black text-secondary">
+            {initial}
+          </div>
+          <div className="max-w-[85%]">
+            <p className="text-[10px] font-bold text-gray-500 mb-1">{candidate}</p>
+            <div className="rounded-2xl rounded-bl-sm border border-gray-100 bg-gray-50 px-3 py-2">
+              <p className="text-sm font-bold text-gray-800">
+                Hi — I&apos;ve uploaded my passport copy. Please let me know if you need anything else.
+              </p>
+              <p className="text-[10px] text-gray-400 mt-1">1 Apr · 10:32am</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2 flex-row-reverse">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-secondary to-indigo-500 text-[10px] font-black text-white">
+            You
+          </div>
+          <div className="max-w-[85%] text-right">
+            <p className="text-[10px] font-bold text-gray-500 mb-1">You</p>
+            <div className="rounded-2xl rounded-br-sm border border-secondary/20 bg-secondary/10 px-3 py-2 text-left inline-block">
+              <p className="text-sm font-bold text-gray-800">
+                Thanks! I still need your English language certificate — please upload by 10 Apr.
+              </p>
+              <p className="text-[10px] text-gray-500 mt-1">1 Apr · 11:05am</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-2 pt-4 border-t border-gray-100">
+        <input
+          type="text"
+          placeholder="Type a message…"
+          className="flex-1 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+        />
+        <button
+          type="button"
+          className="rounded-xl bg-secondary px-4 py-2 text-xs font-black text-white"
+        >
+          <Send className="inline mr-1" size={14} />
+          Send
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NotesTab({ userName }) {
+  return (
+    <div className="space-y-4">
+      <textarea
+        placeholder="Add an internal note…"
+        rows={3}
+        className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none resize-y"
+      />
+      <button type="button" className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
+        Save note
+      </button>
+      {[
+        {
+          who: userName,
+          when: "3 Apr 2026",
+          text: "Candidate is cooperative. Waiting on English cert. Sponsor HR responsive.",
+        },
+        {
+          who: userName,
+          when: "15 Mar 2026",
+          text: "Initial consultation done. Tier 2 route confirmed. Document checklist started.",
+        },
+      ].map((n, i) => (
+        <div key={i} className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+          <p className="text-[11px] font-bold text-gray-500 mb-1">
+            {n.who} · {n.when}
+          </p>
+          <p className="text-sm font-bold text-gray-800">{n.text}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TimelineTab({ candidate }) {
+  const items = [
+    { dot: "blue", title: "Document uploaded — Passport copy", time: `1 Apr 2026 · by ${candidate}`, body: null },
+    { dot: "green", title: "Status changed → Documents received", time: "1 Apr 2026", body: null },
+    { dot: "blue", title: "Document uploaded — Certificate of sponsorship", time: "28 Mar 2026 · by sponsor HR", body: null },
+    { dot: "yellow", title: "Task created — Request English language cert", time: "20 Mar 2026", body: "Due 10 Apr 2026" },
+    { dot: "green", title: "Case created and onboarded", time: "1 Mar 2026", body: null },
+  ];
+  return (
+    <div className="space-y-0">
+      {items.map((item, i) => (
+        <div key={i} className="flex gap-3 pb-5 relative">
+          {i < items.length - 1 && (
+            <div className="absolute left-[11px] top-6 bottom-0 w-px bg-gray-200" />
+          )}
+          <div
+            className={`relative z-[1] flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-black ${item.dot === "green"
+                ? "border-emerald-500 bg-emerald-50 text-emerald-600"
+                : item.dot === "yellow"
+                  ? "border-amber-500 bg-amber-50 text-amber-600"
+                  : "border-secondary bg-secondary/10 text-secondary"
+              }`}
+          >
+            {item.dot === "green" ? <Check size={12} /> : "●"}
+          </div>
+          <div>
+            <p className="text-sm font-bold text-gray-900">{item.title}</p>
+            <p className="text-[11px] font-bold text-gray-500 mt-0.5">{item.time}</p>
+            {item.body && (
+              <p className="text-xs font-bold text-gray-600 mt-2 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
+                {item.body}
+              </p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default Cases;
