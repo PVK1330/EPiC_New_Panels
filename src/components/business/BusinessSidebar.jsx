@@ -58,7 +58,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
           label: "Compliance Dashboard",
           icon: BarChart3,
         },
-        { to: "/business/reports", label: "Reports & Docs", icon: FileText },
+        { to: "/business/compliacedocument", label: "Reports & Docs", icon: FileText },
       ],
     },
     {

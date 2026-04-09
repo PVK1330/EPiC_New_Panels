@@ -73,6 +73,7 @@ import BusinessCompliance from "../pages/business/BusinessCompliance";
 import CosRegistrationForm from "../pages/business/Cosregistration";
 import SponsorWorkerDetails from "../pages/business/SponsoredWorkerDetails";
 import CosAllocationpage from "../pages/business/CosPage"
+import Compliacedocument from "../pages/business/Compliacedocument";
 import BusinessMessages from "../pages/business/BusinessMessages";
 import BusinessNotifications from "../pages/business/BusinessNotifications";
 import BusinessPayment from "../pages/business/BusinessPayment";
@@ -298,6 +299,7 @@ const AppRoutes = () => {
         <Route path="personnel" element={<KeyPersonnel />} />
         <Route path="licence" element={<LicenceStatus />} />
         <Route path="Businessregistration" element={<BusinessRegistration></BusinessRegistration>}></Route>
+        <Route path="compliacedocument" element={<Compliacedocument />} />
         <Route path="compliance" element={<BusinessCompliance />} />
         <Route path="cosallocation" element={<CosAllocationpage />} />
         <Route path="account" element={<BusinessAccount />} />

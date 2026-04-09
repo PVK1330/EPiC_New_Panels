@@ -1,9 +1,18 @@
-import React, { useState, } from 'react';
-import { Building2, MapPin, FileText, Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
-import {useNavigate} from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  Building2,
+  MapPin,
+  FileText,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  LayoutDashboard,
+} from "lucide-react";
+
 const BusinessProfile = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const [companyInfo, setCompanyInfo] = useState({
     address: '123 Business Street',
     registrationNumber: 'REG123456789',
@@ -42,11 +51,11 @@ const BusinessProfile = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'Approved':
-        return <CheckCircle size={16} className="text-green-600" />;
-      case 'Pending':
-        return <Clock size={16} className="text-yellow-600" />;
-      case 'Rejected':
+      case "Approved":
+        return <CheckCircle size={16} className="text-emerald-600" />;
+      case "Pending":
+        return <Clock size={16} className="text-amber-600" />;
+      case "Rejected":
         return <AlertCircle size={16} className="text-red-600" />;
       default:
         return <Clock size={16} className="text-gray-600" />;
@@ -55,20 +64,15 @@ const BusinessProfile = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Approved':
-        return 'text-green-700 bg-green-100';
-      case 'Pending':
-        return 'text-yellow-700 bg-yellow-100';
-      case 'Rejected':
-        return 'text-red-700 bg-red-100';
+      case "Approved":
+        return "text-emerald-700 bg-emerald-100";
+      case "Pending":
+        return "text-amber-700 bg-amber-100";
+      case "Rejected":
+        return "text-red-700 bg-red-100";
       default:
-        return 'text-gray-700 bg-gray-100';
+        return "text-gray-700 bg-gray-100";
     }
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
   };
 
   const cardVariants = {
@@ -77,35 +81,41 @@ const BusinessProfile = () => {
   };
 
   return (
-    <motion.div
-      className="space-y-8 pb-10"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <div className="space-y-10 pb-10">
       {/* Header */}
-      <motion.div variants={cardVariants}>
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <Building2 className="text-primary" size={36} />
+          <LayoutDashboard className="text-primary" size={36} />
           Business Profile
         </h1>
         <p className="text-primary font-bold text-sm mt-1">
-          Manage your company information and change requests
+          Manage your company information and change requests.
         </p>
       </motion.div>
 
       {/* Company Information Section */}
       <motion.div
-        className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
         variants={cardVariants}
+        initial="hidden"
+        animate="visible"
       >
-        <div className='flex justify-between'>
-            <h2 className="text-2xl font-black text-secondary mb-6 flex items-center gap-2">
-          <FileText size={24} className="text-primary" />
-          Company Information
-        </h2>
+        <div className="flex justify-between">
+          <h2 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+            <FileText size={24} className="text-primary" />
+            Company Information
+          </h2>
 
-        <button className='bg-primary text-white rounded-xl px-3 py-2 text-xs font-black transition-transform hover:scale-105' onClick={()=> navigate("/Businessregistration")}>Add Business Registration </button>
+          <button
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark"
+            onClick={() => navigate("/business/Businessregistration")}
+          >
+            Add Business Registration
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -178,10 +188,12 @@ const BusinessProfile = () => {
 
       {/* Change Request Section */}
       <motion.div
-        className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
         variants={cardVariants}
+        initial="hidden"
+        animate="visible"
       >
-        <h2 className="text-2xl font-black text-secondary mb-6 flex items-center gap-2">
+        <h2 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
           <MapPin size={24} className="text-primary" />
           Change Requests
         </h2>
@@ -200,7 +212,7 @@ const BusinessProfile = () => {
             <tbody className="divide-y divide-gray-100">
               {changeRequestsData.map((request) => (
                 <tr key={request.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-4 text-sm font-black text-secondary max-w-xs truncate">
+                  <td className="px-4 py-4 text-sm font-bold text-gray-600 max-w-xs truncate">
                     {request.changeAddress}
                   </td>
                   <td className="px-4 py-4 text-sm font-bold text-gray-600 max-w-xs truncate">
@@ -227,22 +239,22 @@ const BusinessProfile = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-4 pt-4 border-t border-gray-100 mt-6">
+        <div className="flex gap-4 pt-4">
           <button
             onClick={handleSaveChanges}
-            className="px-6 py-3 bg-primary hover:bg-primary-dark text-white font-black rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/15"
+            className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition"
           >
             Save Changes
           </button>
           <button
             onClick={handleCancel}
-            className="px-6 py-3 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-200"
+            className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-6 py-3 transition"
           >
             Cancel
           </button>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };
 
