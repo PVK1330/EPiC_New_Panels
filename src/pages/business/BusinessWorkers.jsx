@@ -26,6 +26,9 @@ const BusinessWorkers = () => {
       visa: "Skilled Worker",
       cos: "X1A2B3456",
       job: "Software Engineer",
+      department: "Engineering",
+      salary: "£45,000",
+      phone: "+44 20 7123 4567",
       startDate: "15 Jan 2023",
       expiry: "12 Jan 2025",
       status: "Expiring",
@@ -37,6 +40,9 @@ const BusinessWorkers = () => {
       visa: "Skilled Worker",
       cos: "X7C8D9012",
       job: "Data Analyst",
+      department: "Analytics",
+      salary: "£38,000",
+      phone: "+44 20 7123 4568",
       startDate: "20 Mar 2022",
       expiry: "30 Jun 2026",
       status: "Active",
@@ -48,6 +54,9 @@ const BusinessWorkers = () => {
       visa: "Intra-company",
       cos: "X9G0H1234",
       job: "Finance Manager",
+      department: "Finance",
+      salary: "£55,000",
+      phone: "+44 20 7123 4569",
       startDate: "01 Sep 2021",
       expiry: "22 Dec 2025",
       status: "Active",
@@ -59,6 +68,9 @@ const BusinessWorkers = () => {
       visa: "ICT",
       cos: "X4E5F6789",
       job: "Project Manager",
+      department: "Operations",
+      salary: "£50,000",
+      phone: "+44 20 7123 4570",
       startDate: "10 Jul 2023",
       expiry: "15 Mar 2025",
       status: "Warning",
@@ -70,6 +82,9 @@ const BusinessWorkers = () => {
       visa: "Skilled Worker",
       cos: "X2J3K4567",
       job: "HR Manager",
+      department: "Human Resources",
+      salary: "£42,000",
+      phone: "+44 20 7123 4571",
       startDate: "05 Nov 2023",
       expiry: "08 Jan 2027",
       status: "Active",
@@ -220,61 +235,66 @@ const BusinessWorkers = () => {
         initial="hidden"
         animate="visible"
       >
-      
-      <div className="bg-white border border-slate-200 rounded-lg overflow-x-auto shadow-sm">
-        <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
-            <tr>
-              <th className="text-left px-6 py-4 text-slate-700 font-semibold">Name</th>
-              <th className="text-left px-6 py-4 text-slate-700 font-semibold">Job Title</th>
-              <th className="text-left px-6 py-4 text-slate-700 font-semibold">Visa Type</th>
-              <th className="text-left px-6 py-4 text-slate-700 font-semibold">COS</th>
-              <th className="text-left px-6 py-4 text-slate-700 font-semibold">Expiry Date</th>
-              <th className="text-left px-6 py-4 text-slate-700 font-semibold">Status</th>
-              <th className="text-right px-6 py-4 text-slate-700 font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {filteredWorkers.map((worker) => (
-              <tr key={worker.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4">
-                  <p className="text-slate-900 font-medium">{worker.name}</p>
-                  <p className="text-slate-600 text-sm">{worker.email}</p>
-                </td>
-                <td className="px-6 py-4 text-slate-900">{worker.job}</td>
-                <td className="px-6 py-4">
-                  <span className="bg-blue-100 text-blue-700 rounded text-sm font-semibold">
-                    {worker.visa}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-slate-700 font-mono text-sm">{worker.cos}</td>
-                <td className="px-6 py-4 text-slate-700">
-                  <div className="flex flex-col">
-                    <span>{worker.expiry}</span>
-                    <span className="text-slate-500 text-xs">Start: {worker.startDate}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(worker.status)}
-                    <span className={`px-3 py-1 rounded text-sm font-semibold border ${getStatusColor(worker.status)}`}>
-                      {worker.status}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex justify-end gap-2">
-                     <button className="flex items-center gap-2 bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 transition">
-                  <Eye size={16} />
-                  View
-                </button>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Name</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Job Title</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Department</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Visa Type</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">COS</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Expiry Date</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredWorkers.map((worker) => (
+                <tr key={worker.id} className="hover:bg-gray-50 transition">
+                  <td className="px-4 py-4">
+                    <p className="text-sm font-black text-secondary">{worker.name}</p>
+                    <p className="text-xs font-bold text-gray-600">{worker.email}</p>
+                  </td>
+                  <td className="px-4 py-4 text-sm font-bold text-gray-700">{worker.job}</td>
+                  <td className="px-4 py-4 text-sm font-bold text-gray-700">{worker.department}</td>
+                  <td className="px-4 py-4">
+                    <span className="inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full bg-primary/10 text-primary">
+                      {worker.visa}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 text-xs font-bold text-gray-600 font-mono">{worker.cos}</td>
+                  <td className="px-4 py-4">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-gray-700">{worker.expiry}</span>
+                      <span className="text-[10px] font-bold text-gray-500">Start: {worker.startDate}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(worker.status)}
+                      <span className={`inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full ${getStatusColor(worker.status)}`}>
+                        {worker.status}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => navigate("/business/Sponsorworkerdetails")}
+                        className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-white transition hover:bg-primary-dark"
+                        title="View details"
+                      >
+                        <Eye size={14} />
+                        View
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </motion.div>
 
       {/* Empty State */}
