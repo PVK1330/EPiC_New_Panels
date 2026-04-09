@@ -1,9 +1,12 @@
 import { Users, Filter, Search, Plus, MoreVertical, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 
 const BusinessWorkers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const navigate = useNavigate();
 
   const workers = [
     {
@@ -104,35 +107,32 @@ const BusinessWorkers = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
+      <motion.div
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Workers</h1>
           <p className="text-slate-600 mt-2">Manage sponsored workers and visa sponsorships</p>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md">
+        <button onClick={()=>navigate("/business/sponsored-workers")} className="flex items-center gap-2 bg-red-800  text-white px-4 py-2 rounded-lg transition-colors shadow-md">
           <Plus size={18} />
           Add Worker
         </button>
-      </div>
-
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
-          <p className="text-slate-600 text-sm mb-1">Total Workers</p>
-          <p className="text-2xl font-bold text-slate-900">{workers.length}</p>
-        </div>
-        <div className="bg-green-50 border border-green-300 rounded-lg p-4 shadow-sm">
-          <p className="text-slate-700 text-sm mb-1">Active Workers</p>
-          <p className="text-2xl font-bold text-green-600">{activeCount}</p>
-        </div>
-        <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 shadow-sm">
-          <p className="text-slate-700 text-sm mb-1">Attention Required</p>
-          <p className="text-2xl font-bold text-amber-600">{warningCount}</p>
-        </div>
-      </div>
+      </div>  
+      </motion.div>   
 
       {/* Search and Filter */}
       <div className="flex flex-col md:flex-row gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="flex-1 relative"
+        >
+
         <div className="flex-1 relative">
           <Search size={18} className="absolute left-3 top-3 text-slate-400" />
           <input
@@ -142,8 +142,11 @@ const BusinessWorkers = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white border border-slate-300 rounded-lg pl-10 pr-4 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
           />
+
         </div>
+        </motion.div>
         <div className="flex items-center gap-2">
+
           <Filter size={18} className="text-slate-400" />
           <select
             value={filterStatus}
@@ -159,6 +162,12 @@ const BusinessWorkers = () => {
       </div>
 
       {/* Workers Table */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+      
       <div className="bg-white border border-slate-200 rounded-lg overflow-x-auto shadow-sm">
         <table className="w-full">
           <thead className="border-b border-slate-200 bg-slate-50">
@@ -181,7 +190,7 @@ const BusinessWorkers = () => {
                 </td>
                 <td className="px-6 py-4 text-slate-900">{worker.job}</td>
                 <td className="px-6 py-4">
-                  <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm font-semibold">
+                  <span className="bg-blue-100 text-blue-700 rounded text-sm font-semibold">
                     {worker.visa}
                   </span>
                 </td>
@@ -203,10 +212,11 @@ const BusinessWorkers = () => {
                 <td className="px-6 py-4">
                   <div className="flex justify-end gap-2">
                     <button
-                      className="p-1 hover:bg-slate-200 rounded transition-colors text-slate-600 hover:text-blue-600"
+                      onClick={()=> navigate("/business/Sponsorworkerdetails")}
+                      className="p-2 w-20 bg-red-800 rounded-xl transition-colors text-white"
                       title="More options"
                     >
-                      <MoreVertical size={18} />
+                     View
                     </button>
                   </div>
                 </td>
@@ -215,6 +225,7 @@ const BusinessWorkers = () => {
           </tbody>
         </table>
       </div>
+      </motion.div>
 
       {/* Empty State */}
       {filteredWorkers.length === 0 && (

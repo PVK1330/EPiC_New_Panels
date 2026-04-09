@@ -13,6 +13,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 const LicenceStatus = () => {
+  
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } },

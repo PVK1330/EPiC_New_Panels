@@ -60,15 +60,22 @@ import BusinessLayout from "../layouts/BusinessLayout";
 
 // Business Pages
 import BusinessDashboard from "../pages/business/BusinessDashboard";
-import BusinessProfile from "../pages/business/BusinessProfile";
-import BusinessPersonnel from "../pages/business/BusinessPersonnel";
+import BussinessProfile from "../pages/business/BusinessProfile";
+import BusinessRegistration from "../pages/business/BusinessRegistration";
+import KeyPersonnel from "../pages/business/BusinessPersonnel";
 import LicenceStatus from "../pages/business/LicenceStatus";
-import CosPage from "../pages/business/CosPage";
-import BusinessWorkers from "../pages/business/BusinessWorkers";
+import BusinessAccount from "../pages/business/BusinessAccount";
 import BusinessDocuments from "../pages/business/BusinessDocuments";
+import LicenceProcess from "../pages/business/LicenceProcess";
+import SponsoredWorkerForm from "../pages/business/SponsoredWorkerForm";
+import BusinessCompliance from "../pages/business/BusinessCompliance";
+import CosRegistrationForm from "../pages/business/Cosregistration";
+import SponsorWorkerDetails from "../pages/business/SponsoredWorkerDetails";
+import CosAllocationpage from "../pages/business/CosPage"
 import BusinessMessages from "../pages/business/BusinessMessages";
 import BusinessNotifications from "../pages/business/BusinessNotifications";
-import BusinessAccount from "../pages/business/BusinessAccount";
+import BusinessPayment from "../pages/business/BusinessPayment";
+import BusinessWorkers from "../pages/business/BusinessWorkers";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { token, user } = useSelector((state) => state.auth);
@@ -286,16 +293,23 @@ const AppRoutes = () => {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<BusinessDashboard />} />
-        <Route path="profile" element={<BusinessProfile />} />
-        <Route path="personnel" element={<BusinessPersonnel />} />
+        <Route path="profile" element={<BussinessProfile />} />
+        <Route path="personnel" element={<KeyPersonnel />} />
         <Route path="licence" element={<LicenceStatus />} />
-        <Route path="cosallocation" element={<CosPage />} />
-        <Route path="workers" element={<BusinessWorkers />} />
-        <Route path="compliance" element={<BusinessDocuments />} />
-        <Route path="reports" element={<BusinessDocuments />} />
+        <Route path="Businessregistration" element={<BusinessRegistration></BusinessRegistration>}></Route>
+        <Route path="compliance" element={<BusinessCompliance />} />
+        <Route path="cosallocation" element={<CosAllocationpage />} />
+        <Route path="account" element={<BusinessAccount />} />
+        <Route path="sponsored-workers" element={<SponsoredWorkerForm />} />
+        <Route path="cosregistrationform" element={<CosRegistrationForm />} />
+        <Route path="Sponsorworkerdetails" element={<SponsorWorkerDetails />} />
+        <Route path="licenceprocess" element={<LicenceProcess />} />
+        <Route path="documents" element={<BusinessDocuments />} />
         <Route path="messages" element={<BusinessMessages />} />
         <Route path="notifications" element={<BusinessNotifications />} />
-        <Route path="settings" element={<BusinessAccount />} />
+        <Route path="payment" element={<BusinessPayment />} />
+        <Route path="workers" element={<BusinessWorkers />} />
+
       </Route>
 
       {/* Staff Routes (Placeholder) */}
