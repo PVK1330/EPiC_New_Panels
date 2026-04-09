@@ -44,7 +44,7 @@ const ModuleMatrixPanel = () => {
               <th className="px-3 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r border-gray-100">
                 Module
               </th>
-              {["Super Admin", "Admin", "Caseworker", "Client", "Sponsor", "Read", "Write", "Approve", "Delete"].map(
+              {[ "Admin", "Caseworker", "Client", "Sponsor", "Read", "Write", "Approve", "Delete"].map(
                 (h) => (
                   <th
                     key={h}
@@ -61,9 +61,6 @@ const ModuleMatrixPanel = () => {
               <tr key={row.module} className="hover:bg-gray-50/80">
                 <td className="px-3 py-3 font-bold text-secondary whitespace-nowrap sticky left-0 bg-white border-r border-gray-50 z-10">
                   {row.module}
-                </td>
-                <td className="px-2 py-3 text-center">
-                  <AccessCell level={row.superAdmin} />
                 </td>
                 <td className="px-2 py-3 text-center">
                   <AccessCell level={row.admin} />

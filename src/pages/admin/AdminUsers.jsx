@@ -12,7 +12,7 @@ const INITIAL_USERS = [
     initials: "SA",
     email: "sarah@visaflow.co.uk",
     phone: "+44 7700 900111",
-    role: "Super Admin",
+    role: "Admin",
     permissions: "Full Access",
     lastLogin: "Today, 09:14",
     status: "Active",
@@ -86,7 +86,6 @@ const AVATAR_COLORS = [
 ];
 
 const ROLE_OPTIONS = [
-  { value: "Super Admin", label: "Super Admin" },
   { value: "Admin",       label: "Admin"       },
   // { value: "Manager",     label: "Manager"     },
 ];

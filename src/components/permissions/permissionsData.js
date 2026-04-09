@@ -15,7 +15,6 @@ export const TABS = [
 export const MODULE_MATRIX_ROWS = [
   {
     module: "Dashboard",
-    superAdmin: "full",
     admin: "full",
     caseworker: "full",
     client: "limited",
@@ -27,7 +26,6 @@ export const MODULE_MATRIX_ROWS = [
   },
   {
     module: "Case Management",
-    superAdmin: "full",
     admin: "full",
     caseworker: "full",
     client: "none",
@@ -39,7 +37,6 @@ export const MODULE_MATRIX_ROWS = [
   },
   {
     module: "Finance",
-    superAdmin: "full",
     admin: "full",
     caseworker: "none",
     client: "none",
@@ -51,7 +48,6 @@ export const MODULE_MATRIX_ROWS = [
   },
   {
     module: "User Management",
-    superAdmin: "full",
     admin: "limited",
     caseworker: "none",
     client: "none",
@@ -63,7 +59,6 @@ export const MODULE_MATRIX_ROWS = [
   },
   {
     module: "Reports",
-    superAdmin: "full",
     admin: "full",
     caseworker: "limited",
     client: "none",
@@ -75,7 +70,6 @@ export const MODULE_MATRIX_ROWS = [
   },
   {
     module: "Documents",
-    superAdmin: "full",
     admin: "full",
     caseworker: "full",
     client: "limited",
@@ -87,7 +81,6 @@ export const MODULE_MATRIX_ROWS = [
   },
   {
     module: "Audit Logs",
-    superAdmin: "full",
     admin: "limited",
     caseworker: "none",
     client: "none",
@@ -99,7 +92,6 @@ export const MODULE_MATRIX_ROWS = [
   },
   {
     module: "Settings",
-    superAdmin: "full",
     admin: "none",
     caseworker: "none",
     client: "none",
@@ -118,7 +110,6 @@ export const ASSIGNMENT_USERS = [
 ];
 
 export const ASSIGNMENT_ROLES = [
-  { value: "Super Admin", label: "Super Admin" },
   { value: "Admin", label: "Admin" },
   { value: "Caseworker", label: "Caseworker" },
   { value: "Client", label: "Client" },
@@ -146,7 +137,6 @@ export const CASE_VISIBILITY_OPTIONS = [
 
 export const CREATE_ROLE_INHERIT_OPTIONS = [
   { value: "", label: "No inheritance (blank role)" },
-  { value: "super_admin", label: "Super Admin (full)" },
   { value: "admin", label: "Admin" },
   { value: "caseworker", label: "Caseworker" },
   { value: "client", label: "Client" },
