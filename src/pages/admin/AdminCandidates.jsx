@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { FiEye, FiEdit2, FiTrash2, FiSearch, FiPlus, FiDownload, FiX } from "react-icons/fi";
+import { FiEye, FiEdit2, FiTrash2, FiSearch, FiPlus, FiDownload, FiX, FiFolder } from "react-icons/fi";
 import { motion } from "framer-motion";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
@@ -230,6 +230,7 @@ const AdminCandidates = () => {
   const [modal, setModal]               = useState({ type: null, data: null });
   const [form, setForm]                 = useState(EMPTY_FORM);
   const [errors, setErrors]             = useState({});
+  const [detailTab, setDetailTab]       = useState("overview");
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -503,99 +504,226 @@ const AdminCandidates = () => {
       {/* ── View Modal ───────────────────────────────────────────────────────── */}
       <Modal
         open={modal.type === "view"}
-        onClose={closeModal}
-        title="Client Profile"
-        maxWidthClass="max-w-2xl"
-        bodyClassName="px-5 py-5 sm:px-6"
-        footer={<Button variant="ghost" onClick={closeModal} className="rounded-xl">Close</Button>}
+        onClose={() => { closeModal(); setDetailTab("overview"); }}
+        title={modal.data ? `Client ${modal.data.firstName} ${modal.data.lastName}` : ""}
+        maxWidthClass="max-w-4xl"
+        bodyClassName="p-0"
       >
         {modal.data && (() => {
           const c = modal.data;
-          const sections = [
-            {
-              label: "Personal Information",
-              rows: [
-                ["Full Name",       `${c.firstName} ${c.lastName}`],
-                ["Date of Birth",   c.dobDisplay],
-                ["Gender",          c.gender],
-                ["Nationality",     c.nationality],
-                ["Country of Birth",c.countryOfBirth],
-                ["Email",           c.email],
-                ["Phone",           c.phone],
-              ],
-            },
-            {
-              label: "Identity Documents",
-              rows: [
-                ["Passport Number",   c.passportNumber],
-                ["Passport Expiry",   fmtDate(c.passportExpiry)],
-                ["NI Number",         c.niNumber || "—"],
-                ["BRP Number",        c.brpNumber || "—"],
-              ],
-            },
-            {
-              label: "Immigration",
-              rows: [
-                ["Visa Type",     c.visaType],
-                ["Visa Expiry",   fmtDate(c.visaExpiry)],
-                ["Case Status",   c.caseStatus],
-                ["Right to Work", c.rightToWork],
-              ],
-            },
-            {
-              label: "Employment",
-              rows: [
-                ["Job Title",         c.jobTitle || "—"],
-                ["Linked Business",   c.linkedBusiness],
-                ["Start Date",        fmtDate(c.employmentStart)],
-              ],
-            },
-            {
-              label: "Payment",
-              rows: [
-                ["Payment Status", c.paymentStatus],
-                ["Fee Amount",     c.feeAmount || "—"],
-              ],
-            },
-            {
-              label: "Address",
-              rows: [
-                ["Street",   c.address || "—"],
-                ["City",     c.city],
-                ["Postcode", c.postcode],
-                ["Country",  c.country],
-              ],
-            },
-          ];
           return (
-            <div className="space-y-5">
-              <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white text-sm font-black shrink-0 ${c.avatarBg}`}>{c.initials}</div>
-                <div>
-                  <p className="text-base font-black text-secondary">{c.firstName} {c.lastName}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{c.email} · {c.phone}</p>
-                </div>
-                <div className="ml-auto flex flex-col items-end gap-1">
-                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${CASE_CHIPS[c.caseStatus] ?? "bg-gray-100 text-gray-500"}`}>{c.caseStatus}</span>
-                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${PAYMENT_CHIPS[c.paymentStatus] ?? "bg-gray-100 text-gray-500"}`}>{c.paymentStatus}</span>
-                </div>
-              </div>
-              {sections.map((s) => (
-                <div key={s.label}>
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-primary mb-2">{s.label}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {s.rows.map(([label, value]) => (
-                      <div key={label} className="bg-gray-50 rounded-xl px-3 py-2.5">
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">{label}</p>
-                        <p className="text-xs font-bold text-secondary mt-0.5">{value}</p>
-                      </div>
-                    ))}
+            <>
+              <div className="shrink-0 border-b border-gray-100 px-4 sm:px-6 py-4 bg-gray-50/80 flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-lg font-black text-gray-900">
+                    {c.firstName} {c.lastName}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-black ${CASE_CHIPS[c.caseStatus] ?? "bg-gray-100 text-gray-500"}`}>
+                      {c.caseStatus}
+                    </span>
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-black ${PAYMENT_CHIPS[c.paymentStatus] ?? "bg-gray-100 text-gray-500"}`}>
+                      {c.paymentStatus}
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          );
-        })()}
+                <button
+                  type="button"
+                  onClick={() => openEdit(c)}
+                  className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/5"
+                >
+                  Edit client
+                </button>
+              </div>
+
+              <div className="shrink-0 flex gap-0 overflow-x-auto border-b border-gray-100 bg-gray-50/50 px-2 no-scrollbar">
+                {[/* eslint-disable indent */
+                  { id: "overview", label: "Overview" },
+                  { id: "documents", label: "Documents" },
+                  { id: "immigration", label: "Immigration" },
+                  { id: "employment", label: "Employment" },
+                  { id: "address", label: "Address" },
+                  { id: "timeline", label: "Timeline" },
+                  { id: "communications", label: "Communication" },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setDetailTab(t.id)}
+                    className={`shrink-0 border-b-2 px-3 sm:px-4 py-3 text-xs font-black transition-colors whitespace-nowrap ${detailTab === t.id
+                        ? "border-secondary text-secondary"
+                        : "border-transparent text-gray-500 hover:text-gray-800"
+                      }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6">
+                {detailTab === "overview" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Personal Information</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Full Name</p>
+                            <p className="text-sm font-bold text-gray-900">{c.firstName} {c.lastName}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Date of Birth</p>
+                            <p className="text-sm font-bold text-gray-900">{c.dobDisplay}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Gender</p>
+                            <p className="text-sm font-bold text-gray-900">{c.gender}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Nationality</p>
+                            <p className="text-sm font-bold text-gray-900">{c.nationality}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Contact Information</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Email</p>
+                            <p className="text-sm font-bold text-gray-900">{c.email}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Phone</p>
+                            <p className="text-sm font-bold text-gray-900">{c.phone}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Address</p>
+                            <p className="text-sm font-bold text-gray-900">{c.address || "Not provided"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pb-4 border-b border-gray-100">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Passport Number</p>
+                        <p className="text-sm font-bold text-gray-900">{c.passportNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Passport Expiry</p>
+                        <p className="text-sm font-bold text-gray-900">{fmtDate(c.passportExpiry)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">NI Number</p>
+                        <p className="text-sm font-bold text-gray-900">{c.niNumber || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">BRP Number</p>
+                        <p className="text-sm font-bold text-gray-900">{c.brpNumber || "Not provided"}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Payment Status</p>
+                        <p className="text-sm font-bold text-gray-900">{c.paymentStatus}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Fee Amount</p>
+                        <p className="text-sm font-bold text-gray-900">{c.feeAmount || "Not specified"}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {detailTab === "documents" && (
+                  <div className="text-center py-8">
+                    <FiFolder size={48} className="text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No documents uploaded yet</p>
+                  </div>
+                )}
+
+                {detailTab === "immigration" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Visa Type</p>
+                        <p className="text-sm font-bold text-gray-900">{c.visaType}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Visa Expiry</p>
+                        <p className="text-sm font-bold text-gray-900">{fmtDate(c.visaExpiry)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Case Status</p>
+                        <p className="text-sm font-bold text-gray-900">{c.caseStatus}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Right to Work</p>
+                        <p className="text-sm font-bold text-gray-900">{c.rightToWork}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {detailTab === "employment" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Job Title</p>
+                        <p className="text-sm font-bold text-gray-900">{c.jobTitle || "Not specified"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Linked Business</p>
+                        <p className="text-sm font-bold text-gray-900">{c.linkedBusiness}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Employment Start</p>
+                        <p className="text-sm font-bold text-gray-900">{fmtDate(c.employmentStart)}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {detailTab === "address" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="md:col-span-2">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Street Address</p>
+                        <p className="text-sm font-bold text-gray-900">{c.address || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">City</p>
+                        <p className="text-sm font-bold text-gray-900">{c.city}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Postcode</p>
+                        <p className="text-sm font-bold text-gray-900">{c.postcode}</p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Country</p>
+                        <p className="text-sm font-bold text-gray-900">{c.country}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {detailTab === "timeline" && (
+                  <div className="text-center py-8">
+                    <FiFolder size={48} className="text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No timeline events recorded yet</p>
+                  </div>
+                )}
+
+                {detailTab === "communications" && (
+                  <div className="text-center py-8">
+                    <FiFolder size={48} className="text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No communications recorded yet</p>
+                  </div>
+                )}
+              </div>
+            </>);
+          })()}
       </Modal>
 
       {/* ── Delete Modal ─────────────────────────────────────────────────────── */}

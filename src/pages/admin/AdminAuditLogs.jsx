@@ -18,6 +18,8 @@ const stats = [
     bg: "bg-blue-100",
     color: "text-blue-600",
     Icon: FiClipboard,
+    filterKey: "status",
+    filterValue: "all",
   },
   {
     label: "Successful",
@@ -25,6 +27,8 @@ const stats = [
     bg: "bg-green-100",
     color: "text-green-600",
     Icon: FiCheckCircle,
+    filterKey: "status",
+    filterValue: "Success",
   },
   {
     label: "Failed",
@@ -32,6 +36,8 @@ const stats = [
     bg: "bg-red-100",
     color: "text-red-600",
     Icon: FiXCircle,
+    filterKey: "status",
+    filterValue: "Failed",
   },
   {
     label: "Today",
@@ -39,6 +45,8 @@ const stats = [
     bg: "bg-purple-100",
     color: "text-purple-600",
     Icon: FiClock,
+    filterKey: "dateRange",
+    filterValue: "last7",
   },
 ];
 
@@ -199,6 +207,10 @@ export default function AdminAuditLogs() {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleStatCardClick = (filterKey, filterValue) => {
+    setFilters((prev) => ({ ...prev, [filterKey]: filterValue }));
+  };
+
   const filteredLogs = useMemo(() => {
     return auditLogs.filter((row) => {
       if (!matchesAction(filters.actionType, row.action)) return false;
@@ -274,6 +286,44 @@ export default function AdminAuditLogs() {
             </Button>
           </div>
         </div>
+      </motion.div>
+
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {stats.map(({ label, value, bg, color, Icon, filterKey, filterValue }) => {
+          const isActive = filters[filterKey] === filterValue;
+          return (
+            <motion.div
+              key={label}
+              variants={cardVariants}
+              onClick={() => handleStatCardClick(filterKey, filterValue)}
+              className={`bg-white p-6 rounded-xl shadow-sm border flex items-center gap-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${
+                isActive 
+                  ? "border-primary ring-2 ring-primary/20" 
+                  : "border-gray-100 hover:border-gray-200"
+              }`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div className={`p-3 ${bg} rounded-lg shrink-0 transition-all duration-200 ${
+                isActive ? "ring-2 ring-white ring-offset-2" : ""
+              }`}>
+                <Icon className={`${color} h-6 w-6`} aria-hidden />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-600">{label}</p>
+                <p className="text-2xl font-black text-secondary">{value}</p>
+              </div>
+              {isActive && (
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+              )}
+            </motion.div>
+          );
+        })}
       </motion.div>
 
       <motion.div
@@ -498,28 +548,6 @@ export default function AdminAuditLogs() {
         </div>
       </motion.div>
 
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {stats.map(({ label, value, bg, color, Icon }) => (
-          <motion.div
-            key={label}
-            variants={cardVariants}
-            className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4"
-          >
-            <div className={`p-3 ${bg} rounded-lg shrink-0`}>
-              <Icon className={`${color} h-6 w-6`} aria-hidden />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">{label}</p>
-              <p className="text-2xl font-black text-secondary">{value}</p>
-            </div>
-          </motion.div>
-        ))}
-      </motion.div>
-    </div>
+          </div>
   );
 }

@@ -8,8 +8,6 @@ const STAT_CARDS = [
     key: "assigned",
     label: "Assigned cases",
     value: "24",
-    trend: "+3 since last week",
-    trendPositive: true,
     borderClass: "border-t-secondary",
     valueClass: "text-secondary",
   },
@@ -17,8 +15,6 @@ const STAT_CARDS = [
     key: "active",
     label: "Active cases",
     value: "18",
-    trend: "+2 new this week",
-    trendPositive: true,
     borderClass: "border-t-emerald-500",
     valueClass: "text-emerald-600",
   },
@@ -26,9 +22,6 @@ const STAT_CARDS = [
     key: "overdue",
     label: "Overdue cases",
     value: "4",
-    trend: "Requires immediate attention",
-    trendPositive: false,
-    trendWarn: true,
     borderClass: "border-t-red-500",
     valueClass: "text-red-600",
   },
@@ -36,8 +29,6 @@ const STAT_CARDS = [
     key: "tasksToday",
     label: "Tasks due today",
     value: "7",
-    trend: "3 completed so far",
-    trendPositive: null,
     borderClass: "border-t-amber-500",
     valueClass: "text-amber-600",
   },
@@ -45,8 +36,6 @@ const STAT_CARDS = [
     key: "completedMonth",
     label: "Completed (month)",
     value: "11",
-    trend: "+4 vs last month",
-    trendPositive: true,
     borderClass: "border-t-teal-500",
     valueClass: "text-teal-600",
   },
@@ -55,8 +44,6 @@ const STAT_CARDS = [
     label: "Performance score",
     value: "87",
     valueSuffix: "%",
-    trend: "+5% improvement",
-    trendPositive: true,
     borderClass: "border-t-indigo-500",
     valueClass: "text-indigo-600",
   },
@@ -238,26 +225,7 @@ const CaseworkerDashboard = () => {
                 </span>
               ) : null}
             </p>
-            <p
-              className={`text-xs font-bold mt-2 ${s.trendWarn
-                ? "text-red-600"
-                : s.trendPositive === false
-                  ? "text-red-600"
-                  : "text-gray-600"
-                }`}
-            >
-              {s.trendPositive === true ? (
-                <>
-                  <span className="text-emerald-600 font-black">
-                    {s.trend.split(/\s+/).slice(0, 1).join(" ")}
-                  </span>{" "}
-                  {s.trend.split(/\s+/).slice(1).join(" ")}
-                </>
-              ) : (
-                s.trend
-              )}
-            </p>
-          </div>
+                      </div>
         ))}
       </div>
 

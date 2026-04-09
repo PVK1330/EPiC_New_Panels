@@ -28,6 +28,7 @@ import Cases from "../pages/caseworker/Cases";
 import MyAccount from "../pages/caseworker/MyAccount";
 import RescheduleForm from "../pages/caseworker/RescheduleForm";
 import CaseworkerPlaceholderPage from "../pages/caseworker/CaseworkerPlaceholderPage";
+import Calendar from "../pages/caseworker/Calendar";
 import Pipeline from "../pages/caseworker/Pipeline";
 import Tasks from "../pages/caseworker/Tasks";
 import CaseworkerDocuments from "../pages/caseworker/CaseworkerDocuments";
@@ -252,7 +253,7 @@ const AppRoutes = () => {
         <Route path="tasks" element={<Tasks />} />
         <Route
           path="calendar"
-          element={<CaseworkerPlaceholderPage title="Calendar" />}
+          element={<Calendar />}
         />
         <Route path="documents/upload" element={<CaseworkerDocuments />} />
         <Route path="documents/missing" element={<CaseworkerDocuments />} />

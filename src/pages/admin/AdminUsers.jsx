@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { FiEdit2, FiTrash2, FiSearch, FiPlus, FiDownload } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiSearch, FiPlus, FiDownload, FiEye } from "react-icons/fi";
 import { motion } from "framer-motion";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
@@ -48,7 +48,7 @@ const INITIAL_USERS = [
     initials: "DO",
     email: "d.osei@visaflow.co.uk",
     phone: "+44 7700 900444",
-    role: "Manager",
+    role: "Admin",
     permissions: "Cases + Finance",
     lastLogin: "2 hours ago",
     status: "Active",
@@ -71,7 +71,7 @@ const INITIAL_USERS = [
 const ROLE_CHIPS = {
   "Super Admin": "bg-purple-100 text-purple-700",
   Admin:         "bg-blue-100 text-blue-700",
-  Manager:       "bg-green-100 text-green-700",
+  // Manager:       "bg-green-100 text-green-700",
 };
 
 const STATUS_CHIPS = {
@@ -88,7 +88,7 @@ const AVATAR_COLORS = [
 const ROLE_OPTIONS = [
   { value: "Super Admin", label: "Super Admin" },
   { value: "Admin",       label: "Admin"       },
-  { value: "Manager",     label: "Manager"     },
+  // { value: "Manager",     label: "Manager"     },
 ];
 
 const PERMISSIONS_OPTIONS = [
@@ -144,6 +144,8 @@ const AdminUsers = () => {
     setErrors({});
     setModal({ type: "edit", data: user });
   };
+
+  const openView = (user) => setModal({ type: "view", data: user });
 
   const openDelete = (user) => setModal({ type: "delete", data: user });
 
@@ -263,7 +265,7 @@ const AdminUsers = () => {
               <option value="All">All Roles</option>
               <option value="Super Admin">Super Admin</option>
               <option value="Admin">Admin</option>
-              <option value="Manager">Manager</option>
+              {/* <option value="Manager">Manager</option> */}
             </select>
             <select
               value={statusFilter}
@@ -341,6 +343,13 @@ const AdminUsers = () => {
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openView(user)}
+                          className="p-2 text-gray-400 hover:text-secondary hover:bg-blue-50 rounded-lg transition-colors"
+                          title="View user"
+                        >
+                          <FiEye size={14} />
+                        </button>
                         <button
                           onClick={() => openEdit(user)}
                           className="p-2 text-gray-400 hover:text-secondary hover:bg-blue-50 rounded-lg transition-colors"
@@ -468,6 +477,68 @@ const AdminUsers = () => {
             required={modal.type === "create"}
             error={errors.confirmPassword}
           />
+        </div>
+      </Modal>
+
+      {/* ── View Modal ─────────────────────────────────────────────────────── */}
+      <Modal
+        open={modal.type === "view"}
+        onClose={closeModal}
+        title="View Admin User"
+        maxWidthClass="max-w-md"
+        bodyClassName="px-5 py-5 sm:px-6"
+        footer={
+          <Button variant="ghost" onClick={closeModal} className="rounded-xl">
+            Close
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 pb-4 border-b border-gray-100">
+            <div
+              className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-black shrink-0 ${modal.data?.avatarBg}`}
+            >
+              {modal.data?.initials}
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-gray-900">{modal.data?.name}</h3>
+              <p className="text-sm text-gray-500">{modal.data?.email}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">Phone</p>
+              <p className="text-sm font-semibold text-gray-800">{modal.data?.phone}</p>
+            </div>
+            <div>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">Role</p>
+              <span
+                className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${
+                  ROLE_CHIPS[modal.data?.role] ?? "bg-gray-100 text-gray-500"
+                }`}
+              >
+                {modal.data?.role}
+              </span>
+            </div>
+            <div>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">Permissions</p>
+              <p className="text-sm font-semibold text-gray-800">{modal.data?.permissions}</p>
+            </div>
+            <div>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">Status</p>
+              <span
+                className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${
+                  STATUS_CHIPS[modal.data?.status] ?? "bg-gray-100 text-gray-500"
+                }`}
+              >
+                {modal.data?.status}
+              </span>
+            </div>
+          </div>
+          <div className="pt-2">
+            <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">Last Active</p>
+            <p className="text-sm font-semibold text-gray-800">{modal.data?.lastLogin}</p>
+          </div>
         </div>
       </Modal>
 

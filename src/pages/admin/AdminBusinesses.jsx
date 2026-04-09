@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { FiEye, FiEdit2, FiTrash2, FiSearch, FiPlus, FiDownload } from "react-icons/fi";
+import { FiEye, FiEdit2, FiTrash2, FiSearch, FiPlus, FiDownload, FiX, FiFolder } from "react-icons/fi";
 import { motion } from "framer-motion";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
@@ -130,6 +130,13 @@ const LICENCE_CHIPS = {
   Revoked:   "bg-red-100 text-red-600",
 };
 
+const RISK_CHIPS = {
+  Low:    "bg-green-100 text-green-700",
+  Medium: "bg-yellow-100 text-yellow-700",
+  High:   "bg-orange-100 text-orange-600",
+  Critical: "bg-red-100 text-red-600",
+};
+
 const RISK_BAR = {
   Low:    "bg-green-500",
   Medium: "bg-yellow-500",
@@ -209,6 +216,7 @@ const AdminBusinesses = () => {
   const [modal, setModal]               = useState({ type: null, data: null });
   const [form, setForm]                 = useState(EMPTY_FORM);
   const [errors, setErrors]             = useState({});
+  const [detailTab, setDetailTab]       = useState("overview");
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -523,77 +531,190 @@ const AdminBusinesses = () => {
 
       <Modal
         open={modal.type === "view"}
-        onClose={closeModal}
-        title="Sponsor Profile"
-        maxWidthClass="max-w-2xl"
-        bodyClassName="px-5 py-5 sm:px-6"
-        footer={<Button variant="ghost" onClick={closeModal} className="rounded-xl">Close</Button>}
+        onClose={() => { closeModal(); setDetailTab("overview"); }}
+        title={modal.data ? `Sponsor ${modal.data.companyName}` : ""}
+        maxWidthClass="max-w-4xl"
+        bodyClassName="p-0"
       >
         {modal.data && (() => {
           const b = modal.data;
-          const sections = [
-            { label: "Company", rows: [
-              ["Legal Name", b.companyName],
-              ["Trading Name", b.tradingName || "—"],
-              ["Companies House", b.companiesHouseNumber || "—"],
-              ["Sector", b.sector],
-            ]},
-            { label: "Sponsor Licence", rows: [
-              ["Licence Number", b.sponsorLicenceNumber],
-              ["Status", b.licenceStatus],
-              ["Expiry", b.licenceExpiryDisplay],
-            ]},
-            { label: "Address", rows: [
-              ["Street", b.address || "—"],
-              ["City", b.city],
-              ["Postcode", b.postcode],
-              ["Country", b.country],
-            ]},
-            { label: "Contact", rows: [
-              ["Name", b.contactName || "—"],
-              ["Email", b.contactEmail],
-              ["Phone", b.contactPhone],
-            ]},
-            { label: "Metrics", rows: [
-              ["Annual CoS Allocation", String(b.annualCosAllocation)],
-              ["Active Cases", String(b.activeCases)],
-              ["Sponsored Workers", String(b.sponsoredWorkers)],
-              ["Risk", `${b.riskLevel} (${b.riskPct}%)`],
-              ["Outstanding", b.outstanding],
-            ]},
-          ];
           return (
-            <div className="space-y-5">
-              <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white text-sm font-black shrink-0 ${b.avatarBg}`}>{b.initials}</div>
-                <div>
-                  <p className="text-base font-black text-secondary">{b.companyName}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{b.tradingName}</p>
-                </div>
-                <div className="ml-auto">
-                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${LICENCE_CHIPS[b.licenceStatus] ?? "bg-gray-100 text-gray-500"}`}>{b.licenceStatus}</span>
-                </div>
-              </div>
-              {sections.map((s) => (
-                <div key={s.label}>
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-primary mb-2">{s.label}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {s.rows.map(([label, value]) => (
-                      <div key={label} className="bg-gray-50 rounded-xl px-3 py-2.5">
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">{label}</p>
-                        <p className="text-xs font-bold text-secondary mt-0.5">{value}</p>
-                      </div>
-                    ))}
+            <>
+              <div className="shrink-0 border-b border-gray-100 px-4 sm:px-6 py-4 bg-gray-50/80 flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-lg font-black text-gray-900">
+                    {b.companyName}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-black ${LICENCE_CHIPS[b.licenceStatus] ?? "bg-gray-100 text-gray-500"}`}>
+                      {b.licenceStatus}
+                    </span>
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-black ${RISK_CHIPS[b.riskLevel] ?? "bg-gray-100 text-gray-500"}`}>
+                      {b.riskLevel} Risk
+                    </span>
                   </div>
                 </div>
-              ))}
-              {b.notes && (
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-primary mb-2">Notes</p>
-                  <p className="text-sm text-gray-600 bg-gray-50 rounded-xl px-3 py-2.5">{b.notes}</p>
-                </div>
-              )}
-            </div>
+                <button
+                  type="button"
+                  onClick={() => openEdit(b)}
+                  className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/5"
+                >
+                  Edit sponsor
+                </button>
+              </div>
+
+              <div className="shrink-0 flex gap-0 overflow-x-auto border-b border-gray-100 bg-gray-50/50 px-2 no-scrollbar">
+                {[
+                  { id: "overview", label: "Overview" },
+                  { id: "licence", label: "Sponsor Licence" },
+                  { id: "contact", label: "Contact" },
+                  { id: "metrics", label: "Metrics" },
+                  { id: "documents", label: "Documents" },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setDetailTab(t.id)}
+                    className={`shrink-0 border-b-2 px-3 sm:px-4 py-3 text-xs font-black transition-colors whitespace-nowrap ${detailTab === t.id
+                        ? "border-secondary text-secondary"
+                        : "border-transparent text-gray-500 hover:text-gray-800"
+                      }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6">
+                {detailTab === "overview" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Company Information</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Legal Name</p>
+                            <p className="text-sm font-bold text-gray-900">{b.companyName}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Trading Name</p>
+                            <p className="text-sm font-bold text-gray-900">{b.tradingName || "Not provided"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Companies House Number</p>
+                            <p className="text-sm font-bold text-gray-900">{b.companiesHouseNumber || "Not provided"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Sector</p>
+                            <p className="text-sm font-bold text-gray-900">{b.sector}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Address Information</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Street Address</p>
+                            <p className="text-sm font-bold text-gray-900">{b.address || "Not provided"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">City</p>
+                            <p className="text-sm font-bold text-gray-900">{b.city}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Postcode</p>
+                            <p className="text-sm font-bold text-gray-900">{b.postcode}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Country</p>
+                            <p className="text-sm font-bold text-gray-900">{b.country}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {b.notes && (
+                      <div>
+                        <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Notes</h4>
+                        <p className="text-sm text-gray-600 bg-gray-50 rounded-xl px-4 py-3">{b.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {detailTab === "licence" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Licence Number</p>
+                        <p className="text-sm font-bold text-gray-900">{b.sponsorLicenceNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Status</p>
+                        <p className="text-sm font-bold text-gray-900">{b.licenceStatus}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Expiry Date</p>
+                        <p className="text-sm font-bold text-gray-900">{b.licenceExpiryDisplay}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Annual CoS Allocation</p>
+                        <p className="text-sm font-bold text-gray-900">{b.annualCosAllocation}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {detailTab === "contact" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Contact Name</p>
+                        <p className="text-sm font-bold text-gray-900">{b.contactName || "Not provided"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Email</p>
+                        <p className="text-sm font-bold text-gray-900">{b.contactEmail}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Phone</p>
+                        <p className="text-sm font-bold text-gray-900">{b.contactPhone}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {detailTab === "metrics" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Active Cases</p>
+                        <p className="text-sm font-bold text-gray-900">{b.activeCases}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Sponsored Workers</p>
+                        <p className="text-sm font-bold text-gray-900">{b.sponsoredWorkers}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Risk Level</p>
+                        <p className="text-sm font-bold text-gray-900">{b.riskLevel} ({b.riskPct}%)</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Outstanding Balance</p>
+                        <p className="text-sm font-bold text-gray-900">{b.outstanding}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {detailTab === "documents" && (
+                  <div className="text-center py-8">
+                    <FiFolder size={48} className="text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No documents uploaded yet</p>
+                  </div>
+                )}
+              </div>
+            </>
           );
         })()}
       </Modal>

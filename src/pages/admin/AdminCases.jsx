@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { INITIAL_CASES } from "../../data/casesData";
 import {
   Briefcase,
   X,
@@ -46,56 +48,6 @@ const stats = [
   },
 ];
 
-const initialCases = [
-  {
-    caseId: "#CAS-001",
-    candidate: "John Smith",
-    business: "Tech Solutions Ltd",
-    visaType: "H-1B",
-    status: "Approved",
-    submitted: "2024-01-15",
-    priority: "high",
-    caseworker: "Emily Davis",
-    totalAmount: 5000,
-    paidAmount: 5000,
-    notes: "All documents submitted.",
-    candidateId: "C-1001",
-    businessId: "B-2001",
-    caseworkerId: "CW-301",
-    targetSubmissionDate: "2024-02-01",
-    nationality: "American",
-    jobTitle: "Software Engineer",
-    department: "Engineering",
-    salaryOffered: 120000,
-    petitionType: "New",
-    lcaNumber: "I-200-24001",
-    receiptNumber: "EAC2401234567",
-  },
-  {
-    caseId: "#CAS-002",
-    candidate: "Sarah Johnson",
-    business: "Global Tech Inc",
-    visaType: "L-1A",
-    status: "Pending",
-    submitted: "2024-01-18",
-    priority: "medium",
-    caseworker: "Mark Lee",
-    totalAmount: 4500,
-    paidAmount: 2000,
-    notes: "Awaiting additional docs.",
-    candidateId: "C-1002",
-    businessId: "B-2002",
-    caseworkerId: "CW-302",
-    targetSubmissionDate: "2024-02-15",
-    nationality: "Canadian",
-    jobTitle: "Product Manager",
-    department: "Product",
-    salaryOffered: 135000,
-    petitionType: "Extension",
-    lcaNumber: "I-200-24002",
-    receiptNumber: "",
-  },
-];
 
 const visaTypes = [
   "H-1B",
@@ -178,83 +130,6 @@ const cardVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 };
-
-function ViewModal({ case: c, onClose }) {
-  if (!c) return null;
-  const rows = [
-    ["Case ID", c.caseId],
-    ["Status", c.status],
-    ["Visa Type", c.visaType],
-    ["Petition Type", c.petitionType],
-    ["Priority", c.priority],
-    ["Submitted", c.submitted],
-    ["Target Submission", c.targetSubmissionDate],
-    ["LCA Number", c.lcaNumber],
-    ["Receipt Number", c.receiptNumber || "—"],
-    ["Candidate", c.candidate],
-    ["Candidate ID", c.candidateId],
-    ["Nationality", c.nationality],
-    ["Job Title", c.jobTitle],
-    ["Department", c.department],
-    ["Business", c.business],
-    ["Business ID", c.businessId],
-    ["Caseworker", c.caseworker],
-    ["Caseworker ID", c.caseworkerId],
-    ["Salary Offered", `$${c.salaryOffered?.toLocaleString()}`],
-    ["Total Amount", `$${c.totalAmount?.toLocaleString()}`],
-    ["Paid Amount", `$${c.paidAmount?.toLocaleString()}`],
-    [
-      "Balance",
-      `$${((c.totalAmount || 0) - (c.paidAmount || 0)).toLocaleString()}`,
-    ],
-    ["Notes", c.notes],
-  ];
-  return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <motion.div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <motion.div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ duration: 0.25 }}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div>
-            <h3 className="text-lg font-black text-secondary">Case Details</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {c.caseId} — {c.candidate}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <div className="p-6 grid grid-cols-2 gap-x-8 gap-y-4">
-          {rows.map(([label, val]) => (
-            <div key={label} className={label === "Notes" ? "col-span-2" : ""}>
-              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-0.5">
-                {label}
-              </p>
-              <p className="text-sm text-gray-800 font-medium">{val || "—"}</p>
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-end px-6 py-4 border-t border-gray-100">
-          <Button onClick={onClose}>Close</Button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
 
 function CaseFormModal({
   title,
@@ -549,10 +424,10 @@ function CaseFormModal({
 }
 
 export default function AdminCases() {
-  const [cases, setCases] = useState(initialCases);
+  const navigate = useNavigate();
+  const [cases, setCases] = useState(INITIAL_CASES);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [viewOpen, setViewOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [selectedCase, setSelectedCase] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -688,11 +563,6 @@ export default function AdminCases() {
     setDeleteId(null);
   };
 
-  const openView = (c) => {
-    setSelectedCase(c);
-    setViewOpen(true);
-  };
-
   return (
     <div className="space-y-8 pb-10">
       <motion.div
@@ -814,7 +684,7 @@ export default function AdminCases() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => openView(c)}
+                        onClick={() => navigate(`/admin/case-detail/${c.caseId.replace(/^#/, '')}`)}
                         className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
                         title="View"
                       >
@@ -842,18 +712,6 @@ export default function AdminCases() {
           </table>
         </div>
       </motion.div>
-
-      <AnimatePresence>
-        {viewOpen && (
-          <ViewModal
-            case={selectedCase}
-            onClose={() => {
-              setViewOpen(false);
-              setSelectedCase(null);
-            }}
-          />
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {addOpen && (
