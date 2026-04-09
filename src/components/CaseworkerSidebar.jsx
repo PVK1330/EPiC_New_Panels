@@ -145,7 +145,7 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
               <LogOut size={18} />
             </button>
           </div>
-          <div className="mt-4 px-4 flex items-center justify-between">
+          {/* <div className="mt-4 px-4 flex items-center justify-between">
             <button
               type="button"
               className="text-[10px] font-black text-gray-600 uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-1.5"
@@ -154,7 +154,7 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
               Support
             </button>
             <span className="text-[10px] font-bold text-gray-500">v1.0.2</span>
-          </div>
+          </div> */}
         </div>
       </aside>
     </>

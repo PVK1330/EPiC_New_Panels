@@ -49,8 +49,8 @@ const MessagePanel = ({
         embedded
           ? "min-h-0"
           : fullBleed
-            ? "flex flex-col gap-0 pb-4 -mx-4 md:-mx-8 px-4 md:px-8 min-h-0 animate-in fade-in duration-500"
-            : "flex flex-col gap-0 pb-4 min-h-0 animate-in fade-in duration-500"
+            ? "flex flex-col gap-0 h-screen overflow-hidden -mx-4 md:-mx-8 px-4 md:px-8 animate-in fade-in duration-500"
+            : "flex flex-col gap-0 h-screen overflow-hidden animate-in fade-in duration-500"
       }
     >
       {!embedded && (
@@ -66,12 +66,12 @@ const MessagePanel = ({
 
       <div
         className={`${embedded
-            ? "rounded-b-xl rounded-tr-xl border border-gray-200 bg-white overflow-hidden flex flex-col lg:grid lg:grid-cols-[minmax(260px,300px)_1fr] min-h-[520px] lg:min-h-[calc(100vh-14rem)] max-h-[calc(100vh-10rem)] border-t-0"
-            : "rounded-xl border border-gray-200 bg-white overflow-hidden flex flex-col lg:grid lg:grid-cols-[minmax(260px,300px)_1fr] min-h-[520px] lg:min-h-[calc(100vh-14rem)] max-h-[calc(100vh-10rem)]"
+            ? "rounded-b-xl rounded-tr-xl border border-gray-200 bg-white overflow-hidden flex flex-col lg:grid lg:grid-cols-[minmax(260px,300px)_1fr] h-full border-t-0"
+            : "rounded-xl border border-gray-200 bg-white overflow-hidden flex flex-col lg:grid lg:grid-cols-[minmax(260px,300px)_1fr] flex-1"
           }`}
       >
         {/* Thread list */}
-        <aside className="border-b lg:border-b-0 lg:border-r border-gray-200 bg-gray-50/80 flex flex-col max-h-[40vh] lg:max-h-none min-h-0">
+        <aside className="border-b lg:border-b-0 lg:border-r border-gray-200 bg-gray-50/80 flex flex-col h-full overflow-hidden">
           <div className="p-3 border-b border-gray-100 shrink-0">
             <div className="relative">
               <Search
@@ -88,7 +88,7 @@ const MessagePanel = ({
             </div>
           </div>
 
-          <div className="overflow-y-auto flex-1 min-h-0">
+          <div className="overflow-y-auto flex-1 min-h-0 custom-scrollbar">
             {threads.map((t) => (
               <button
                 key={t.id}
@@ -130,7 +130,7 @@ const MessagePanel = ({
         </aside>
 
         {/* Chat */}
-        <section className="flex flex-col min-h-[280px] lg:min-h-0 bg-white min-w-0">
+        <section className="flex flex-col h-full bg-white min-w-0 overflow-hidden">
           {activeMeta ? (
             <>
               <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 bg-gray-50/90 shrink-0">
@@ -159,7 +159,7 @@ const MessagePanel = ({
 
               <div
                 ref={messagesScrollRef}
-                className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0 overscroll-contain"
+                className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0 overscroll-contain custom-scrollbar scroll-smooth"
               >
                 {messages.map((msg) => (
                   <div
@@ -203,31 +203,33 @@ const MessagePanel = ({
                 <div className="flex gap-2 items-end">
                   <button
                     type="button"
-                    className="shrink-0 rounded-lg border border-gray-200 bg-white p-2.5 text-gray-500 hover:text-secondary hover:border-secondary/30 transition-colors"
+                    className="shrink-0 rounded-full border border-gray-200 bg-white p-2.5 text-gray-500 hover:text-secondary hover:border-secondary/30 transition-colors"
                     title="Attach document"
                   >
                     <Paperclip size={18} />
                   </button>
-                  <textarea
-                    value={draft}
-                    onChange={(e) => onDraftChange?.(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        onSend?.();
-                      }
-                    }}
-                    placeholder={placeholder}
-                    rows={2}
-                    className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none resize-none max-h-24"
-                  />
+                  <div className="flex-1 relative">
+                    <textarea
+                      value={draft}
+                      onChange={(e) => onDraftChange?.(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          onSend?.();
+                        }
+                      }}
+                      placeholder={placeholder}
+                      rows={1}
+                      className="w-full rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none resize-none max-h-32 overflow-y-auto custom-scrollbar"
+                      style={{ minHeight: '44px' }}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={onSend}
-                    className="shrink-0 rounded-xl bg-primary px-4 py-2.5 text-sm font-black text-white hover:bg-primary-dark shadow-md shadow-primary/20 flex items-center gap-1"
+                    className="shrink-0 rounded-full bg-primary p-3 text-white hover:bg-primary-dark shadow-md shadow-primary/20 transition-colors"
                   >
-                    <Send size={16} />
-                    Send
+                    <Send size={18} />
                   </button>
                 </div>
               </div>

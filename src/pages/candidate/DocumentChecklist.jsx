@@ -347,13 +347,14 @@ const DocumentChecklist = () => {
                         </button>
                       )}
                       {doc.status === "required" && (
-                        <Link
-                          to="/candidate/upload-documents"
-                          className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-black text-primary hover:bg-primary hover:text-white transition-colors"
+                        <button
+                          type="button"
+                          onClick={() => setViewDoc(doc)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600 hover:border-secondary hover:bg-secondary/5 hover:text-secondary"
                         >
-                          <Upload size={14} />
-                          Upload
-                        </Link>
+                         <Eye size={14} />
+                           View document
+                       </button>
                       )}
                       {doc.status === "rejected" && (
                         <Link

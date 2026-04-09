@@ -478,7 +478,7 @@ const CandidateAccount = () => {
               </div>
             </div>
 
-            <div className="rounded-[1.25rem] border border-gray-100 bg-white p-6 shadow-sm">
+            {/* <div className="rounded-[1.25rem] border border-gray-100 bg-white p-6 shadow-sm">
               <h2 className="text-sm font-black text-gray-900 border-b border-gray-100 pb-3 mb-2 flex items-center gap-2">
                 <span aria-hidden>🔔</span> Notification preferences
               </h2>
@@ -539,7 +539,7 @@ const CandidateAccount = () => {
                   </button>
                 </div>
               ))}
-            </div>
+            </div> */}
 
             <div className="rounded-[1.25rem] border border-gray-100 bg-white p-6 shadow-sm">
               <h2 className="text-sm font-black text-gray-900 border-b border-gray-100 pb-3 mb-4 flex items-center gap-2">

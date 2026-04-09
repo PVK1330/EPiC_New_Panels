@@ -15,6 +15,7 @@ import CaseDetailCommunication from "../../components/caseDetail/CaseDetailCommu
 import CaseDetailNotes from "../../components/caseDetail/CaseDetailNotes";
 import CaseDetailAuditLog from "../../components/caseDetail/CaseDetailAuditLog";
 import { CASE_DETAIL_TABS, TAB_IDS, DEFAULT_CASE_DETAIL } from "../../components/caseDetail/caseDetailData";
+import { getCaseById } from "../../data/casesData";
 
 const AdminCaseDetail = () => {
   const { caseId } = useParams();
@@ -25,6 +26,66 @@ const AdminCaseDetail = () => {
 
   const data = useMemo(() => {
     const id = caseId || DEFAULT_CASE_DETAIL.caseId;
+    const foundCase = getCaseById(id.replace(/^#/, ""));
+    
+    if (foundCase) {
+      return {
+        ...DEFAULT_CASE_DETAIL,
+        caseId: foundCase.caseId,
+        candidateName: foundCase.candidate,
+        statusChip: foundCase.status,
+        visaChip: foundCase.visaType,
+        subtitle: `${foundCase.business} · Assigned to ${foundCase.caseworker} · Target: ${foundCase.targetSubmissionDate}`,
+        candidate: {
+          fullName: foundCase.candidate,
+          dob: "N/A",
+          nationality: foundCase.nationality,
+          passport: "N/A",
+          email: "N/A",
+          phone: "N/A",
+        },
+        sponsor: {
+          company: foundCase.business,
+          licenceNo: foundCase.businessId,
+          licenceStatus: "Active",
+          licenceExpiry: "N/A",
+          contact: "N/A",
+          caseworker: foundCase.caseworker,
+        },
+        case: {
+          visaType: foundCase.visaType,
+          caseStatus: foundCase.status,
+          dateOpened: foundCase.submitted,
+          targetDate: foundCase.targetSubmissionDate,
+          visaExpiry: "N/A",
+          paymentStatus: foundCase.paidAmount >= foundCase.totalAmount ? "Fully Paid" : "Partially Paid",
+        },
+        progress: {
+          pct: foundCase.paidAmount >= foundCase.totalAmount ? 100 : Math.round((foundCase.paidAmount / foundCase.totalAmount) * 100),
+          documents: "N/A",
+          tasks: "N/A",
+          payment: `$${foundCase.paidAmount.toLocaleString()} paid`,
+          daysLeft: "N/A",
+        },
+        documents: [],
+        tasks: [],
+        payments: {
+          total: `$${foundCase.totalAmount.toLocaleString()}`,
+          paid: `$${foundCase.paidAmount.toLocaleString()}`,
+          balance: `$${(foundCase.totalAmount - foundCase.paidAmount).toLocaleString()}`,
+          history: [],
+          invoiceId: "N/A",
+        },
+        timeline: [],
+        threads: [],
+        messages: [],
+        internalNotes: [
+          { author: foundCase.caseworker, date: foundCase.submitted, body: foundCase.notes || "No notes" },
+        ],
+        audit: [],
+      };
+    }
+    
     return {
       ...DEFAULT_CASE_DETAIL,
       caseId: id.replace(/^#/, ""),

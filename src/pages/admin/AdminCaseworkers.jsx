@@ -1,9 +1,17 @@
 import { useState, useMemo } from "react";
-import { FiEdit2, FiTrash2, FiSearch, FiPlus, FiBarChart2 } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiSearch, FiPlus, FiBarChart2, FiEye, FiUserPlus } from "react-icons/fi";
 import { motion } from "framer-motion";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
+
+const MOCK_CASES = [
+  { id: "CAS-001", caseId: "#CAS-001", candidate: "John Smith", business: "Tech Solutions Ltd", visaType: "H-1B", status: "In Progress", priority: "High", submitted: "2024-01-15", deadline: "2024-02-15" },
+  { id: "CAS-002", caseId: "#CAS-002", candidate: "Sarah Johnson", business: "Global Tech Inc", visaType: "L-1A", status: "Pending Review", priority: "Medium", submitted: "2024-01-18", deadline: "2024-02-20" },
+  { id: "CAS-003", caseId: "#CAS-003", candidate: "Li Wei", business: "Innovation Labs", visaType: "O-1", status: "Approved", priority: "Low", submitted: "2024-01-10", deadline: "2024-02-10" },
+  { id: "CAS-004", caseId: "#CAS-004", candidate: "Amara Diallo", business: "StartUp Co", visaType: "E-2", status: "Document Request", priority: "High", submitted: "2024-01-20", deadline: "2024-02-25" },
+  { id: "CAS-005", caseId: "#CAS-005", candidate: "Sofia Rossi", business: "Enterprise Corp", visaType: "TN", status: "Submitted", priority: "Medium", submitted: "2024-01-22", deadline: "2024-03-01" },
+];
 
 const INITIAL_CASEWORKERS = [
   {
@@ -20,6 +28,7 @@ const INITIAL_CASEWORKERS = [
     performance: 91,
     status: "Active",
     avatarBg: "bg-blue-500",
+    assignedCases: [MOCK_CASES[0], MOCK_CASES[1], MOCK_CASES[2]],
   },
   {
     id: 2,
@@ -35,6 +44,7 @@ const INITIAL_CASEWORKERS = [
     performance: 74,
     status: "Active",
     avatarBg: "bg-green-500",
+    assignedCases: [MOCK_CASES[1], MOCK_CASES[3]],
   },
   {
     id: 3,
@@ -50,6 +60,7 @@ const INITIAL_CASEWORKERS = [
     performance: 58,
     status: "High Load",
     avatarBg: "bg-purple-500",
+    assignedCases: [MOCK_CASES[2], MOCK_CASES[4], MOCK_CASES[0]],
   },
   {
     id: 4,
@@ -65,6 +76,7 @@ const INITIAL_CASEWORKERS = [
     performance: 79,
     status: "Active",
     avatarBg: "bg-yellow-500",
+    assignedCases: [MOCK_CASES[3], MOCK_CASES[1]],
   },
   {
     id: 5,
@@ -80,6 +92,7 @@ const INITIAL_CASEWORKERS = [
     performance: 88,
     status: "Active",
     avatarBg: "bg-pink-500",
+    assignedCases: [MOCK_CASES[4]],
   },
   {
     id: 6,
@@ -95,6 +108,7 @@ const INITIAL_CASEWORKERS = [
     performance: 96,
     status: "On Leave",
     avatarBg: "bg-teal-500",
+    assignedCases: [MOCK_CASES[0]],
   },
 ];
 
@@ -140,6 +154,20 @@ const STATUS_CHIPS = {
   Inactive:    "bg-gray-100 text-gray-500",
 };
 
+const CASE_STATUS_CHIPS = {
+  "In Progress": "bg-blue-100 text-blue-800",
+  "Pending Review": "bg-yellow-100 text-yellow-800",
+  "Approved": "bg-green-100 text-green-800",
+  "Document Request": "bg-orange-100 text-orange-800",
+  "Submitted": "bg-purple-100 text-purple-800",
+};
+
+const PRIORITY_CHIPS = {
+  High: "bg-red-100 text-red-800",
+  Medium: "bg-yellow-100 text-yellow-800",
+  Low: "bg-green-100 text-green-800",
+};
+
 const EMPTY_FORM = {
   name: "", email: "", phone: "",
   role: "Caseworker", department: "General Processing",
@@ -160,6 +188,7 @@ const AdminCaseworkers = () => {
   const [modal, setModal]               = useState({ type: null, data: null });
   const [form, setForm]                 = useState(EMPTY_FORM);
   const [errors, setErrors]             = useState({});
+  const [reassignModal, setReassignModal] = useState({ open: false, case: null, targetCaseworker: null });
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -187,7 +216,8 @@ const AdminCaseworkers = () => {
     setModal({ type: "edit", data: cw });
   };
 
-  const openDelete = (cw) => setModal({ type: "delete", data: cw });
+  const openView = (cw) => setModal({ type: "view", data: cw });
+const openDelete = (cw) => setModal({ type: "delete", data: cw });
 
   const closeModal = () => {
     setModal({ type: null, data: null });
@@ -252,6 +282,46 @@ const AdminCaseworkers = () => {
   const handleDelete = () => {
     setCaseworkers((p) => p.filter((c) => c.id !== modal.data.id));
     closeModal();
+  };
+
+  const openReassignModal = (caseItem, currentCaseworker) => {
+    setReassignModal({ 
+      open: true, 
+      case: caseItem, 
+      currentCaseworker: currentCaseworker,
+      targetCaseworker: null 
+    });
+  };
+
+  const closeReassignModal = () => {
+    setReassignModal({ open: false, case: null, currentCaseworker: null, targetCaseworker: null });
+  };
+
+  const handleReassign = () => {
+    if (!reassignModal.targetCaseworker) return;
+
+    // Update caseworkers' assigned cases
+    setCaseworkers(prev => prev.map(cw => {
+      if (cw.id === reassignModal.currentCaseworker.id) {
+        // Remove case from current caseworker
+        return {
+          ...cw,
+          assignedCases: cw.assignedCases.filter(c => c.id !== reassignModal.case.id),
+          activeCases: Math.max(0, cw.activeCases - 1)
+        };
+      }
+      if (cw.id === reassignModal.targetCaseworker) {
+        // Add case to target caseworker
+        return {
+          ...cw,
+          assignedCases: [...cw.assignedCases, reassignModal.case],
+          activeCases: cw.activeCases + 1
+        };
+      }
+      return cw;
+    }));
+
+    closeReassignModal();
   };
 
   const isFormModal = modal.type === "create" || modal.type === "edit";
@@ -404,6 +474,13 @@ const AdminCaseworkers = () => {
                       {/* Actions */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openView(cw)}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <FiEye size={14} />
+                          </button>
                           <button
                             onClick={() => openEdit(cw)}
                             className="p-2 text-gray-400 hover:text-secondary hover:bg-blue-50 rounded-lg transition-colors"
@@ -563,6 +640,180 @@ const AdminCaseworkers = () => {
             <span className="font-black text-secondary">{modal.data?.name}</span>? All assigned cases will need to be reassigned.
           </p>
         </div>
+      </Modal>
+
+      {/* View Caseworker Details Modal */}
+      <Modal
+        open={modal.type === "view"}
+        onClose={closeModal}
+        title="Caseworker Details"
+        maxWidthClass="max-w-4xl"
+        bodyClassName="px-5 py-5 sm:px-6"
+        footer={
+          <Button variant="ghost" onClick={closeModal} className="rounded-xl">
+            Close
+          </Button>
+        }
+      >
+        {modal.data && (
+          <div className="space-y-6">
+            {/* Caseworker Info */}
+            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-sm font-black shrink-0 ${modal.data.avatarBg}`}>
+                {modal.data.initials}
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-black text-secondary">{modal.data.name}</h3>
+                <p className="text-sm text-gray-600">{modal.data.role} · {modal.data.department}</p>
+                <p className="text-xs text-gray-500 mt-1">{modal.data.email} · {modal.data.phone}</p>
+              </div>
+              <div className="text-right">
+                <span className={`px-3 py-1 rounded-full text-xs font-black ${STATUS_CHIPS[modal.data.status]}`}>
+                  {modal.data.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Performance Stats */}
+            <div className="grid grid-cols-4 gap-4">
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <p className="text-2xl font-black text-blue-600">{modal.data.activeCases}</p>
+                <p className="text-xs text-gray-600">Active Cases</p>
+              </div>
+              <div className="text-center p-3 bg-red-50 rounded-lg">
+                <p className="text-2xl font-black text-red-600">{modal.data.overdue}</p>
+                <p className="text-xs text-gray-600">Overdue</p>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <p className="text-2xl font-black text-green-600">{modal.data.completed}</p>
+                <p className="text-xs text-gray-600">Completed</p>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <p className="text-2xl font-black text-purple-600">{modal.data.performance}%</p>
+                <p className="text-xs text-gray-600">Performance</p>
+              </div>
+            </div>
+
+            {/* Assigned Cases */}
+            <div>
+              <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Assigned Cases</h4>
+              {modal.data.assignedCases && modal.data.assignedCases.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Case ID</th>
+                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Candidate</th>
+                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Business</th>
+                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Visa Type</th>
+                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Status</th>
+                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Priority</th>
+                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Deadline</th>
+                        <th className="text-center py-2 px-3 font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modal.data.assignedCases.map((caseItem) => (
+                        <tr key={caseItem.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2 px-3 font-mono text-xs">{caseItem.caseId}</td>
+                          <td className="py-2 px-3">{caseItem.candidate}</td>
+                          <td className="py-2 px-3">{caseItem.business}</td>
+                          <td className="py-2 px-3">{caseItem.visaType}</td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${CASE_STATUS_CHIPS[caseItem.status]}`}>
+                              {caseItem.status}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${PRIORITY_CHIPS[caseItem.priority]}`}>
+                              {caseItem.priority}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-xs">{caseItem.deadline}</td>
+                          <td className="py-2 px-3 text-center">
+                            <button
+                              onClick={() => openReassignModal(caseItem, modal.data)}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+                            >
+                              <FiUserPlus size={12} />
+                              Reassign
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <p>No cases assigned to this caseworker.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Reassign Case Modal */}
+      <Modal
+        open={reassignModal.open}
+        onClose={closeReassignModal}
+        title="Reassign Case"
+        maxWidthClass="max-w-md"
+        bodyClassName="px-5 py-5 sm:px-6"
+        footer={
+          <>
+            <Button variant="ghost" onClick={closeReassignModal} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={handleReassign} 
+              className="rounded-xl"
+              disabled={!reassignModal.targetCaseworker}
+            >
+              Reassign Case
+            </Button>
+          </>
+        }
+      >
+        {reassignModal.case && reassignModal.currentCaseworker && (
+          <div className="space-y-4">
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm font-semibold text-gray-700 mb-1">Case to Reassign</p>
+              <p className="text-xs text-gray-600">{reassignModal.case.caseId} · {reassignModal.case.candidate}</p>
+              <p className="text-xs text-gray-500">{reassignModal.case.business} · {reassignModal.case.visaType}</p>
+            </div>
+            
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm font-semibold text-blue-700 mb-1">From</p>
+              <p className="text-xs text-blue-600">{reassignModal.currentCaseworker.name}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Assign To
+              </label>
+              <select
+                value={reassignModal.targetCaseworker || ""}
+                onChange={(e) => setReassignModal(prev => ({ 
+                  ...prev, 
+                  targetCaseworker: e.target.value ? parseInt(e.target.value) : null 
+                }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select a caseworker...</option>
+                {caseworkers
+                  .filter(cw => cw.id !== reassignModal.currentCaseworker.id && cw.status === "Active")
+                  .map(cw => (
+                    <option key={cw.id} value={cw.id}>
+                      {cw.name} ({cw.activeCases} active cases)
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+        )}
       </Modal>
     </motion.div>
   );

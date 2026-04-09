@@ -9,7 +9,7 @@ import {
   User,
   Users,
   MessageSquare,
-  DollarSign,
+  // DollarSign,
   Activity,
   UserCircle,
   CalendarClock,
@@ -95,11 +95,11 @@ export const caseworkerNavSections = [
         label: "Messages",
         icon: MessageSquare,
       },
-      {
-        to: "/caseworker/finance",
-        label: "Finance",
-        icon: DollarSign,
-      },
+      // {
+      //   to: "/caseworker/finance",
+      //   label: "Finance",
+      //   icon: DollarSign,
+      // },
       {
         to: "/caseworker/performance",
         label: "Performance",

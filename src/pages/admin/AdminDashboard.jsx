@@ -26,7 +26,7 @@ const kpiCards = [
   {
     label: "Total Cases",
     value: "1,284",
-    sub: "↑ 12% from last month",
+    // sub: "↑ 12% from last month",
     icon: RiFolderOpenLine,
     iconColor: "text-blue-600",
     iconBg: "bg-blue-50",
@@ -35,7 +35,7 @@ const kpiCards = [
   {
     label: "Cases In Progress",
     value: "347",
-    sub: "27% of total",
+    // sub: "27% of total",
     icon: RiSettings3Line,
     iconColor: "text-orange-500",
     iconBg: "bg-orange-50",
@@ -43,7 +43,7 @@ const kpiCards = [
   {
     label: "Delayed Cases",
     value: "41",
-    sub: "↑ 8 since last week",
+    // sub: "↑ 8 since last week",
     icon: RiAlarmWarningLine,
     iconColor: "text-red-500",
     iconBg: "bg-red-50",
@@ -52,7 +52,7 @@ const kpiCards = [
   {
     label: "Completed This Month",
     value: "218",
-    sub: "↑ 18% vs prior month",
+    // sub: "↑ 18% vs prior month",
     icon: RiCheckLine,
     iconColor: "text-green-600",
     iconBg: "bg-green-50",
@@ -60,7 +60,7 @@ const kpiCards = [
   {
     label: "Active Caseworkers",
     value: "24",
-    sub: "3 on leave today",
+    // sub: "3 on leave today",
     icon: RiUserLine,
     iconColor: "text-purple-600",
     iconBg: "bg-purple-50",
@@ -69,7 +69,7 @@ const kpiCards = [
   {
     label: "Fees Collected",
     value: "£284k",
-    sub: "£61k outstanding",
+    // sub: "£61k outstanding",
     icon: RiMoneyDollarCircleLine,
     iconColor: "text-yellow-600",
     iconBg: "bg-yellow-50",
@@ -77,7 +77,7 @@ const kpiCards = [
   {
     label: "Visa Expiry Alerts",
     value: "18",
-    sub: "Next 30 days",
+    // sub: "Next 30 days",
     icon: RiErrorWarningLine,
     iconColor: "text-red-500",
     iconBg: "bg-red-50",
@@ -85,7 +85,7 @@ const kpiCards = [
   {
     label: "Sponsor Licence Expiry",
     value: "5",
-    sub: "Requiring renewal",
+    // sub: "Requiring renewal",
     icon: RiBuildingLine,
     iconColor: "text-orange-500",
     iconBg: "bg-orange-50",

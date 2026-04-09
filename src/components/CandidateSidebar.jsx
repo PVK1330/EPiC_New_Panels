@@ -192,7 +192,7 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          <div className="mt-3 px-1 flex items-center justify-between">
+          {/* <div className="mt-3 px-1 flex items-center justify-between">
             <button
               type="button"
               className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-1.5"
@@ -201,7 +201,7 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
               Support
             </button>
             <span className="text-[10px] font-bold text-gray-300">v1.0.2</span>
-          </div>
+          </div> */}
         </div>
       </aside>
     </>
