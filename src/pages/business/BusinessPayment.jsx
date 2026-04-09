@@ -1,5 +1,6 @@
-import { CreditCard, Download, Filter, Search, CheckCircle2, AlertCircle } from "lucide-react";
+import { CreditCard, Download, Filter, Search, CheckCircle2, AlertCircle, Eye, LayoutDashboard, DollarSign, Clock } from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 const BusinessPayment = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -82,129 +83,191 @@ const BusinessPayment = () => {
 
   const getStatusColor = (status) => {
     return status === "Completed"
-      ? "bg-green-100 text-green-700"
+      ? "bg-emerald-100 text-emerald-700"
       : status === "Pending"
       ? "bg-amber-100 text-amber-700"
-      : "bg-slate-100 text-slate-700";
+      : "bg-gray-100 text-gray-700";
   };
 
   const getStatusIcon = (status) => {
     return status === "Completed" ? (
-      <CheckCircle2 size={16} className="text-green-600" />
+      <CheckCircle2 size={16} className="text-emerald-600" />
     ) : (
       <AlertCircle size={16} className="text-amber-600" />
     );
   };
 
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  };
+
+  const handleView = (payment) => {
+    alert(`Viewing payment: ${payment.invoiceNo}`);
+  };
+
+  const handleDownload = (payment) => {
+    alert(`Downloading invoice: ${payment.invoiceNo}`);
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-10 pb-10">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Payments</h1>
-          <p className="text-slate-600 mt-2">Manage invoices and payment history</p>
-        </div>
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md">
-          <CreditCard size={18} />
-          Make Payment
-        </button>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
+          <LayoutDashboard className="text-primary" size={36} />
+          Payments
+        </h1>
+        <p className="text-primary font-bold text-sm mt-1">
+          Manage invoices and payment history.
+        </p>
+      </motion.div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
-          <p className="text-slate-600 text-sm mb-1">Total Paid</p>
-          <p className="text-2xl font-bold text-green-600">£{totalPaid.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
-          <p className="text-slate-600 text-sm mb-1">Amount Pending</p>
-          <p className="text-2xl font-bold text-amber-600">£{totalPending.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
-          <p className="text-slate-600 text-sm mb-1">Payment Methods</p>
-          <p className="text-slate-900 font-semibold">3 on file</p>
-          <p className="text-slate-500 text-xs mt-1">•••• 4242</p>
-        </div>
-      </div>
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4 text-gray-900">
+            <DollarSign size={20} className="text-emerald-600" />
+            <span className="font-black">Total Paid</span>
+          </div>
+          <p className="text-3xl font-black text-secondary">£{totalPaid.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
+        </motion.div>
+        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4 text-gray-900">
+            <Clock size={20} className="text-amber-500" />
+            <span className="font-black">Amount Pending</span>
+          </div>
+          <p className="text-3xl font-black text-secondary">£{totalPending.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
+        </motion.div>
+        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4 text-gray-900">
+            <CreditCard size={20} className="text-primary" />
+            <span className="font-black">Payment Methods</span>
+          </div>
+          <p className="text-sm font-black text-secondary">3 on file</p>
+          <p className="text-xs font-bold text-gray-500 mt-1">•••• 4242</p>
+        </motion.div>
+      </motion.div>
 
       {/* Search and Filter */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search size={18} className="absolute left-3 top-3 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search invoices..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white border border-slate-300 rounded-lg pl-10 pr-4 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-          />
+      <motion.div
+        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="Search invoices..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-gray-400" />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+            >
+              <option value="all">All Payments</option>
+              <option value="completed">Completed</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+          <button className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark">
+            <CreditCard size={16} />
+            Make Payment
+          </button>
         </div>
-        <div className="flex items-center gap-2">
-          <Filter size={18} className="text-slate-400" />
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-          >
-            <option value="all">All Payments</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-          </select>
-        </div>
-      </div>
+      </motion.div>
 
       {/* Payments Table */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-x-auto shadow-sm">
-        <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
-            <tr>
-              <th className="text-left px-6 py-4 text-slate-700 font-semibold">Description</th>
-              <th className="text-left px-6 py-4 text-slate-700 font-semibold">Invoice No.</th>
-              <th className="text-left px-6 py-4 text-slate-700 font-semibold">Amount</th>
-              <th className="text-left px-6 py-4 text-slate-700 font-semibold">Date</th>
-              <th className="text-left px-6 py-4 text-slate-700 font-semibold">Status</th>
-              <th className="text-right px-6 py-4 text-slate-700 font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {filteredPayments.map((payment) => (
-              <tr key={payment.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4">
-                  <p className="text-slate-900 font-medium">{payment.description}</p>
-                  {payment.dueDate !== "N/A" && (
-                    <p className="text-slate-600 text-sm">Due: {payment.dueDate}</p>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-slate-700 font-mono">{payment.invoiceNo}</td>
-                <td className="px-6 py-4 text-slate-900 font-semibold">{payment.amount}</td>
-                <td className="px-6 py-4 text-slate-700">{payment.date}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(payment.status)}
-                    <span className={`px-3 py-1 rounded text-sm font-semibold ${getStatusColor(payment.status)}`}>
-                      {payment.status}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex justify-end gap-2">
-                    <button className="p-1 hover:bg-slate-200 rounded transition-colors text-blue-600" title="Download">
-                      <Download size={18} />
-                    </button>
-                  </div>
-                </td>
+      <motion.div
+        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Description</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Invoice No.</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Amount</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Date</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredPayments.map((payment) => (
+                <tr key={payment.id} className="hover:bg-gray-50 transition">
+                  <td className="px-4 py-4">
+                    <p className="text-sm font-black text-secondary">{payment.description}</p>
+                    {payment.dueDate !== "N/A" && (
+                      <p className="text-xs font-bold text-gray-500">Due: {payment.dueDate}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{payment.invoiceNo}</td>
+                  <td className="px-4 py-4 text-sm font-black text-secondary">{payment.amount}</td>
+                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{payment.date}</td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(payment.status)}
+                      <span className={`inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full ${getStatusColor(payment.status)}`}>
+                        {payment.status}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleView(payment)}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDownload(payment)}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"
+                      >
+                        <Download size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
 
       {/* Empty State */}
       {filteredPayments.length === 0 && (
-        <div className="bg-white border border-slate-200 rounded-lg p-8 text-center shadow-sm">
-          <CreditCard size={48} className="mx-auto text-slate-300 mb-4" />
-          <p className="text-slate-600">No payments found matching your search</p>
-        </div>
+        <motion.div
+          className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm"
+          variants={cardVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <CreditCard size={48} className="mx-auto text-gray-300 mb-4" />
+          <p className="text-gray-600 font-bold">No payments found matching your search</p>
+        </motion.div>
       )}
     </div>
   );

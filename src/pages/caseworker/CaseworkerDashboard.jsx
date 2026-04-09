@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { CalendarDays, Check, TrendingUp, Bell, Plus } from "lucide-react";
+import { CalendarDays, Check, TrendingUp, Bell, Plus, Send, MessageSquareMore } from "lucide-react";
 
 const STAT_CARDS = [
   {
@@ -156,6 +156,37 @@ const PERF_ROWS = [
   { label: "Avg completion", width: 65, barClass: "bg-indigo-500", val: "65%" },
   { label: "Overdue rate", width: 16, barClass: "bg-red-500", val: "16%", valClass: "text-red-600" },
   { label: "Doc accuracy", width: 88, barClass: "bg-amber-500", val: "88%" },
+];
+
+const RECENT_MESSAGES = [
+  {
+    from: "Ahmed Al-Rashid",
+    initials: "AA",
+    text: "I've uploaded the passport copy as requested.",
+    time: "1h ago",
+    unread: true,
+  },
+  {
+    from: "Priya Sharma",
+    initials: "PS",
+    text: "Can you clarify the document requirements?",
+    time: "3h ago",
+    unread: true,
+  },
+  {
+    from: "Carlos Mendes",
+    initials: "CM",
+    text: "Thanks for the update on my application status.",
+    time: "Yesterday",
+    unread: false,
+  },
+  {
+    from: "TechCorp Ltd",
+    initials: "TC",
+    text: "We need to update the sponsor details.",
+    time: "Yesterday",
+    unread: false,
+  },
 ];
 
 function badgeClass(tone) {
@@ -402,6 +433,61 @@ const CaseworkerDashboard = () => {
                 <span className="text-base font-black text-gray-500">/ 100</span>
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Messages Section */}
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-black text-gray-900 uppercase tracking-wide flex items-center gap-2">
+            <MessageSquareMore size={18} className="text-secondary" />
+            Recent Messages
+          </h2>
+          <Link
+            to="/caseworker/messages"
+            className="text-xs font-black text-secondary hover:text-primary"
+          >
+            View all →
+          </Link>
+        </div>
+        <div className="p-5 space-y-3 flex-1">
+          {RECENT_MESSAGES.map((m) => (
+            <div
+              key={`${m.from}-${m.time}-${m.text}`}
+              className="rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-3"
+            >
+              <div className="flex items-start gap-3">
+                <div className="h-9 w-9 rounded-full bg-secondary text-white text-xs font-black flex items-center justify-center shrink-0">
+                  {m.initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-black text-gray-800 truncate">{m.from}</p>
+                    <span className="ml-auto text-[11px] font-bold text-gray-400 shrink-0">
+                      {m.time}
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-gray-500 mt-0.5">{m.text}</p>
+                </div>
+                {m.unread && <span className="mt-1 h-2 w-2 rounded-full bg-primary" />}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="px-5 py-4 border-t border-gray-100">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Type a message..."
+              className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <button
+              type="button"
+              className="rounded-xl bg-primary p-3 text-white shadow-md shadow-primary/20 hover:bg-primary-dark"
+            >
+              <Send size={18} />
+            </button>
           </div>
         </div>
       </div>

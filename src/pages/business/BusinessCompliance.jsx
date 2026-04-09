@@ -235,7 +235,7 @@ const BusinessCompliance = () => {
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-black text-secondary flex items-center gap-2">
               <UserRoundCog size={24} className="text-primary" />
-              Risk by Worker
+              Flag by Worker
             </h3>
           </div>
 

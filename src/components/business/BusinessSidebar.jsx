@@ -10,6 +10,10 @@ import {
   Bell,
   Settings,
   X,
+  UserCheck,
+  DollarSign,
+  Briefcase,
+  TrendingUp,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../store/slices/authSlice";
@@ -46,8 +50,16 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
       label: "Sponsorship",
       items: [
         { to: "/business/licence", label: "Licence Status", icon: FileText },
+        { to: "/business/apply-licence", label: "Apply / Renew Licence", icon: FileText },
+        { to: "/business/licence-documents", label: "Licence Documents", icon: FileText },
         { to: "/business/cosallocation", label: "CoS Allocation", icon: Package },
         { to: "/business/workers", label: "Sponsored Workers", icon: Users },
+      ],
+    },
+    {
+      label: "Candidates",
+      items: [
+        { to: "/business/my-candidates", label: "My Candidates", icon: Briefcase },
       ],
     },
     {
@@ -58,7 +70,21 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
           label: "Compliance Dashboard",
           icon: BarChart3,
         },
-        { to: "/business/compliacedocument", label: "Reports & Docs", icon: FileText },
+        { to: "/business/compliacedocument", label: "Compliance Documents", icon: FileText },
+        { to: "/business/reporting-obligations", label: "Reporting Obligations", icon: UserCheck },
+      ],
+    },
+    {
+      label: "HR File Management",
+      items: [
+        { to: "/business/employee-records", label: "Employee Records", icon: Users },
+      ],
+    },
+    {
+      label: "Finance",
+      items: [
+        { to: "/business/invoices", label: "Invoices", icon: DollarSign },
+        { to: "/business/payment", label: "Payments", icon: DollarSign },
       ],
     },
     {
@@ -70,6 +96,12 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
           label: "Notifications",
           icon: Bell,
         },
+      ],
+    },
+    {
+      label: "Reports",
+      items: [
+        { to: "/business/reports", label: "Reports", icon: TrendingUp },
       ],
     },
     {

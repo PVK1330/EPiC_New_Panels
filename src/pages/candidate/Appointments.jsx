@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Calendar,
   Video,
@@ -8,6 +9,9 @@ import {
   ArrowRight,
   History,
   MonitorPlay,
+  LayoutDashboard,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import Modal from "../../components/Modal";
 
@@ -69,6 +73,7 @@ const AppointmentCard = ({
   joinable = false,
   meetingUrl,
   platform,
+  onView,
 }) => {
   const isCompleted = status === "Completed";
   const meta = platform ? platformMeta(platform) : null;
@@ -83,8 +88,11 @@ const AppointmentCard = ({
   };
 
   return (
-    <div
-      className={`p-6 rounded-[2rem] mb-6 transition-all hover:shadow-lg border ${
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className={`p-6 rounded-3xl mb-6 transition-all hover:shadow-lg border ${
         joinable
           ? "bg-white border-primary/10 shadow-md"
           : "bg-white border-gray-100 shadow-sm"
@@ -93,7 +101,7 @@ const AppointmentCard = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex gap-5 items-start">
           <div
-            className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+            className={`w-14 h-14 rounded-3xl flex items-center justify-center flex-shrink-0 ${
               joinable
                 ? "bg-primary text-white shadow-lg shadow-primary/20"
                 : "bg-gray-50 text-gray-400"
@@ -158,6 +166,7 @@ const AppointmentCard = ({
           ) : (
             <button
               type="button"
+              onClick={() => onView && onView({ title, date, time, location, status, platform, meetingUrl })}
               className="text-gray-400 hover:text-primary font-black text-sm transition-colors px-4 py-2"
             >
               View Details
@@ -165,7 +174,7 @@ const AppointmentCard = ({
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -227,6 +236,8 @@ const Appointments = () => {
   const [upcoming, setUpcoming] = useState(initialUpcoming);
   const [past] = useState(initialPast);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [form, setForm] = useState({
     title: "",
     date: "",
@@ -248,6 +259,16 @@ const Appointments = () => {
   const closeSchedule = () => {
     setScheduleOpen(false);
     resetScheduleForm();
+  };
+
+  const handleView = (appointment) => {
+    setSelectedAppointment(appointment);
+    setViewOpen(true);
+  };
+
+  const closeView = () => {
+    setSelectedAppointment(null);
+    setViewOpen(false);
   };
 
   const handleScheduleSubmit = (e) => {
@@ -278,31 +299,73 @@ const Appointments = () => {
     closeSchedule();
   };
 
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  };
+
+  const totalAppointments = upcoming.length + past.length;
+  const upcomingCount = upcoming.length;
+  const completedCount = past.length;
+
   return (
     <div className="space-y-10 pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-4xl font-black text-secondary tracking-tight">
-            Appointments
-          </h1>
-          <p className="text-gray-500 font-bold text-sm mt-1">
-            Join video calls on{" "}
-            <span className="text-secondary">Microsoft Teams</span>,{" "}
-            <span className="text-secondary">Google Meet</span>, or{" "}
-            <span className="text-secondary">Zoom</span>. Schedule a new
-            meeting anytime.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setScheduleOpen(true)}
-          className="bg-primary text-white px-8 py-4 rounded-2xl text-sm font-black shadow-xl shadow-primary/25 hover:bg-primary-dark transition-all transform active:scale-95 flex items-center gap-2 self-start md:self-center"
-        >
-          <Plus size={20} /> Schedule New
-        </button>
-      </div>
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
+          <LayoutDashboard className="text-primary" size={36} />
+          Appointments
+        </h1>
+        <p className="text-primary font-bold text-sm mt-1">
+          Join video calls on{" "}
+          <span className="text-secondary">Microsoft Teams</span>,{" "}
+          <span className="text-secondary">Google Meet</span>, or{" "}
+          <span className="text-secondary">Zoom</span>. Schedule a new
+          meeting anytime.
+        </p>
+      </motion.div>
 
-      <div className="rounded-2xl border border-gray-100 bg-white/80 p-4 md:p-5 shadow-sm">
+      {/* Stats Cards */}
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4 text-gray-900">
+            <Calendar size={20} className="text-primary" />
+            <span className="font-black">Total Appointments</span>
+          </div>
+          <p className="text-3xl font-black text-secondary">{totalAppointments}</p>
+        </motion.div>
+        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4 text-gray-900">
+            <Video size={20} className="text-primary" />
+            <span className="font-black">Upcoming</span>
+          </div>
+          <p className="text-3xl font-black text-secondary">{upcomingCount}</p>
+        </motion.div>
+        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4 text-gray-900">
+            <CheckCircle2 size={20} className="text-emerald-600" />
+            <span className="font-black">Completed</span>
+          </div>
+          <p className="text-3xl font-black text-secondary">{completedCount}</p>
+        </motion.div>
+      </motion.div>
+
+      {/* Meeting Platforms */}
+      <motion.div
+        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">
           Meeting platforms
         </p>
@@ -310,21 +373,26 @@ const Appointments = () => {
           {PLATFORMS.map((p) => (
             <div
               key={p.value}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-gray-100 text-sm font-bold text-gray-700"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm font-bold text-gray-700"
             >
               <MonitorPlay size={18} className="text-primary shrink-0" />
               {p.label}
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 gap-8">
-        <section>
-          <h2 className="text-xl font-black text-secondary mb-6 tracking-tight flex items-center gap-2">
-            <Video className="text-primary" size={24} />
-            Upcoming & Live
-          </h2>
+      {/* Upcoming & Live Section */}
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <h2 className="text-xl font-black text-secondary mb-6 tracking-tight flex items-center gap-2">
+          <Video className="text-primary" size={24} />
+          Upcoming & Live
+        </h2>
+        <div className="space-y-4">
           {upcoming.map((apt) => (
             <AppointmentCard
               key={apt.id}
@@ -336,32 +404,39 @@ const Appointments = () => {
               joinable={apt.joinable}
               meetingUrl={apt.meetingUrl}
               platform={apt.platform}
+              onView={handleView}
             />
           ))}
-        </section>
+        </div>
+      </motion.div>
 
-        <section>
-          <h2 className="text-xl font-black text-secondary mb-6 tracking-tight flex items-center gap-2">
-            <History size={24} className="text-primary" />
-            Appointment History
-          </h2>
-          <div className="space-y-4">
-            {past.map((apt) => (
-              <AppointmentCard
-                key={apt.id}
-                title={apt.title}
-                date={apt.dateDisplay}
-                time={apt.time}
-                location={apt.location}
-                status={apt.status}
-                joinable={apt.joinable}
-                meetingUrl={apt.meetingUrl}
-                platform={apt.platform}
-              />
-            ))}
-          </div>
-        </section>
-      </div>
+      {/* Appointment History Section */}
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <h2 className="text-xl font-black text-secondary mb-6 tracking-tight flex items-center gap-2">
+          <History size={24} className="text-primary" />
+          Appointment History
+        </h2>
+        <div className="space-y-4">
+          {past.map((apt) => (
+            <AppointmentCard
+              key={apt.id}
+              title={apt.title}
+              date={apt.dateDisplay}
+              time={apt.time}
+              location={apt.location}
+              status={apt.status}
+              joinable={apt.joinable}
+              meetingUrl={apt.meetingUrl}
+              platform={apt.platform}
+              onView={handleView}
+            />
+          ))}
+        </div>
+      </motion.div>
 
       <Modal
         open={scheduleOpen}
@@ -508,6 +583,100 @@ const Appointments = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* View Appointment Details Modal */}
+      <Modal
+        open={viewOpen}
+        onClose={closeView}
+        title="Appointment Details"
+        titleId="view-appointment-title"
+        maxWidthClass="max-w-lg"
+        bodyClassName="p-4 sm:p-6"
+      >
+        {selectedAppointment && (
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-50 rounded-xl">
+              <h3 className="text-lg font-black text-secondary">{selectedAppointment.title}</h3>
+              <div className="flex items-center gap-2 mt-2">
+                {selectedAppointment.platform && (
+                  <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide bg-secondary/10 text-secondary border border-secondary/20">
+                    {platformMeta(selectedAppointment.platform)?.shortLabel}
+                  </span>
+                )}
+                <span className={`px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                  selectedAppointment.status === "Completed"
+                    ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                    : selectedAppointment.status === "Live Now"
+                      ? "bg-orange-50 text-orange-600 border-orange-100 animate-pulse"
+                      : "bg-blue-50 text-blue-600 border-blue-100"
+                }`}>
+                  {selectedAppointment.status}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Calendar size={18} className="text-primary" />
+                <div>/
+                  <p className="text-[10px] font-bold text-gray-500 uppercase">Date</p>
+                  <p className="text-sm font-black text-secondary">{selectedAppointment.date}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Clock size={18} className="text-primary" />
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase">Time</p>
+                  <p className="text-sm font-black text-secondary">{selectedAppointment.time}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <MapPin size={18} className="text-primary" />
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase">Location</p>
+                  <p className="text-sm font-black text-secondary">{selectedAppointment.location}</p>
+                </div>
+              </div>
+
+              {selectedAppointment.meetingUrl && (
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <Video size={18} className="text-primary" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase">Meeting Link</p>
+                    <p className="text-sm font-black text-secondary truncate">{selectedAppointment.meetingUrl}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={closeView}
+                className="flex-1 rounded-xl bg-gray-100 py-3 text-sm font-black text-gray-600 transition-colors hover:bg-gray-200"
+              >
+                Close
+              </button>
+              {selectedAppointment.meetingUrl && selectedAppointment.status !== "Completed" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = selectedAppointment.meetingUrl.match(/^https?:\/\//i)
+                      ? selectedAppointment.meetingUrl
+                      : `https://${selectedAppointment.meetingUrl}`;
+                    window.open(url, "_blank", "noopener,noreferrer");
+                  }}
+                  className="flex-1 rounded-xl bg-primary py-3 text-sm font-black text-white transition-colors hover:bg-primary-dark"
+                >
+                  Join Meeting
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
