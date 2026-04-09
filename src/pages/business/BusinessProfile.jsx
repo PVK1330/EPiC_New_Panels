@@ -85,91 +85,91 @@ const BusinessProfile = () => {
     >
       {/* Header */}
       <motion.div variants={cardVariants}>
-        <h1 className="text-4xl font-black text-blue-900 tracking-tight flex items-center gap-3">
-          <Building2 className="text-blue-600" size={36} />
+        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
+          <Building2 className="text-primary" size={36} />
           Business Profile
         </h1>
-        <p className="text-slate-600 font-medium text-sm mt-1">
+        <p className="text-primary font-bold text-sm mt-1">
           Manage your company information and change requests
         </p>
       </motion.div>
 
       {/* Company Information Section */}
       <motion.div
-        className="bg-white rounded-xl shadow-sm border border-slate-200 p-6"
+        className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
         variants={cardVariants}
       >
         <div className='flex justify-between'>
-            <h2 className="text-2xl font-bold text-blue-900 mb-6 flex items-center gap-2">
-          <FileText size={24} className="text-blue-600" />
+            <h2 className="text-2xl font-black text-secondary mb-6 flex items-center gap-2">
+          <FileText size={24} className="text-primary" />
           Company Information
         </h2>
 
-        <button className='bg-red-800 text-white rounded-xl px-2 transition-transform hover:scale-105 font-medium' onClick={()=> navigate("business/registration")}>Add Business Registration </button>
+        <button className='bg-primary text-white rounded-xl px-3 py-2 text-xs font-black transition-transform hover:scale-105' onClick={()=> navigate("/Businessregistration")}>Add Business Registration </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-xs font-bold text-gray-700 mb-2">
               Address
             </label>
             <input
               type="text"
               value={companyInfo.address}
               onChange={(e) => handleCompanyInfoChange('address', e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 placeholder-slate-400"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               placeholder="Enter company address"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-xs font-bold text-gray-700 mb-2">
               Registration Number
             </label>
             <input
               type="text"
               value={companyInfo.registrationNumber}
               onChange={(e) => handleCompanyInfoChange('registrationNumber', e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 placeholder-slate-400"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               placeholder="Enter registration number"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-xs font-bold text-gray-700 mb-2">
               Registered Address
             </label>
             <input
               type="text"
               value={companyInfo.registeredAddress}
               onChange={(e) => handleCompanyInfoChange('registeredAddress', e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 placeholder-slate-400"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               placeholder="Enter registered address"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-xs font-bold text-gray-700 mb-2">
               City
             </label>
             <input
               type="text"
               value={companyInfo.city}
               onChange={(e) => handleCompanyInfoChange('city', e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 placeholder-slate-400"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               placeholder="Enter city"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-xs font-bold text-gray-700 mb-2">
               Pincode
             </label>
             <input
               type="text"
               value={companyInfo.pincode}
               onChange={(e) => handleCompanyInfoChange('pincode', e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 placeholder-slate-400"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               placeholder="Enter pincode"
             />
           </div>
@@ -178,44 +178,44 @@ const BusinessProfile = () => {
 
       {/* Change Request Section */}
       <motion.div
-        className="bg-white rounded-xl shadow-sm border border-slate-200 p-6"
+        className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
         variants={cardVariants}
       >
-        <h2 className="text-2xl font-bold text-blue-900 mb-6 flex items-center gap-2">
-          <MapPin size={24} className="text-blue-600" />
+        <h2 className="text-2xl font-black text-secondary mb-6 flex items-center gap-2">
+          <MapPin size={24} className="text-primary" />
           Change Requests
         </h2>
 
         <div className="overflow-x-auto">
           <table className="min-w-full text-left divide-y divide-gray-200">
-            <thead className="bg-slate-50">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Change Address</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Description</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Submitted Date</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Deadline</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Change Address</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Description</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Submitted Date</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Deadline</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {changeRequestsData.map((request) => (
-                <tr key={request.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-4 text-sm font-medium text-slate-900 max-w-xs truncate">
+                <tr key={request.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-4 text-sm font-black text-secondary max-w-xs truncate">
                     {request.changeAddress}
                   </td>
-                  <td className="px-4 py-4 text-sm text-slate-600 max-w-xs truncate">
+                  <td className="px-4 py-4 text-sm font-bold text-gray-600 max-w-xs truncate">
                     {request.description}
                   </td>
-                  <td className="px-4 py-4 text-sm text-slate-600">
+                  <td className="px-4 py-4 text-sm font-bold text-gray-600">
                     {request.submittedDate}
                   </td>
-                  <td className="px-4 py-4 text-sm text-slate-600">
+                  <td className="px-4 py-4 text-sm font-bold text-gray-600">
                     {request.submittedDeadline}
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(request.status)}
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(request.status)}`}>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black ${getStatusColor(request.status)}`}>
                         {request.status}
                       </span>
                     </div>
@@ -227,16 +227,16 @@ const BusinessProfile = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-4 pt-4 border-t border-slate-200 mt-6">
+        <div className="flex gap-4 pt-4 border-t border-gray-100 mt-6">
           <button
             onClick={handleSaveChanges}
-            className="px-6 py-3 bg-red-700 hover:bg-red-800 text-white font-semibold rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+            className="px-6 py-3 bg-primary hover:bg-primary-dark text-white font-black rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/15"
           >
             Save Changes
           </button>
           <button
             onClick={handleCancel}
-            className="px-6 py-3 border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+            className="px-6 py-3 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-200"
           >
             Cancel
           </button>

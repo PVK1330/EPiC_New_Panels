@@ -1,12 +1,32 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Eye } from "lucide-react";
+import {
+  LayoutDashboard,
+  FileText,
+  Eye,
+  Download,
+  Upload,
+  Hash,
+  ShieldCheck,
+  Calendar,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  User,
+  Briefcase,
+  CreditCard,
+  MapPin,
+  Phone,
+  Mail,
+} from "lucide-react";
 
 const SponsoredWorkerDetails = () => {
   const [activeTab, setActiveTab] = useState("details");
 
   const inputStyle =
-    "mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900";
+    "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40";
+
+  const labelStyle = "text-xs font-bold text-gray-700 mb-2";
 
   const dummyData = {
     firstName: "John",
@@ -15,55 +35,118 @@ const SponsoredWorkerDetails = () => {
     gender: "Male",
     nationality: "Indian",
     passport: "A1234567",
+    passportExpiry: "2030-06-15",
     email: "john@example.com",
     phone: "+91 9876543210",
+    address: "123 Main Street, London",
     job: "Software Developer",
     salary: "45000",
+    startDate: "2024-01-15",
+    visaType: "Skilled Worker Visa",
+    visaNumber: "VISA-2024-12345",
+    visaExpiry: "2025-12-31",
+    cosNumber: "COS-2024-67890",
+    cosExpiry: "2025-06-30",
+    status: "Active",
   };
 
   const documents = [
-    { name: "Passport Copy" },
-    { name: "Visa Approval Letter" },
-    { name: "Employment Contract" },
-    { name: "Address Proof" },
+    { name: "Passport Copy", status: "uploaded", uploadDate: "2024-01-10" },
+    { name: "Visa Approval Letter", status: "uploaded", uploadDate: "2024-01-12" },
+    { name: "Employment Contract", status: "uploaded", uploadDate: "2024-01-15" },
+    { name: "Address Proof", status: "pending", uploadDate: null },
+    { name: "Right to Work Document", status: "uploaded", uploadDate: "2024-01-20" },
+  ];
+
+  const workHistory = [
+    { company: "Previous Company Ltd", position: "Junior Developer", startDate: "2022-01-01", endDate: "2023-12-31" },
+    { company: "Tech Solutions Inc", position: "Intern", startDate: "2021-06-01", endDate: "2021-12-31" },
+  ];
+
+  const complianceStatus = [
+    { item: "Right to Work Check", status: "Compliant", date: "2024-01-15" },
+    { item: "DBS Check", status: "Compliant", date: "2024-01-10" },
+    { item: "Visa Validity", status: "Compliant", date: "2024-01-12" },
+    { item: "CoS Assignment", status: "Compliant", date: "2024-01-15" },
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-      className="p-6 bg-gray-100 min-h-screen"
-    >
-      <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-lg p-8">
-
-        {/* Heading */}
-        <h2 className="text-3xl font-bold text-blue-900 mb-6 text-center">
+    <div className="space-y-10 pb-10">
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
+          <LayoutDashboard className="text-primary" size={36} />
           Sponsored Worker Details
-        </h2>
+        </h1>
+        <p className="text-primary font-bold text-sm mt-1">
+          View and manage sponsored worker information and compliance status.
+        </p>
+      </motion.div>
 
+      <motion.div
+        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
         {/* Tabs */}
-        <div className="flex border-b mb-8">
+        <div className="flex border-b border-gray-200 mb-8">
           <button
             onClick={() => setActiveTab("details")}
-            className={`px-6 py-2 font-medium ${
+            className={`px-6 py-3 text-sm font-black border-b-2 transition ${
               activeTab === "details"
-                ? " border-red-800 text-red-800"
-                : "text-gray-500"
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            Details
+            Personal Details
+          </button>
+
+          <button
+            onClick={() => setActiveTab("visa")}
+            className={`px-6 py-3 text-sm font-black border-b-2 transition ${
+              activeTab === "visa"
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Visa & CoS
           </button>
 
           <button
             onClick={() => setActiveTab("documents")}
-            className={`px-6 py-2 font-medium ${
+            className={`px-6 py-3 text-sm font-black border-b-2 transition ${
               activeTab === "documents"
-                ? " border-red-800 text-red-800"
-                : "text-gray-500"
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
             Documents
+          </button>
+
+          <button
+            onClick={() => setActiveTab("compliance")}
+            className={`px-6 py-3 text-sm font-black border-b-2 transition ${
+              activeTab === "compliance"
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Compliance
+          </button>
+
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`px-6 py-3 text-sm font-black border-b-2 transition ${
+              activeTab === "history"
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Work History
           </button>
         </div>
 
@@ -72,37 +155,38 @@ const SponsoredWorkerDetails = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="space-y-10"
+            className="space-y-8"
           >
             {/* PERSONAL */}
             <section>
-              <h3 className="text-xl font-semibold text-blue-900 mb-4">
+              <h3 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+                <User size={24} className="text-primary" />
                 Personal Information
               </h3>
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label>First Name</label>
+                  <label className={labelStyle}>First Name</label>
                   <input value={dummyData.firstName} readOnly className={inputStyle} />
                 </div>
 
                 <div>
-                  <label>Last Name</label>
+                  <label className={labelStyle}>Last Name</label>
                   <input value={dummyData.lastName} readOnly className={inputStyle} />
                 </div>
 
                 <div>
-                  <label>Date of Birth</label>
+                  <label className={labelStyle}>Date of Birth</label>
                   <input value={dummyData.dob} readOnly className={inputStyle} />
                 </div>
 
                 <div>
-                  <label>Gender</label>
+                  <label className={labelStyle}>Gender</label>
                   <input value={dummyData.gender} readOnly className={inputStyle} />
                 </div>
 
                 <div>
-                  <label>Nationality</label>
+                  <label className={labelStyle}>Nationality</label>
                   <input value={dummyData.nationality} readOnly className={inputStyle} />
                 </div>
               </div>
@@ -110,52 +194,127 @@ const SponsoredWorkerDetails = () => {
 
             {/* PASSPORT */}
             <section>
-              <h3 className="text-xl font-semibold text-blue-900 mb-4">
+              <h3 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+                <CreditCard size={24} className="text-primary" />
                 Passport Details
               </h3>
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label>Passport Number</label>
+                  <label className={labelStyle}>Passport Number</label>
                   <input value={dummyData.passport} readOnly className={inputStyle} />
+                </div>
+
+                <div>
+                  <label className={labelStyle}>Passport Expiry</label>
+                  <input value={dummyData.passportExpiry} readOnly className={inputStyle} />
                 </div>
               </div>
             </section>
 
             {/* CONTACT */}
             <section>
-              <h3 className="text-xl font-semibold text-blue-900 mb-4">
+              <h3 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+                <Phone size={24} className="text-primary" />
                 Contact Information
               </h3>
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label>Email</label>
+                  <label className={labelStyle}>Email</label>
                   <input value={dummyData.email} readOnly className={inputStyle} />
                 </div>
 
                 <div>
-                  <label>Phone</label>
+                  <label className={labelStyle}>Phone</label>
                   <input value={dummyData.phone} readOnly className={inputStyle} />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className={labelStyle}>Address</label>
+                  <input value={dummyData.address} readOnly className={inputStyle} />
                 </div>
               </div>
             </section>
 
             {/* JOB */}
             <section>
-              <h3 className="text-xl font-semibold text-blue-900 mb-4">
+              <h3 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+                <Briefcase size={24} className="text-primary" />
                 Job Details
               </h3>
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label>Job Title</label>
+                  <label className={labelStyle}>Job Title</label>
                   <input value={dummyData.job} readOnly className={inputStyle} />
                 </div>
 
                 <div>
-                  <label>Salary</label>
+                  <label className={labelStyle}>Salary</label>
                   <input value={`£${dummyData.salary}`} readOnly className={inputStyle} />
+                </div>
+
+                <div>
+                  <label className={labelStyle}>Start Date</label>
+                  <input value={dummyData.startDate} readOnly className={inputStyle} />
+                </div>
+
+                <div>
+                  <label className={labelStyle}>Status</label>
+                  <input value={dummyData.status} readOnly className={inputStyle} />
+                </div>
+              </div>
+            </section>
+          </motion.div>
+        )}
+
+        {/* VISA TAB */}
+        {activeTab === "visa" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-8"
+          >
+            <section>
+              <h3 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+                <Hash size={24} className="text-primary" />
+                Visa Details
+              </h3>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className={labelStyle}>Visa Type</label>
+                  <input value={dummyData.visaType} readOnly className={inputStyle} />
+                </div>
+
+                <div>
+                  <label className={labelStyle}>Visa Number</label>
+                  <input value={dummyData.visaNumber} readOnly className={inputStyle} />
+                </div>
+
+                <div>
+                  <label className={labelStyle}>Visa Expiry</label>
+                  <input value={dummyData.visaExpiry} readOnly className={inputStyle} />
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+                <ShieldCheck size={24} className="text-primary" />
+                CoS Assignment
+              </h3>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className={labelStyle}>CoS Number</label>
+                  <input value={dummyData.cosNumber} readOnly className={inputStyle} />
+                </div>
+
+                <div>
+                  <label className={labelStyle}>CoS Expiry</label>
+                  <input value={dummyData.cosExpiry} readOnly className={inputStyle} />
                 </div>
               </div>
             </section>
@@ -172,23 +331,108 @@ const SponsoredWorkerDetails = () => {
             {documents.map((doc, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3"
               >
                 <div className="flex items-center gap-3">
-                  <FileText className="text-gray-500" />
-                  <span className="font-medium">{doc.name}</span>
+                  {doc.status === "uploaded" ? (
+                    <CheckCircle size={20} className="text-emerald-600" />
+                  ) : (
+                    <Upload size={20} className="text-amber-600" />
+                  )}
+                  <div>
+                    <p className="text-sm font-black text-secondary">{doc.name}</p>
+                    <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-black ${
+                      doc.status === "uploaded" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    }`}>
+                      {doc.status === "uploaded" ? "Uploaded" : "Pending"}
+                    </span>
+                    {doc.uploadDate && (
+                      <p className="text-[10px] font-bold text-gray-500 mt-1">Uploaded: {doc.uploadDate}</p>
+                    )}
+                  </div>
                 </div>
 
-                <button className="flex items-center gap-2 bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 transition">
-                  <Eye size={16} />
-                  View
-                </button>
+                <div className="flex gap-2">
+                  {doc.status === "uploaded" ? (
+                    <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-white transition hover:bg-primary-dark">
+                      <Eye size={14} />
+                      View
+                    </button>
+                  ) : (
+                    <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-white transition hover:bg-primary-dark">
+                      <Upload size={14} />
+                      Upload
+                    </button>
+                  )}
+                  <button className="inline-flex items-center gap-2 rounded-lg bg-gray-200 px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-300">
+                    <Download size={14} />
+                    Download
+                  </button>
+                </div>
               </div>
             ))}
           </motion.div>
         )}
-      </div>
-    </motion.div>
+
+        {/* COMPLIANCE TAB */}
+        {activeTab === "compliance" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-4"
+          >
+            {complianceStatus.map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3"
+              >
+                <div className="flex items-center gap-3">
+                  <ShieldCheck size={20} className="text-emerald-600" />
+                  <div>
+                    <p className="text-sm font-black text-secondary">{item.item}</p>
+                    <p className="text-[10px] font-bold text-gray-500">Checked: {item.date}</p>
+                  </div>
+                </div>
+
+                <span className="inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full bg-emerald-100 text-emerald-700">
+                  {item.status}
+                </span>
+              </div>
+            ))}
+          </motion.div>
+        )}
+
+        {/* HISTORY TAB */}
+        {activeTab === "history" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-4"
+          >
+            {workHistory.map((item, index) => (
+              <div
+                key={index}
+                className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4"
+              >
+                <div className="flex items-start gap-3">
+                  <Briefcase size={20} className="text-primary mt-1" />
+                  <div className="flex-1">
+                    <p className="text-sm font-black text-secondary">{item.position}</p>
+                    <p className="text-xs font-bold text-gray-600">{item.company}</p>
+                    <div className="flex items-center gap-4 mt-2">
+                      <span className="text-[10px] font-bold text-gray-500 flex items-center gap-1">
+                        <Calendar size={12} />
+                        {item.startDate} - {item.endDate}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </motion.div>
+    </div>
   );
 };
 

@@ -184,11 +184,11 @@ export default function BusinessDashboard() {
             variants={cardVariants}
             className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4"
           >
-            <div className={`p-3 ${bg} rounded-lg`}>
+            <div className={`p-3 ${bg} rounded-xl`}>
               <Icon className={`${color} h-6 w-6`} />
             </div>
             <div>
-              <p className="text-sm text-gray-600">{label}</p>
+              <p className="text-xs font-bold text-gray-600">{label}</p>
               <p className="text-2xl font-black text-secondary">{value}</p>
             </div>
           </motion.div>
@@ -205,10 +205,10 @@ export default function BusinessDashboard() {
       >
          
         <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-blue-900 flex items-center gap-2">
-          <Bell size={25} className="text-red-700" /> Compliance Reminders
+        <h3 className="font-black text-secondary flex items-center gap-2">
+          <Bell size={25} className="text-primary" /> Compliance Reminders
         </h3>
-        <button className="text-sm text-red-700 hover:underline">
+        <button className="text-xs font-bold text-primary hover:underline">
           View All
         </button>
       </div>
@@ -224,14 +224,14 @@ export default function BusinessDashboard() {
 
               {/* Left */}
               <div>
-                <h4 className="font-medium text-sm">
+                <h4 className="text-sm font-black text-secondary">
                   {item.title}
                 </h4>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs font-bold text-gray-500">
                   {item.description}
                 </p>
 
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-[10px] font-bold text-gray-400 mt-1">
                   Due: {item.dueDate}
                 </p>
               </div>
@@ -241,7 +241,7 @@ export default function BusinessDashboard() {
 
                 {/* Priority */}
                 <span
-                  className={`text-xs px-2 py-1 rounded ${getPriorityColor(
+                  className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(
                     item.priority
                   )}`}
                 >
@@ -249,7 +249,7 @@ export default function BusinessDashboard() {
                 </span>
 
                 {/* Status */}
-                <div className="flex items-center gap-1 text-xs">
+                <div className="flex items-center gap-1 text-[10px] font-bold">
                   {getStatusIcon(item.status)}
                   {item.status}
                 </div>
@@ -274,10 +274,10 @@ export default function BusinessDashboard() {
           
                 {/* Header */}
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold text-blue-900 flex items-center gap-2">
-                    <Briefcase size={25} className="text-red-700" /> Active Cases
+                  <h3 className="font-black text-secondary flex items-center gap-2">
+                    <Briefcase size={25} className="text-primary" /> Active Cases
                   </h3>
-                  <button className="text-sm text-red-700 hover:underline">
+                  <button className="text-xs font-bold text-primary hover:underline">
                     View All
                   </button>
                 </div>
@@ -295,14 +295,14 @@ export default function BusinessDashboard() {
           
                         {/* Left */}
                         <div>
-                          <h4 className="font-medium text-sm">
+                          <h4 className="text-sm font-black text-secondary">
                             {item.name}
                           </h4>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs font-bold text-gray-500">
                             {item.caseType}
                           </p>
           
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-[10px] font-bold text-gray-400 mt-1">
                             Deadline: {item.deadline}
                           </p>
                         </div>
@@ -312,14 +312,14 @@ export default function BusinessDashboard() {
           
                           {/* Priority */}
                           <span
-                            className={`text-xs px-2 py-1 rounded ${getPriorityColor(
+                            className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(
                               item.priority
                             )}`}
                           >
                             {item.priority}
                           </span>
           
-                          <div className="flex items-center gap-1 text-xs">
+                          <div className="flex items-center gap-1 text-[10px] font-bold">
                             {getStatusIcon(item.status)}
                             {item.status}
                           </div>
@@ -346,36 +346,36 @@ export default function BusinessDashboard() {
         transition={{ duration: 0.5, delay: 0.7 }}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-blue-900 flex items-center gap-2">
-            <Users size={25} className="text-blue-600" /> Recent Sponsored Workers
+          <h3 className="font-black text-secondary flex items-center gap-2">
+            <Users size={25} className="text-primary" /> Recent Sponsored Workers
           </h3>
-          <button className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+          <button className="text-xs font-bold text-primary hover:text-primary-dark transition-colors">
             View all
           </button>
         </div>
 
         <div className="overflow-x-auto">
           <table className="min-w-full text-left divide-y divide-gray-200">
-            <thead className="bg-slate-50">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Worker Name</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Visa Type</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">CoS No.</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Job Title</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Visa Expiry</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Worker Name</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Visa Type</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">CoS No.</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Job Title</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Visa Expiry</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {workersData.map((worker) => (
-                <tr key={worker.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-4 text-sm font-medium text-slate-900">{worker.name}</td>
-                  <td className="px-4 py-4 text-sm text-slate-600">{worker.visaType}</td>
-                  <td className="px-4 py-4 text-sm text-slate-600">{worker.cosNumber}</td>
-                  <td className="px-4 py-4 text-sm text-slate-600">{worker.jobTitle}</td>
-                  <td className="px-4 py-4 text-sm text-slate-600">{worker.visaExpiry}</td>
+                <tr key={worker.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-4 text-sm font-black text-secondary">{worker.name}</td>
+                  <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.visaType}</td>
+                  <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.cosNumber}</td>
+                  <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.jobTitle}</td>
+                  <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.visaExpiry}</td>
                   <td className="px-4 py-4">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black ${
                       worker.status === "Active"
                         ? "bg-green-100 text-green-700"
                         : worker.status === "Pending"

@@ -1,53 +1,95 @@
-import {
-  User, Calendar, Globe, Heart, CreditCard, Mail, Phone,
-  MapPin, Building, Briefcase, Building2, DollarSignIcon,
-  IdCard, FileText
-} from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  User,
+  Calendar,
+  Globe,
+  Heart,
+  CreditCard,
+  Mail,
+  Phone,
+  MapPin,
+  Building,
+  Briefcase,
+  Building2,
+  DollarSign,
+  IdCard,
+  FileText,
+  LayoutDashboard,
+  Hash,
+  ShieldCheck,
+} from "lucide-react";
 
 const SponsoredWorkerForm = () => {
   const [previousVisa, setPreviousVisa] = useState("");
 
   const inputStyle =
-    "mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm  focus:outline-none  focus:ring-slate-900";
+    "w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40";
+
+  const labelStyle = "text-xs font-bold text-gray-700 mb-2";
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-6xl mx-auto bg-white p-8 rounded-2xl shadow-lg">
-
-        <h2 className="text-3xl font-bold text-blue-900 mb-8 text-center">
+    <div className="space-y-10 pb-10">
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
+          <LayoutDashboard className="text-primary" size={36} />
           Sponsored Worker Form
-        </h2>
+        </h1>
+        <p className="text-primary font-bold text-sm mt-1">
+          Register a new sponsored worker with all required information.
+        </p>
+      </motion.div>
 
+      <motion.div
+        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <form className="space-y-10">
 
           {/* PERSONAL DETAILS */}
           <section>
-            <h3 className="text-xl font-semibold text-blue-900 mb-4">
+            <h3 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+              <User size={24} className="text-primary" />
               Personal Details
             </h3>
 
             <div className="grid md:grid-cols-2 gap-6">
 
               <div className="relative">
-                <label>First Name *</label>
+                <label className={labelStyle}>First Name *</label>
                 <input type="text" className={inputStyle} />
                 <User className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div className="relative">
-                <label>Last Name *</label>
+                <label className={labelStyle}>Last Name *</label>
                 <input type="text" className={inputStyle} />
                 <User className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div>
-                <label>Date of Birth *</label>
+                <label className={labelStyle}>Date of Birth *</label>
                 <input type="date" className={inputStyle} />
               </div>
 
               <div>
-                <label>Gender *</label>
+                <label className={labelStyle}>Gender *</label>
                 <select className={inputStyle}>
                   <option>Male</option>
                   <option>Female</option>
@@ -55,13 +97,13 @@ const SponsoredWorkerForm = () => {
               </div>
 
               <div className="relative">
-                <label>Nationality *</label>
+                <label className={labelStyle}>Nationality *</label>
                 <input type="text" className={inputStyle} />
                 <Globe className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div className="relative">
-                <label>Marital Status</label>
+                <label className={labelStyle}>Marital Status</label>
                 <select className={inputStyle}>
                   <option>Single</option>
                   <option>Married</option>
@@ -75,30 +117,31 @@ const SponsoredWorkerForm = () => {
 
           {/* PASSPORT */}
           <section>
-            <h3 className="text-xl font-semibold text-blue-900 mb-4">
+            <h3 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+              <CreditCard size={24} className="text-primary" />
               Passport Details
             </h3>
 
             <div className="grid md:grid-cols-2 gap-6">
 
               <div className="relative">
-                <label>Passport Number *</label>
+                <label className={labelStyle}>Passport Number *</label>
                 <input type="text" className={inputStyle} />
                 <CreditCard className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div>
-                <label>Issue Date *</label>
+                <label className={labelStyle}>Issue Date *</label>
                 <input type="date" className={inputStyle} />
               </div>
 
               <div>
-                <label>Expiry Date *</label>
+                <label className={labelStyle}>Expiry Date *</label>
                 <input type="date" className={inputStyle} />
               </div>
 
               <div>
-                <label>Country of Issue *</label>
+                <label className={labelStyle}>Country of Issue *</label>
                 <select className={inputStyle}>
                   <option>Select Country</option>
                   <option>India</option>
@@ -112,32 +155,33 @@ const SponsoredWorkerForm = () => {
 
           {/* CONTACT */}
           <section>
-            <h3 className="text-xl font-semibold text-blue-900 mb-4">
+            <h3 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+              <Phone size={24} className="text-primary" />
               Contact Information
             </h3>
 
             <div className="grid md:grid-cols-2 gap-6">
 
               <div className="relative">
-                <label>Email *</label>
+                <label className={labelStyle}>Email *</label>
                 <input type="email" className={inputStyle} />
                 <Mail className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div className="relative">
-                <label>Phone *</label>
+                <label className={labelStyle}>Phone *</label>
                 <input type="text" className={inputStyle} />
                 <Phone className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div className="relative">
-                <label>Address *</label>
+                <label className={labelStyle}>Address *</label>
                 <input type="text" className={inputStyle} />
                 <MapPin className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div className="relative">
-                <label>City *</label>
+                <label className={labelStyle}>City *</label>
                 <input type="text" className={inputStyle} />
                 <Building className="absolute right-3 top-10 text-gray-400" />
               </div>
@@ -147,41 +191,78 @@ const SponsoredWorkerForm = () => {
 
           {/* JOB */}
           <section>
-            <h3 className="text-xl font-semibold text-blue-900 mb-4">
+            <h3 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+              <Briefcase size={24} className="text-primary" />
               Job Details
             </h3>
 
             <div className="grid md:grid-cols-2 gap-6">
 
               <div className="relative">
-                <label>Job Title *</label>
+                <label className={labelStyle}>Job Title *</label>
                 <input type="text" className={inputStyle} />
                 <Briefcase className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div className="relative">
-                <label>Department</label>
+                <label className={labelStyle}>Department</label>
                 <input type="text" className={inputStyle} />
                 <Building2 className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div>
-                <label>Start Date *</label>
+                <label className={labelStyle}>Start Date *</label>
                 <input type="date" className={inputStyle} />
               </div>
 
               <div className="relative">
-                <label>Salary *</label>
+                <label className={labelStyle}>Salary *</label>
                 <input type="number" className={inputStyle} />
-                <DollarSignIcon className="absolute right-3 top-10 text-gray-400" />
+                <DollarSign className="absolute right-3 top-10 text-gray-400" />
               </div>
 
             </div>
           </section>
 
+          {/* VISA DETAILS */}
+          <section>
+            <h3 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+              <Hash size={24} className="text-primary" />
+              Visa Details
+            </h3>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className={labelStyle}>Visa Type *</label>
+                <select className={inputStyle}>
+                  <option>Select Visa Type</option>
+                  <option>Skilled Worker Visa</option>
+                  <option>Student Visa</option>
+                  <option>Health Care Visa</option>
+                </select>
+              </div>
+
+              <div>
+                <label className={labelStyle}>Visa Number</label>
+                <input type="text" className={inputStyle} placeholder="Enter visa number" />
+              </div>
+
+              <div>
+                <label className={labelStyle}>Visa Expiry Date *</label>
+                <input type="date" className={inputStyle} />
+              </div>
+
+              <div>
+                <label className={labelStyle}>CoS Number</label>
+                <input type="text" className={inputStyle} placeholder="Enter CoS number" />
+              </div>
+            </div>
+          </section>
+
           {/* IMMIGRATION */}
           <section>
-            <h3 className="text-xl font-semibold text-blue-900 mb-4">
+            <h3 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
+              <ShieldCheck size={24} className="text-primary" />
               Immigration Information
             </h3>
 
@@ -231,9 +312,9 @@ const SponsoredWorkerForm = () => {
               )}
 
               <div className="relative">
-                <label>Notes</label>
+                <label className={labelStyle}>Notes</label>
                 <textarea
-                  className="mt-1 w-full p-4 border border-slate-300 rounded-xl shadow-sm  focus:outline-none"
+                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 resize-none"
                   rows="3"
                 />
                 <FileText className="absolute right-3 top-10 text-gray-400" />
@@ -242,15 +323,24 @@ const SponsoredWorkerForm = () => {
             </div>
           </section>
 
-          {/* BUTTON */}
-          <div className="text-center">
-            <button className="bg-red-800 hover:bg-red-900 text-white px-8 py-3 rounded-xl shadow-md transition">
+          {/* BUTTONS */}
+          <div className="flex gap-4 pt-4">
+            <button
+              type="submit"
+              className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition"
+            >
               Submit Form
+            </button>
+            <button
+              type="button"
+              className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-6 py-3 transition"
+            >
+              Cancel
             </button>
           </div>
 
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 };
