@@ -78,6 +78,7 @@ import BusinessMessages from "../pages/business/BusinessMessages";
 import BusinessNotifications from "../pages/business/BusinessNotifications";
 import BusinessPayment from "../pages/business/BusinessPayment";
 import BusinessWorkers from "../pages/business/BusinessWorkers";
+import BusinessSettings from "../pages/business/BusinessSettings";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { token, user } = useSelector((state) => state.auth);
@@ -312,6 +313,7 @@ const AppRoutes = () => {
         <Route path="notifications" element={<BusinessNotifications />} />
         <Route path="payment" element={<BusinessPayment />} />
         <Route path="workers" element={<BusinessWorkers />} />
+        <Route path="settings" element={<BusinessSettings />} />
 
       </Route>
 
