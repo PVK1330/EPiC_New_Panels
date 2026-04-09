@@ -105,7 +105,7 @@ const BusinessProfile = () => {
           Company Information
         </h2>
 
-        <button className='bg-red-800 text-white rounded-xl px-2 transition-transform hover:scale-105 font-medium' onClick={()=> navigate("business/registration")}>Add Business Registration </button>
+        <button className='bg-red-800 text-white rounded-xl px-2 transition-transform hover:scale-105 font-medium' onClick={()=> navigate("/business/Businessregistration")}>Add Business Registration </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

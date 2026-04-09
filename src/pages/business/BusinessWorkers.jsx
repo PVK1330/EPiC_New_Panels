@@ -1,4 +1,4 @@
-import { Users, Filter, Search, Plus, MoreVertical, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Users, Filter, Search, Plus, MoreVertical, AlertCircle, CheckCircle2,Eye } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -211,13 +211,10 @@ const BusinessWorkers = () => {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex justify-end gap-2">
-                    <button
-                      onClick={()=> navigate("/business/Sponsorworkerdetails")}
-                      className="p-2 w-20 bg-red-800 rounded-xl transition-colors text-white"
-                      title="More options"
-                    >
-                     View
-                    </button>
+                     <button className="flex items-center gap-2 bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 transition">
+                  <Eye size={16} />
+                  View
+                </button>
                   </div>
                 </td>
               </tr>
