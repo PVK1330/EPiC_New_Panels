@@ -399,45 +399,7 @@ const CaseworkerDashboard = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm flex flex-col">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h2 className="text-sm font-black text-gray-900 uppercase tracking-wide flex items-center gap-2">
-              <TrendingUp size={18} className="text-secondary" />
-              Performance overview
-            </h2>
-            <span className="text-xs font-black text-gray-400">Demo metrics</span>
-          </div>
-          <div className="p-5 space-y-4">
-            {PERF_ROWS.map((p) => (
-              <div key={p.label} className="flex items-center gap-3">
-                <span className="text-xs font-bold text-gray-600 w-32 sm:w-36 shrink-0">
-                  {p.label}
-                </span>
-                <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${p.barClass}`}
-                    style={{ width: `${p.width}%` }}
-                  />
-                </div>
-                <span
-                  className={`text-xs font-mono font-black text-gray-900 w-10 text-right shrink-0 ${p.valClass || ""}`}
-                >
-                  {p.val}
-                </span>
-              </div>
-            ))}
-            <div className="pt-4 mt-2 border-t border-gray-100">
-              <p className="text-xs font-bold text-gray-500 mb-1">Overall score</p>
-              <p className="text-3xl font-black text-indigo-600">
-                87
-                <span className="text-base font-black text-gray-500">/ 100</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Messages Section */}
+            {/* Recent Messages Section */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-sm font-black text-gray-900 uppercase tracking-wide flex items-center gap-2">
@@ -491,6 +453,45 @@ const CaseworkerDashboard = () => {
           </div>
         </div>
       </div>
+        {/* <div className="rounded-2xl border border-gray-100 bg-white shadow-sm flex flex-col">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <h2 className="text-sm font-black text-gray-900 uppercase tracking-wide flex items-center gap-2">
+              <TrendingUp size={18} className="text-secondary" />
+              Performance overview
+            </h2>
+            <span className="text-xs font-black text-gray-400">Demo metrics</span>
+          </div>
+          <div className="p-5 space-y-4">
+            {PERF_ROWS.map((p) => (
+              <div key={p.label} className="flex items-center gap-3">
+                <span className="text-xs font-bold text-gray-600 w-32 sm:w-36 shrink-0">
+                  {p.label}
+                </span>
+                <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${p.barClass}`}
+                    style={{ width: `${p.width}%` }}
+                  />
+                </div>
+                <span
+                  className={`text-xs font-mono font-black text-gray-900 w-10 text-right shrink-0 ${p.valClass || ""}`}
+                >
+                  {p.val}
+                </span>
+              </div>
+            ))}
+            <div className="pt-4 mt-2 border-t border-gray-100">
+              <p className="text-xs font-bold text-gray-500 mb-1">Overall score</p>
+              <p className="text-3xl font-black text-indigo-600">
+                87
+                <span className="text-base font-black text-gray-500">/ 100</span>
+              </p>
+            </div>
+          </div>
+        </div> */}
+      </div>
+
+      
     </div>
   );
 };

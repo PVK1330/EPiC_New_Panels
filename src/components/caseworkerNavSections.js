@@ -75,11 +75,11 @@ export const caseworkerNavSections = [
   {
     title: "People",
     items: [
-      {
-        to: "/caseworker/people/candidates",
-        label: "Candidate profiles",
-        icon: User,
-      },
+      // {
+      //   to: "/caseworker/people/candidates",
+      //   label: "Candidate profiles",
+      //   icon: User,
+      // },
       {
         to: "/caseworker/people/sponsors",
         label: "Sponsor profiles",
