@@ -1,5 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Search, Settings, Grid3x3, List, Calendar as CalendarIcon, Clock, MapPin, Users, Video, Phone, X, Edit, Trash2, Eye, UserCheck } from "lucide-react";
+import MicrosoftConnect from "../../components/MicrosoftConnect";
+import CreateMeetingModal from "../../components/CreateMeetingModal";
+import { getUpcomingMeetings } from "../../services/teamsApi";
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -9,6 +12,27 @@ const Calendar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showEventDetailModal, setShowEventDetailModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showTeamsModal, setShowTeamsModal] = useState(false);
+  const [teamsMeetings, setTeamsMeetings] = useState([]);
+  const [loadingTeams, setLoadingTeams] = useState(true);
+
+  // Fetch Teams meetings on component mount
+  useEffect(() => {
+    fetchTeamsMeetings();
+  }, []);
+
+  const fetchTeamsMeetings = async () => {
+    try {
+      setLoadingTeams(true);
+      const response = await getUpcomingMeetings(30); // Get next 30 days
+      setTeamsMeetings(response.data.meetings || []);
+    } catch (error) {
+      console.error('Failed to fetch Teams meetings:', error);
+      setTeamsMeetings([]);
+    } finally {
+      setLoadingTeams(false);
+    }
+  };
 
   // Mock events data
   const [events, setEvents] = useState([
@@ -69,6 +93,24 @@ const Calendar = () => {
     }
   ]);
 
+  // Convert Teams meetings to event format
+  const teamsEvents = teamsMeetings.map(meeting => ({
+    id: `teams-${meeting.id}`,
+    title: meeting.subject,
+    date: new Date(meeting.start_time),
+    endDate: new Date(meeting.end_time),
+    type: 'teams',
+    location: 'Microsoft Teams',
+    attendees: meeting.attendees?.map(a => a.email) || [],
+    description: meeting.description || '',
+    color: 'bg-purple-500',
+    joinUrl: meeting.join_url,
+    isTeamsMeeting: true
+  }));
+
+  // Combine local events with Teams meetings
+  const allEvents = [...events, ...teamsEvents];
+
   const [newEvent, setNewEvent] = useState({
     title: "",
     date: "",
@@ -107,7 +149,7 @@ const Calendar = () => {
   // Get events for a specific day
   const getEventsForDay = (day) => {
     if (!day) return [];
-    return events.filter(event => {
+    return allEvents.filter(event => {
       const eventDate = new Date(event.date);
       return eventDate.toDateString() === day.toDateString();
     });
@@ -210,18 +252,19 @@ const Calendar = () => {
       case 'meeting': return <Users size={14} />;
       case 'call': return <Phone size={14} />;
       case 'deadline': return <Clock size={14} />;
+      case 'teams': return <Video size={14} />;
       default: return <CalendarIcon size={14} />;
     }
   };
 
   // Filter events based on search
   const filteredEvents = useMemo(() => {
-    if (!searchQuery) return events;
-    return events.filter(event => 
+    if (!searchQuery) return allEvents;
+    return allEvents.filter(event => 
       event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       event.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [events, searchQuery]);
+  }, [allEvents, searchQuery]);
 
   const days = getDaysInMonth(currentDate);
 
@@ -235,6 +278,13 @@ const Calendar = () => {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowTeamsModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
+          >
+            <Video size={16} />
+            Create Teams Meeting
+          </button>
+          <button
             onClick={() => setShowEventModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-xl hover:bg-secondary/90 transition-colors"
           >
@@ -243,6 +293,9 @@ const Calendar = () => {
           </button>
         </div>
       </div>
+
+      {/* Microsoft Teams Connection */}
+      <MicrosoftConnect />
 
       {/* Controls Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200">
@@ -653,6 +706,23 @@ const Calendar = () => {
                     </div>
                   )}
 
+                  {selectedEvent.isTeamsMeeting && selectedEvent.joinUrl && (
+                    <div className="flex items-center gap-3">
+                      <Video size={16} className="text-gray-400" />
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500">Join Meeting</p>
+                        <a
+                          href={selectedEvent.joinUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-bold text-purple-600 hover:text-purple-700 underline"
+                        >
+                          {selectedEvent.joinUrl}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
                   {selectedEvent.attendees && selectedEvent.attendees.length > 0 && (
                     <div className="flex items-start gap-3">
                       <Users size={16} className="text-gray-400 mt-1" />
@@ -704,6 +774,16 @@ const Calendar = () => {
           </div>
         </div>
       )}
+
+      {/* Create Teams Meeting Modal */}
+      <CreateMeetingModal
+        isOpen={showTeamsModal}
+        onClose={() => setShowTeamsModal(false)}
+        onSuccess={() => {
+          fetchTeamsMeetings();
+          setShowTeamsModal(false);
+        }}
+      />
     </div>
   );
 };

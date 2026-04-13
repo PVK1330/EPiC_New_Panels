@@ -56,24 +56,24 @@ const COSPage = () => {
       allocationDate: "2025-01-01",
       lastUsed: "2025-04-05",
     },
-    {
-      visaType: "Student Visa",
-      allocated: 30,
-      used: 20,
-      remaining: 10,
-      expiryDate: "2025-08-31",
-      allocationDate: "2025-02-15",
-      lastUsed: "2025-04-02",
-    },
-    {
-      visaType: "Health Care Visa",
-      allocated: 40,
-      used: 25,
-      remaining: 15,
-      expiryDate: "2025-11-30",
-      allocationDate: "2025-01-20",
-      lastUsed: "2025-04-08",
-    },
+    // {
+    //   visaType: "Skilled Worker Visa",
+    //   allocated: 30,
+    //   used: 20,
+    //   remaining: 10,
+    //   expiryDate: "2025-08-31",
+    //   allocationDate: "2025-02-15",
+    //   lastUsed: "2025-04-02",
+    // },
+    // {
+    //   visaType: "Skilled Worker Visa",
+    //   allocated: 40,
+    //   used: 25,
+    //   remaining: 15,
+    //   expiryDate: "2025-11-30",
+    //   allocationDate: "2025-01-20",
+    //   lastUsed: "2025-04-08",
+    // },
   ];
 
   // Utility to generate initials
@@ -313,8 +313,6 @@ const COSPage = () => {
                   >
                     <option value="">Select visa type</option>
                     <option>Skilled Worker Visa</option>
-                    <option>Student Visa</option>
-                    <option>Health Care Visa</option>
                   </select>
                 </div>
                 <div>
