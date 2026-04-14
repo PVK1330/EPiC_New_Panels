@@ -5,6 +5,105 @@ import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 
+// Multi-select component for caseworkers
+function CaseworkerMultiSelect({ options, value, onChange, error }) {
+  const [open, setOpen] = useState(false);
+
+  const toggleId = (id) => {
+    if (value.includes(id)) {
+      onChange(value.filter((x) => x !== id));
+    } else if (value.length < 2) {
+      onChange([...value, id]);
+    }
+  };
+
+  const summaryText = value.length
+    ? value
+        .map((id) => {
+          const o = options.find((x) => x.id === id);
+          return o ? `${o.name} (${o.id})` : id;
+        })
+        .join(" · ")
+    : "";
+
+  return (
+    <div className="relative space-y-2">
+      <label className="block text-sm font-medium text-gray-700">
+        Assign To <span className="text-red-500">*</span>
+        <span className="text-gray-400 font-normal ml-1">(1–2 workers)</span>
+      </label>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-left text-sm bg-white border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          error ? "border-red-400" : ""
+        }`}
+      >
+        <span
+          className={
+            value.length ? "text-gray-900 font-semibold" : "text-gray-400"
+          }
+        >
+          {value.length ? summaryText : "Choose caseworkers…"}
+        </span>
+        <span className="text-xs font-bold text-gray-400 tabular-nums shrink-0">
+          {value.length}/2
+        </span>
+      </button>
+      {open && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-[200] cursor-default bg-transparent"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute z-[210] left-0 right-0 mt-1 border border-gray-200 rounded-xl bg-white shadow-xl py-1 max-h-60 overflow-y-auto">
+            {options.map((o) => {
+              const checked = value.includes(o.id);
+              const disabled = !checked && value.length >= 2;
+              return (
+                <label
+                  key={o.id}
+                  className={`flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${
+                    disabled
+                      ? "opacity-40 cursor-not-allowed"
+                      : "cursor-pointer hover:bg-blue-50"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="accent-blue-600 rounded border-gray-300"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={() => toggleId(o.id)}
+                  />
+                  <span className="font-semibold text-gray-800">{o.name}</span>
+                  <span className="text-xs font-mono text-gray-500 ml-auto">
+                    {o.id}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </>
+      )}
+      {value.length > 0 && (
+        <p className="text-xs text-gray-600 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
+          <span className="font-bold text-secondary">Assigned:</span>{" "}
+          {value
+            .map((id) => {
+              const o = options.find((x) => x.id === id);
+              return o ? `${o.name} — ${o.id}` : id;
+            })
+            .join(" · ")}
+        </p>
+      )}
+      {error && <span className="text-xs text-red-500">{error}</span>}
+    </div>
+  );
+}
+
 const MOCK_CASES = [
   { id: "CAS-001", caseId: "#CAS-001", candidate: "John Smith", business: "Tech Solutions Ltd", visaType: "H-1B", status: "In Progress", priority: "High", submitted: "2024-01-15", deadline: "2024-02-15" },
   { id: "CAS-002", caseId: "#CAS-002", candidate: "Sarah Johnson", business: "Global Tech Inc", visaType: "L-1A", status: "Pending Review", priority: "Medium", submitted: "2024-01-18", deadline: "2024-02-20" },
@@ -188,7 +287,8 @@ const AdminCaseworkers = () => {
   const [modal, setModal]               = useState({ type: null, data: null });
   const [form, setForm]                 = useState(EMPTY_FORM);
   const [errors, setErrors]             = useState({});
-  const [reassignModal, setReassignModal] = useState({ open: false, case: null, targetCaseworker: null });
+  const [reassignModal, setReassignModal] = useState({ open: false, case: null, currentCaseworker: null, targetCaseworkers: [] });
+  const [reassignError, setReassignError] = useState("");
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -285,20 +385,31 @@ const openDelete = (cw) => setModal({ type: "delete", data: cw });
   };
 
   const openReassignModal = (caseItem, currentCaseworker) => {
-    setReassignModal({ 
-      open: true, 
-      case: caseItem, 
+    setReassignModal({
+      open: true,
+      case: caseItem,
       currentCaseworker: currentCaseworker,
-      targetCaseworker: null 
+      targetCaseworkers: []
     });
   };
 
   const closeReassignModal = () => {
-    setReassignModal({ open: false, case: null, currentCaseworker: null, targetCaseworker: null });
+    setReassignModal({ open: false, case: null, currentCaseworker: null, targetCaseworkers: [] });
+    setReassignError("");
   };
 
   const handleReassign = () => {
-    if (!reassignModal.targetCaseworker) return;
+    if (!reassignModal.targetCaseworkers || reassignModal.targetCaseworkers.length === 0) {
+      setReassignError("Please select at least one caseworker.");
+      return;
+    }
+
+    // Validation: Current caseworker must have at least 2 cases after reassignment
+    const currentCaseworker = caseworkers.find(cw => cw.id === reassignModal.currentCaseworker.id);
+    if (currentCaseworker && currentCaseworker.assignedCases.length <= 2) {
+      setReassignError("Cannot reassign: Caseworker must have at least 2 cases assigned.");
+      return;
+    }
 
     // Update caseworkers' assigned cases
     setCaseworkers(prev => prev.map(cw => {
@@ -310,8 +421,8 @@ const openDelete = (cw) => setModal({ type: "delete", data: cw });
           activeCases: Math.max(0, cw.activeCases - 1)
         };
       }
-      if (cw.id === reassignModal.targetCaseworker) {
-        // Add case to target caseworker
+      if (reassignModal.targetCaseworkers.includes(cw.id)) {
+        // Add case to each target caseworker
         return {
           ...cw,
           assignedCases: [...cw.assignedCases, reassignModal.case],
@@ -759,18 +870,20 @@ const openDelete = (cw) => setModal({ type: "delete", data: cw });
         open={reassignModal.open}
         onClose={closeReassignModal}
         title="Reassign Case"
-        maxWidthClass="max-w-md"
+        maxWidthClass="max-w-lg"
+        maxHeightClass="max-h-[80vh]"
+        marginBottomClass="mb-8"
         bodyClassName="px-5 py-5 sm:px-6"
         footer={
           <>
             <Button variant="ghost" onClick={closeReassignModal} className="rounded-xl">
               Cancel
             </Button>
-            <Button 
-              variant="primary" 
-              onClick={handleReassign} 
+            <Button
+              variant="primary"
+              onClick={handleReassign}
               className="rounded-xl"
-              disabled={!reassignModal.targetCaseworker}
+              disabled={!reassignModal.targetCaseworkers || reassignModal.targetCaseworkers.length === 0}
             >
               Reassign Case
             </Button>
@@ -779,39 +892,34 @@ const openDelete = (cw) => setModal({ type: "delete", data: cw });
       >
         {reassignModal.case && reassignModal.currentCaseworker && (
           <div className="space-y-4">
+            {reassignError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-xs font-semibold text-red-700">{reassignError}</p>
+              </div>
+            )}
+
             <div className="p-3 bg-gray-50 rounded-lg">
               <p className="text-sm font-semibold text-gray-700 mb-1">Case to Reassign</p>
               <p className="text-xs text-gray-600">{reassignModal.case.caseId} · {reassignModal.case.candidate}</p>
               <p className="text-xs text-gray-500">{reassignModal.case.business} · {reassignModal.case.visaType}</p>
             </div>
-            
+
             <div className="p-3 bg-blue-50 rounded-lg">
               <p className="text-sm font-semibold text-blue-700 mb-1">From</p>
-              <p className="text-xs text-blue-600">{reassignModal.currentCaseworker.name}</p>
+              <p className="text-xs text-blue-600">{reassignModal.currentCaseworker.name} ({reassignModal.currentCaseworker.assignedCases.length} cases assigned)</p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Assign To
-              </label>
-              <select
-                value={reassignModal.targetCaseworker || ""}
-                onChange={(e) => setReassignModal(prev => ({ 
-                  ...prev, 
-                  targetCaseworker: e.target.value ? parseInt(e.target.value) : null 
-                }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select a caseworker...</option>
-                {caseworkers
-                  .filter(cw => cw.id !== reassignModal.currentCaseworker.id && cw.status === "Active")
-                  .map(cw => (
-                    <option key={cw.id} value={cw.id}>
-                      {cw.name} ({cw.activeCases} active cases)
-                    </option>
-                  ))}
-              </select>
-            </div>
+            <CaseworkerMultiSelect
+              options={caseworkers
+                .filter(cw => cw.id !== reassignModal.currentCaseworker.id)
+                .map(cw => ({ id: cw.id, name: cw.name }))}
+              value={reassignModal.targetCaseworkers}
+              onChange={(ids) => {
+                setReassignModal(prev => ({ ...prev, targetCaseworkers: ids }));
+                setReassignError("");
+              }}
+              error={reassignError && reassignModal.targetCaseworkers.length === 0 ? reassignError : ""}
+            />
           </div>
         )}
       </Modal>

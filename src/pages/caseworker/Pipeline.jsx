@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Filter, Plus, X } from "lucide-react";
+import { Filter } from "lucide-react";
 
 const STAGES = [
   { id: "lead", title: "Lead", header: "bg-slate-100 border-slate-200", titleClass: "text-slate-600", countClass: "bg-slate-200/80 text-slate-700" },
@@ -62,18 +62,6 @@ export default function Pipeline() {
   const [stages, setStages] = useState(() => STAGES);
   const [filterOpen, setFilterOpen] = useState(false);
   const [draggedCard, setDraggedCard] = useState(null);
-  const [showAddCard, setShowAddCard] = useState(null); // stage ID or null
-  const [showAddStage, setShowAddStage] = useState(false);
-  const [newStageForm, setNewStageForm] = useState({
-    title: "",
-  });
-  const [newCardForm, setNewCardForm] = useState({
-    candidate: "",
-    sponsor: "",
-    badge: "Low",
-    tone: "gray",
-    date: "",
-  });
 
   const byStage = useMemo(() => {
     const map = Object.fromEntries(stages.map((s) => [s.id, []]));
@@ -84,31 +72,6 @@ export default function Pipeline() {
   }, [cards, stages]);
 
   const total = cards.length;
-
-  const handleAddStage = () => {
-    if (!newStageForm.title) return;
-
-    const newStage = {
-      id: newStageForm.title.toLowerCase().replace(/\s+/g, "-"),
-      title: newStageForm.title,
-      header: "bg-gray-50 border-gray-200",
-      titleClass: "text-gray-700",
-      countClass: "bg-gray-200/80 text-gray-700",
-    };
-
-    setStages([...stages, newStage]);
-    setNewStageForm({ title: "" });
-    setShowAddStage(false);
-  };
-
-  const handleRemoveStage = (stageId) => {
-    setStages(stages.filter((s) => s.id !== stageId));
-    // Move cards from removed stage to the first available stage
-    const firstStage = stages[0]?.id;
-    if (firstStage) {
-      setCards(cards.map((c) => (c.stage === stageId ? { ...c, stage: firstStage } : c)));
-    }
-  };
 
   const handleDragStart = (e, card) => {
     setDraggedCard(card);
@@ -139,49 +102,6 @@ export default function Pipeline() {
     setDraggedCard(null);
   };
 
-  const handleAddCard = (stage) => {
-    if (!newCardForm.candidate || !newCardForm.sponsor || !newCardForm.date) return;
-
-    const newCard = {
-      caseId: `#C-${Math.floor(Math.random() * 10000)}`,
-      stage: stage,
-      candidate: newCardForm.candidate,
-      sponsor: newCardForm.sponsor,
-      badge: newCardForm.badge,
-      tone: newCardForm.tone,
-      date: newCardForm.date,
-    };
-
-    setCards([...cards, newCard]);
-    setNewCardForm({
-      candidate: "",
-      sponsor: "",
-      badge: "Low",
-      tone: "gray",
-      date: "",
-    });
-    setShowAddCard(null);
-  };
-
-  const handleCancelAddCard = () => {
-    setNewCardForm({
-      candidate: "",
-      sponsor: "",
-      badge: "Low",
-      tone: "gray",
-      date: "",
-    });
-    setShowAddCard(null);
-  };
-
-  const getNextCaseId = () => {
-    const maxId = cards.reduce((max, card) => {
-      const num = parseInt(card.caseId.replace("#C-", ""));
-      return num > max ? num : max;
-    }, 0);
-    return `#C-${String(maxId + 1).padStart(4, "0")}`;
-  };
-
   return (
     <div className="flex flex-col min-h-[calc(100vh-8rem)] -mx-4 md:-mx-8 animate-in fade-in duration-500">
       <div className="shrink-0 px-4 md:px-8 pb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b border-gray-100 bg-white/80">
@@ -207,22 +127,6 @@ export default function Pipeline() {
               Demo: connect filters to case tags and visa type when the API is ready.
             </p>
           )}
-          <button
-            type="button"
-            onClick={() => setShowAddStage(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-primary/20 hover:bg-primary-dark"
-          >
-            <Plus size={18} strokeWidth={2.5} />
-            Add Stage
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/caseworker/cases")}
-            className="inline-flex items-center gap-2 rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
-          >
-            <Plus size={18} strokeWidth={2.5} />
-            Add case
-          </button>
         </div>
       </div>
 
@@ -241,19 +145,9 @@ export default function Pipeline() {
                   <span className={`text-[11px] font-black uppercase tracking-wider ${col.titleClass}`}>
                     {col.title}
                   </span>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[11px] font-black tabular-nums rounded-full px-2 py-0.5 ${col.countClass}`}>
-                      {list.length}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveStage(col.id)}
-                      className="text-gray-400 hover:text-red-600 transition-colors"
-                      title="Remove stage"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
+                  <span className={`text-[11px] font-black tabular-nums rounded-full px-2 py-0.5 ${col.countClass}`}>
+                    {list.length}
+                  </span>
                 </div>
                 <div
                   className="rounded-b-xl border border-t-0 border-gray-200 bg-gray-50/90 p-2 flex flex-col gap-2 min-h-[500px]"
@@ -297,104 +191,12 @@ export default function Pipeline() {
                       </div>
                     </div>
                   ))}
-                  {showAddCard === col.id ? (
-                    <div className="rounded-lg border border-secondary/50 bg-secondary/5 p-3">
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          placeholder="Candidate name"
-                          value={newCardForm.candidate}
-                          onChange={(e) => setNewCardForm({ ...newCardForm, candidate: e.target.value })}
-                          className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/20"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Sponsor name"
-                          value={newCardForm.sponsor}
-                          onChange={(e) => setNewCardForm({ ...newCardForm, sponsor: e.target.value })}
-                          className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/20"
-                        />
-                        <input
-                          type="date"
-                          value={newCardForm.date}
-                          onChange={(e) => setNewCardForm({ ...newCardForm, date: e.target.value })}
-                          className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/20"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleAddCard(col.id)}
-                            className="flex-1 rounded-lg bg-primary px-2 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition-colors"
-                          >
-                            Add
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleCancelAddCard}
-                            className="flex-1 rounded-lg bg-gray-100 px-2 py-1.5 text-xs font-black text-gray-600 hover:bg-gray-200 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setShowAddCard(col.id)}
-                      className="mt-1 rounded-lg border border-dashed border-gray-300 py-2 text-xs font-bold text-gray-500 hover:border-secondary/50 hover:text-secondary hover:bg-secondary/5 transition-colors"
-                    >
-                      + Add card
-                    </button>
-                  )}
                 </div>
               </div>
             );
           })}
         </div>
       </div>
-
-      {/* Add Stage Modal */}
-      {showAddStage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <h2 className="text-xl font-black text-secondary mb-4">Add New Stage</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">
-                  Stage Title
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Interview"
-                  value={newStageForm.title}
-                  onChange={(e) => setNewStageForm({ title: e.target.value })}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddStage(false);
-                    setNewStageForm({ title: "" });
-                  }}
-                  className="flex-1 rounded-xl bg-gray-100 py-3 text-sm font-black text-gray-600 transition-colors hover:bg-gray-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAddStage}
-                  className="flex-1 rounded-xl bg-primary py-3 text-sm font-black text-white transition-colors hover:bg-primary-dark"
-                >
-                  Add Stage
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

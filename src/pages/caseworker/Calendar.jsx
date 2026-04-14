@@ -277,13 +277,13 @@ const Calendar = () => {
           <p className="text-gray-500 mt-1">Schedule events, meetings, and deadlines</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          {/* <button
             onClick={() => setShowTeamsModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
           >
             <Video size={16} />
             Create Teams Meeting
-          </button>
+          </button> */}
           <button
             onClick={() => setShowEventModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-xl hover:bg-secondary/90 transition-colors"

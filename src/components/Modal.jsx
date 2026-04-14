@@ -8,6 +8,8 @@ const Modal = ({
   footer,
   titleId = "modal-title",
   maxWidthClass = "max-w-md",
+  maxHeightClass = "",
+  marginBottomClass = "",
   bodyClassName = "",
   headerClassName = "",
 }) => {
@@ -28,7 +30,7 @@ const Modal = ({
       />
       <div className="relative flex min-h-[100dvh] items-center justify-center px-3 py-6 sm:p-4 md:p-6">
         <div
-          className={`relative z-10 flex w-full ${maxWidthClass} max-h-[calc(100dvh-1.5rem)] sm:max-h-[min(90dvh,56rem)] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200`}
+          className={`relative z-10 flex w-full ${maxWidthClass} ${maxHeightClass || "max-h-[calc(100dvh-1.5rem)] sm:max-h-[min(90dvh,56rem)]"} ${marginBottomClass} flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200`}
         >
           <div
             className={`flex shrink-0 items-start justify-between gap-3 border-b border-gray-100 bg-gray-50/80 px-4 py-3 sm:px-6 sm:py-4 ${headerClassName}`}

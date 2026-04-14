@@ -56,60 +56,60 @@ const MicrosoftConnect = () => {
     );
   }
 
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className={`p-3 rounded-full ${status?.isConnected ? 'bg-green-100' : 'bg-gray-100'}`}>
-            <Video className={`w-6 h-6 ${status?.isConnected ? 'text-green-600' : 'text-gray-400'}`} />
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Microsoft Teams Integration</h3>
-            <p className="text-sm text-gray-500">
-              {status?.isConnected 
-                ? `Connected as ${status?.microsoftEmail}`
-                : 'Connect to create and manage Teams meetings'
-              }
-            </p>
-          </div>
-        </div>
+  // return (
+  //   <div className="bg-white rounded-xl shadow-sm p-6">
+  //     <div className="flex items-center justify-between">
+  //       <div className="flex items-center gap-4">
+  //         <div className={`p-3 rounded-full ${status?.isConnected ? 'bg-green-100' : 'bg-gray-100'}`}>
+  //           <Video className={`w-6 h-6 ${status?.isConnected ? 'text-green-600' : 'text-gray-400'}`} />
+  //         </div>
+  //         <div>
+  //           <h3 className="font-semibold text-gray-900">Microsoft Teams Integration</h3>
+  //           <p className="text-sm text-gray-500">
+  //             {status?.isConnected 
+  //               ? `Connected as ${status?.microsoftEmail}`
+  //               : 'Connect to create and manage Teams meetings'
+  //             }
+  //           </p>
+  //         </div>
+  //       </div>
 
-        <div className="flex items-center gap-3">
-          {status?.isConnected ? (
-            <>
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDisconnect}
-              >
-                Disconnect
-              </Button>
-            </>
-          ) : (
-            <>
-              <XCircle className="w-5 h-5 text-gray-300" />
-              <Button
-                size="sm"
-                onClick={handleConnect}
-                disabled={connecting}
-              >
-                {connecting ? 'Connecting...' : 'Connect'}
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+  //       <div className="flex items-center gap-3">
+  //         {status?.isConnected ? (
+  //           <>
+  //             <CheckCircle className="w-5 h-5 text-green-500" />
+  //             <Button
+  //               variant="outline"
+  //               size="sm"
+  //               onClick={handleDisconnect}
+  //             >
+  //               Disconnect
+  //             </Button>
+  //           </>
+  //         ) : (
+  //           <>
+  //             <XCircle className="w-5 h-5 text-gray-300" />
+  //             <Button
+  //               size="sm"
+  //               onClick={handleConnect}
+  //               disabled={connecting}
+  //             >
+  //               {connecting ? 'Connecting...' : 'Connect'}
+  //             </Button>
+  //           </>
+  //         )}
+  //       </div>
+  //     </div>
 
-      {status?.isConnected && status?.isTokenExpired && (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800">
-            ⚠️ Your Microsoft token has expired. Please reconnect your account.
-          </p>
-        </div>
-      )}
-    </div>
-  );
+  //     {status?.isConnected && status?.isTokenExpired && (
+  //       <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+  //         <p className="text-sm text-yellow-800">
+  //           ⚠️ Your Microsoft token has expired. Please reconnect your account.
+  //         </p>
+  //       </div>
+  //     )}
+  //   </div>
+  // );
 };
 
 export default MicrosoftConnect;

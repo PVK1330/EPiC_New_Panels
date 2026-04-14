@@ -80,7 +80,7 @@ const SegregationPanel = () => {
           />
         </div>
 
-        <pre className="p-4 rounded-xl bg-gray-900 text-green-400 text-xs font-mono overflow-x-auto border border-gray-700">
+        {/* <pre className="p-4 rounded-xl bg-gray-900 text-green-400 text-xs font-mono overflow-x-auto border border-gray-700">
           <span className="text-gray-500">{"// Segregation logic (reference)"}</span>
           {"\n"}
           <span className="text-purple-400">if</span> (user.type === <span className="text-amber-300">&apos;external&apos;</span>) {"{"}
@@ -88,7 +88,7 @@ const SegregationPanel = () => {
           {"\n"}  hideFinancialControls = <span className="text-green-400">true</span>;
           {"\n"}
           {"}"}
-        </pre>
+        </pre> */}
 
         <div className="flex flex-wrap items-center gap-3">
           <Button type="button" variant="primary" onClick={handleSave} className="rounded-xl">
