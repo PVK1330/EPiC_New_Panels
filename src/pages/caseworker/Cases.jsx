@@ -1510,8 +1510,8 @@ function PaymentsTab() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
-          { label: "Total fee", value: "£3,500", color: "text-gray-900" },
-          { label: "Paid", value: "£3,500", color: "text-emerald-600" },
+          // { label: "Total fee", value: "£3,500", color: "text-gray-900" },
+          // { label: "Paid", value: "£3,500", color: "text-emerald-600" },
           { label: "Outstanding", value: "£0", color: "text-gray-500" },
         ].map((b) => (
           <div
