@@ -130,6 +130,88 @@ const workersData = [
     status: "Expiring",
   },
 ];
+const notification = [
+  {
+    "id": 1,
+    "type": "visa_update",
+    "title": "New Skilled Worker Visa Rules",
+    "message": "Updated salary threshold requirements announced for Skilled Worker visas.",
+    "date": "2026-04-20",
+    "time": "10:30 AM",
+    "priority": "High",
+    "status": "unread"
+  },
+  {
+    "id": 2,
+    "type": "event",
+    "title": "Immigration Webinar 2026",
+    "message": "Join our webinar to understand the latest immigration policies.",
+    "date": "2026-04-22",
+    "time": "03:00 PM",
+    "priority": "Medium",
+    "status": "read"
+  },
+  {
+    "id": 3,
+    "type": "meeting",
+    "title": "Client Meeting - Visa Consultation",
+    "message": "Discuss visa application process with client John Doe.",
+    "date": "2026-04-18",
+    "time": "11:00 AM",
+    "priority": "High",
+    "status": "unread"
+  },
+  {
+    "id": 4,
+    "type": "visa_update",
+    "title": "Student Visa Policy Change",
+    "message": "New rules for part-time work hours for international students.",
+    "date": "2026-04-25",
+    "time": "09:00 AM",
+    "priority": "Medium",
+    "status": "unread"
+  },
+  {
+    "id": 5,
+    "type": "event",
+    "title": "Compliance Deadline Reminder",
+    "message": "Submit all required documents before deadline.",
+    "date": "2026-04-28",
+    "time": "05:00 PM",
+    "priority": "High",
+    "status": "unread"
+  },
+  {
+    "id": 6,
+    "type": "meeting",
+    "title": "Internal Team Sync",
+    "message": "Weekly sync meeting with development team.",
+    "date": "2026-04-17",
+    "time": "04:30 PM",
+    "priority": "low",
+    "status": "read"
+  },
+  {
+    "id": 7,
+    "type": "event",
+    "title": "HR Compliance Workshop",
+    "message": "Workshop on latest HR compliance regulations.",
+    "date": "2026-05-02",
+    "time": "02:00 PM",
+    "priority": "Medium",
+    "status": "unread"
+  },
+  {
+    "id": 8,
+    "type": "meeting",
+    "title": "Sponsor License Review Meeting",
+    "message": "Review sponsor license status with legal team.",
+    "date": "2026-04-19",
+    "time": "01:00 PM",
+    "priority": "High",
+    "status": "unread"
+  }
+]
 
 const getStatusIcon = (status) => {
   if (status === "Completed") return <CheckCircle size={16} className="text-green-600" />;
@@ -197,7 +279,7 @@ export default function BusinessDashboard() {
 
       {/* Recent Activity */}
       <div className="grid md:grid-cols-2 gap-6 mb-8 cursor-default  ">
-      <motion.div
+      <motion.div 
         className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -391,6 +473,68 @@ export default function BusinessDashboard() {
           </table>
         </div>
       </motion.div>
+      <div className="grid md:grid-cols-1">
+          
+      <motion.div
+        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+         
+        <div className="flex items-center justify-between mb-4">
+        <h3 className="font-black text-secondary flex items-center gap-2">
+          <Bell size={25} className="text-primary" /> New Updates and Notifications
+        </h3>
+        <button className="text-xs font-bold text-primary hover:underline">
+          View All
+        </button>
+      </div>
+        <div className="space-y-4">
+
+        {notification.map((item) => (
+          <div
+            key={item.id}
+            className=" p-4 hover:bg-gray-50 transition"
+          >
+
+            <div className="flex justify-between items-start">
+
+              {/* Left */}
+              <div>
+                <h4 className="text-sm font-black text-secondary">
+                  {item.title}
+                </h4>
+                <p className="text-xs font-bold text-gray-500">
+                  {item.message}
+                </p>
+
+                <p className="text-[10px] font-bold text-gray-400 mt-1">
+                  Due: {item.date}
+                </p>
+                <p className="text-[10px] font-bold text-gray-400 mt-1">
+                  Due: {item.time}
+                </p>
+              </div>
+
+              <span
+                  className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(
+                    item.priority
+                  )}`}
+                >
+                  {item.priority}
+                </span>
+
+      
+
+            </div>
+          </div>
+        ))}
+
+      </div>
+       
+      </motion.div>
+      </div>
     </div>
   );
 }
