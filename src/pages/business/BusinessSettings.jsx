@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useSelector } from "react-redux";
 import {
   LayoutDashboard,
   User,
@@ -11,10 +12,17 @@ import {
   ChevronRight,
   Save,
 } from "lucide-react";
+import Modal from "../../components/Modal";
+import TwoFactorSetup from "../../components/TwoFactorSetup";
+import TwoFactorDisable from "../../components/TwoFactorDisable";
 
 const BusinessSettings = () => {
+  const token = useSelector((state) => state.auth.token);
   const [activeTab, setActiveTab] = useState("account");
   const [darkMode, setDarkMode] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+  const [twoFactorMode, setTwoFactorMode] = useState("setup"); // setup or disable
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -228,6 +236,41 @@ const BusinessSettings = () => {
                   <button className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark">
                     Change Password
                   </button>
+
+                  <div className="pt-4 border-t border-gray-200">
+                    <h3 className="text-sm font-black text-secondary mb-3">Two-Factor Authentication</h3>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div>
+                        <p className="text-sm font-bold text-secondary">
+                          {twoFactorEnabled ? "2FA is enabled" : "2FA is disabled"}
+                        </p>
+                        <p className="text-xs font-bold text-gray-500 mt-0.5">
+                          {twoFactorEnabled ? "Your account is protected with 2FA" : "Enable 2FA for enhanced security"}
+                        </p>
+                      </div>
+                      {twoFactorEnabled ? (
+                        <button
+                          onClick={() => {
+                            setTwoFactorMode("disable");
+                            setTwoFactorModalOpen(true);
+                          }}
+                          className="px-4 py-2 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition"
+                        >
+                          Disable 2FA
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setTwoFactorMode("setup");
+                            setTwoFactorModalOpen(true);
+                          }}
+                          className="px-4 py-2 rounded-xl text-sm font-black text-white bg-primary hover:bg-primary-dark transition"
+                        >
+                          Enable 2FA
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -361,6 +404,35 @@ const BusinessSettings = () => {
           </motion.div>
         </div>
       </motion.div>
+
+      <Modal
+        open={twoFactorModalOpen}
+        onClose={() => setTwoFactorModalOpen(false)}
+        title=""
+        maxWidthClass="max-w-md"
+        bodyClassName="p-0"
+        footer={null}
+      >
+        {twoFactorMode === "setup" ? (
+          <TwoFactorSetup
+            token={token}
+            onSetupComplete={() => {
+              setTwoFactorEnabled(true);
+              setTwoFactorModalOpen(false);
+            }}
+            onCancel={() => setTwoFactorModalOpen(false)}
+          />
+        ) : (
+          <TwoFactorDisable
+            token={token}
+            onDisableComplete={() => {
+              setTwoFactorEnabled(false);
+              setTwoFactorModalOpen(false);
+            }}
+            onCancel={() => setTwoFactorModalOpen(false)}
+          />
+        )}
+      </Modal>
     </div>
   );
 };

@@ -12,6 +12,9 @@ import {
   Shield,
 } from "lucide-react";
 import { useSelector } from "react-redux";
+import Modal from "../../components/Modal";
+import TwoFactorSetup from "../../components/TwoFactorSetup";
+import TwoFactorDisable from "../../components/TwoFactorDisable";
 
 const InputField = ({
   label,
@@ -45,6 +48,9 @@ const MyAccount = () => {
   const user = useSelector((state) => state.auth.user);
   const [gender, setGender] = useState("male");
   const [saved, setSaved] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+  const [twoFactorMode, setTwoFactorMode] = useState("setup"); // setup or disable
 
   const handleSave = () => {
     setSaved(true);
@@ -159,6 +165,43 @@ const MyAccount = () => {
           </div>
         </div>
 
+        <div className="border-t border-gray-100 pt-6 mb-6">
+          <h2 className="text-base font-black text-secondary mb-5 tracking-tight">
+            Two-Factor Authentication
+          </h2>
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+            <div>
+              <p className="text-sm font-bold text-secondary">
+                {twoFactorEnabled ? "2FA is enabled" : "2FA is disabled"}
+              </p>
+              <p className="text-xs font-bold text-gray-500 mt-0.5">
+                {twoFactorEnabled ? "Your account is protected with 2FA" : "Enable 2FA for enhanced security"}
+              </p>
+            </div>
+            {twoFactorEnabled ? (
+              <button
+                onClick={() => {
+                  setTwoFactorMode("disable");
+                  setTwoFactorModalOpen(true);
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition"
+              >
+                Disable 2FA
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setTwoFactorMode("setup");
+                  setTwoFactorModalOpen(true);
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-black text-white bg-primary hover:bg-primary-dark transition"
+              >
+                Enable 2FA
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Actions */}
         <div className="flex items-center justify-between">
           <button
@@ -175,6 +218,35 @@ const MyAccount = () => {
           </button>
         </div>
       </div>
+
+      <Modal
+        open={twoFactorModalOpen}
+        onClose={() => setTwoFactorModalOpen(false)}
+        title=""
+        maxWidthClass="max-w-md"
+        bodyClassName="p-0"
+        footer={null}
+      >
+        {twoFactorMode === "setup" ? (
+          <TwoFactorSetup
+            token="demo-token"
+            onSetupComplete={() => {
+              setTwoFactorEnabled(true);
+              setTwoFactorModalOpen(false);
+            }}
+            onCancel={() => setTwoFactorModalOpen(false)}
+          />
+        ) : (
+          <TwoFactorDisable
+            token="demo-token"
+            onDisableComplete={() => {
+              setTwoFactorEnabled(false);
+              setTwoFactorModalOpen(false);
+            }}
+            onCancel={() => setTwoFactorModalOpen(false)}
+          />
+        )}
+      </Modal>
     </div>
   );
 };

@@ -11,6 +11,7 @@ const VIEWS = {
   login: "login",
   register: "register",
   forgot: "forgot",
+  twoFactor: "twoFactor",
 };
 
 const COUNTRIES = [
@@ -118,6 +119,11 @@ const Login = () => {
 
   const [forgotEmail, setForgotEmail] = useState("");
 
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [twoFactorError, setTwoFactorError] = useState("");
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [pendingLogin, setPendingLogin] = useState(null);
+
   const roleDisplayName = {
     candidate: "Demo Candidate",
     caseworker: "Demo Caseworker",
@@ -203,18 +209,27 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const { role } = form;
-      const name =
-        roleDisplayName[role] ?? role.charAt(0).toUpperCase() + role.slice(1);
+      // Demo mode - simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      
+      // Simulate 2FA requirement for demo
+      if (form.email.includes("admin") || form.email.includes("caseworker") || form.email.includes("business")) {
+        setPendingLogin({ email: form.email, password: form.password });
+        setView(VIEWS.twoFactor);
+      } else {
+        const { role } = form;
+        const name =
+          roleDisplayName[role] ?? role.charAt(0).toUpperCase() + role.slice(1);
 
-      dispatch(
-        setCredentials({
-          user: { name, email: form.email, role },
-          token: "demo-token",
-        }),
-      );
+        dispatch(
+          setCredentials({
+            user: { name, email: form.email, role },
+            token: "demo-token",
+          }),
+        );
 
-      navigate(`/${role}/dashboard`);
+        navigate(`/${role}/dashboard`);
+      }
     } catch {
       setErrors({ password: "Invalid credentials" });
     } finally {
@@ -289,9 +304,47 @@ const Login = () => {
     }
   };
 
+  const handleTwoFactorSubmit = async (e) => {
+    e.preventDefault();
+    if (!twoFactorCode || twoFactorCode.length !== 6) {
+      setTwoFactorError("Enter a valid 6-digit code");
+      return;
+    }
+
+    setTwoFactorLoading(true);
+    try {
+      // Demo mode - simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      
+      const { role } = form;
+      const name =
+        roleDisplayName[role] ?? role.charAt(0).toUpperCase() + role.slice(1);
+
+      dispatch(
+        setCredentials({
+          user: { name, email: pendingLogin.email, role },
+          token: "demo-token",
+        }),
+      );
+
+      navigate(`/${role}/dashboard`);
+    } catch (error) {
+      setTwoFactorError(error.message || "Invalid 2FA code");
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
+
+  const handleBackToLogin = () => {
+    setTwoFactorCode("");
+    setTwoFactorError("");
+    setPendingLogin(null);
+    setView(VIEWS.login);
+  };
+
   const shellClass =
     "bg-white rounded-xl shadow-lg p-8 w-full transition-[max-width] duration-200 " +
-    (view === VIEWS.login ? "max-w-sm" : view === VIEWS.register ? "max-w-2xl" : "max-w-md");
+    (view === VIEWS.login ? "max-w-sm" : view === VIEWS.register ? "max-w-2xl" : view === VIEWS.twoFactor ? "max-w-md" : "max-w-md");
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4 py-10">
@@ -597,7 +650,7 @@ const Login = () => {
               Reset password
             </h1>
             <p className="text-center text-xs font-bold text-gray-500 mb-6">
-              Enter the email you use for ElitePic. We’ll send reset instructions
+              Enter the email you use for ElitePic. We'll send reset instructions
               when email is connected (demo shows a message only).
             </p>
             <form onSubmit={handleForgotSubmit} className="space-y-4">
@@ -622,6 +675,46 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => setView(VIEWS.login)}
+                className="font-black text-secondary hover:text-primary hover:underline"
+              >
+                Back to sign in
+              </button>
+            </p>
+          </>
+        )}
+
+        {view === VIEWS.twoFactor && (
+          <>
+            <h1 className="text-lg font-black text-secondary text-center mb-1">
+              Two-factor authentication
+            </h1>
+            <p className="text-center text-xs font-bold text-gray-500 mb-6">
+              Enter the 6-digit code from your authenticator app
+            </p>
+            <form onSubmit={handleTwoFactorSubmit} className="space-y-4">
+              <Input
+                label="Authentication code"
+                name="twoFactorCode"
+                type="text"
+                value={twoFactorCode}
+                onChange={(e) => {
+                  setTwoFactorCode(e.target.value);
+                  setTwoFactorError("");
+                }}
+                placeholder="123456"
+                maxLength={6}
+                error={twoFactorError}
+                required
+                className="text-center text-2xl tracking-widest"
+              />
+              <Button type="submit" disabled={twoFactorLoading} className="w-full">
+                {twoFactorLoading ? "Verifying…" : "Verify"}
+              </Button>
+            </form>
+            <p className="mt-5 text-center text-sm text-gray-600">
+              <button
+                type="button"
+                onClick={handleBackToLogin}
                 className="font-black text-secondary hover:text-primary hover:underline"
               >
                 Back to sign in
