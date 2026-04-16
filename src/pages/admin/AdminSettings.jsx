@@ -20,6 +20,9 @@ import Button from "../../components/Button";
 import Input from "../../components/Input";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
 import Modal from "../../components/Modal";
+import TwoFactorSetup from "../../components/TwoFactorSetup";
+import TwoFactorDisable from "../../components/TwoFactorDisable";
+import { useSelector } from "react-redux";
 
 const timezones = ["UTC-05:00 Eastern Time", "UTC-06:00 Central Time", "UTC-07:00 Mountain Time", "UTC-08:00 Pacific Time"];
 const languages = ["English", "Spanish", "French", "German"];
@@ -90,6 +93,7 @@ const panelMotion = {
 };
 
 export default function AdminSettings() {
+  const token = useSelector((state) => state.auth.token);
   const [configTab, setConfigTab] = useState("account");
   const [visaTypes, setVisaTypes] = useState(INITIAL_VISA_TYPES);
   const [visaModalOpen, setVisaModalOpen] = useState(false);
@@ -99,6 +103,8 @@ export default function AdminSettings() {
   const [visaFormError, setVisaFormError] = useState("");
   const [categoryInput, setCategoryInput] = useState("");
   const [categories, setCategories] = useState(["Urgent", "VIP", "Standard"]);
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+  const [twoFactorMode, setTwoFactorMode] = useState("setup"); // setup or disable
 
   const [emailTemplate, setEmailTemplate] = useState("payment");
   const [emailSubject, setEmailSubject] = useState("[VisaFlow] Action Required: Outstanding Payment");
@@ -328,10 +334,37 @@ VisaFlow Team`,
                     <p className="text-sm font-black text-secondary">Two-factor authentication</p>
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium text-gray-700">Enable 2FA for enhanced security</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Receive a code on your phone when signing in</p>
+                        <p className="text-sm font-medium text-gray-700">
+                          {twoFA ? "2FA is enabled" : "2FA is disabled"}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {twoFA ? "Your account is protected with 2FA" : "Enable 2FA for enhanced security"}
+                        </p>
                       </div>
-                      <Toggle on={twoFA} onToggle={() => setTwoFA((v) => !v)} />
+                      {twoFA ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="rounded-xl text-red-600 hover:bg-red-50"
+                          onClick={() => {
+                            setTwoFactorMode("disable");
+                            setTwoFactorModalOpen(true);
+                          }}
+                        >
+                          Disable 2FA
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          className="rounded-xl"
+                          onClick={() => {
+                            setTwoFactorMode("setup");
+                            setTwoFactorModalOpen(true);
+                          }}
+                        >
+                          Enable 2FA
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -600,6 +633,35 @@ VisaFlow Team`,
           />
           <p className="text-[11px] text-gray-400 leading-relaxed">You can add more fields later (code, description, processing time).</p>
         </form>
+      </Modal>
+
+      <Modal
+        open={twoFactorModalOpen}
+        onClose={() => setTwoFactorModalOpen(false)}
+        title=""
+        maxWidthClass="max-w-md"
+        bodyClassName="p-0"
+        footer={null}
+      >
+        {twoFactorMode === "setup" ? (
+          <TwoFactorSetup
+            token={token}
+            onSetupComplete={() => {
+              setTwoFA(true);
+              setTwoFactorModalOpen(false);
+            }}
+            onCancel={() => setTwoFactorModalOpen(false)}
+          />
+        ) : (
+          <TwoFactorDisable
+            token={token}
+            onDisableComplete={() => {
+              setTwoFA(false);
+              setTwoFactorModalOpen(false);
+            }}
+            onCancel={() => setTwoFactorModalOpen(false)}
+          />
+        )}
       </Modal>
     </div>
   );

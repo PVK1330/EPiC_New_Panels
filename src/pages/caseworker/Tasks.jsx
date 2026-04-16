@@ -1,10 +1,13 @@
 import { useMemo, useState, useCallback } from "react";
+import { useSelector } from "react-redux";
 import { Plus, Check } from "lucide-react";
 import Modal from "../../components/Modal";
+import { INITIAL_CASES } from "../../data/casesData";
 
 const TODAY_ISO = "2026-04-07";
 
-const TASK_CASE_OPTIONS = [
+// Default case options (will be filtered by current caseworker)
+const DEFAULT_CASE_OPTIONS = [
   { caseId: "#C-2401", candidate: "Ahmed Al-Rashid" },
   { caseId: "#C-2398", candidate: "Priya Sharma" },
   { caseId: "#C-2391", candidate: "Carlos Mendes" },
@@ -13,12 +16,11 @@ const TASK_CASE_OPTIONS = [
   { caseId: "#C-2405", candidate: "Omar Farouk" },
 ];
 
-const emptyCreateForm = () => ({
+const emptyCreateForm = (caseOptions) => ({
   name: "",
-  caseId: TASK_CASE_OPTIONS[0].caseId,
+  caseId: caseOptions?.[0]?.caseId || DEFAULT_CASE_OPTIONS[0].caseId,
   due: TODAY_ISO,
   priority: "medium",
-  assignToMe: true,
 });
 
 function deriveSection(dueIso) {
@@ -43,8 +45,8 @@ function priorityToPrioTone(p) {
   return "gray";
 }
 
-function buildNewTask(form) {
-  const c = TASK_CASE_OPTIONS.find((x) => x.caseId === form.caseId) || TASK_CASE_OPTIONS[0];
+function buildNewTask(form, caseOptions) {
+  const c = caseOptions.find((x) => x.caseId === form.caseId) || DEFAULT_CASE_OPTIONS[0];
   const section = deriveSection(form.due);
   const overdue = section === "overdue";
   return {
@@ -58,7 +60,7 @@ function buildNewTask(form) {
     priority: priorityToDisplay(form.priority),
     prioTone: priorityToPrioTone(form.priority),
     section,
-    mine: form.assignToMe,
+    mine: true,
     done: false,
     action: overdue ? "Escalate" : "Update",
   };
@@ -122,6 +124,7 @@ function badgePriority(tone) {
 }
 
 export default function Tasks() {
+  const user = useSelector((state) => state.auth.user);
   const [filter, setFilter] = useState("all");
   const [tasks, setTasks] = useState(() => INITIAL_TASKS);
   const [createOpen, setCreateOpen] = useState(false);
@@ -131,35 +134,50 @@ export default function Tasks() {
   const [editTaskId, setEditTaskId] = useState(null);
   const [editForm, setEditForm] = useState({
     name: "",
-    caseId: TASK_CASE_OPTIONS[0].caseId,
+    caseId: DEFAULT_CASE_OPTIONS[0].caseId,
     due: TODAY_ISO,
     priority: "medium",
-    assignToMe: true,
   });
   const [editErrors, setEditErrors] = useState({});
 
+  // Filter case options to show only cases assigned to current caseworker
+  const taskCaseOptions = useMemo(() => {
+    if (!user) return DEFAULT_CASE_OPTIONS;
+
+    // Filter cases to show only those assigned to the current caseworker
+    // In a real implementation, this would check the user's ID against case.caseworkerIds
+    // For demo purposes, we'll show all cases but in production this would filter
+    const filteredCases = DEFAULT_CASE_OPTIONS.filter(option => {
+      // In production: check if user's ID is in the case's caseworkerIds array
+      // For now, return all for demo
+      return true;
+    });
+
+    return filteredCases.length > 0 ? filteredCases : DEFAULT_CASE_OPTIONS;
+  }, [user]);
+
   const caseOptionsForEdit = useMemo(() => {
     const map = new Map();
-    TASK_CASE_OPTIONS.forEach((o) => map.set(o.caseId, o));
+    taskCaseOptions.forEach((o) => map.set(o.caseId, o));
     tasks.forEach((t) => {
       if (!map.has(t.caseId)) map.set(t.caseId, { caseId: t.caseId, candidate: t.candidate });
     });
     return [...map.values()];
-  }, [tasks]);
+  }, [tasks, taskCaseOptions]);
 
   const openCreateModal = useCallback(() => {
     setViewTask(null);
     setEditTaskId(null);
     setCreateErrors({});
-    setCreateForm(emptyCreateForm());
+    setCreateForm(emptyCreateForm(taskCaseOptions));
     setCreateOpen(true);
-  }, []);
+  }, [taskCaseOptions]);
 
   const closeCreateModal = useCallback(() => {
     setCreateOpen(false);
     setCreateErrors({});
-    setCreateForm(emptyCreateForm());
-  }, []);
+    setCreateForm(emptyCreateForm(taskCaseOptions));
+  }, [taskCaseOptions]);
 
   const submitCreateTask = useCallback(() => {
     const err = {};
@@ -167,10 +185,10 @@ export default function Tasks() {
     if (!createForm.due) err.due = "Required";
     setCreateErrors(err);
     if (Object.keys(err).length) return;
-    const row = buildNewTask(createForm);
+    const row = buildNewTask(createForm, taskCaseOptions);
     setTasks((prev) => [row, ...prev]);
     closeCreateModal();
-  }, [createForm, closeCreateModal]);
+  }, [createForm, closeCreateModal, taskCaseOptions]);
 
   const openTaskView = useCallback((t) => {
     setViewTask(t);
@@ -188,7 +206,6 @@ export default function Tasks() {
       caseId: t.caseId,
       due: t.due,
       priority: displayPriorityToKey(t.priority),
-      assignToMe: t.mine,
     });
   }, []);
 
@@ -243,7 +260,7 @@ export default function Tasks() {
           priority: priorityToDisplay(editForm.priority),
           prioTone: priorityToPrioTone(editForm.priority),
           section,
-          mine: editForm.assignToMe,
+          mine: true,
           status,
           statusTone,
           action,
@@ -441,7 +458,7 @@ export default function Tasks() {
               onChange={(e) => setCreateForm((f) => ({ ...f, caseId: e.target.value }))}
               className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
             >
-              {TASK_CASE_OPTIONS.map((o) => (
+              {taskCaseOptions.map((o) => (
                 <option key={o.caseId} value={o.caseId}>
                   {o.caseId} — {o.candidate}
                 </option>
@@ -481,15 +498,6 @@ export default function Tasks() {
               </select>
             </div>
           </div>
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={createForm.assignToMe}
-              onChange={(e) => setCreateForm((f) => ({ ...f, assignToMe: e.target.checked }))}
-              className="rounded border-gray-300 text-secondary focus:ring-secondary"
-            />
-            <span className="text-sm font-bold text-gray-800">Assign to me</span>
-          </label>
           <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
@@ -625,15 +633,6 @@ export default function Tasks() {
               </select>
             </div>
           </div>
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={editForm.assignToMe}
-              onChange={(e) => setEditForm((f) => ({ ...f, assignToMe: e.target.checked }))}
-              className="rounded border-gray-300 text-secondary focus:ring-secondary"
-            />
-            <span className="text-sm font-bold text-gray-800">Assign to me</span>
-          </label>
           <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"

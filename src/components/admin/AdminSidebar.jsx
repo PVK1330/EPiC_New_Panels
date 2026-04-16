@@ -80,7 +80,7 @@ const navSections = [
   {
     label: "Tools",
     items: [
-      { to: "/admin/documents",   label: "Document Management", icon: RiFileList3Line    },
+      // { to: "/admin/documents",   label: "Document Management", icon: RiFileList3Line    },
       { to: "/admin/notifications",label: "Notifications",      icon: RiNotification2Line},
       { to: "/admin/messages",    label: "Messages",            icon: RiMessage2Line     },
       { to: "/admin/audit-logs",  label: "Compliance & Audits", icon: RiShieldCheckLine  },

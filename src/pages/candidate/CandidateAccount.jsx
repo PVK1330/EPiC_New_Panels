@@ -19,6 +19,9 @@ import {
   Settings,
   Star,
 } from "lucide-react";
+import Modal from "../../components/Modal";
+import TwoFactorSetup from "../../components/TwoFactorSetup";
+import TwoFactorDisable from "../../components/TwoFactorDisable";
 
 const RATING_LABELS = ["", "Needs work", "Fair", "Good", "Very good", "Excellent"];
 
@@ -162,6 +165,9 @@ const CandidateAccount = () => {
   const [notifStatus, setNotifStatus] = useState(true);
   const [notifPay, setNotifPay] = useState(true);
   const [notifDeadline, setNotifDeadline] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+  const [twoFactorMode, setTwoFactorMode] = useState("setup"); // setup or disable
 
   const demoDownload = (label) => {
     window.alert(`Demo: "${label}" would download in a live app.`);
@@ -478,6 +484,43 @@ const CandidateAccount = () => {
               </div>
             </div>
 
+            <div className="rounded-[1.25rem] border border-gray-100 bg-white p-6 shadow-sm">
+              <h2 className="text-sm font-black text-gray-900 border-b border-gray-100 pb-3 mb-4 flex items-center gap-2">
+                <span aria-hidden>🔐</span> Two-Factor Authentication
+              </h2>
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <div>
+                  <p className="text-sm font-bold text-secondary">
+                    {twoFactorEnabled ? "2FA is enabled" : "2FA is disabled"}
+                  </p>
+                  <p className="text-xs font-bold text-gray-500 mt-0.5">
+                    {twoFactorEnabled ? "Your account is protected with 2FA" : "Enable 2FA for enhanced security"}
+                  </p>
+                </div>
+                {twoFactorEnabled ? (
+                  <button
+                    onClick={() => {
+                      setTwoFactorMode("disable");
+                      setTwoFactorModalOpen(true);
+                    }}
+                    className="px-4 py-2 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition"
+                  >
+                    Disable 2FA
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setTwoFactorMode("setup");
+                      setTwoFactorModalOpen(true);
+                    }}
+                    className="px-4 py-2 rounded-xl text-sm font-black text-white bg-primary hover:bg-primary-dark transition"
+                  >
+                    Enable 2FA
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* <div className="rounded-[1.25rem] border border-gray-100 bg-white p-6 shadow-sm">
               <h2 className="text-sm font-black text-gray-900 border-b border-gray-100 pb-3 mb-2 flex items-center gap-2">
                 <span aria-hidden>🔔</span> Notification preferences
@@ -577,6 +620,35 @@ const CandidateAccount = () => {
           </div>
         </div>
       )}
+
+      <Modal
+        open={twoFactorModalOpen}
+        onClose={() => setTwoFactorModalOpen(false)}
+        title=""
+        maxWidthClass="max-w-md"
+        bodyClassName="p-0"
+        footer={null}
+      >
+        {twoFactorMode === "setup" ? (
+          <TwoFactorSetup
+            token="demo-token"
+            onSetupComplete={() => {
+              setTwoFactorEnabled(true);
+              setTwoFactorModalOpen(false);
+            }}
+            onCancel={() => setTwoFactorModalOpen(false)}
+          />
+        ) : (
+          <TwoFactorDisable
+            token="demo-token"
+            onDisableComplete={() => {
+              setTwoFactorEnabled(false);
+              setTwoFactorModalOpen(false);
+            }}
+            onCancel={() => setTwoFactorModalOpen(false)}
+          />
+        )}
+      </Modal>
     </div>
   );
 };

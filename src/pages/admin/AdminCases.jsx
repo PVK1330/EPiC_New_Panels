@@ -13,6 +13,8 @@ import {
   CheckCircle,
   XCircle,
   FileText,
+  Search,
+  Filter,
 } from "lucide-react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
@@ -538,6 +540,12 @@ export default function AdminCases() {
   const [formData, setFormData] = useState(emptyForm);
   const [errors, setErrors] = useState({});
 
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [visaTypeFilter, setVisaTypeFilter] = useState("all");
+
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
     setFormData((prev) => ({
@@ -690,6 +698,33 @@ export default function AdminCases() {
     setDeleteId(null);
   };
 
+  // Filter logic - simplified like MyCandidates
+  const filteredCases = cases.filter((c) => {
+    const matchesSearch =
+      c.caseId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.candidate.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.business.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesFilter =
+      filterType === "all" ||
+      (filterType === "approved" && c.status === "Approved") ||
+      (filterType === "pending" && c.status === "Pending") ||
+      (filterType === "rejected" && c.status === "Rejected") ||
+      (filterType === "review" && c.status === "Review");
+    
+    const matchesPriority =
+      priorityFilter === "all" ||
+      (priorityFilter === "low" && c.priority === "low") ||
+      (priorityFilter === "medium" && c.priority === "medium") ||
+      (priorityFilter === "high" && c.priority === "high") ||
+      (priorityFilter === "urgent" && c.priority === "urgent");
+    
+    const matchesVisaType =
+      visaTypeFilter === "all" || c.visaType === visaTypeFilter;
+    
+    return matchesSearch && matchesFilter && matchesPriority && matchesVisaType;
+  });
+
   return (
     <div className="space-y-8 pb-10">
       <motion.div
@@ -756,6 +791,64 @@ export default function AdminCases() {
         <div className="px-6 py-4 border-b border-gray-100">
           <h3 className="text-lg font-black text-secondary">Recent Cases</h3>
         </div>
+
+        <div className="px-6 py-4 border-b border-gray-100">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Search cases..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter size={18} className="text-gray-400" />
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+              >
+                <option value="all">All Statuses</option>
+                <option value="approved">Approved</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+                <option value="review">Review</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock size={18} className="text-gray-400" />
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+              >
+                <option value="all">All Priorities</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Briefcase size={18} className="text-gray-400" />
+              <select
+                value={visaTypeFilter}
+                onChange={(e) => setVisaTypeFilter(e.target.value)}
+                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+              >
+                <option value="all">All Visa Types</option>
+                {visaTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50">
@@ -771,7 +864,7 @@ export default function AdminCases() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {cases.map((c, i) => (
+              {filteredCases.map((c, i) => (
                 <motion.tr
                   key={c.caseId}
                   className="hover:bg-gray-50 transition-colors"

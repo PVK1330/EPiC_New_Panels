@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { FileText, Upload } from "lucide-react";
+import { FileText, Upload, X } from "lucide-react";
 
 const CASE_OPTIONS = [
   { id: "#C-2401", label: "#C-2401 — Ahmed Al-Rashid" },
@@ -80,6 +80,7 @@ export default function CaseworkerDocuments() {
   const [caseId, setCaseId] = useState(CASE_OPTIONS[0].id);
   const [docType, setDocType] = useState(DOC_TYPES[0]);
   const [notes, setNotes] = useState("");
+  const [rejectModal, setRejectModal] = useState({ isOpen: false, doc: null, note: "" });
 
   const isMissingRoute = location.pathname.includes("/documents/missing");
 
@@ -267,6 +268,7 @@ export default function CaseworkerDocuments() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => setRejectModal({ isOpen: true, doc: r, note: "" })}
                         className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-black text-red-800"
                       >
                         Reject
@@ -345,6 +347,65 @@ export default function CaseworkerDocuments() {
           </div>
         </div>
       </section>
+
+      {/* Reject Modal */}
+      {rejectModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h3 className="text-sm font-black text-gray-900">Reject document</h3>
+              <button
+                type="button"
+                onClick={() => setRejectModal({ isOpen: false, doc: null, note: "" })}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {rejectModal.doc && (
+                <div className="rounded-xl bg-gray-50 px-4 py-3">
+                  <p className="text-sm font-bold text-gray-900">{rejectModal.doc.title}</p>
+                  <p className="text-[11px] font-bold text-gray-500">
+                    {rejectModal.doc.caseId} · {rejectModal.doc.candidate}
+                  </p>
+                </div>
+              )}
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Reason for rejection
+                </label>
+                <textarea
+                  value={rejectModal.note}
+                  onChange={(e) => setRejectModal({ ...rejectModal, note: e.target.value })}
+                  rows={4}
+                  placeholder="Explain why this document is being rejected…"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-red-500/15 focus:border-red-500 resize-y min-h-[96px]"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectModal({ isOpen: false, doc: null, note: "" })}
+                  className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    alert(`Demo: Rejected ${rejectModal.doc?.title} with note: "${rejectModal.note}"`);
+                    setRejectModal({ isOpen: false, doc: null, note: "" });
+                  }}
+                  className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-black text-white shadow-md shadow-red-600/20 hover:bg-red-600/90"
+                >
+                  Confirm rejection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

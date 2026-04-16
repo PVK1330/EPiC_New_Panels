@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, X, FileText, Briefcase, Phone, Mail, Calendar, MapPin, User, Building, Check, AlertCircle, Clock } from "lucide-react";
 
 const TABS = [
-  { id: "candidates", label: "Candidate Profiles", path: "/caseworker/people/candidates" },
+  // { id: "candidates", label: "Candidate Profiles", path: "/caseworker/people/candidates" },
   { id: "sponsors", label: "Sponsor Profiles", path: "/caseworker/people/sponsors" },
 ];
 

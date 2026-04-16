@@ -11,6 +11,10 @@ import {
   Eye,
   Pencil,
   MessageSquare,
+  UserRoundCog,
+  X,
+  CalendarClock,
+  ArrowRightLeft,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
@@ -43,6 +47,26 @@ const CASES_DATA = [
   { caseId: "#C-2293", candidate: "Tom Bradley", business: "Bradley Farms", visa: "Tier 2", status: "on_track", target: "2026-10-01", priority: "low", payment: "paid" },
   { caseId: "#C-2288", candidate: "Wang Lei", business: "Pacific Imports", visa: "Skilled Worker", status: "on_track", target: "2026-06-18", priority: "high", payment: "paid" },
   { caseId: "#C-2281", candidate: "Isabelle Fortin", business: "Fortin Avocats UK", visa: "Graduate", status: "completed", target: "2026-01-20", priority: "low", payment: "paid" },
+];
+
+/** Caseworkers pool for reassignment */
+const CASEWORKERS = [
+  { id: "cw-01", name: "Sarah Mitchell", role: "Senior Caseworker", avatar: "SM", load: 8 },
+  { id: "cw-02", name: "James Holloway", role: "Caseworker", avatar: "JH", load: 12 },
+  { id: "cw-03", name: "Yvonne Clarke", role: "Senior Caseworker", avatar: "YC", load: 5 },
+  { id: "cw-04", name: "Tariq Hussain", role: "Caseworker", avatar: "TH", load: 14 },
+  { id: "cw-05", name: "Beatrice Osei", role: "Lead Caseworker", avatar: "BO", load: 3 },
+  { id: "cw-06", name: "Nikolai Volkov", role: "Caseworker", avatar: "NV", load: 10 },
+  { id: "cw-07", name: "Preethi Anand", role: "Senior Caseworker", avatar: "PA", load: 7 },
+];
+
+const REASSIGN_REASONS = [
+  "Caseworker unavailable / on leave",
+  "Conflict of interest",
+  "Specialist expertise required",
+  "Workload rebalancing",
+  "Escalation to senior caseworker",
+  "Other",
 ];
 
 const STATUS_CHIPS = [
@@ -104,12 +128,29 @@ const caseToEditForm = (c) => ({
   payment: c.payment,
 });
 
+const emptyReassignForm = () => ({
+  caseworkerId: "",
+  reasonPreset: "",
+  reasonCustom: "",
+});
+
 function formatTarget(iso) {
   const d = new Date(iso + "T12:00:00");
   return d.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
+  });
+}
+
+function formatDateTime(date) {
+  return date.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
   });
 }
 
@@ -160,6 +201,12 @@ function priorityLabel(p) {
   return p.charAt(0).toUpperCase() + p.slice(1);
 }
 
+function loadColor(load) {
+  if (load <= 5) return "text-emerald-600 bg-emerald-50 border-emerald-200";
+  if (load <= 10) return "text-amber-600 bg-amber-50 border-amber-200";
+  return "text-red-600 bg-red-50 border-red-200";
+}
+
 const Cases = () => {
   const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
@@ -178,9 +225,18 @@ const Cases = () => {
   const [editCaseForm, setEditCaseForm] = useState(() => caseToEditForm(CASES_DATA[0]));
   const [editCaseErrors, setEditCaseErrors] = useState({});
 
+  // ── Reassign state ──────────────────────────────────────────────────────────
+  const [reassignCaseId, setReassignCaseId] = useState(null);
+  const [reassignForm, setReassignForm] = useState(emptyReassignForm());
+  const [reassignErrors, setReassignErrors] = useState({});
+  // Map: caseId → { caseworker, reason, at }
+  const [reassignments, setReassignments] = useState({});
+  // ───────────────────────────────────────────────────────────────────────────
+
   const openDetail = useCallback((c) => {
     setNewCaseOpen(false);
     setEditCaseId(null);
+    setReassignCaseId(null);
     setDetailCase(c);
     setDetailTab("overview");
   }, []);
@@ -190,6 +246,7 @@ const Cases = () => {
   const openNewCaseModal = useCallback(() => {
     setDetailCase(null);
     setEditCaseId(null);
+    setReassignCaseId(null);
     setNewCaseErrors({});
     setNewCaseForm(emptyNewCaseForm());
     setNewCaseOpen(true);
@@ -198,6 +255,7 @@ const Cases = () => {
   const openCaseEdit = useCallback((c) => {
     setNewCaseOpen(false);
     setDetailCase(null);
+    setReassignCaseId(null);
     setEditCaseErrors({});
     setEditCaseId(c.caseId);
     setEditCaseForm(caseToEditForm(c));
@@ -271,6 +329,53 @@ const Cases = () => {
     setPage(1);
   }, [cases, newCaseForm, closeNewCaseModal]);
 
+  // ── Reassign handlers ───────────────────────────────────────────────────────
+  const openReassign = useCallback((c) => {
+    setDetailCase(null);
+    setNewCaseOpen(false);
+    setEditCaseId(null);
+    setReassignErrors({});
+    setReassignForm(emptyReassignForm());
+    setReassignCaseId(c.caseId);
+  }, []);
+
+  const closeReassign = useCallback(() => {
+    setReassignCaseId(null);
+    setReassignErrors({});
+    setReassignForm(emptyReassignForm());
+  }, []);
+
+  const submitReassign = useCallback(() => {
+    const err = {};
+    if (!reassignForm.caseworkerId) err.caseworkerId = "Please select a caseworker";
+    if (!reassignForm.reasonPreset) err.reasonPreset = "Please select a reason";
+    if (
+      reassignForm.reasonPreset === "Other" &&
+      !reassignForm.reasonCustom.trim()
+    )
+      err.reasonCustom = "Please provide a reason";
+    setReassignErrors(err);
+    if (Object.keys(err).length) return;
+
+    const cw = CASEWORKERS.find((w) => w.id === reassignForm.caseworkerId);
+    const reason =
+      reassignForm.reasonPreset === "Other"
+        ? reassignForm.reasonCustom.trim()
+        : reassignForm.reasonPreset;
+
+    setReassignments((prev) => ({
+      ...prev,
+      [reassignCaseId]: {
+        caseworker: cw.name,
+        caseworkerRole: cw.role,
+        reason,
+        at: new Date(),
+      },
+    }));
+    closeReassign();
+  }, [reassignCaseId, reassignForm, closeReassign]);
+  // ───────────────────────────────────────────────────────────────────────────
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return cases.filter((c) => {
@@ -298,6 +403,11 @@ const Cases = () => {
     const start = (p - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, page, totalPages]);
+
+  // The case object for the reassign modal title
+  const reassignCase = reassignCaseId
+    ? cases.find((c) => c.caseId === reassignCaseId)
+    : null;
 
   return (
     <div className="space-y-6 pb-10 animate-in fade-in duration-500">
@@ -399,7 +509,7 @@ const Cases = () => {
 
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1000px]">
+          <table className="w-full min-w-[1100px]">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 {[
@@ -433,90 +543,141 @@ const Cases = () => {
                 pageSlice.map((c) => {
                   const st = badgeStatus(c.status);
                   const pay = badgePayment(c.payment);
+                  const reassigned = reassignments[c.caseId];
                   return (
-                    <tr
-                      key={c.caseId}
-                      className="hover:bg-gray-50/80 cursor-pointer transition-colors"
-                      onClick={() => openDetail(c)}
-                    >
-                      <td className="py-3 px-4">
-                        <span className="font-mono text-xs font-black text-secondary">
-                          {c.caseId}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-sm font-bold text-gray-900">
-                        {c.candidate}
-                      </td>
-                      <td className="py-3 px-4 text-sm font-bold text-gray-600">
-                        {c.business}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeVisa(c.visa)}`}
-                        >
-                          {c.visa}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${st.className}`}
-                        >
-                          {st.label}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-sm font-bold text-gray-600 tabular-nums whitespace-nowrap">
-                        {formatTarget(c.target)}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgePriority(c.priority)}`}
-                        >
-                          {priorityLabel(c.priority)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${pay.className}`}
-                        >
-                          {pay.label}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex flex-wrap gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openDetail(c)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-gray-600 hover:border-secondary/40 hover:text-secondary transition-colors"
-                            title="View case"
+                    <>
+                      {/* ── Main data row ── */}
+                      <tr
+                        key={c.caseId}
+                        className={`hover:bg-gray-50/80 cursor-pointer transition-colors ${reassigned ? "border-b-0" : ""}`}
+                        onClick={() => openDetail(c)}
+                      >
+                        <td className="py-3 px-4">
+                          <span className="font-mono text-xs font-black text-secondary">
+                            {c.caseId}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-sm font-bold text-gray-900">
+                          {c.candidate}
+                        </td>
+                        <td className="py-3 px-4 text-sm font-bold text-gray-600">
+                          {c.business}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeVisa(c.visa)}`}
                           >
-                            <Eye size={14} />
-                            <span className="hidden sm:inline">View</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openCaseEdit(c)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-secondary hover:bg-secondary/5 transition-colors"
-                            title="Edit case"
+                            {c.visa}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${st.className}`}
                           >
-                            <Pencil size={14} />
-                            <span className="hidden sm:inline">Edit</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(
-                                `/caseworker/messages?caseId=${encodeURIComponent(c.caseId)}`,
-                              )
-                            }
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-gray-600 hover:border-primary/40 hover:text-primary transition-colors"
-                            title="Message candidate"
+                            {st.label}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-sm font-bold text-gray-600 tabular-nums whitespace-nowrap">
+                          {formatTarget(c.target)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgePriority(c.priority)}`}
                           >
-                            <MessageSquare size={14} />
-                            <span className="hidden sm:inline">Message</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                            {priorityLabel(c.priority)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${pay.className}`}
+                          >
+                            {pay.label}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex flex-wrap gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openDetail(c)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-gray-600 hover:border-secondary/40 hover:text-secondary transition-colors"
+                              title="View case"
+                            >
+                              <Eye size={14} />
+                              <span className="hidden sm:inline">View</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openCaseEdit(c)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-secondary hover:bg-secondary/5 transition-colors"
+                              title="Edit case"
+                            >
+                              <Pencil size={14} />
+                              <span className="hidden sm:inline">Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigate(
+                                  `/caseworker/messages?caseId=${encodeURIComponent(c.caseId)}`,
+                                )
+                              }
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-gray-600 hover:border-primary/40 hover:text-primary transition-colors"
+                              title="Message candidate"
+                            >
+                              <MessageSquare size={14} />
+                              <span className="hidden sm:inline">Message</span>
+                            </button>
+                            {/* ── Reassign button ── */}
+                            <button
+                              type="button"
+                              onClick={() => openReassign(c)}
+                              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-black transition-colors ${
+                                reassigned
+                                  ? "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100"
+                                  : "border-gray-200 bg-white text-gray-600 hover:border-violet-300 hover:text-violet-700 hover:bg-violet-50"
+                              }`}
+                              title="Reassign case"
+                            >
+                              <ArrowRightLeft size={14} />
+                              <span className="hidden sm:inline">
+                                {reassigned ? "Reassigned" : "Reassign"}
+                              </span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* ── Reassignment info banner row ── */}
+                      {reassigned && (
+                        <tr
+                          key={`${c.caseId}-reassigned`}
+                          className="bg-violet-50/60 border-b border-violet-100"
+                        >
+                          <td colSpan={9} className="px-4 py-2">
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                              <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-violet-700">
+                                <ArrowRightLeft size={12} />
+                                Reassigned to{" "}
+                                <span className="font-black text-violet-900">
+                                  {reassigned.caseworker}
+                                </span>
+                                <span className="font-bold text-violet-500">
+                                  ({reassigned.caseworkerRole})
+                                </span>
+                              </span>
+                              <span className="text-[11px] font-bold text-violet-600">
+                                Reason:{" "}
+                                <span className="italic">{reassigned.reason}</span>
+                              </span>
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-violet-500 ml-auto">
+                                <CalendarClock size={12} />
+                                {formatDateTime(reassigned.at)}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })
               )}
@@ -563,6 +724,7 @@ const Cases = () => {
         </div>
       </div>
 
+      {/* ─────────────────────── NEW CASE MODAL ─────────────────────── */}
       <Modal
         open={newCaseOpen}
         onClose={closeNewCaseModal}
@@ -699,6 +861,7 @@ const Cases = () => {
         </div>
       </Modal>
 
+      {/* ─────────────────────── EDIT CASE MODAL ─────────────────────── */}
       <Modal
         open={!!editCaseId}
         onClose={closeCaseEdit}
@@ -857,6 +1020,165 @@ const Cases = () => {
         </div>
       </Modal>
 
+      {/* ─────────────────────── REASSIGN MODAL ─────────────────────── */}
+      <Modal
+        open={!!reassignCaseId}
+        onClose={closeReassign}
+        title={reassignCase ? `Reassign case ${reassignCase.caseId}` : "Reassign case"}
+        titleId="reassign-modal-title"
+        maxWidthClass="max-w-xl"
+        bodyClassName="p-4 sm:p-6"
+      >
+        {reassignCase && (
+          <div className="space-y-5">
+            {/* Case summary chip */}
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-violet-100 bg-violet-50/60 px-4 py-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-black text-gray-900">{reassignCase.candidate}</p>
+                <p className="text-[11px] font-bold text-gray-500 mt-0.5">
+                  {reassignCase.business} · {reassignCase.visa}
+                </p>
+              </div>
+              <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeStatus(reassignCase.status).className}`}>
+                {badgeStatus(reassignCase.status).label}
+              </span>
+            </div>
+
+            {/* Caseworker list */}
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
+                Select new caseworker
+              </label>
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {CASEWORKERS.map((cw) => {
+                  const selected = reassignForm.caseworkerId === cw.id;
+                  return (
+                    <button
+                      key={cw.id}
+                      type="button"
+                      onClick={() =>
+                        setReassignForm((f) => ({ ...f, caseworkerId: cw.id }))
+                      }
+                      className={`w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${
+                        selected
+                          ? "border-violet-400 bg-violet-50 ring-2 ring-violet-200"
+                          : "border-gray-200 bg-white hover:border-violet-200 hover:bg-violet-50/40"
+                      }`}
+                    >
+                      {/* Avatar */}
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
+                          selected
+                            ? "bg-violet-600 text-white"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {cw.avatar}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-black ${selected ? "text-violet-900" : "text-gray-900"}`}>
+                          {cw.name}
+                        </p>
+                        <p className="text-[11px] font-bold text-gray-500">{cw.role}</p>
+                      </div>
+                      {/* Current load badge */}
+                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black ${loadColor(cw.load)}`}>
+                        {cw.load} active
+                      </span>
+                      {selected && (
+                        <Check size={16} className="shrink-0 text-violet-600" strokeWidth={3} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {reassignErrors.caseworkerId && (
+                <p className="text-xs font-bold text-red-600 mt-1.5">
+                  {reassignErrors.caseworkerId}
+                </p>
+              )}
+            </div>
+
+            {/* Reason preset */}
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Reason for reassignment
+              </label>
+              <select
+                value={reassignForm.reasonPreset}
+                onChange={(e) =>
+                  setReassignForm((f) => ({
+                    ...f,
+                    reasonPreset: e.target.value,
+                    reasonCustom: "",
+                  }))
+                }
+                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${
+                  reassignErrors.reasonPreset ? "border-red-300" : "border-gray-200"
+                }`}
+              >
+                <option value="">Select a reason…</option>
+                {REASSIGN_REASONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+              {reassignErrors.reasonPreset && (
+                <p className="text-xs font-bold text-red-600 mt-1">
+                  {reassignErrors.reasonPreset}
+                </p>
+              )}
+            </div>
+
+            {/* Custom reason (shown when "Other" selected) */}
+            {reassignForm.reasonPreset === "Other" && (
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Please describe the reason
+                </label>
+                <textarea
+                  value={reassignForm.reasonCustom}
+                  onChange={(e) =>
+                    setReassignForm((f) => ({ ...f, reasonCustom: e.target.value }))
+                  }
+                  rows={3}
+                  placeholder="Explain why this case is being reassigned…"
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y ${
+                    reassignErrors.reasonCustom ? "border-red-300" : "border-gray-200"
+                  }`}
+                />
+                {reassignErrors.reasonCustom && (
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {reassignErrors.reasonCustom}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={closeReassign}
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitReassign}
+                className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-md shadow-violet-200 hover:bg-violet-700 transition-colors"
+              >
+                <UserRoundCog size={16} />
+                Confirm reassignment
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ─────────────────────── CASE DETAIL MODAL ─────────────────────── */}
       <Modal
         open={!!detailCase}
         onClose={closeDetail}
@@ -886,15 +1208,31 @@ const Cases = () => {
                   >
                     {priorityLabel(detailCase.priority)} priority
                   </span>
+                  {reassignments[detailCase.caseId] && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[11px] font-black text-violet-700">
+                      <ArrowRightLeft size={11} />
+                      Reassigned → {reassignments[detailCase.caseId].caseworker}
+                    </span>
+                  )}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => openCaseEdit(detailCase)}
-                className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/5"
-              >
-                Edit case
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => openReassign(detailCase)}
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-black text-violet-700 hover:bg-violet-100 transition-colors"
+                >
+                  <ArrowRightLeft size={14} />
+                  Reassign
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openCaseEdit(detailCase)}
+                  className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/5"
+                >
+                  Edit case
+                </button>
+              </div>
             </div>
 
             <div className="shrink-0 flex gap-0 overflow-x-auto border-b border-gray-100 bg-gray-50/50 px-2 no-scrollbar">
@@ -1172,8 +1510,8 @@ function PaymentsTab() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
-          { label: "Total fee", value: "£3,500", color: "text-gray-900" },
-          { label: "Paid", value: "£3,500", color: "text-emerald-600" },
+          // { label: "Total fee", value: "£3,500", color: "text-gray-900" },
+          // { label: "Paid", value: "£3,500", color: "text-emerald-600" },
           { label: "Outstanding", value: "£0", color: "text-gray-500" },
         ].map((b) => (
           <div
