@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/constants';
-import { getToken, clearAuth } from '../utils/storage';
+import { getToken } from '../utils/storage';
+import store from '../store/index.js';
+import { logout } from '../store/slices/authSlice';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -18,8 +20,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      clearAuth();
-      window.location.href = '/login';
+      store.dispatch(logout());
     }
     return Promise.reject(error);
   }
