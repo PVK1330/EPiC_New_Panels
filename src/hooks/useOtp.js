@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { verifyOtp, resendOtp, verifyResetOtp } from '../services/auth.service';
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { verifyOtp, resendOtp, verifyResetOtp } from "../services/auth.service";
 
-const useOtp = (type = 'register') => {
+const useOtp = (type = "register") => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
   const timerRef = useRef(null);
 
@@ -28,19 +28,19 @@ const useOtp = (type = 'register') => {
 
   const verifyOtpHandler = async (otp) => {
     setIsLoading(true);
-    setError('');
+    setError("");
     try {
       const email =
-        type === 'register'
-          ? sessionStorage.getItem('pending_otp_email')
-          : sessionStorage.getItem('pending_reset_email');
-      if (type === 'register') {
+        type === "register"
+          ? sessionStorage.getItem("pending_otp_email")
+          : sessionStorage.getItem("pending_reset_email");
+      if (type === "register") {
         await verifyOtp({ email, otp });
-        sessionStorage.removeItem('pending_otp_email');
-        navigate('/login');
+        sessionStorage.removeItem("pending_otp_email");
+        navigate("/login");
       } else {
         await verifyResetOtp({ email, otp });
-        navigate('/set-password');
+        navigate("/set-password");
       }
     } catch (err) {
       setError(err.message);
@@ -51,12 +51,12 @@ const useOtp = (type = 'register') => {
 
   const resendOtpHandler = async () => {
     if (countdown > 0) return;
-    setError('');
+    setError("");
     try {
       const email =
-        type === 'register'
-          ? sessionStorage.getItem('pending_otp_email')
-          : sessionStorage.getItem('pending_reset_email');
+        type === "register"
+          ? sessionStorage.getItem("pending_otp_email")
+          : sessionStorage.getItem("pending_reset_email");
       await resendOtp(email);
       startCountdown();
     } catch (err) {

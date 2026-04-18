@@ -6,7 +6,12 @@ import Input from "../components/Input";
 import Button from "../components/Button";
 import eliteLogo from "../assets/elitepic_logo.png";
 import { setCredentials } from "../store/slices/authSlice";
-import { loginUser, registerUser, forgotPassword, verifyTwoFactor } from "../services/auth.service";
+import {
+  loginUser,
+  registerUser,
+  forgotPassword,
+  verifyTwoFactor,
+} from "../services/auth.service";
 import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
 
 const VIEWS = {
@@ -130,13 +135,15 @@ const Login = () => {
 
   const validateRegister = () => {
     const errs = {};
-    if (!registerForm.firstName.trim()) errs.firstName = "First name is required";
+    if (!registerForm.firstName.trim())
+      errs.firstName = "First name is required";
     if (!registerForm.lastName.trim()) errs.lastName = "Last name is required";
     if (!registerForm.email.trim()) errs.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email))
       errs.email = "Enter a valid email";
     if (!registerForm.password) errs.password = "Password is required";
-    else if (registerForm.password.length < 8) errs.password = "At least 8 characters";
+    else if (registerForm.password.length < 8)
+      errs.password = "At least 8 characters";
     if (registerForm.password !== registerForm.confirmPassword)
       errs.confirmPassword = "Passwords do not match";
     if (!registerForm.dob) errs.dob = "Date of birth is required";
@@ -146,7 +153,8 @@ const Login = () => {
     if (!registerForm.state.trim()) errs.state = "State is required";
     if (!registerForm.country.trim()) errs.country = "Country is required";
     if (!registerForm.pincode.trim()) errs.pincode = "Pincode is required";
-    if (!registerForm.nationality.trim()) errs.nationality = "Nationality is required";
+    if (!registerForm.nationality.trim())
+      errs.nationality = "Nationality is required";
     return errs;
   };
 
@@ -156,14 +164,19 @@ const Login = () => {
     if (Object.keys(errs).length) return setErrors(errs);
     setLoading(true);
     try {
-      const res = await loginUser({ email: form.email, password: form.password });
+      const res = await loginUser({
+        email: form.email,
+        password: form.password,
+      });
       if (res.data?.requires_2fa) {
         setPendingLogin({ email: form.email, password: form.password });
         setView(VIEWS.twoFactor);
       } else {
         const { user: userData, token: jwtToken } = res.data;
         const role = ROLE_NAMES[userData.role_id] || "candidate";
-        dispatch(setCredentials({ user: { ...userData, role }, token: jwtToken }));
+        dispatch(
+          setCredentials({ user: { ...userData, role }, token: jwtToken }),
+        );
         navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
       }
     } catch (err) {
@@ -235,7 +248,9 @@ const Login = () => {
       });
       const { user: userData, token: jwtToken } = res.data;
       const role = ROLE_NAMES[userData.role_id] || "candidate";
-      dispatch(setCredentials({ user: { ...userData, role }, token: jwtToken }));
+      dispatch(
+        setCredentials({ user: { ...userData, role }, token: jwtToken }),
+      );
       navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
     } catch (err) {
       setTwoFactorError(err.message || "Invalid 2FA code");
@@ -256,8 +271,8 @@ const Login = () => {
     (view === VIEWS.login
       ? "max-w-sm"
       : view === VIEWS.register
-      ? "max-w-2xl"
-      : "max-w-md");
+        ? "max-w-2xl"
+        : "max-w-md");
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4 py-10">
@@ -394,7 +409,7 @@ const Login = () => {
                         value={selectedCountry.code}
                         onChange={(e) => {
                           const country = COUNTRIES.find(
-                            (c) => c.code === e.target.value
+                            (c) => c.code === e.target.value,
                           );
                           if (country) handleCountryCodeChange(country);
                         }}
@@ -542,7 +557,9 @@ const Login = () => {
                 disabled={registerLoading}
                 className="w-full"
               >
-                {registerLoading ? "Creating account…" : "Create candidate account"}
+                {registerLoading
+                  ? "Creating account…"
+                  : "Create candidate account"}
               </Button>
             </form>
 
@@ -612,7 +629,9 @@ const Login = () => {
                 type="text"
                 value={twoFactorCode}
                 onChange={(e) => {
-                  setTwoFactorCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+                  setTwoFactorCode(
+                    e.target.value.replace(/\D/g, "").slice(0, 6),
+                  );
                   setTwoFactorError("");
                 }}
                 placeholder="123456"

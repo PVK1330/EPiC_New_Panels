@@ -1,217 +1,434 @@
-import { useState, useMemo } from "react";
-import { FiEdit2, FiTrash2, FiSearch, FiPlus, FiDownload, FiEye } from "react-icons/fi";
+import { useState, useEffect } from "react";
+import {
+  FiEdit2,
+  FiTrash2,
+  FiSearch,
+  FiPlus,
+  FiDownload,
+  FiEye,
+  FiRefreshCw,
+} from "react-icons/fi";
+import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
-
-const INITIAL_USERS = [
-  {
-    id: 1,
-    name: "Sarah Anand",
-    initials: "SA",
-    email: "sarah@visaflow.co.uk",
-    phone: "+44 7700 900111",
-    role: "Admin",
-    permissions: "Full Access",
-    lastLogin: "Today, 09:14",
-    status: "Active",
-    avatarBg: "bg-blue-500",
-  },
-  {
-    id: 2,
-    name: "Mohamed Rashid",
-    initials: "MR",
-    email: "m.rashid@visaflow.co.uk",
-    phone: "+44 7700 900222",
-    role: "Admin",
-    permissions: "Cases + Finance",
-    lastLogin: "Yesterday",
-    status: "Active",
-    avatarBg: "bg-yellow-500",
-  },
-  {
-    id: 3,
-    name: "Janet Nwosu",
-    initials: "JN",
-    email: "j.nwosu@visaflow.co.uk",
-    phone: "+44 7700 900333",
-    role: "Admin",
-    permissions: "Cases Only",
-    lastLogin: "3 days ago",
-    status: "Suspended",
-    avatarBg: "bg-red-500",
-  },
-  {
-    id: 4,
-    name: "David Osei",
-    initials: "DO",
-    email: "d.osei@visaflow.co.uk",
-    phone: "+44 7700 900444",
-    role: "Admin",
-    permissions: "Cases + Finance",
-    lastLogin: "2 hours ago",
-    status: "Active",
-    avatarBg: "bg-green-500",
-  },
-  {
-    id: 5,
-    name: "Priya Kapoor",
-    initials: "PK",
-    email: "p.kapoor@visaflow.co.uk",
-    phone: "+44 7700 900555",
-    role: "Admin",
-    permissions: "Finance Only",
-    lastLogin: "1 week ago",
-    status: "Inactive",
-    avatarBg: "bg-purple-500",
-  },
-];
+import useAdmin from "../../hooks/useAdmin";
+import { useToast } from "../../context/ToastContext";
+import {
+  createAdmin,
+  updateAdmin,
+  toggleAdminStatus,
+  resetAdminPassword,
+  deleteAdmin,
+} from "../../services/adminService";
 
 const ROLE_CHIPS = {
-  "Super Admin": "bg-purple-100 text-purple-700",
-  Admin:         "bg-blue-100 text-blue-700",
-  // Manager:       "bg-green-100 text-green-700",
+  admin: "bg-blue-100 text-blue-700",
+  "super admin": "bg-purple-100 text-purple-700",
 };
 
 const STATUS_CHIPS = {
-  Active:    "bg-green-100 text-green-700",
-  Inactive:  "bg-gray-100 text-gray-500",
-  Suspended: "bg-red-100 text-red-600",
+  active: "bg-green-100 text-green-700",
+  inactive: "bg-gray-100 text-gray-500",
 };
 
 const AVATAR_COLORS = [
-  "bg-blue-500","bg-yellow-500","bg-red-500",
-  "bg-green-500","bg-purple-500","bg-pink-500","bg-teal-500",
+  "bg-blue-500",
+  "bg-yellow-500",
+  "bg-red-500",
+  "bg-green-500",
+  "bg-purple-500",
+  "bg-pink-500",
+  "bg-teal-500",
 ];
 
-const ROLE_OPTIONS = [
-  { value: "Admin",       label: "Admin"       },
-  // { value: "Manager",     label: "Manager"     },
+const ROLE_OPTIONS = [{ value: "1", label: "Admin" }];
+
+const STATUS_FILTER_OPTIONS = [
+  { value: "All", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
 ];
 
-const PERMISSIONS_OPTIONS = [
-  { value: "Full Access",     label: "Full Access"     },
-  { value: "Cases + Finance", label: "Cases + Finance" },
-  { value: "Cases Only",      label: "Cases Only"      },
-  { value: "Finance Only",    label: "Finance Only"    },
+const EDIT_STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
 ];
 
-const STATUS_OPTIONS = [
-  { value: "Active",   label: "Active"   },
-  { value: "Inactive", label: "Inactive" },
-];
-
-const EMPTY_FORM = {
-  name: "", email: "", phone: "",
-  role: "Admin", permissions: "Cases Only",
-  password: "", confirmPassword: "",
-  status: "Active",
+const EMPTY_CREATE = {
+  first_name: "",
+  last_name: "",
+  email: "",
+  country_code: "+1",
+  mobile: "",
+  role_id: "1",
+  password: "",
+  confirm_password: "",
 };
 
-const AdminUsers = () => {
-  const [users, setUsers]           = useState(INITIAL_USERS);
-  const [search, setSearch]         = useState("");
-  const [roleFilter, setRoleFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [modal, setModal]           = useState({ type: null, data: null });
-  const [form, setForm]             = useState(EMPTY_FORM);
-  const [errors, setErrors]         = useState({});
+const EMPTY_RESET = {
+  new_password: "",
+  confirm_password: "",
+};
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return users.filter((u) => {
-      const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
-      const matchRole   = roleFilter === "All"   || u.role === roleFilter;
-      const matchStatus = statusFilter === "All" || u.status === statusFilter;
-      return matchSearch && matchRole && matchStatus;
-    });
-  }, [users, search, roleFilter, statusFilter]);
+function getApiError(error) {
+  const d = error?.response?.data;
+  const m = d?.message;
+  if (typeof m === "string") return m;
+  if (Array.isArray(m) && m.length) return m[0];
+  return error?.message || "Something went wrong";
+}
+
+function displayRoleName(admin) {
+  const n = admin?.Role?.name;
+  if (!n) return "Admin";
+  return n.charAt(0).toUpperCase() + n.slice(1);
+}
+
+function formatStatusLabel(status) {
+  if (status === "active") return "Active";
+  if (status === "inactive") return "Inactive";
+  return status || "—";
+}
+
+function initialsFrom(admin) {
+  const a = (admin.first_name || "").trim().charAt(0);
+  const b = (admin.last_name || "").trim().charAt(0);
+  const s = `${a}${b}`.toUpperCase();
+  return s || "?";
+}
+
+function fullName(admin) {
+  return `${admin.first_name || ""} ${admin.last_name || ""}`.trim() || "—";
+}
+
+export default function AdminUsers() {
+  const { showToast } = useToast();
+  const { admins, pagination, loading, fetchAdmins } = useAdmin();
+
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+
+  const [modal, setModal] = useState({ type: null, data: null });
+  const [createForm, setCreateForm] = useState(EMPTY_CREATE);
+  const [editForm, setEditForm] = useState(null);
+  const [resetForm, setResetForm] = useState(EMPTY_RESET);
+  const [errors, setErrors] = useState({});
+  const [resetErrors, setResetErrors] = useState({});
+
+  const [saving, setSaving] = useState(false);
+  const [toggleId, setToggleId] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearch(searchInput), 400);
+    return () => window.clearTimeout(t);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter]);
+
+  const statusParam = statusFilter === "All" ? "" : statusFilter;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const r = await fetchAdmins(
+        page,
+        limit,
+        debouncedSearch.trim(),
+        statusParam,
+      );
+      if (cancelled) return;
+      if (!r.ok) {
+        showToast({ message: getApiError(r.error), variant: "danger" });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    page,
+    debouncedSearch,
+    statusFilter,
+    fetchAdmins,
+    showToast,
+    statusParam,
+  ]);
+
+  const closeModal = () => {
+    setModal({ type: null, data: null });
+    setCreateForm(EMPTY_CREATE);
+    setEditForm(null);
+    setResetForm(EMPTY_RESET);
+    setErrors({});
+    setResetErrors({});
+  };
 
   const openCreate = () => {
-    setForm(EMPTY_FORM);
+    setCreateForm(EMPTY_CREATE);
     setErrors({});
     setModal({ type: "create", data: null });
   };
 
-  const openEdit = (user) => {
-    setForm({
-      name: user.name, email: user.email, phone: user.phone,
-      role: user.role, permissions: user.permissions,
-      password: "", confirmPassword: "", status: user.status,
+  const openEdit = (row) => {
+    setEditForm({
+      first_name: row.first_name || "",
+      last_name: row.last_name || "",
+      email: row.email || "",
+      country_code: row.country_code || "+1",
+      mobile: row.mobile || "",
+      role_id: String(row.role_id ?? 1),
+      status: row.status === "inactive" ? "inactive" : "active",
     });
     setErrors({});
-    setModal({ type: "edit", data: user });
+    setModal({ type: "edit", data: row });
   };
 
-  const openView = (user) => setModal({ type: "view", data: user });
-
-  const openDelete = (user) => setModal({ type: "delete", data: user });
-
-  const closeModal = () => {
-    setModal({ type: null, data: null });
-    setErrors({});
+  const openView = (row) => {
+    setModal({ type: "view", data: row });
   };
 
-  const handleChange = (e) => {
+  const openDelete = (row) => {
+    setModal({ type: "delete", data: row });
+  };
+
+  const openReset = (row) => {
+    setResetForm(EMPTY_RESET);
+    setResetErrors({});
+    setModal({ type: "reset", data: row });
+  };
+
+  const handleCreateChange = (e) => {
     const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
+    setCreateForm((p) => ({ ...p, [name]: value }));
     if (errors[name]) setErrors((p) => ({ ...p, [name]: "" }));
   };
 
-  const validate = (isEdit) => {
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm((p) => ({ ...p, [name]: value }));
+    if (errors[name]) setErrors((p) => ({ ...p, [name]: "" }));
+  };
+
+  const handleResetChange = (e) => {
+    const { name, value } = e.target;
+    setResetForm((p) => ({ ...p, [name]: value }));
+    if (resetErrors[name]) setResetErrors((p) => ({ ...p, [name]: "" }));
+  };
+
+  const validateCreate = () => {
     const errs = {};
-    if (!form.name.trim())  errs.name  = "Full name is required";
-    if (!form.email.trim()) errs.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = "Enter a valid email";
-    if (!form.phone.trim()) errs.phone = "Phone number is required";
-    if (!isEdit) {
-      if (!form.password)        errs.password        = "Password is required";
-      if (!form.confirmPassword) errs.confirmPassword = "Please confirm password";
-      else if (form.password !== form.confirmPassword) errs.confirmPassword = "Passwords do not match";
-    } else if (form.password && form.password !== form.confirmPassword) {
-      errs.confirmPassword = "Passwords do not match";
-    }
+    if (!createForm.first_name.trim()) errs.first_name = "First name is required";
+    if (!createForm.last_name.trim()) errs.last_name = "Last name is required";
+    if (!createForm.email.trim()) errs.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(createForm.email))
+      errs.email = "Enter a valid email";
+    if (!createForm.country_code.trim())
+      errs.country_code = "Country code is required";
+    if (!createForm.mobile.trim()) errs.mobile = "Mobile is required";
+    if (!createForm.password) errs.password = "Password is required";
+    if (!createForm.confirm_password)
+      errs.confirm_password = "Please confirm password";
+    else if (createForm.password !== createForm.confirm_password)
+      errs.confirm_password = "Passwords do not match";
     return errs;
   };
 
-  const handleCreate = () => {
-    const errs = validate(false);
-    if (Object.keys(errs).length) { setErrors(errs); return; }
-    const initials = form.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
-    const avatarBg = AVATAR_COLORS[users.length % AVATAR_COLORS.length];
-    setUsers((p) => [
-      ...p,
-      { id: Date.now(), name: form.name, initials, email: form.email,
-        phone: form.phone, role: form.role, permissions: form.permissions,
-        lastLogin: "Never", status: form.status, avatarBg },
-    ]);
-    closeModal();
+  const validateEdit = () => {
+    const errs = {};
+    if (!editForm.first_name.trim()) errs.first_name = "First name is required";
+    if (!editForm.last_name.trim()) errs.last_name = "Last name is required";
+    if (!editForm.email.trim()) errs.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(editForm.email))
+      errs.email = "Enter a valid email";
+    if (!editForm.country_code.trim())
+      errs.country_code = "Country code is required";
+    if (!editForm.mobile.trim()) errs.mobile = "Mobile is required";
+    return errs;
   };
 
-  const handleUpdate = () => {
-    const errs = validate(true);
-    if (Object.keys(errs).length) { setErrors(errs); return; }
-    setUsers((p) =>
-      p.map((u) =>
-        u.id !== modal.data.id ? u : {
-          ...u,
-          name: form.name,
-          initials: form.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2),
-          email: form.email, phone: form.phone,
-          role: form.role, permissions: form.permissions, status: form.status,
+  const validateReset = () => {
+    const errs = {};
+    if (!resetForm.new_password) errs.new_password = "Password is required";
+    if (!resetForm.confirm_password)
+      errs.confirm_password = "Please confirm password";
+    else if (resetForm.new_password !== resetForm.confirm_password)
+      errs.confirm_password = "Passwords do not match";
+    return errs;
+  };
+
+  const handleCreate = async () => {
+    const errs = validateCreate();
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await createAdmin({
+        first_name: createForm.first_name.trim(),
+        last_name: createForm.last_name.trim(),
+        email: createForm.email.trim(),
+        country_code: createForm.country_code.trim(),
+        mobile: createForm.mobile.trim(),
+        role_id: Number(createForm.role_id),
+        password: createForm.password,
+        confirm_password: createForm.confirm_password,
+      });
+      showToast({
+        message: res.data?.message || "Admin created successfully",
+        variant: "success",
+      });
+      closeModal();
+      if (page !== 1) setPage(1);
+      else {
+        const r = await fetchAdmins(
+          1,
+          limit,
+          debouncedSearch.trim(),
+          statusParam,
+        );
+        if (!r.ok) {
+          showToast({ message: getApiError(r.error), variant: "danger" });
         }
-      )
-    );
-    closeModal();
+      }
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDelete = () => {
-    setUsers((p) => p.filter((u) => u.id !== modal.data.id));
-    closeModal();
+  const handleUpdate = async () => {
+    const errs = validateEdit();
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await updateAdmin(modal.data.id, {
+        first_name: editForm.first_name.trim(),
+        last_name: editForm.last_name.trim(),
+        email: editForm.email.trim(),
+        country_code: editForm.country_code.trim(),
+        mobile: editForm.mobile.trim(),
+        role_id: Number(editForm.role_id),
+        status: editForm.status,
+      });
+      showToast({
+        message: res.data?.message || "Admin updated successfully",
+        variant: "success",
+      });
+      closeModal();
+      {
+        const r = await fetchAdmins(
+          page,
+          limit,
+          debouncedSearch.trim(),
+          statusParam,
+        );
+        if (!r.ok) {
+          showToast({ message: getApiError(r.error), variant: "danger" });
+        }
+      }
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggle = async (row) => {
+    setToggleId(row.id);
+    try {
+      const res = await toggleAdminStatus(row.id);
+      showToast({
+        message: res.data?.message || "Status updated",
+        variant: "success",
+      });
+      {
+        const r = await fetchAdmins(
+          page,
+          limit,
+          debouncedSearch.trim(),
+          statusParam,
+        );
+        if (!r.ok) {
+          showToast({ message: getApiError(r.error), variant: "danger" });
+        }
+      }
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setToggleId(null);
+    }
+  };
+
+  const handleResetSubmit = async () => {
+    const errs = validateReset();
+    if (Object.keys(errs).length) {
+      setResetErrors(errs);
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await resetAdminPassword(modal.data.id, {
+        new_password: resetForm.new_password,
+        confirm_password: resetForm.confirm_password,
+      });
+      showToast({
+        message: res.data?.message || "Password reset successfully",
+        variant: "success",
+      });
+      closeModal();
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleteId(modal.data.id);
+    try {
+      const res = await deleteAdmin(modal.data.id);
+      showToast({
+        message: res.data?.message || "Admin removed",
+        variant: "success",
+      });
+      closeModal();
+      const nextPage = admins.length === 1 && page > 1 ? page - 1 : page;
+      if (nextPage !== page) setPage(nextPage);
+      else {
+        const r = await fetchAdmins(
+          nextPage,
+          limit,
+          debouncedSearch.trim(),
+          statusParam,
+        );
+        if (!r.ok) {
+          showToast({ message: getApiError(r.error), variant: "danger" });
+        }
+      }
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setDeleteId(null);
+    }
   };
 
   const isFormModal = modal.type === "create" || modal.type === "edit";
+  const totalPages = pagination.pages || 1;
+  const startIdx =
+    pagination.total === 0 ? 0 : (page - 1) * pagination.limit + 1;
+  const endIdx = Math.min(page * pagination.limit, pagination.total);
 
   return (
     <motion.div
@@ -220,129 +437,145 @@ const AdminUsers = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-secondary tracking-tight">Admin Users</h1>
+          <h1 className="text-3xl font-black text-secondary tracking-tight">
+            Admin Users
+          </h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Manage administrator accounts and their permissions
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+          >
             <FiDownload size={14} />
             Export
           </button>
           <Button onClick={openCreate} className="rounded-xl shadow-sm">
             <FiPlus size={14} />
-            Create Admin
+            Add Admin
           </Button>
         </div>
       </div>
 
-      {/* Table Card */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-
-        {/* Filter Bar */}
         <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-xs">
-            <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <FiSearch
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            />
             <input
               type="text"
               placeholder="Search admins…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 bg-gray-50 placeholder:text-gray-400"
             />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-secondary/30 text-gray-600"
-            >
-              <option value="All">All Roles</option>
-              <option value="Super Admin">Super Admin</option>
-              <option value="Admin">Admin</option>
-              {/* <option value="Manager">Manager</option> */}
-            </select>
-            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-secondary/30 text-gray-600"
             >
-              <option value="All">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-              <option value="Suspended">Suspended</option>
+              {STATUS_FILTER_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label === "All" ? "All status" : o.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[200px] relative">
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+              <Loader2 className="w-10 h-10 animate-spin text-secondary" />
+            </div>
+          )}
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 text-left">
-                {["Name", "Email", "Role", "Status", "Last Active", "Actions"].map((h) => (
-                  <th
-                    key={h}
-                    className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
-                  >
-                    {h}
-                  </th>
-                ))}
+                {["Name", "Email", "Mobile", "Role", "Status", "Actions"].map(
+                  (h) => (
+                    <th
+                      key={h}
+                      className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtered.length === 0 ? (
+              {!loading && admins.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-gray-400">
-                    No admin users match your search.
+                  <td
+                    colSpan={6}
+                    className="px-5 py-12 text-center text-sm text-gray-400"
+                  >
+                    No admin users found.
                   </td>
                 </tr>
               ) : (
-                filtered.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50/70 transition-colors">
+                admins.map((user, idx) => (
+                  <tr
+                    key={user.id}
+                    className="hover:bg-gray-50/70 transition-colors"
+                  >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 ${user.avatarBg}`}
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}
                         >
-                          {user.initials}
+                          {initialsFrom(user)}
                         </div>
                         <span className="text-sm font-semibold text-gray-800 whitespace-nowrap">
-                          {user.name}
+                          {fullName(user)}
                         </span>
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">
                       {user.email}
                     </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
-                          ROLE_CHIPS[user.role] ?? "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {user.role}
-                      </span>
+                    <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">
+                      {user.country_code} {user.mobile}
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
                       <span
                         className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
-                          STATUS_CHIPS[user.status] ?? "bg-gray-100 text-gray-500"
+                          ROLE_CHIPS[
+                            (user.Role?.name || "admin").toLowerCase()
+                          ] ?? "bg-gray-100 text-gray-500"
                         }`}
                       >
-                        {user.status}
+                        {displayRoleName(user)}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-xs text-gray-500 font-mono whitespace-nowrap">
-                      {user.lastLogin}
+                    <td className="px-5 py-3.5 whitespace-nowrap">
+                      <button
+                        type="button"
+                        disabled={toggleId === user.id}
+                        onClick={() => handleToggle(user)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-opacity hover:opacity-90 disabled:opacity-50 ${
+                          STATUS_CHIPS[user.status] ??
+                          "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {toggleId === user.id
+                          ? "…"
+                          : formatStatusLabel(user.status)}
+                      </button>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-1">
                         <button
+                          type="button"
                           onClick={() => openView(user)}
                           className="p-2 text-gray-400 hover:text-secondary hover:bg-blue-50 rounded-lg transition-colors"
                           title="View user"
@@ -350,6 +583,7 @@ const AdminUsers = () => {
                           <FiEye size={14} />
                         </button>
                         <button
+                          type="button"
                           onClick={() => openEdit(user)}
                           className="p-2 text-gray-400 hover:text-secondary hover:bg-blue-50 rounded-lg transition-colors"
                           title="Edit user"
@@ -357,6 +591,15 @@ const AdminUsers = () => {
                           <FiEdit2 size={14} />
                         </button>
                         <button
+                          type="button"
+                          onClick={() => openReset(user)}
+                          className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                          title="Reset password"
+                        >
+                          <FiRefreshCw size={14} />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => openDelete(user)}
                           className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete user"
@@ -372,20 +615,48 @@ const AdminUsers = () => {
           </table>
         </div>
 
-        {/* Footer count */}
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50">
+        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-xs text-gray-400">
-            Showing <span className="font-bold text-secondary">{filtered.length}</span> of{" "}
-            <span className="font-bold text-secondary">{users.length}</span> admin users
+            Showing{" "}
+            <span className="font-bold text-secondary">
+              {pagination.total === 0 ? 0 : startIdx}
+            </span>
+            –
+            <span className="font-bold text-secondary">{endIdx}</span> of{" "}
+            <span className="font-bold text-secondary">
+              {pagination.total}
+            </span>
           </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="rounded-xl text-xs"
+            >
+              Previous
+            </Button>
+            <span className="text-xs text-gray-500 font-semibold">
+              Page {page} / {Math.max(1, totalPages)}
+            </span>
+            <Button
+              variant="ghost"
+              disabled={page >= totalPages || loading}
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded-xl text-xs"
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* ── Create / Edit Modal ─────────────────────────────────────────────── */}
       <Modal
         open={isFormModal}
         onClose={closeModal}
-        title={modal.type === "create" ? "Create Admin User" : "Edit Admin User"}
+        title={
+          modal.type === "create" ? "Create Admin User" : "Edit Admin User"
+        }
         maxWidthClass="max-w-lg"
         bodyClassName="px-5 py-5 sm:px-6"
         footer={
@@ -395,91 +666,154 @@ const AdminUsers = () => {
             </Button>
             <Button
               variant="primary"
+              disabled={saving}
               onClick={modal.type === "create" ? handleCreate : handleUpdate}
               className="rounded-xl"
             >
-              {modal.type === "create" ? "Create User" : "Update User"}
+              {saving
+                ? "Saving…"
+                : modal.type === "create"
+                  ? "Create User"
+                  : "Update User"}
             </Button>
           </>
         }
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            label="Full Name"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder="Sarah Anand"
-            required
-            error={errors.name}
-          />
-          <Input
-            label="Email Address"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            placeholder="sarah@example.com"
-            required
-            error={errors.email}
-          />
-          <Input
-            label="Phone Number"
-            name="phone"
-            type="tel"
-            value={form.phone}
-            onChange={handleChange}
-            placeholder="+44 7700 900000"
-            required
-            error={errors.phone}
-          />
-          <Input
-            label="Role"
-            name="role"
-            value={form.role}
-            onChange={handleChange}
-            options={ROLE_OPTIONS}
-            required
-          />
-          <Input
-            label="Permissions Group"
-            name="permissions"
-            value={form.permissions}
-            onChange={handleChange}
-            options={PERMISSIONS_OPTIONS}
-          />
-          <Input
-            label="Status"
-            name="status"
-            value={form.status}
-            onChange={handleChange}
-            options={STATUS_OPTIONS}
-            required
-          />
-          <Input
-            label={modal.type === "edit" ? "New Password (optional)" : "Password"}
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handleChange}
-            placeholder={modal.type === "edit" ? "Leave blank to keep current" : "••••••••"}
-            required={modal.type === "create"}
-            error={errors.password}
-          />
-          <Input
-            label="Confirm Password"
-            name="confirmPassword"
-            type="password"
-            value={form.confirmPassword}
-            onChange={handleChange}
-            placeholder="••••••••"
-            required={modal.type === "create"}
-            error={errors.confirmPassword}
-          />
-        </div>
+        {modal.type === "create" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="First name"
+              name="first_name"
+              value={createForm.first_name}
+              onChange={handleCreateChange}
+              required
+              error={errors.first_name}
+            />
+            <Input
+              label="Last name"
+              name="last_name"
+              value={createForm.last_name}
+              onChange={handleCreateChange}
+              required
+              error={errors.last_name}
+            />
+            <Input
+              label="Email"
+              name="email"
+              type="email"
+              value={createForm.email}
+              onChange={handleCreateChange}
+              required
+              error={errors.email}
+            />
+            <Input
+              label="Country code"
+              name="country_code"
+              value={createForm.country_code}
+              onChange={handleCreateChange}
+              required
+              error={errors.country_code}
+            />
+            <Input
+              label="Mobile"
+              name="mobile"
+              value={createForm.mobile}
+              onChange={handleCreateChange}
+              required
+              error={errors.mobile}
+            />
+            <Input
+              label="Role"
+              name="role_id"
+              value={createForm.role_id}
+              onChange={handleCreateChange}
+              options={ROLE_OPTIONS}
+              required
+            />
+            <Input
+              label="Password"
+              name="password"
+              type="password"
+              value={createForm.password}
+              onChange={handleCreateChange}
+              required
+              error={errors.password}
+            />
+            <Input
+              label="Confirm password"
+              name="confirm_password"
+              type="password"
+              value={createForm.confirm_password}
+              onChange={handleCreateChange}
+              required
+              error={errors.confirm_password}
+            />
+          </div>
+        )}
+        {modal.type === "edit" && editForm && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="First name"
+              name="first_name"
+              value={editForm.first_name}
+              onChange={handleEditChange}
+              required
+              error={errors.first_name}
+            />
+            <Input
+              label="Last name"
+              name="last_name"
+              value={editForm.last_name}
+              onChange={handleEditChange}
+              required
+              error={errors.last_name}
+            />
+            <Input
+              label="Email"
+              name="email"
+              type="email"
+              value={editForm.email}
+              onChange={handleEditChange}
+              required
+              error={errors.email}
+            />
+            <Input
+              label="Country code"
+              name="country_code"
+              value={editForm.country_code}
+              onChange={handleEditChange}
+              required
+              error={errors.country_code}
+            />
+            <Input
+              label="Mobile"
+              name="mobile"
+              value={editForm.mobile}
+              onChange={handleEditChange}
+              required
+              error={errors.mobile}
+            />
+            <Input
+              label="Role"
+              name="role_id"
+              value={editForm.role_id}
+              onChange={handleEditChange}
+              options={ROLE_OPTIONS}
+              required
+            />
+            <Input
+              label="Status"
+              name="status"
+              value={editForm.status}
+              onChange={handleEditChange}
+              options={EDIT_STATUS_OPTIONS}
+              required
+              className="sm:col-span-2"
+            />
+          </div>
+        )}
       </Modal>
 
-      {/* ── View Modal ─────────────────────────────────────────────────────── */}
       <Modal
         open={modal.type === "view"}
         onClose={closeModal}
@@ -495,53 +829,101 @@ const AdminUsers = () => {
         <div className="space-y-4">
           <div className="flex items-center gap-4 pb-4 border-b border-gray-100">
             <div
-              className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-black shrink-0 ${modal.data?.avatarBg}`}
+              className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-black shrink-0 ${AVATAR_COLORS[(modal.data?.id || 0) % AVATAR_COLORS.length]}`}
             >
-              {modal.data?.initials}
+              {modal.data ? initialsFrom(modal.data) : ""}
             </div>
             <div>
-              <h3 className="text-lg font-black text-gray-900">{modal.data?.name}</h3>
+              <h3 className="text-lg font-black text-gray-900">
+                {modal.data ? fullName(modal.data) : ""}
+              </h3>
               <p className="text-sm text-gray-500">{modal.data?.email}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">Phone</p>
-              <p className="text-sm font-semibold text-gray-800">{modal.data?.phone}</p>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
+                Mobile
+              </p>
+              <p className="text-sm font-semibold text-gray-800">
+                {modal.data?.country_code} {modal.data?.mobile}
+              </p>
             </div>
             <div>
-              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">Role</p>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
+                Role
+              </p>
               <span
                 className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${
-                  ROLE_CHIPS[modal.data?.role] ?? "bg-gray-100 text-gray-500"
+                  ROLE_CHIPS[
+                    (modal.data?.Role?.name || "admin").toLowerCase()
+                  ] ?? "bg-gray-100 text-gray-500"
                 }`}
               >
-                {modal.data?.role}
+                {modal.data ? displayRoleName(modal.data) : ""}
               </span>
             </div>
-            <div>
-              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">Permissions</p>
-              <p className="text-sm font-semibold text-gray-800">{modal.data?.permissions}</p>
-            </div>
-            <div>
-              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">Status</p>
+            <div className="col-span-2">
+              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
+                Status
+              </p>
               <span
                 className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${
-                  STATUS_CHIPS[modal.data?.status] ?? "bg-gray-100 text-gray-500"
+                  STATUS_CHIPS[modal.data?.status] ??
+                  "bg-gray-100 text-gray-500"
                 }`}
               >
-                {modal.data?.status}
+                {modal.data ? formatStatusLabel(modal.data.status) : ""}
               </span>
             </div>
-          </div>
-          <div className="pt-2">
-            <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">Last Active</p>
-            <p className="text-sm font-semibold text-gray-800">{modal.data?.lastLogin}</p>
           </div>
         </div>
       </Modal>
 
-      {/* ── Delete Modal ─────────────────────────────────────────────────────── */}
+      <Modal
+        open={modal.type === "reset"}
+        onClose={closeModal}
+        title="Reset password"
+        maxWidthClass="max-w-md"
+        bodyClassName="px-5 py-5 sm:px-6"
+        footer={
+          <>
+            <Button variant="ghost" onClick={closeModal} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={saving}
+              onClick={handleResetSubmit}
+              className="rounded-xl"
+            >
+              {saving ? "Saving…" : "Reset password"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Input
+            label="New password"
+            name="new_password"
+            type="password"
+            value={resetForm.new_password}
+            onChange={handleResetChange}
+            required
+            error={resetErrors.new_password}
+          />
+          <Input
+            label="Confirm password"
+            name="confirm_password"
+            type="password"
+            value={resetForm.confirm_password}
+            onChange={handleResetChange}
+            required
+            error={resetErrors.confirm_password}
+          />
+        </div>
+      </Modal>
+
       <Modal
         open={modal.type === "delete"}
         onClose={closeModal}
@@ -553,8 +935,13 @@ const AdminUsers = () => {
             <Button variant="ghost" onClick={closeModal} className="rounded-xl">
               Cancel
             </Button>
-            <Button variant="danger" onClick={handleDelete} className="rounded-xl">
-              Delete
+            <Button
+              variant="danger"
+              disabled={deleteId != null}
+              onClick={handleDelete}
+              className="rounded-xl"
+            >
+              {deleteId != null ? "Deleting…" : "Delete"}
             </Button>
           </>
         }
@@ -565,13 +952,13 @@ const AdminUsers = () => {
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">
             Are you sure you want to delete{" "}
-            <span className="font-black text-secondary">{modal.data?.name}</span>? This action
-            cannot be undone and will permanently remove their account and access.
+            <span className="font-black text-secondary">
+              {modal.data ? fullName(modal.data) : ""}
+            </span>
+            ? This will deactivate the account.
           </p>
         </div>
       </Modal>
     </motion.div>
   );
-};
-
-export default AdminUsers;
+}

@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { setCredentials, logout } from '../store/slices/authSlice';
-import { loginUser, registerUser, logoutUser } from '../services/auth.service';
-import { ROLE_NAMES, ROLE_ROUTES } from '../utils/constants';
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { setCredentials, logout } from "../store/slices/authSlice";
+import { loginUser, registerUser, logoutUser } from "../services/auth.service";
+import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
 
 const useAuth = () => {
   const dispatch = useDispatch();
@@ -16,15 +16,17 @@ const useAuth = () => {
     try {
       const res = await loginUser({ email, password });
       if (res.data?.requires_2fa) {
-        sessionStorage.setItem('pending_2fa_email', email);
-        sessionStorage.setItem('pending_2fa_password', password);
-        navigate('/2fa');
+        sessionStorage.setItem("pending_2fa_email", email);
+        sessionStorage.setItem("pending_2fa_password", password);
+        navigate("/2fa");
         return { twoFactorRequired: true };
       }
       const { user: userData, token: jwtToken } = res.data;
-      const role = ROLE_NAMES[userData.role_id] || 'candidate';
-      dispatch(setCredentials({ user: { ...userData, role }, token: jwtToken }));
-      navigate(ROLE_ROUTES[userData.role_id] || '/candidate/dashboard');
+      const role = ROLE_NAMES[userData.role_id] || "candidate";
+      dispatch(
+        setCredentials({ user: { ...userData, role }, token: jwtToken }),
+      );
+      navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
       return { success: true };
     } finally {
       setIsLoading(false);
@@ -35,8 +37,8 @@ const useAuth = () => {
     setIsLoading(true);
     try {
       await registerUser(data);
-      sessionStorage.setItem('pending_otp_email', data.email);
-      navigate('/verify-otp');
+      sessionStorage.setItem("pending_otp_email", data.email);
+      navigate("/verify-otp");
       return { success: true };
     } finally {
       setIsLoading(false);
@@ -46,10 +48,9 @@ const useAuth = () => {
   const handleLogout = async () => {
     try {
       await logoutUser();
-    } catch {
-    }
+    } catch {}
     dispatch(logout());
-    navigate('/login');
+    navigate("/login");
   };
 
   return {
