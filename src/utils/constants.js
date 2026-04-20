@@ -1,4 +1,5 @@
-export const API_BASE_URL = "http://72.61.188.186:5001";
+// export const API_BASE_URL = "http://72.61.188.186:5001";
+   export const API_BASE_URL = "http://localhost:5000";
 
 export const ROLE_NAMES = {
   1: "admin",

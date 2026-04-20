@@ -89,9 +89,9 @@ const MessagePanel = ({
           </div>
 
           <div className="overflow-y-auto flex-1 min-h-0 custom-scrollbar">
-            {threads.map((t) => (
+            {threads.map((t, index) => (
               <button
-                key={t.id}
+                key={t.id || index}
                 type="button"
                 onClick={() => onSelectThread?.(t.id)}
                 className={`w-full text-left px-4 py-3 border-b border-gray-100 transition-colors ${activeThreadId === t.id
@@ -110,6 +110,11 @@ const MessagePanel = ({
                       <span className="text-sm font-black text-gray-900 truncate">
                         {t.name}
                       </span>
+                      {t.caseDisplayId && (
+                        <span className="ml-2 text-[10px] font-black text-primary px-1.5 py-0.5 bg-primary/5 rounded border border-primary/20">
+                          {t.caseDisplayId}
+                        </span>
+                      )}
                       {t.unread > 0 && (
                         <span className="shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
                           {t.unread}
@@ -161,9 +166,9 @@ const MessagePanel = ({
                 ref={messagesScrollRef}
                 className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0 overscroll-contain custom-scrollbar scroll-smooth"
               >
-                {messages.map((msg) => (
+                {messages.map((msg, index) => (
                   <div
-                    key={msg.id}
+                    key={msg.id || index}
                     className={`flex flex-col max-w-[85%] ${msg.from === "me" ? "self-end items-end" : "self-start"
                       }`}
                   >
