@@ -1,52 +1,77 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Input from "./Input";
 import Button from "./Button";
 import eliteLogo from "../assets/elitepic_logo.png";
+import { setup2fa, verify2faSetup } from "../services/auth2faService";
 
-const TwoFactorSetup = ({ token, onSetupComplete, onCancel }) => {
+function getApiError(error) {
+  const d = error?.response?.data;
+  const m = d?.message;
+  if (typeof m === "string") return m;
+  if (Array.isArray(m) && m.length) return m[0];
+  return error?.message || "Something went wrong";
+}
+
+const TwoFactorSetup = ({ onSetupComplete, onCancel }) => {
   const [qrCode, setQrCode] = useState(null);
   const [secret, setSecret] = useState("");
   const [backupCodes, setBackupCodes] = useState([]);
   const [verificationCode, setVerificationCode] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
-  const [step, setStep] = useState("setup"); // setup, verify, complete
+  const [step, setStep] = useState("loading");
 
-  const handleSetup = async () => {
+  const runSetup = useCallback(async () => {
     setLoading(true);
     setError("");
-    // Demo mode - simulate API call with mock data
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    // Mock QR code data (using a placeholder QR code)
-    setQrCode("https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=otpauth://totp/EPiC:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=EPiC");
-    setSecret("JBSWY3DPEHPK3PXP");
-    setBackupCodes(["ABCD1234", "EFGH5678", "IJKL9012", "MNOP3456", "QRST7890", "UVWX2345"]);
-    setStep("verify");
-    setLoading(false);
-  };
+    setStep("loading");
+    try {
+      const res = await setup2fa();
+      const d = res.data?.data;
+      if (!d) {
+        setError("Invalid server response");
+        setStep("error");
+        return;
+      }
+      setQrCode(d.qrCode);
+      setSecret(d.secret || "");
+      setBackupCodes(Array.isArray(d.backupCodes) ? d.backupCodes : []);
+      setStep("verify");
+    } catch (e) {
+      setError(getApiError(e));
+      setStep("error");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    runSetup();
+  }, [runSetup]);
 
   const handleVerify = async (e) => {
     e.preventDefault();
-    if (!verificationCode || verificationCode.length !== 6) {
+    const code = verificationCode.trim();
+    if (!code || code.length !== 6) {
       setError("Enter a valid 6-digit code");
       return;
     }
 
     setVerifying(true);
     setError("");
-    // Demo mode - simulate verification
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    setStep("complete");
-    setVerifying(false);
-    if (onSetupComplete) onSetupComplete({ success: true });
+    try {
+      await verify2faSetup({
+        token: code,
+        backupCodes,
+      });
+      setStep("complete");
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
+      setVerifying(false);
+    }
   };
-
-  useEffect(() => {
-    handleSetup();
-  }, []);
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
@@ -55,16 +80,32 @@ const TwoFactorSetup = ({ token, onSetupComplete, onCancel }) => {
         <h2 className="text-xl font-black text-secondary">Two-Factor Authentication Setup</h2>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm font-bold">
-          {error}
-        </div>
+      {error && step !== "verify" && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm font-bold">{error}</div>
       )}
 
-      {step === "setup" && loading && (
+      {step === "loading" && loading && (
         <div className="text-center py-8">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           <p className="mt-4 text-sm text-gray-600 font-bold">Generating QR code...</p>
+        </div>
+      )}
+
+      {step === "error" && !loading && (
+        <div className="space-y-4">
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm font-bold">{error}</div>
+          <Button type="button" className="w-full" onClick={runSetup}>
+            Try again
+          </Button>
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-sm font-bold text-secondary hover:text-primary hover:underline"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -82,25 +123,27 @@ const TwoFactorSetup = ({ token, onSetupComplete, onCancel }) => {
               )}
               <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs font-bold text-gray-600 mb-1">Manual entry code:</p>
-                <code className="text-sm font-mono text-secondary bg-white px-3 py-2 rounded border block">
+                <code className="text-sm font-mono text-secondary bg-white px-3 py-2 rounded border block break-all">
                   {secret}
                 </code>
               </div>
             </div>
 
             <form onSubmit={handleVerify} className="space-y-4">
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm font-bold">{error}</div>
+              )}
               <Input
                 label="Enter the 6-digit code from your app"
                 name="verificationCode"
                 type="text"
                 value={verificationCode}
                 onChange={(e) => {
-                  setVerificationCode(e.target.value);
+                  setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6));
                   setError("");
                 }}
                 placeholder="123456"
                 maxLength={6}
-                error={error}
                 required
                 className="text-center text-2xl tracking-widest"
               />
@@ -135,7 +178,7 @@ const TwoFactorSetup = ({ token, onSetupComplete, onCancel }) => {
           </div>
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-left">
-            <h4 className="text-sm font-black text-yellow-800 mb-2">⚠️ Save Your Backup Codes</h4>
+            <h4 className="text-sm font-black text-yellow-800 mb-2">Save Your Backup Codes</h4>
             <p className="text-xs text-yellow-700 mb-3">
               Store these codes in a safe place. You can use them to access your account if you lose your authenticator device.
             </p>
@@ -148,7 +191,13 @@ const TwoFactorSetup = ({ token, onSetupComplete, onCancel }) => {
             </div>
           </div>
 
-          <Button onClick={onCancel} className="w-full">
+          <Button
+            type="button"
+            className="w-full"
+            onClick={() => {
+              if (onSetupComplete) onSetupComplete({ success: true });
+            }}
+          >
             Done
           </Button>
         </div>

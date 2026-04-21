@@ -23,7 +23,6 @@ import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
 import Modal from "../../components/Modal";
 import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
-import { useSelector } from "react-redux";
 import { useToast } from "../../context/ToastContext";
 import {
   getMe,
@@ -169,7 +168,6 @@ const emptyEmailDrafts = () => {
 };
 
 export default function AdminSettings() {
-  const token = useSelector((state) => state.auth.token);
   const { showToast } = useToast();
   const slaBaselineRef = useRef(null);
 
@@ -1369,7 +1367,6 @@ export default function AdminSettings() {
       >
         {twoFactorMode === "setup" ? (
           <TwoFactorSetup
-            token={token}
             onSetupComplete={() => {
               setTwoFactorModalOpen(false);
               loadMe();
@@ -1378,7 +1375,6 @@ export default function AdminSettings() {
           />
         ) : (
           <TwoFactorDisable
-            token={token}
             onDisableComplete={() => {
               setTwoFactorModalOpen(false);
               loadMe();

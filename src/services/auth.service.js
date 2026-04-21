@@ -1,7 +1,17 @@
 import { apiClient } from "./axios.instance";
 
 const extractError = (error, fallback) => {
-  throw new Error(error.response?.data?.message || fallback);
+  const d = error.response?.data;
+  if (typeof d?.message === "string" && d.message.trim()) {
+    throw new Error(d.message);
+  }
+  if (typeof d?.error === "string" && d.error.trim()) {
+    throw new Error(d.error);
+  }
+  if (error.message) {
+    throw new Error(error.message);
+  }
+  throw new Error(fallback);
 };
 
 export const registerUser = async (data) => {
