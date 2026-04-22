@@ -1,19 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import MessagePanel from "../../components/messaging/MessagePanel";
 import useMessaging from "../../hooks/useMessaging";
 
 export default function CandidateMessages() {
-  const { 
-    threads, 
-    messagesByThread, 
-    loading, 
-    fetchThread, 
-    sendMessage: apiSendMessage 
-  } = useMessaging();
-
   const [activeId, setActiveId] = useState(null);
+  const {
+    threads,
+    messagesByThread,
+    loading,
+    fetchThread,
+    sendMessage: apiSendMessage,
+  } = useMessaging({ activeThreadPartnerId: activeId });
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
+  const activeCaseId = useMemo(
+    () => threads.find((t) => t.id === activeId)?.caseId ?? null,
+    [threads, activeId],
+  );
 
   // Set first thread as active initially if available
   useEffect(() => {
@@ -25,9 +28,9 @@ export default function CandidateMessages() {
   // Load messages when active thread changes
   useEffect(() => {
     if (activeId) {
-      fetchThread(activeId);
+      fetchThread(activeId, activeCaseId);
     }
-  }, [activeId, fetchThread]);
+  }, [activeId, activeCaseId, fetchThread]);
 
   const handleSend = async () => {
     const text = draft.trim();
@@ -38,28 +41,30 @@ export default function CandidateMessages() {
       return;
     }
     
-    const result = await apiSendMessage(activeId, text);
+    const result = await apiSendMessage(activeId, text, activeCaseId);
     if (result.success) {
       setDraft("");
     }
   };
 
   return (
-    <MessagePanel
-      title="Messages"
-      subtitle="Communicate securely with your assigned caseworker."
-      fullBleed={false}
-      threads={threads}
-      activeThreadId={activeId}
-      onSelectThread={setActiveId}
-      query={query}
-      onQueryChange={setQuery}
-      messagesByThread={messagesByThread}
-      draft={draft}
-      onDraftChange={setDraft}
-      onSend={handleSend}
-      showOnline
-    />
+    <div className="flex flex-col min-h-0 w-full h-[min(calc(100dvh-7rem),calc(100vh-6rem))] max-h-[calc(100dvh-4rem)] sm:max-h-none">
+      <MessagePanel
+        title="Messages"
+        subtitle="Communicate securely with your assigned caseworker."
+        fullBleed={false}
+        threads={threads}
+        activeThreadId={activeId}
+        onSelectThread={setActiveId}
+        query={query}
+        onQueryChange={setQuery}
+        messagesByThread={messagesByThread}
+        draft={draft}
+        onDraftChange={setDraft}
+        onSend={handleSend}
+        showOnline
+      />
+    </div>
   );
 }
 
