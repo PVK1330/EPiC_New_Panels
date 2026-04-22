@@ -677,6 +677,14 @@ export default function AdminUsers() {
               required
               error={errors.email}
             />
+             <Input
+              label="Role"
+              name="role_id"
+              value={createForm.role_id}
+              onChange={handleCreateChange}
+              options={ROLE_OPTIONS}
+              required
+            />
             <Input
               label="Country Code"
               name="country_code"
@@ -696,22 +704,8 @@ export default function AdminUsers() {
               required
               error={errors.mobile}
             />
-            <Input
-              label="Role"
-              name="role_id"
-              value={createForm.role_id}
-              onChange={handleCreateChange}
-              options={ROLE_OPTIONS}
-              required
-            />
-            <Input
-              label="Status"
-              name="status"
-              value={createForm.status}
-              onChange={handleCreateChange}
-              options={EDIT_STATUS_OPTIONS}
-              required
-            />
+           
+           
             <Input
               label="Password"
               name="password"
@@ -731,6 +725,14 @@ export default function AdminUsers() {
               placeholder="••••••••"
               required
               error={errors.confirm_password}
+            />
+             <Input
+              label="Status"
+              name="status"
+              value={createForm.status}
+              onChange={handleCreateChange}
+              options={EDIT_STATUS_OPTIONS}
+              required
             />
           </div>
         )}

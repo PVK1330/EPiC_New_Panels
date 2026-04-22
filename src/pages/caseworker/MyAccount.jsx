@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   UserCircle,
   User,
@@ -11,14 +11,17 @@ import {
   Lock,
   Shield,
 } from "lucide-react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import Modal from "../../components/Modal";
 import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
+import api from "../../services/api";
+import { setCredentials } from "../../store/slices/authSlice";
 
 const InputField = ({
   label,
-  defaultValue,
+  value,
+  onChange,
   type = "text",
   icon: Icon,
   placeholder,
@@ -30,7 +33,8 @@ const InputField = ({
     <div className="relative">
       <input
         type={type}
-        defaultValue={defaultValue}
+        value={value}
+        onChange={onChange}
         placeholder={placeholder}
         className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
       />
@@ -46,15 +50,86 @@ const InputField = ({
 
 const MyAccount = () => {
   const user = useSelector((state) => state.auth.user);
+  const dispatch = useDispatch();
   const [gender, setGender] = useState("male");
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [twoFactorMode, setTwoFactorMode] = useState("setup"); // setup or disable
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const [formData, setFormData] = useState({
+    first_name: user?.name?.split(" ")[0] || "",
+    last_name: user?.name?.split(" ")[1] || "",
+    email: user?.email || "",
+    country_code: "+1",
+    mobile: "",
+    profile_pic: null,
+  });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await api.get("/api/user/profile");
+        const { first_name, last_name, email, country_code, mobile } = response.data.data.user;
+        setFormData((prev) => ({
+          ...prev,
+          first_name,
+          last_name,
+          email,
+          country_code: country_code || "+1",
+          mobile,
+        }));
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleInputChange = (field) => (e) => {
+    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setFormData((prev) => ({ ...prev, profile_pic: file }));
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const data = new FormData();
+      data.append("first_name", formData.first_name);
+      data.append("last_name", formData.last_name);
+      data.append("country_code", formData.country_code);
+      data.append("mobile", formData.mobile);
+      if (formData.profile_pic) {
+        data.append("profile_pic", formData.profile_pic);
+      }
+
+      const response = await api.put("/api/user/profile", data, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      console.log("Profile update response:", response.status, response.data);
+
+      dispatch(
+        setCredentials({
+          user: response.data.data.user,
+          token: user.token,
+        })
+      );
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -74,38 +149,68 @@ const MyAccount = () => {
       <div className="bg-white p-8 rounded-xl shadow-sm border-2 border-primary/20 max-w-7xl">
         {/* Avatar */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-primary/20 flex items-center justify-center text-5xl mb-3 shadow-inner">
-            👨
+          <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-primary/20 flex items-center justify-center text-5xl mb-3 shadow-inner overflow-hidden">
+            {formData.profile_pic ? (
+              <img
+                src={URL.createObjectURL(formData.profile_pic)}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              "👨"
+            )}
           </div>
-          <button className="text-xs font-black text-blue-600 uppercase tracking-widest hover:underline">
+          <label className="text-xs font-black text-blue-600 uppercase tracking-widest hover:underline cursor-pointer">
             Update Profile Image
-          </button>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </label>
         </div>
 
         {/* Profile Fields */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
           <InputField
             label="First Name"
-            defaultValue={user?.name?.split(" ")[0] || "Gaurav"}
+            value={formData.first_name}
+            onChange={handleInputChange("first_name")}
             icon={User}
           />
           <InputField
             label="Last Name"
-            defaultValue={user?.name?.split(" ")[1] || "Moghe"}
+            value={formData.last_name}
+            onChange={handleInputChange("last_name")}
             icon={User}
           />
           <InputField
             label="Email"
-            defaultValue={user?.email || "gaurav@example.com"}
+            value={formData.email}
+            onChange={handleInputChange("email")}
             type="email"
             icon={Mail}
           />
-          <InputField
-            label="Phone"
-            defaultValue="9876543210"
-            type="tel"
-            icon={Phone}
-          />
+          <div className="flex gap-2">
+            <div className="w-24">
+              <InputField
+                label="Country Code"
+                value={formData.country_code}
+                onChange={handleInputChange("country_code")}
+                icon={Phone}
+              />
+            </div>
+            <div className="flex-1">
+              <InputField
+                label="Mobile"
+                value={formData.mobile}
+                onChange={handleInputChange("mobile")}
+                type="tel"
+                icon={Phone}
+              />
+            </div>
+          </div>
           {/* <InputField
             label="Date of Birth"
             defaultValue="01-01-2000"
@@ -206,12 +311,13 @@ const MyAccount = () => {
         <div className="flex items-center justify-between">
           <button
             onClick={handleSave}
-            className={`font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95 ${saved
+            disabled={loading}
+            className={`font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${saved
                 ? "bg-green-500 text-white"
                 : "bg-blue-700 hover:bg-blue-800 text-white"
               }`}
           >
-            {saved ? "✓ Saved!" : "Save Changes"}
+            {loading ? "Saving..." : saved ? "✓ Saved!" : "Save Changes"}
           </button>
           <button className="bg-primary hover:opacity-90 text-white font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95">
             Logout
