@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiSettings,
@@ -23,6 +24,7 @@ import Modal from "../../components/Modal";
 import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
 import { useSelector } from "react-redux";
+import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from "../../services/caseWorker";
 
 const timezones = ["UTC-05:00 Eastern Time", "UTC-06:00 Central Time", "UTC-07:00 Mountain Time", "UTC-08:00 Pacific Time"];
 const languages = ["English", "Spanish", "French", "German"];
@@ -33,6 +35,7 @@ const CONFIG_TABS = [
   { id: "account", label: "Your account", icon: <FiUser size={16} /> },
   { id: "visa", label: "Visa types", icon: <FiLayers size={16} /> },
   { id: "categories", label: "Case categories", icon: <FiFolder size={16} /> },
+  { id: "departments", label: "Departments", icon: <FiFolder size={16} /> },
   { id: "roles", label: "Role permissions", icon: <FiShield size={16} /> },
   { id: "email", label: "Email templates", icon: <FiMail size={16} /> },
   { id: "payment", label: "Payment config", icon: <FiCreditCard size={16} /> },
@@ -98,6 +101,12 @@ export default function AdminSettings() {
   const [visaTypes, setVisaTypes] = useState(INITIAL_VISA_TYPES);
   const [visaModalOpen, setVisaModalOpen] = useState(false);
   const [visaModalMode, setVisaModalMode] = useState("add");
+  const [departments, setDepartments] = useState([]);
+  const [departmentModalOpen, setDepartmentModalOpen] = useState(false);
+  const [departmentModalMode, setDepartmentModalMode] = useState("add");
+  const [editingDepartment, setEditingDepartment] = useState(null);
+  const [departmentFormName, setDepartmentFormName] = useState("");
+  const [departmentFormError, setDepartmentFormError] = useState("");
   const [editingVisaId, setEditingVisaId] = useState(null);
   const [visaFormName, setVisaFormName] = useState("");
   const [visaFormError, setVisaFormError] = useState("");
@@ -105,6 +114,99 @@ export default function AdminSettings() {
   const [categories, setCategories] = useState(["Urgent", "VIP", "Standard"]);
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [twoFactorMode, setTwoFactorMode] = useState("setup"); // setup or disable
+
+  useEffect(() => {
+    if (configTab === "departments") {
+      fetchDepartments();
+    }
+  }, [configTab]);
+
+  const fetchDepartments = async () => {
+    try {
+      const res = await getDepartments();
+      if (res.data?.status === "success") {
+        setDepartments(res.data.data.departments || []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch departments:", e);
+    }
+  };
+
+  const openDepartmentModalAdd = () => {
+    setDepartmentModalMode("add");
+    setEditingDepartment(null);
+    setDepartmentFormName("");
+    setDepartmentFormError("");
+    setDepartmentModalOpen(true);
+  };
+
+  const openDepartmentModalEdit = (department) => {
+    setDepartmentModalMode("edit");
+    setEditingDepartment(department);
+    setDepartmentFormName(department);
+    setDepartmentFormError("");
+    setDepartmentModalOpen(true);
+  };
+
+  const closeDepartmentModal = () => {
+    setDepartmentModalOpen(false);
+    setDepartmentFormName("");
+    setDepartmentFormError("");
+    setEditingDepartment(null);
+  };
+
+  const submitDepartmentForm = async (e) => {
+    e.preventDefault();
+    const trimmed = departmentFormName.trim();
+    if (!trimmed) {
+      setDepartmentFormError("Name is required");
+      return;
+    }
+    try {
+      if (departmentModalMode === "add") {
+        await createDepartment({ name: trimmed });
+      } else if (editingDepartment) {
+        await updateDepartment({ oldName: editingDepartment, newName: trimmed });
+      }
+      closeDepartmentModal();
+      fetchDepartments();
+    } catch (e) {
+      console.error("Failed to save department:", e);
+      setDepartmentFormError(e.response?.data?.message || "Failed to save department");
+    }
+  };
+
+  const removeDepartment = async (department) => {
+    const result = await Swal.fire({
+      title: "Delete Department",
+      text: `Are you sure you want to delete "${department}"?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel"
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteDepartment({ name: department });
+        fetchDepartments();
+        Swal.fire({
+          title: "Deleted!",
+          text: `Department "${department}" has been deleted.`,
+          icon: "success"
+        });
+      } catch (e) {
+        console.error("Failed to delete department:", e);
+        Swal.fire({
+          title: "Error",
+          text: e.response?.data?.message || "Failed to delete department",
+          icon: "error"
+        });
+      }
+    }
+  };
 
   const [emailTemplate, setEmailTemplate] = useState("payment");
   const [emailSubject, setEmailSubject] = useState("[VisaFlow] Action Required: Outstanding Payment");
@@ -510,6 +612,41 @@ VisaFlow Team`,
             </motion.div>
           )}
 
+          {configTab === "departments" && (
+            <motion.div key="departments" className="p-5 sm:p-6" {...panelMotion}>
+              <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Departments</h3>
+              <div className="flex flex-col gap-2.5 mb-5">
+                {departments.map((department) => (
+                  <div
+                    key={department}
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 rounded-xl bg-gray-50 border border-gray-100"
+                  >
+                    <span className="text-sm font-semibold text-secondary">{department}</span>
+                    <div className="flex gap-2 shrink-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="rounded-xl text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+                        onClick={() => openDepartmentModalEdit(department)}
+                      >
+                        <FiEdit2 size={14} aria-hidden />
+                        Edit
+                      </Button>
+                      <Button type="button" variant="danger" className="rounded-xl text-xs px-3 py-1.5 inline-flex items-center gap-1.5" onClick={() => removeDepartment(department)}>
+                        <FiTrash2 size={14} aria-hidden />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Button type="button" className="rounded-xl inline-flex items-center gap-2" onClick={openDepartmentModalAdd}>
+                <FiPlus size={16} aria-hidden />
+                Add department
+              </Button>
+            </motion.div>
+          )}
+
           {configTab === "roles" && (
             <motion.div key="roles" className="p-5 sm:p-6" {...panelMotion}>
               <h3 className="text-sm font-black text-secondary pb-3 mb-2 border-b border-gray-100">Role permissions</h3>
@@ -605,14 +742,12 @@ VisaFlow Team`,
         open={visaModalOpen}
         onClose={closeVisaModal}
         title={visaModalMode === "add" ? "Add visa type" : "Edit visa type"}
-        maxWidthClass="max-w-md"
-        bodyClassName="px-5 py-5 sm:px-6"
         footer={
           <>
             <Button type="button" variant="ghost" className="rounded-xl" onClick={closeVisaModal}>
               Cancel
             </Button>
-            <Button type="submit" form={VISA_FORM_ID} className="rounded-xl">
+            <Button type="button" className="rounded-xl" onClick={submitVisaForm}>
               {visaModalMode === "add" ? "Add" : "Save"}
             </Button>
           </>
@@ -621,17 +756,48 @@ VisaFlow Team`,
         <form id={VISA_FORM_ID} onSubmit={submitVisaForm} className="space-y-4">
           <Input
             label="Visa type name"
-            name="visaName"
+            name="name"
             value={visaFormName}
-            onChange={(e) => {
-              setVisaFormName(e.target.value);
-              if (visaFormError) setVisaFormError("");
-            }}
-            placeholder="e.g. Skilled Worker Visa"
-            required
+            onChange={(e) => setVisaFormName(e.target.value)}
             error={visaFormError}
+            placeholder="e.g. Skilled Worker Visa"
           />
-          <p className="text-[11px] text-gray-400 leading-relaxed">You can add more fields later (code, description, processing time).</p>
+        </form>
+      </Modal>
+
+      <Modal
+        open={departmentModalOpen}
+        onClose={closeDepartmentModal}
+        title={departmentModalMode === "add" ? "Add department" : "Edit department"}
+        footer={
+          <div className="flex gap-3 pt-4 mt-4 border-t border-gray-100">
+            <Button type="button" variant="ghost" className="rounded-xl flex-1" onClick={closeDepartmentModal}>
+              Cancel
+            </Button>
+            <Button type="button" className="rounded-xl flex-1" onClick={submitDepartmentForm}>
+              {departmentModalMode === "add" ? "Add" : "Save"}
+            </Button>
+          </div>
+        }
+      >
+        <form onSubmit={submitDepartmentForm} className="p-2">
+          <div className="mb-4">
+            <label htmlFor="department-name" className="block text-sm font-bold text-gray-700 mb-2">
+              Department name
+            </label>
+            <input
+              id="department-name"
+              type="text"
+              value={departmentFormName}
+              onChange={(e) => setDepartmentFormName(e.target.value)}
+              placeholder="e.g. Immigration"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm"
+              autoFocus
+            />
+            {departmentFormError && (
+              <p className="mt-2 text-xs text-red-500 font-medium">{departmentFormError}</p>
+            )}
+          </div>
         </form>
       </Modal>
 

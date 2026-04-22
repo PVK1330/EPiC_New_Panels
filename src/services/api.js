@@ -2,9 +2,10 @@ import axios from "axios";
 import { getToken } from "../utils/storage";
 import store from "../store";
 import { logout } from "../store/slices/authSlice";
+import { API_BASE_URL } from "../utils/constants";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: { "Content-Type": "application/json" },
 });

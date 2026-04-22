@@ -21,11 +21,12 @@ import {
   toggleAdminStatus,
   resetAdminPassword,
   deleteAdmin,
+  exportAdmins,
 } from "../../services/adminService";
 
 const ROLE_CHIPS = {
   admin: "bg-blue-100 text-blue-700",
-  "super admin": "bg-purple-100 text-purple-700",
+  "Admin": "bg-purple-100 text-purple-700",
 };
 
 const STATUS_CHIPS = {
@@ -81,7 +82,7 @@ function getApiError(error) {
 }
 
 function displayRoleName(admin) {
-  const n = admin?.Role?.name;
+  const n = admin?.role?.name;
   if (!n) return "Admin";
   return n.charAt(0).toUpperCase() + n.slice(1);
 }
@@ -123,6 +124,7 @@ export default function AdminUsers() {
   const [saving, setSaving] = useState(false);
   const [toggleId, setToggleId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(searchInput), 400);
@@ -424,6 +426,36 @@ export default function AdminUsers() {
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await exportAdmins({
+        search: debouncedSearch.trim(),
+        status: statusParam,
+      });
+      
+      // Create a blob from the response
+      const blob = new Blob([res.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `admins_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      showToast({
+        message: "Admins exported successfully",
+        variant: "success",
+      });
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const isFormModal = modal.type === "create" || modal.type === "edit";
   const totalPages = pagination.pages || 1;
   const startIdx =
@@ -449,9 +481,15 @@ export default function AdminUsers() {
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+            onClick={handleExport}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FiDownload size={14} />
+            {exporting ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <FiDownload size={14} />
+            )}
             Export
           </button>
           <Button onClick={openCreate} className="rounded-xl shadow-sm">
@@ -550,7 +588,7 @@ export default function AdminUsers() {
                       <span
                         className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
                           ROLE_CHIPS[
-                            (user.Role?.name || "admin").toLowerCase()
+                            (user.role?.name || "admin").toLowerCase()
                           ] ?? "bg-gray-100 text-gray-500"
                         }`}
                       >
@@ -856,7 +894,7 @@ export default function AdminUsers() {
               <span
                 className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${
                   ROLE_CHIPS[
-                    (modal.data?.Role?.name || "admin").toLowerCase()
+                    (modal.data?.role?.name || "admin").toLowerCase()
                   ] ?? "bg-gray-100 text-gray-500"
                 }`}
               >

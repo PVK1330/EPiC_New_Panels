@@ -16,3 +16,14 @@ export const resetSponsorPassword = (id, data) =>
   api.patch(`/api/sponsors/${id}/reset-password`, data);
 
 export const deleteSponsor = (id) => api.delete(`/api/sponsors/${id}`);
+
+export const exportSponsors = (params = {}) =>
+  api.get(`/api/sponsors/export`, { params, responseType: 'blob' });
+
+export const bulkImportSponsors = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post(`/api/sponsors/bulk-import`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+};

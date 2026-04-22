@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -12,6 +13,11 @@ import {
   RiCalendarLine,
   RiDownloadLine,
 } from "react-icons/ri";
+import {
+  getDashboardStats,
+  getRecentCases,
+  getRecentActivities,
+} from "../../services/dashboardApi";
 
 // ─── Static Data (from index.html dashboard) ──────────────────────────────────
 
@@ -21,84 +27,6 @@ const today = new Date().toLocaleDateString("en-GB", {
   month: "long",
   year: "numeric",
 });
-
-const kpiCards = [
-  {
-    label: "Total Cases",
-    value: "1,284",
-    // sub: "↑ 12% from last month",
-    icon: RiFolderOpenLine,
-    iconColor: "text-blue-600",
-    iconBg: "bg-blue-50",
-    to: "/admin/cases",
-  },
-  {
-    label: "Cases In Progress",
-    value: "347",
-    // sub: "27% of total",
-    icon: RiSettings3Line,
-    iconColor: "text-orange-500",
-    iconBg: "bg-orange-50",
-  },
-  {
-    label: "Delayed Cases",
-    value: "41",
-    // sub: "↑ 8 since last week",
-    icon: RiAlarmWarningLine,
-    iconColor: "text-red-500",
-    iconBg: "bg-red-50",
-    to: "/admin/cases",
-  },
-  {
-    label: "Completed This Month",
-    value: "218",
-    // sub: "↑ 18% vs prior month",
-    icon: RiCheckLine,
-    iconColor: "text-green-600",
-    iconBg: "bg-green-50",
-  },
-  {
-    label: "Active Caseworkers",
-    value: "24",
-    // sub: "3 on leave today",
-    icon: RiUserLine,
-    iconColor: "text-purple-600",
-    iconBg: "bg-purple-50",
-    to: "/admin/caseworkers",
-  },
-  {
-    label: "Fees Collected",
-    value: "£284k",
-    // sub: "£61k outstanding",
-    icon: RiMoneyDollarCircleLine,
-    iconColor: "text-yellow-600",
-    iconBg: "bg-yellow-50",
-  },
-  {
-    label: "Visa Expiry Alerts",
-    value: "18",
-    // sub: "Next 30 days",
-    icon: RiErrorWarningLine,
-    iconColor: "text-red-500",
-    iconBg: "bg-red-50",
-  },
-  {
-    label: "Sponsor Licence Expiry",
-    value: "5",
-    // sub: "Requiring renewal",
-    icon: RiBuildingLine,
-    iconColor: "text-orange-500",
-    iconBg: "bg-orange-50",
-  },
-];
-
-const recentCases = [
-  { id: "#VF-2841", candidate: "Priya Sharma",  visaType: "Skilled Worker",   status: "On Track",  chip: "green"  },
-  { id: "#VF-2839", candidate: "James Okoye",   visaType: "Sponsor Licence",  status: "Due",       chip: "yellow" },
-  { id: "#VF-2835", candidate: "Li Wei",         visaType: "Graduate Visa",    status: "Overdue",   chip: "red"    },
-  { id: "#VF-2830", candidate: "Amara Diallo",  visaType: "ILR",              status: "In Review", chip: "blue"   },
-  { id: "#VF-2828", candidate: "Sofia Rossi",   visaType: "Student Visa",     status: "On Track",  chip: "green"  },
-];
 
 const escalations = [
   {
@@ -132,11 +60,6 @@ const outstandingClients = [
   { name: "Apex Consulting", amount: "£5,800",  color: "text-yellow-600" },
 ];
 
-const recentActivity = [
-  { title: "New case created",  detail: "Tech Solutions Ltd - H-1B Visa", time: "2 hours ago" },
-  { title: "Payment received",  detail: "Global Corp - £5,000",           time: "5 hours ago" },
-  { title: "Case approved",     detail: "John Smith - Work Permit",        time: "1 day ago"   },
-];
 
 // ─── Chip colour map ───────────────────────────────────────────────────────────
 const chipCls = {
@@ -168,10 +91,111 @@ const cardItem = {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [recentCases, setRecentCases] = useState([]);
+  const [recentActivities, setRecentActivities] = useState([]);
+
+  // Fetch dashboard data on component mount
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch all dashboard data in parallel
+        const [statsRes, casesRes, activitiesRes] = await Promise.all([
+          getDashboardStats(),
+          getRecentCases({ limit: 5 }),
+          getRecentActivities({ limit: 5 }),
+        ]);
+
+        setDashboardStats(statsRes.data.data);
+        setRecentCases(casesRes.data.data.cases || []);
+        setRecentActivities(activitiesRes.data.data.activities || []);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  // Transform backend data to KPI cards format
+  const kpiCards = dashboardStats ? [
+    {
+      label: "Total Cases",
+      value: dashboardStats.caseStats?.totalCases?.toString() || "0",
+      icon: RiFolderOpenLine,
+      iconColor: "text-blue-600",
+      iconBg: "bg-blue-50",
+      to: "/admin/cases",
+    },
+    {
+      label: "Active Cases",
+      value: dashboardStats.caseStats?.activeCases?.toString() || "0",
+      icon: RiSettings3Line,
+      iconColor: "text-orange-500",
+      iconBg: "bg-orange-50",
+    },
+    {
+      label: "Pending Cases",
+      value: dashboardStats.caseStats?.pendingCases?.toString() || "0",
+      icon: RiAlarmWarningLine,
+      iconColor: "text-red-500",
+      iconBg: "bg-red-50",
+      to: "/admin/cases",
+    },
+    {
+      label: "Completed Cases",
+      value: dashboardStats.caseStats?.completedCases?.toString() || "0",
+      icon: RiCheckLine,
+      iconColor: "text-green-600",
+      iconBg: "bg-green-50",
+    },
+    {
+      label: "Total Caseworkers",
+      value: dashboardStats.userStats?.totalCaseworkers?.toString() || "0",
+      icon: RiUserLine,
+      iconColor: "text-purple-600",
+      iconBg: "bg-purple-50",
+      to: "/admin/caseworkers",
+    },
+    {
+      label: "Total Candidates",
+      value: dashboardStats.userStats?.totalCandidates?.toString() || "0",
+      icon: RiUserLine,
+      iconColor: "text-yellow-600",
+      iconBg: "bg-yellow-50",
+    },
+    {
+      label: "Total Sponsors",
+      value: dashboardStats.userStats?.totalSponsors?.toString() || "0",
+      icon: RiBuildingLine,
+      iconColor: "text-orange-500",
+      iconBg: "bg-orange-50",
+    },
+    {
+      label: "Total Admins",
+      value: dashboardStats.userStats?.totalAdmins?.toString() || "0",
+      icon: RiErrorWarningLine,
+      iconColor: "text-blue-500",
+      iconBg: "bg-blue-50",
+    },
+  ] : [];
 
   return (
     <div className="space-y-8 pb-10">
-
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p className="mt-4 text-sm text-gray-500">Loading dashboard...</p>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* ── Page Header ─────────────────────────────────────────────────────── */}
       <motion.div
         className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4"
@@ -262,16 +286,21 @@ export default function AdminDashboard() {
                 {recentCases.map((row) => (
                   <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3 font-mono text-xs font-bold text-secondary whitespace-nowrap">
-                      {row.id}
+                      {row.caseId || `#${row.id}`}
                     </td>
                     <td className="px-5 py-3 text-sm font-semibold text-gray-700 whitespace-nowrap">
-                      {row.candidate}
+                      {row.candidate ? `${row.candidate.first_name} ${row.candidate.last_name}` : 'Unknown'}
                     </td>
                     <td className="px-5 py-3 text-xs text-gray-500 whitespace-nowrap">
-                      {row.visaType}
+                      {row.visaType?.name || 'N/A'}
                     </td>
                     <td className="px-5 py-3 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${chipCls[row.chip]}`}>
+                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
+                        row.status === 'Completed' ? chipCls.green :
+                        row.status === 'Pending' ? chipCls.yellow :
+                        row.status === 'Cancelled' ? chipCls.red :
+                        chipCls.blue
+                      }`}>
                         {row.status}
                       </span>
                     </td>
@@ -405,21 +434,28 @@ export default function AdminDashboard() {
           <h3 className="text-sm font-black text-secondary">Recent Activity</h3>
         </div>
         <div className="divide-y divide-gray-50">
-          {recentActivity.map(({ title, detail, time }, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
-            >
-              <div>
-                <p className="text-sm font-bold text-secondary">{title}</p>
-                <p className="text-xs text-gray-400">{detail}</p>
+          {recentActivities.length > 0 ? (
+            recentActivities.map((activity, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-bold text-secondary">{activity.title}</p>
+                  <p className="text-xs text-gray-400">{activity.description}</p>
+                </div>
+                <span className="text-xs text-gray-400 whitespace-nowrap ml-4">
+                  {new Date(activity.createdAt).toLocaleString()}
+                </span>
               </div>
-              <span className="text-xs text-gray-400 whitespace-nowrap ml-4">{time}</span>
-            </div>
-          ))}
+            ))
+          ) : (
+            <div className="px-6 py-4 text-sm text-gray-500">No recent activity</div>
+          )}
         </div>
       </motion.div>
-
+      </>
+      )}
     </div>
   );
 }

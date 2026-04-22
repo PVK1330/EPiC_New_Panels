@@ -54,6 +54,7 @@ import AdminPipeline from '../pages/admin/AdminPipeline';
 import AdminAssign from '../pages/admin/AdminAssign';
 import AdminEscalations from '../pages/admin/AdminEscalations';
 import AdminWorkload from '../pages/admin/AdminWorkload';
+import AdminDepartments from '../pages/admin/AdminDepartments';
 import AdminDocuments from '../pages/admin/AdminDocuments';
 import AdminMessages from '../pages/admin/AdminMessages';
 
@@ -163,6 +164,7 @@ const AppRouter = () => {
           <Route path="assign" element={<AdminAssign />} />
           <Route path="escalations" element={<AdminEscalations />} />
           <Route path="workload" element={<AdminWorkload />} />
+          <Route path="departments" element={<AdminDepartments />} />
           <Route path="documents" element={<AdminDocuments />} />
           <Route path="messages" element={<AdminMessages />} />
         </Route>

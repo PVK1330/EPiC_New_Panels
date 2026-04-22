@@ -16,3 +16,14 @@ export const resetCandidatePassword = (id, data) =>
   api.patch(`/api/candidate/${id}/reset-password`, data);
 
 export const deleteCandidate = (id) => api.delete(`/api/candidate/${id}`);
+
+export const bulkImportCandidates = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post(`/api/candidate/bulk-import`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+};
+
+export const exportCandidates = (params = {}) =>
+  api.get(`/api/candidate/export`, { params, responseType: 'blob' });

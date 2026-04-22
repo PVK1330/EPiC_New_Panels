@@ -267,7 +267,7 @@ const AdminLayout = () => {
                     {user?.name || "Admin"}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">
-                    Super Admin
+                    Admin
                   </p>
                 </div>
               </button>

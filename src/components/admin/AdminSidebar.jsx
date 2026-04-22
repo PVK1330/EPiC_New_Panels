@@ -229,7 +229,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
                 {user?.name || "Admin"}
               </p>
               <p className="text-[10px] font-bold text-gray-400 truncate uppercase tracking-wider">
-                Super Admin
+                Admin
               </p>
             </div>
             <button

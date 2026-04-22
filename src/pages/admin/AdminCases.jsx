@@ -95,7 +95,7 @@ const TABLE_COLS = [
   "Case ID",
   "Candidate",
   "Business",
-  "Worker ID(s)",
+  "CaseWorker (s)",
   "Visa Type",
   "Priority",
   "Status",

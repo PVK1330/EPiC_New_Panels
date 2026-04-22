@@ -5,6 +5,8 @@ import {
   FiSearch,
   FiPlus,
   FiDownload,
+  FiUpload,
+  FiCheck,
   FiEye,
   FiRefreshCw,
 } from "react-icons/fi";
@@ -21,6 +23,8 @@ import {
   toggleSponsorStatus,
   resetSponsorPassword,
   deleteSponsor,
+  exportSponsors,
+  bulkImportSponsors,
 } from "../../services/sponsorApi";
 
 const PASSWORD_MIN = 6;
@@ -125,6 +129,9 @@ export default function AdminBusinesses() {
   const [saving, setSaving] = useState(false);
   const [toggleId, setToggleId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importFile, setImportFile] = useState(null);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(searchInput), 400);
@@ -431,6 +438,93 @@ export default function AdminBusinesses() {
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await exportSponsors({
+        search: debouncedSearch.trim(),
+        status: statusParam,
+      });
+      
+      // Create a blob from the response
+      const blob = new Blob([res.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sponsors_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      showToast({
+        message: "Sponsors exported successfully",
+        variant: "success",
+      });
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleBulkImport = async () => {
+    if (!importFile) {
+      showToast({ message: "Please select a CSV file", variant: "danger" });
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const res = await bulkImportSponsors(importFile);
+      const { successful, failed, total_processed, results } = res.data?.data || {};
+      
+      showToast({
+        message: `Bulk import completed: ${successful} successful, ${failed} failed out of ${total_processed}`,
+        variant: successful > 0 ? "success" : "danger",
+      });
+      
+      // Refresh the list
+      const r = await fetchSponsors(
+        page,
+        limit,
+        debouncedSearch.trim(),
+        statusParam,
+      );
+      if (!r.ok) {
+        showToast({ message: getApiError(r.error), variant: "danger" });
+      }
+      
+      setImportFile(null);
+      closeModal();
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const downloadSampleCSV = () => {
+    const csvContent = [
+      'first_name,last_name,email,country_code,mobile',
+      'Tech,Innovations,info@techinnovations.com,+1,5551234567',
+      'Global,Trade Solutions,contact@globaltrade.com,+44,2079460123',
+      'Digital,Ventures,hello@digitalventures.io,+1,4159876543',
+      'Smart,Business Group,info@smartbusiness.co,+91,9876543210',
+      'Enterprise,Connect,team@enterpriseconnect.net,+1,2125550199',
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sample_sponsors_import.csv';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  };
+
   const isFormModal = modal.type === "create" || modal.type === "edit";
   const totalPages = pagination.pages || 1;
   const startIdx =
@@ -456,9 +550,28 @@ export default function AdminBusinesses() {
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+            onClick={() => setModal({ type: "import" })}
+            disabled={importing}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FiDownload size={14} />
+            {importing ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <FiUpload size={14} />
+            )}
+            Import
+          </button>
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {exporting ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <FiDownload size={14} />
+            )}
             Export
           </button>
           <Button onClick={openCreate} className="rounded-xl shadow-sm">
@@ -964,6 +1077,98 @@ export default function AdminBusinesses() {
             </span>
             ? This will deactivate the account.
           </p>
+        </div>
+      </Modal>
+
+      <Modal
+        open={modal.type === "import"}
+        onClose={closeModal}
+        title="Bulk Import Sponsors"
+        maxWidthClass="max-w-md"
+        bodyClassName="px-5 py-5 sm:px-6"
+        footer={
+          <>
+            <Button variant="ghost" onClick={closeModal} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={importing || !importFile}
+              onClick={handleBulkImport}
+              className="rounded-xl"
+            >
+              {importing ? (
+                <>
+                  <Loader2 size={14} className="animate-spin mr-2" />
+                  Importing…
+                </>
+              ) : (
+                "Import Sponsors"
+              )}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+              <FiDownload size={18} className="text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-gray-900">Download Sample CSV</p>
+              <p className="text-xs text-gray-500 mt-0.5">Use this template for bulk import</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={downloadSampleCSV}
+              className="rounded-lg text-blue-600 hover:bg-blue-100"
+            >
+              Download
+            </Button>
+          </div>
+          
+          <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-gray-300 transition-colors">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => setImportFile(e.target.files[0])}
+              className="hidden"
+              id="import-file-input"
+            />
+            <label
+              htmlFor="import-file-input"
+              className="cursor-pointer flex flex-col items-center gap-2"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center">
+                <FiUpload size={20} className="text-gray-500" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700">
+                  {importFile ? importFile.name : "Click to upload CSV file"}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Maximum file size: 5MB
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {importFile && (
+            <div className="flex items-center justify-between p-3 bg-green-50 border border-green-100 rounded-xl">
+              <div className="flex items-center gap-2">
+                <FiCheck size={16} className="text-green-600" />
+                <span className="text-sm font-medium text-green-700">File selected</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setImportFile(null)}
+                className="text-xs text-gray-500 hover:text-gray-700"
+              >
+                Remove
+              </button>
+            </div>
+          )}
         </div>
       </Modal>
     </motion.div>

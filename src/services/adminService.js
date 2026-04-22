@@ -16,3 +16,6 @@ export const resetAdminPassword = (id, data) =>
   api.patch(`/api/admin/reset-password/${id}`, data);
 
 export const deleteAdmin = (id) => api.delete(`/api/admin/${id}`);
+
+export const exportAdmins = (params = {}) =>
+  api.get(`/api/admin/export`, { params, responseType: 'blob' });
