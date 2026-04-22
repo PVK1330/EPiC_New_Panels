@@ -30,3 +30,17 @@ export const bulkImportCandidates = (file) => {
 
 export const exportCandidates = (params = {}) =>
   api.get(`/api/candidate/export`, { params, responseType: 'blob' });
+
+// ── Candidate-facing application routes (/api/candidate-application) ────────
+
+/** Fetch the currently logged-in candidate's saved application */
+export const getMyApplication = () =>
+  api.get('/api/candidate-application');
+
+/** Submit the completed application (creates or overwrites, status → submitted) */
+export const submitApplication = (data) =>
+  api.post('/api/candidate-application', data);
+
+/** Save progress as a draft without changing submission status */
+export const saveApplicationDraft = (data) =>
+  api.put('/api/candidate-application', data);

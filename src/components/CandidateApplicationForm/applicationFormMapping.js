@@ -115,6 +115,13 @@ export function mapApplicationToCandidateRow(application, overrides = {}) {
 
   // Application data for the candidate_applications table
   const applicationData = {
+    // Core identity — mirrors what is stored in the users table so the
+    // application record is self-contained and searchable on its own
+    firstName: application.firstName ?? "",
+    lastName: application.lastName ?? "",
+    email: application.email ?? "",
+    contactNumber: application.contactNumber ?? "",
+
     // Personal Information
     applicationType: application.applicationType || "Single",
     gender: application.gender || null,
