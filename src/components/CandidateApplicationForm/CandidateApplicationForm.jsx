@@ -210,6 +210,11 @@ export default function CandidateApplicationForm({
   const formData = isControlled ? controlledFormData : internalForm;
   const setFormData = isControlled ? setControlledFormData : setInternalForm;
 
+  // Initialize showSecondParent based on existing parent2 details
+  if (isControlled && controlledFormData?.parent2Name && !showSecondParent) {
+    setShowSecondParent(true);
+  }
+
   const resolvedVisibility =
     fieldVisibilityProp === undefined
       ? loadFieldVisibilityFromStorage()
@@ -592,7 +597,7 @@ export default function CandidateApplicationForm({
               </div>
             )}
 
-            {!showSecondParent ? (
+            {!showSecondParent && !formData.parent2Name ? (
               <div className="md:col-span-2">
                 <button
                   type="button"

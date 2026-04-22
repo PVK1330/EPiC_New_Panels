@@ -1,9 +1,12 @@
 import api from "./api";
 
-export const getCandidates = (page = 1, limit = 10, search = "", status = "") =>
-  api.get(`/api/candidate`, { params: { page, limit, search, status } });
+export const getCandidates = (page = 1, limit = 10, search = "", status = "", visaType = "", paymentStatus = "") =>
+  api.get(`/api/candidate`, { params: { page, limit, search, status, visaType, paymentStatus } });
 
 export const getCandidateById = (id) => api.get(`/api/candidate/${id}`);
+
+// Enhanced function to fetch candidate with full application data
+export const getCandidateWithApplication = (id) => api.get(`/api/candidate/${id}`);
 
 export const createCandidate = (data) => api.post(`/api/candidate/`, data);
 

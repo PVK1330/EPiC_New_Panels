@@ -11,10 +11,10 @@ export default function useCandidate() {
   });
   const [loading, setLoading] = useState(true);
 
-  const fetchCandidates = useCallback(async (page, limit, search, status) => {
+  const fetchCandidates = useCallback(async (page, limit, search, status, visaType, paymentStatus) => {
     setLoading(true);
     try {
-      const res = await getCandidates(page, limit, search, status);
+      const res = await getCandidates(page, limit, search, status, visaType, paymentStatus);
       const payload = res.data?.data;
       setCandidates(payload?.candidates ?? []);
       setPagination(

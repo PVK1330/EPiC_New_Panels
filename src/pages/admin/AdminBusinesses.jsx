@@ -71,6 +71,23 @@ const EMPTY_CREATE = {
   role_id: "4",
   password: "",
   confirm_password: "",
+  companyName: "",
+  tradingName: "",
+  registrationNumber: "",
+  industrySector: "",
+  sponsorLicenceNumber: "",
+  licenceStatus: "Active",
+  licenceExpiryDate: "",
+  registeredAddress: "",
+  city: "",
+  postalCode: "",
+  country: "United Kingdom",
+  cosAllocation: "",
+  activeCases: "",
+  sponsoredWorkers: "",
+  riskLevel: "Low",
+  riskPct: "20",
+  outstandingBalance: "",
 };
 
 const EMPTY_RESET = {
@@ -186,6 +203,7 @@ export default function AdminBusinesses() {
   };
 
   const openEdit = (row) => {
+    const profile = row.sponsorProfile || {};
     setEditForm({
       first_name: row.first_name || "",
       last_name: row.last_name || "",
@@ -194,6 +212,49 @@ export default function AdminBusinesses() {
       mobile: row.mobile || "",
       role_id: String(row.role_id ?? 4),
       status: row.status === "inactive" ? "inactive" : "active",
+      companyName: profile.companyName || "",
+      tradingName: profile.tradingName || "",
+      registrationNumber: profile.registrationNumber || "",
+      sponsorLicenceNumber: profile.sponsorLicenceNumber || "",
+      licenceRating: profile.licenceRating || "",
+      industrySector: profile.industrySector || "",
+      yearEstablished: profile.yearEstablished || "",
+      website: profile.website || "",
+      registeredAddress: profile.registeredAddress || "",
+      tradingAddress: profile.tradingAddress || "",
+      city: profile.city || "",
+      state: profile.state || "",
+      country: profile.country || "",
+      postalCode: profile.postalCode || "",
+      authorisingName: profile.authorisingName || "",
+      authorisingPhone: profile.authorisingPhone || "",
+      authorisingEmail: profile.authorisingEmail || "",
+      keyContactName: profile.keyContactName || "",
+      keyContactPhone: profile.keyContactPhone || "",
+      keyContactEmail: profile.keyContactEmail || "",
+      ownershipType: profile.ownershipType || "",
+      hrName: profile.hrName || "",
+      hrPhone: profile.hrPhone || "",
+      hrEmail: profile.hrEmail || "",
+      licenceIssueDate: profile.licenceIssueDate || "",
+      licenceExpiryDate: profile.licenceExpiryDate || "",
+      cosAllocation: profile.cosAllocation || "",
+      billingName: profile.billingName || "",
+      billingEmail: profile.billingEmail || "",
+      billingPhone: profile.billingPhone || "",
+      outstandingBalance: profile.outstandingBalance || "",
+      paymentTerms: profile.paymentTerms || "",
+      sponsorLetter: profile.sponsorLetter || "",
+      insuranceCertificate: profile.insuranceCertificate || "",
+      hrPolicies: profile.hrPolicies || "",
+      organisationalChart: profile.organisationalChart || "",
+      recruitmentDocs: profile.recruitmentDocs || "",
+      licenceStatus: profile.licenceStatus || "",
+      riskLevel: profile.riskLevel || "",
+      activeCases: profile.activeCases || "",
+      sponsoredWorkers: profile.sponsoredWorkers || "",
+      notes: profile.notes || "",
+      riskPct: profile.riskPct || "",
     });
     setErrors({});
     setModal({ type: "edit", data: row });
@@ -293,6 +354,23 @@ export default function AdminBusinesses() {
         role_id: Number(createForm.role_id),
         password: createForm.password,
         confirm_password: createForm.confirm_password,
+        companyName: createForm.companyName?.trim() || null,
+        tradingName: createForm.tradingName?.trim() || null,
+        registrationNumber: createForm.registrationNumber?.trim() || null,
+        industrySector: createForm.industrySector?.trim() || null,
+        sponsorLicenceNumber: createForm.sponsorLicenceNumber?.trim() || null,
+        licenceStatus: createForm.licenceStatus || null,
+        licenceExpiryDate: createForm.licenceExpiryDate || null,
+        registeredAddress: createForm.registeredAddress?.trim() || null,
+        city: createForm.city?.trim() || null,
+        postalCode: createForm.postalCode?.trim() || null,
+        country: createForm.country?.trim() || null,
+        cosAllocation: createForm.cosAllocation || null,
+        activeCases: createForm.activeCases || null,
+        sponsoredWorkers: createForm.sponsoredWorkers || null,
+        riskLevel: createForm.riskLevel || null,
+        riskPct: createForm.riskPct || null,
+        outstandingBalance: createForm.outstandingBalance || null,
       });
       showToast({
         message: res.data?.message || "Sponsor created successfully",
@@ -334,6 +412,49 @@ export default function AdminBusinesses() {
         mobile: editForm.mobile.trim(),
         role_id: Number(editForm.role_id),
         status: editForm.status,
+        companyName: editForm.companyName?.trim() || null,
+        tradingName: editForm.tradingName?.trim() || null,
+        registrationNumber: editForm.registrationNumber?.trim() || null,
+        sponsorLicenceNumber: editForm.sponsorLicenceNumber?.trim() || null,
+        licenceRating: editForm.licenceRating || null,
+        industrySector: editForm.industrySector?.trim() || null,
+        yearEstablished: editForm.yearEstablished || null,
+        website: editForm.website?.trim() || null,
+        registeredAddress: editForm.registeredAddress?.trim() || null,
+        tradingAddress: editForm.tradingAddress?.trim() || null,
+        city: editForm.city?.trim() || null,
+        state: editForm.state?.trim() || null,
+        country: editForm.country?.trim() || null,
+        postalCode: editForm.postalCode?.trim() || null,
+        authorisingName: editForm.authorisingName?.trim() || null,
+        authorisingPhone: editForm.authorisingPhone?.trim() || null,
+        authorisingEmail: editForm.authorisingEmail?.trim() || null,
+        keyContactName: editForm.keyContactName?.trim() || null,
+        keyContactPhone: editForm.keyContactPhone?.trim() || null,
+        keyContactEmail: editForm.keyContactEmail?.trim() || null,
+        ownershipType: editForm.ownershipType?.trim() || null,
+        hrName: editForm.hrName?.trim() || null,
+        hrPhone: editForm.hrPhone?.trim() || null,
+        hrEmail: editForm.hrEmail?.trim() || null,
+        licenceIssueDate: editForm.licenceIssueDate || null,
+        licenceExpiryDate: editForm.licenceExpiryDate || null,
+        cosAllocation: editForm.cosAllocation || null,
+        billingName: editForm.billingName?.trim() || null,
+        billingEmail: editForm.billingEmail?.trim() || null,
+        billingPhone: editForm.billingPhone?.trim() || null,
+        outstandingBalance: editForm.outstandingBalance || null,
+        paymentTerms: editForm.paymentTerms?.trim() || null,
+        sponsorLetter: editForm.sponsorLetter?.trim() || null,
+        insuranceCertificate: editForm.insuranceCertificate?.trim() || null,
+        hrPolicies: editForm.hrPolicies?.trim() || null,
+        organisationalChart: editForm.organisationalChart?.trim() || null,
+        recruitmentDocs: editForm.recruitmentDocs?.trim() || null,
+        licenceStatus: editForm.licenceStatus || null,
+        riskLevel: editForm.riskLevel || null,
+        activeCases: editForm.activeCases || null,
+        sponsoredWorkers: editForm.sponsoredWorkers || null,
+        notes: editForm.notes?.trim() || null,
+        riskPct: editForm.riskPct || null,
       });
       showToast({
         message: res.data?.message || "Sponsor updated successfully",
@@ -506,12 +627,12 @@ export default function AdminBusinesses() {
 
   const downloadSampleCSV = () => {
     const csvContent = [
-      'first_name,last_name,email,country_code,mobile',
-      'Tech,Innovations,info@techinnovations.com,+1,5551234567',
-      'Global,Trade Solutions,contact@globaltrade.com,+44,2079460123',
-      'Digital,Ventures,hello@digitalventures.io,+1,4159876543',
-      'Smart,Business Group,info@smartbusiness.co,+91,9876543210',
-      'Enterprise,Connect,team@enterpriseconnect.net,+1,2125550199',
+      'first_name,last_name,email,country_code,mobile,companyName,licenceStatus,riskLevel',
+      'Tech,Innovations,info@techinnovations.com,+1,5551234567,Tech Innovations Ltd,Active,Low',
+      'Global,Trade Solutions,contact@globaltrade.com,+44,2079460123,Global Trade Solutions,Active,Medium',
+      'Digital,Ventures,hello@digitalventures.io,+1,4159876543,Digital Ventures,Active,Low',
+      'Smart,Business Group,info@smartbusiness.co,+91,9876543210,Smart Business Group,Pending,Low',
+      'Enterprise,Connect,team@enterpriseconnect.net,+1,2125550199,Enterprise Connect,Active,Medium',
     ].join('\n');
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -620,11 +741,11 @@ export default function AdminBusinesses() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 text-left">
-                {["Name", "Email", "Mobile", "Role", "Status", "Actions"].map(
+                {["Company", "Licence Status", "Licence Expiry", "Active Cases", "Sponsored Workers", "Risk Score", "Outstanding", "Actions"].map(
                   (h) => (
                     <th
                       key={h}
-                      className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                      className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
                     >
                       {h}
                     </th>
@@ -636,63 +757,79 @@ export default function AdminBusinesses() {
               {!loading && sponsors.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={8}
                     className="px-5 py-12 text-center text-sm text-gray-400"
                   >
                     No sponsors found.
                   </td>
                 </tr>
               ) : (
-                sponsors.map((user, idx) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-gray-50/70 transition-colors"
-                  >
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}
-                        >
-                          {initialsFrom(user)}
+                sponsors.map((user, idx) => {
+                  const profile = user.sponsorProfile || {};
+                  const companyName = profile.companyName || `${user.first_name} ${user.last_name}`;
+                  const initials = profile.companyName ? profile.companyName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) : initialsFrom(user);
+                  const licenceStatus = profile.licenceStatus || "—";
+                  const licenceExpiry = profile.licenceExpiryDate ? new Date(profile.licenceExpiryDate).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" }) : "—";
+                  const activeCases = profile.activeCases ?? 0;
+                  const sponsoredWorkers = profile.sponsoredWorkers ?? 0;
+                  const riskLevel = profile.riskLevel || "—";
+                  const riskPct = profile.riskPct ?? 20;
+                  const outstanding = profile.outstandingBalance ? `£${Number(profile.outstandingBalance).toLocaleString("en-GB", { maximumFractionDigits: 0 })}` : "£0";
+
+                  const riskBarColor = riskLevel === 'Low' ? 'bg-green-500' : riskLevel === 'Medium' ? 'bg-yellow-500' : riskLevel === 'High' ? 'bg-red-500' : 'bg-gray-400';
+                  const riskTextColor = riskLevel === 'Low' ? 'text-green-600' : riskLevel === 'Medium' ? 'text-yellow-600' : riskLevel === 'High' ? 'text-red-500' : 'text-gray-500';
+
+                  return (
+                    <tr
+                      key={user.id}
+                      className="hover:bg-gray-50/70 transition-colors"
+                    >
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}
+                          >
+                            {initials}
+                          </div>
+                          <span className="text-sm font-semibold text-gray-800 whitespace-nowrap">
+                            {companyName}
+                          </span>
                         </div>
-                        <span className="text-sm font-semibold text-gray-800 whitespace-nowrap">
-                          {fullName(user)}
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
+                            licenceStatus === 'Active' ? 'bg-green-100 text-green-700' :
+                            licenceStatus === 'Suspended' ? 'bg-orange-100 text-orange-700' :
+                            licenceStatus === 'Expired' ? 'bg-red-100 text-red-700' :
+                            licenceStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-500'
+                          }`}
+                        >
+                          {licenceStatus}
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">
-                      {user.email}
-                    </td>
-                    <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">
-                      {user.country_code} {user.mobile}
-                    </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
-                          ROLE_CHIPS[
-                            (user.Role?.name || "sponsor").toLowerCase()
-                          ] ?? "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {displayRoleName(user)}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <button
-                        type="button"
-                        disabled={toggleId === user.id}
-                        onClick={() => handleToggle(user)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-opacity hover:opacity-90 disabled:opacity-50 ${
-                          STATUS_CHIPS[user.status] ??
-                          "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {toggleId === user.id
-                          ? "…"
-                          : formatStatusLabel(user.status)}
-                      </button>
-                    </td>
-                    <td className="px-5 py-3.5">
+                      </td>
+                      <td className="px-4 py-3.5 text-xs font-mono whitespace-nowrap">
+                        {licenceExpiry}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm font-bold text-secondary whitespace-nowrap">
+                        {activeCases}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm font-bold text-secondary whitespace-nowrap">
+                        {sponsoredWorkers}
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${riskBarColor}`} style={{ width: `${riskPct}%` }} />
+                          </div>
+                          <span className={`text-xs font-black ${riskTextColor}`}>{riskLevel}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm font-mono font-bold text-red-500 whitespace-nowrap">
+                        {outstanding}
+                      </td>
+                    <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
@@ -712,14 +849,6 @@ export default function AdminBusinesses() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => openReset(user)}
-                          className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                          title="Reset password"
-                        >
-                          <FiRefreshCw size={14} />
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => openDelete(user)}
                           className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete"
@@ -729,7 +858,8 @@ export default function AdminBusinesses() {
                       </div>
                     </td>
                   </tr>
-                ))
+                )
+                })
               )}
             </tbody>
           </table>
@@ -777,7 +907,7 @@ export default function AdminBusinesses() {
         title={
           modal.type === "create" ? "Create Sponsor" : "Edit Sponsor"
         }
-        maxWidthClass="max-w-lg"
+        maxWidthClass="max-w-2xl"
         bodyClassName="px-5 py-5 sm:px-6"
         footer={
           <>
@@ -800,7 +930,114 @@ export default function AdminBusinesses() {
         }
       >
         {modal.type === "create" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Company</p>
+            </div>
+            <Input
+              label="Legal Company Name"
+              name="companyName"
+              value={createForm.companyName}
+              onChange={handleCreateChange}
+              placeholder="TechNova Ltd"
+              required
+              error={errors.companyName}
+              className="sm:col-span-2"
+            />
+            <Input
+              label="Trading Name"
+              name="tradingName"
+              value={createForm.tradingName}
+              onChange={handleCreateChange}
+              placeholder="TechNova"
+            />
+            <Input
+              label="Companies House Number"
+              name="registrationNumber"
+              value={createForm.registrationNumber}
+              onChange={handleCreateChange}
+              placeholder="08472931"
+            />
+            <Input
+              label="Sector / Industry"
+              name="industrySector"
+              value={createForm.industrySector}
+              onChange={handleCreateChange}
+              placeholder="Technology & IT"
+              className="sm:col-span-2"
+            />
+
+            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Sponsor Licence</p>
+            </div>
+            <Input
+              label="Sponsor Licence Number"
+              name="sponsorLicenceNumber"
+              value={createForm.sponsorLicenceNumber}
+              onChange={handleCreateChange}
+              placeholder="ABC123456"
+              required
+              error={errors.sponsorLicenceNumber}
+            />
+            <Input
+              label="Licence Status"
+              name="licenceStatus"
+              value={createForm.licenceStatus}
+              onChange={handleCreateChange}
+              options={[
+                { value: "Active", label: "Active" },
+                { value: "Suspended", label: "Suspended" },
+                { value: "Expired", label: "Expired" },
+                { value: "Pending", label: "Pending" },
+              ]}
+            />
+            <Input
+              label="Licence Expiry Date"
+              name="licenceExpiryDate"
+              type="date"
+              value={createForm.licenceExpiryDate}
+              onChange={handleCreateChange}
+              required
+              error={errors.licenceExpiryDate}
+            />
+
+            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Registered Address</p>
+            </div>
+            <Input
+              label="Street Address"
+              name="registeredAddress"
+              value={createForm.registeredAddress}
+              onChange={handleCreateChange}
+              placeholder="1 Canary Wharf"
+              className="sm:col-span-2"
+            />
+            <Input
+              label="City"
+              name="city"
+              value={createForm.city}
+              onChange={handleCreateChange}
+              placeholder="London"
+            />
+            <Input
+              label="Postcode"
+              name="postalCode"
+              value={createForm.postalCode}
+              onChange={handleCreateChange}
+              placeholder="E14 5AB"
+            />
+            <Input
+              label="Country"
+              name="country"
+              value={createForm.country}
+              onChange={handleCreateChange}
+              placeholder="United Kingdom"
+              className="sm:col-span-2"
+            />
+
+            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Primary Contact (User Account)</p>
+            </div>
             <Input
               label="First name"
               name="first_name"
@@ -843,14 +1080,6 @@ export default function AdminBusinesses() {
               error={errors.mobile}
             />
             <Input
-              label="Role"
-              name="role_id"
-              value={createForm.role_id}
-              onChange={handleCreateChange}
-              options={ROLE_OPTIONS}
-              required
-            />
-            <Input
               label="Password"
               name="password"
               type="password"
@@ -868,10 +1097,158 @@ export default function AdminBusinesses() {
               required
               error={errors.confirm_password}
             />
+
+            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Compliance & Metrics</p>
+            </div>
+            <Input
+              label="Annual CoS Allocation"
+              name="cosAllocation"
+              value={createForm.cosAllocation}
+              onChange={handleCreateChange}
+              type="number"
+              placeholder="50"
+            />
+            <Input
+              label="Active Cases"
+              name="activeCases"
+              value={createForm.activeCases}
+              onChange={handleCreateChange}
+              type="number"
+              placeholder="12"
+            />
+            <Input
+              label="Sponsored Workers"
+              name="sponsoredWorkers"
+              value={createForm.sponsoredWorkers}
+              onChange={handleCreateChange}
+              type="number"
+              placeholder="28"
+            />
+            <Input
+              label="Risk Level"
+              name="riskLevel"
+              value={createForm.riskLevel}
+              onChange={handleCreateChange}
+              options={[
+                { value: "Low", label: "Low" },
+                { value: "Medium", label: "Medium" },
+                { value: "High", label: "High" },
+              ]}
+            />
+            <Input
+              label="Risk Score %"
+              name="riskPct"
+              value={createForm.riskPct}
+              onChange={handleCreateChange}
+              type="number"
+              placeholder="20"
+            />
+            <Input
+              label="Outstanding Fees (£)"
+              name="outstandingBalance"
+              value={createForm.outstandingBalance}
+              onChange={handleCreateChange}
+              type="number"
+              step="0.01"
+              placeholder="12400"
+            />
           </div>
         )}
         {modal.type === "edit" && editForm && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Company</p>
+            </div>
+            <Input
+              label="Legal Company Name"
+              name="companyName"
+              value={editForm.companyName || ""}
+              onChange={handleEditChange}
+              className="sm:col-span-2"
+            />
+            <Input
+              label="Trading Name"
+              name="tradingName"
+              value={editForm.tradingName || ""}
+              onChange={handleEditChange}
+            />
+            <Input
+              label="Companies House Number"
+              name="registrationNumber"
+              value={editForm.registrationNumber || ""}
+              onChange={handleEditChange}
+            />
+            <Input
+              label="Sector / Industry"
+              name="industrySector"
+              value={editForm.industrySector || ""}
+              onChange={handleEditChange}
+              className="sm:col-span-2"
+            />
+
+            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Sponsor Licence</p>
+            </div>
+            <Input
+              label="Sponsor Licence Number"
+              name="sponsorLicenceNumber"
+              value={editForm.sponsorLicenceNumber || ""}
+              onChange={handleEditChange}
+            />
+            <Input
+              label="Licence Status"
+              name="licenceStatus"
+              value={editForm.licenceStatus || ""}
+              onChange={handleEditChange}
+              options={[
+                { value: "Active", label: "Active" },
+                { value: "Suspended", label: "Suspended" },
+                { value: "Expired", label: "Expired" },
+                { value: "Pending", label: "Pending" },
+              ]}
+            />
+            <Input
+              label="Licence Expiry Date"
+              name="licenceExpiryDate"
+              type="date"
+              value={editForm.licenceExpiryDate || ""}
+              onChange={handleEditChange}
+            />
+
+            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Registered Address</p>
+            </div>
+            <Input
+              label="Street Address"
+              name="registeredAddress"
+              value={editForm.registeredAddress || ""}
+              onChange={handleEditChange}
+              className="sm:col-span-2"
+            />
+            <Input
+              label="City"
+              name="city"
+              value={editForm.city || ""}
+              onChange={handleEditChange}
+            />
+            <Input
+              label="Postcode"
+              name="postalCode"
+              value={editForm.postalCode || ""}
+              onChange={handleEditChange}
+            />
+            <Input
+              label="Country"
+              name="country"
+              value={editForm.country || ""}
+              onChange={handleEditChange}
+              className="sm:col-span-2"
+            />
+
+            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Primary Contact (User Account)</p>
+            </div>
             <Input
               label="First name"
               name="first_name"
@@ -930,6 +1307,57 @@ export default function AdminBusinesses() {
               required
               className="sm:col-span-2"
             />
+
+            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Compliance & Metrics</p>
+            </div>
+            <Input
+              label="Annual CoS Allocation"
+              name="cosAllocation"
+              value={editForm.cosAllocation || ""}
+              onChange={handleEditChange}
+              type="number"
+            />
+            <Input
+              label="Active Cases"
+              name="activeCases"
+              value={editForm.activeCases || ""}
+              onChange={handleEditChange}
+              type="number"
+            />
+            <Input
+              label="Sponsored Workers"
+              name="sponsoredWorkers"
+              value={editForm.sponsoredWorkers || ""}
+              onChange={handleEditChange}
+              type="number"
+            />
+            <Input
+              label="Risk Level"
+              name="riskLevel"
+              value={editForm.riskLevel || ""}
+              onChange={handleEditChange}
+              options={[
+                { value: "Low", label: "Low" },
+                { value: "Medium", label: "Medium" },
+                { value: "High", label: "High" },
+              ]}
+            />
+            <Input
+              label="Risk Score %"
+              name="riskPct"
+              value={editForm.riskPct || ""}
+              onChange={handleEditChange}
+              type="number"
+            />
+            <Input
+              label="Outstanding Fees (£)"
+              name="outstandingBalance"
+              value={editForm.outstandingBalance || ""}
+              onChange={handleEditChange}
+              type="number"
+              step="0.01"
+            />
           </div>
         )}
       </Modal>
@@ -961,6 +1389,14 @@ export default function AdminBusinesses() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
+                Company Name
+              </p>
+              <p className="text-sm font-semibold text-gray-800">
+                {modal.data?.sponsorProfile?.companyName || `${modal.data?.first_name} ${modal.data?.last_name}`}
+              </p>
+            </div>
             <div>
               <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
                 Mobile
@@ -981,6 +1417,36 @@ export default function AdminBusinesses() {
                 }`}
               >
                 {modal.data ? displayRoleName(modal.data) : ""}
+              </span>
+            </div>
+            <div>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
+                Licence Status
+              </p>
+              <span
+                className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${
+                  modal.data?.sponsorProfile?.licenceStatus === 'Active' ? 'bg-green-100 text-green-700' :
+                  modal.data?.sponsorProfile?.licenceStatus === 'Suspended' ? 'bg-orange-100 text-orange-700' :
+                  modal.data?.sponsorProfile?.licenceStatus === 'Expired' ? 'bg-red-100 text-red-700' :
+                  'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {modal.data?.sponsorProfile?.licenceStatus || "—"}
+              </span>
+            </div>
+            <div>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
+                Risk Level
+              </p>
+              <span
+                className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${
+                  modal.data?.sponsorProfile?.riskLevel === 'Low' ? 'bg-green-100 text-green-700' :
+                  modal.data?.sponsorProfile?.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
+                  modal.data?.sponsorProfile?.riskLevel === 'High' ? 'bg-red-100 text-red-700' :
+                  'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {modal.data?.sponsorProfile?.riskLevel || "—"}
               </span>
             </div>
             <div className="col-span-2">

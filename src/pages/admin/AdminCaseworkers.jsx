@@ -145,16 +145,14 @@ export default function AdminCaseworkers() {
       const res = await getDepartments();
       if (res.data?.status === "success") {
         const deptList = res.data.data.departments || [];
-        const departmentOptions = deptList.map((dept) => ({
-          value: dept,
-          label: dept,
-        }));
-        setDepartments(departmentOptions);
+        setDepartments(deptList.map((d) => ({ value: d, label: d })));
       }
     } catch (e) {
       console.error("Failed to fetch departments:", e);
+      showToast({ message: "Failed to fetch departments", variant: "danger" });
     }
   };
+
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importFile, setImportFile] = useState(null);
@@ -246,6 +244,38 @@ export default function AdminCaseworkers() {
     const { name, value } = e.target;
     setEditForm((p) => ({ ...p, [name]: value }));
     if (errors[name]) setErrors((p) => ({ ...p, [name]: "" }));
+  };
+
+  const handleToggleStatus = async (row) => {
+    const newStatus = row.status === "active" ? "inactive" : "active";
+    try {
+      const res = await updateCaseworker(row.id, {
+        first_name: row.first_name,
+        last_name: row.last_name,
+        email: row.email,
+        country_code: row.country_code,
+        mobile: row.mobile,
+        role_id: row.role_id,
+        department: row?.caseworkerProfile?.department || "",
+        status: newStatus,
+      });
+      showToast({
+        message: `Status changed to ${newStatus}`,
+        variant: "success",
+      });
+      const r = await fetchCaseworkers(
+        page,
+        limit,
+        debouncedSearch.trim(),
+        statusParam,
+        deptParam,
+      );
+      if (!r.ok) {
+        showToast({ message: getApiError(r.error), variant: "danger" });
+      }
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    }
   };
 
   const validateCreate = () => {
@@ -456,6 +486,7 @@ export default function AdminCaseworkers() {
       const res = await exportCaseworkers({
         search: debouncedSearch.trim(),
         status: statusParam,
+        department: deptParam,
       });
       
       // Create a blob from the response
@@ -514,6 +545,19 @@ export default function AdminCaseworkers() {
             <FiUpload size={14} />
             Import Data
           </Button>
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {exporting ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <FiDownload size={14} />
+            )}
+            Export
+          </button>
           <Button onClick={openCreate} className="rounded-xl shadow-sm">
             <FiPlus size={14} />
             Add Caseworker
@@ -594,6 +638,7 @@ export default function AdminCaseworkers() {
                 {[
                   "Name",
                   "Email",
+                  "Department",
                   "Active Cases",
                   "Overdue",
                   "Completed",
@@ -614,7 +659,7 @@ export default function AdminCaseworkers() {
               {!loading && caseworkers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-5 py-12 text-center text-sm text-gray-400"
                   >
                     No caseworkers match your search.
@@ -649,6 +694,7 @@ export default function AdminCaseworkers() {
                         </div>
                       </td>
                       <td className="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">{user.email}</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">{departmentLabel(user)}</td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${activeCases >= 20 ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-700"}`}>
                           {activeCases}
@@ -669,9 +715,12 @@ export default function AdminCaseworkers() {
                         </div>
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${STATUS_CHIPS[user.status?.toLowerCase()] ?? "bg-gray-100 text-gray-500"}`}>
+                        <button
+                          onClick={() => handleToggleStatus(user)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-black cursor-pointer hover:opacity-80 transition-opacity ${STATUS_CHIPS[user.status?.toLowerCase()] ?? "bg-gray-100 text-gray-500"}`}
+                        >
                           {formatStatusLabel(user.status)}
-                        </span>
+                        </button>
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1">
