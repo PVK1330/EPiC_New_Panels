@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   APPLICATION_STEP_LABELS,
@@ -6,7 +6,11 @@ import {
   loadFieldVisibilityFromStorage,
   loadCustomFieldDefinitionsFromStorage,
 } from "./initialFormState";
-import { pruneCustomResponsesToDefinitions } from "./applicationFormMapping";
+import {
+  pruneCustomResponsesToDefinitions,
+  candidateRowToApplicationForm,
+} from "./applicationFormMapping";
+import useCandidate from "../../hooks/useCandidate";
 
 const inputClass =
   "mt-1 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow";
@@ -31,6 +35,7 @@ function AppInput({
   className = "",
   placeholder = "",
   hint = "",
+  error = "",
 }) {
   return (
     <div className={className}>
@@ -44,9 +49,11 @@ function AppInput({
         value={formData[name] ?? ""}
         onChange={onChange}
         placeholder={placeholder}
-        className={inputClass}
+        className={`${inputClass} ${error ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
       />
-      {hint ? (
+      {error ? (
+        <p className="mt-1 text-[11px] font-bold text-red-500">{error}</p>
+      ) : hint ? (
         <p className="mt-1 text-[11px] font-bold text-gray-400">{hint}</p>
       ) : null}
     </div>
@@ -61,6 +68,7 @@ function AppSelect({
   options,
   placeholder = "Select",
   question,
+  error = "",
 }) {
   return (
     <div>
@@ -73,7 +81,7 @@ function AppSelect({
         name={name}
         value={formData[name] ?? ""}
         onChange={onChange}
-        className={inputClass}
+        className={`${inputClass} ${error ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
       >
         <option value="">{placeholder}</option>
         {options.map((o) => (
@@ -82,6 +90,9 @@ function AppSelect({
           </option>
         ))}
       </select>
+      {error ? (
+        <p className="mt-1 text-[11px] font-bold text-red-500">{error}</p>
+      ) : null}
     </div>
   );
 }
@@ -103,7 +114,7 @@ function AppTextarea({ label, id, value, onChange, className = "" }) {
   );
 }
 
-function YesNo({ label, name, formData, onChange }) {
+function YesNo({ label, name, formData, onChange, error = "" }) {
   return (
     <div>
       <span className={fieldLabelClass}>{label}</span>
@@ -125,6 +136,9 @@ function YesNo({ label, name, formData, onChange }) {
           </label>
         ))}
       </div>
+      {error ? (
+        <p className="mt-1 text-[11px] font-bold text-red-500">{error}</p>
+      ) : null}
     </div>
   );
 }
@@ -140,16 +154,18 @@ function FormProgress({ step, labels }) {
             className="flex min-w-[4.5rem] flex-1 flex-col items-center sm:min-w-0"
           >
             <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm ${idx <= step
-                ? "bg-secondary text-white shadow-md shadow-secondary/20"
-                : "bg-gray-200 text-gray-600"
-                }`}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm ${
+                idx <= step
+                  ? "bg-secondary text-white shadow-md shadow-secondary/20"
+                  : "bg-gray-200 text-gray-600"
+              }`}
             >
               {idx + 1}
             </div>
             <span
-              className={`mt-1.5 text-center text-xs font-bold leading-snug tracking-normal sm:text-sm ${idx <= step ? "text-secondary" : "text-gray-400"
-                }`}
+              className={`mt-1.5 text-center text-xs font-bold leading-snug tracking-normal sm:text-sm ${
+                idx <= step ? "text-secondary" : "text-gray-400"
+              }`}
             >
               {lbl}
             </span>
@@ -190,6 +206,58 @@ const visaTypeOptions = [
   { value: "Other", label: "Other" },
 ];
 
+/** All DATE-type fields — empty strings must be converted to null before the API call. */
+const DATE_FIELDS = [
+  "dob", "issueDate", "expiryDate",
+  "startDate", "endDate",
+  "parentDob", "parent2Dob",
+  "entryDate", "leaveDate",
+  "visaEndDate",
+];
+
+/** Replace empty strings with null for every date field so PostgreSQL never
+ *  receives the literal string "" or "Invalid date". */
+function sanitizeForApi(payload) {
+  const out = { ...payload };
+  for (const key of DATE_FIELDS) {
+    const v = out[key];
+    if (!v || String(v).trim() === "") {
+      out[key] = null;
+    }
+  }
+  return out;
+}
+
+/** Per-step required-field validation. Returns { fieldName: "error message" }. */
+function validateStep(stepIndex, data) {
+  const errs = {};
+
+  if (stepIndex === 0) {
+    if (!data.firstName?.trim())
+      errs.firstName = "First name is required";
+    if (!data.lastName?.trim())
+      errs.lastName = "Last name is required";
+    if (!data.email?.trim()) {
+      errs.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
+      errs.email = "Enter a valid email address";
+    }
+    if (!data.contactNumber?.trim())
+      errs.contactNumber = "Contact number is required";
+    if (!data.gender)
+      errs.gender = "Please select a gender";
+  }
+
+  if (stepIndex === 1) {
+    if (!data.nationality?.trim())
+      errs.nationality = "Nationality is required";
+    if (!data.dob)
+      errs.dob = "Date of birth is required";
+  }
+
+  return errs;
+}
+
 export default function CandidateApplicationForm({
   variant = "candidate",
   embedded = false,
@@ -202,15 +270,83 @@ export default function CandidateApplicationForm({
   containerClassName,
 }) {
   const navigate = useNavigate();
+  const {
+    submitApplication,
+    saveApplicationDraft,
+    getMyApplication,
+    applicationLoading,
+  } = useCandidate();
+
   const [internalForm, setInternalForm] = useState(getInitialApplicationFormData);
   const [step, setStep] = useState(0);
   const [showSecondParent, setShowSecondParent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
 
-  const isControlled = controlledFormData !== undefined && setControlledFormData !== undefined;
+  const isControlled =
+    controlledFormData !== undefined && setControlledFormData !== undefined;
   const formData = isControlled ? controlledFormData : internalForm;
   const setFormData = isControlled ? setControlledFormData : setInternalForm;
 
-  // Initialize showSecondParent based on existing parent2 details
+  // ── Load saved draft on mount (candidate, uncontrolled form only) ──────────
+  useEffect(() => {
+    if (variant !== "candidate" || isControlled) return;
+
+    let cancelled = false;
+
+    async function loadDraft() {
+      setDraftLoading(true);
+      try {
+        const result = await getMyApplication();
+
+        if (cancelled) return;
+
+        if (result.ok && result.application) {
+          // Use the existing mapper: it normalises null→"", ISO dates→YYYY-MM-DD
+          const restored = candidateRowToApplicationForm({
+            first_name: result.application.firstName ?? "",
+            last_name: result.application.lastName ?? "",
+            email: result.application.email ?? "",
+            country_code: "",
+            mobile: result.application.contactNumber ?? "",
+            application: result.application,
+          });
+          setInternalForm(restored);
+          if (restored.parent2Name) setShowSecondParent(true);
+          setDraftRestored(true);
+        } else {
+          // API ok but no record yet — try localStorage fallback
+          tryLocalStorageFallback();
+        }
+      } catch {
+        if (!cancelled) tryLocalStorageFallback();
+      } finally {
+        if (!cancelled) setDraftLoading(false);
+      }
+    }
+
+    function tryLocalStorageFallback() {
+      try {
+        const raw = localStorage.getItem("elitepic_application_draft");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setInternalForm((prev) => ({ ...prev, ...parsed }));
+          if (parsed.parent2Name) setShowSecondParent(true);
+          setDraftRestored(true);
+        }
+      } catch {
+        /* nothing to restore */
+      }
+    }
+
+    loadDraft();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Initialize showSecondParent based on existing parent2 details (controlled mode)
   if (isControlled && controlledFormData?.parent2Name && !showSecondParent) {
     setShowSecondParent(true);
   }
@@ -229,6 +365,10 @@ export default function CandidateApplicationForm({
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear the error for this field as soon as the user edits it
+    if (formErrors[name]) {
+      setFormErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
+    }
   };
 
   const handleCustomResponseChange = (fieldId, value) => {
@@ -246,34 +386,102 @@ export default function CandidateApplicationForm({
 
   const lastStep = APPLICATION_STEP_LABELS.length - 1;
 
-  const goNext = () => setStep((s) => Math.min(s + 1, lastStep));
-  const goPrev = () => setStep((s) => Math.max(s - 1, 0));
+  const goNext = () => {
+    // Only validate on candidate-facing form; admin form skips step validation
+    if (variant === "candidate") {
+      const errs = validateStep(step, formData);
+      if (Object.keys(errs).length > 0) {
+        setFormErrors(errs);
+        return; // Block advancement until errors are fixed
+      }
+    }
+    setFormErrors({});
+    setStep((s) => Math.min(s + 1, lastStep));
+  };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const goPrev = () => {
+    setFormErrors({});
+    setStep((s) => Math.max(s - 1, 0));
+  };
+
+  const handleSubmit = async (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
     const defs =
       customFieldDefinitionsProp === undefined
         ? loadCustomFieldDefinitionsFromStorage()
         : customFieldDefinitionsProp;
     const cleaned = pruneCustomResponsesToDefinitions(formData, defs);
+
     if (variant === "admin" && typeof onAdminSubmit === "function") {
       onAdminSubmit(cleaned);
       return;
     }
-    console.log("Application submitted:", cleaned);
-    alert("Application submitted. Check the console for the payload.");
+
+    // Candidate variant — validate all required steps before submitting
+    const step0Errs = validateStep(0, cleaned);
+    const step1Errs = validateStep(1, cleaned);
+    const allErrs = { ...step0Errs, ...step1Errs };
+    if (Object.keys(allErrs).length > 0) {
+      setFormErrors(allErrs);
+      // Jump back to the first step that has errors
+      if (Object.keys(step0Errs).length > 0) setStep(0);
+      else if (Object.keys(step1Errs).length > 0) setStep(1);
+      return;
+    }
+
+    // Sanitize date fields — convert empty strings to null
+    const payload = sanitizeForApi(cleaned);
+
+    setSubmitting(true);
+    const result = await submitApplication(payload);
+    setSubmitting(false);
+
+    if (result.ok) {
+      alert("Application submitted successfully!");
+      navigate("/candidate/dashboard");
+    } else {
+      const msg =
+        result.error?.response?.data?.message ||
+        result.error?.message ||
+        "Submission failed. Please try again.";
+      alert(msg);
+    }
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (variant !== "candidate") return;
-    try {
-      localStorage.setItem(
-        "elitepic_application_draft",
-        JSON.stringify(formData)
-      );
-      alert("Draft saved on this device.");
-    } catch {
-      alert("Could not save draft.");
+    const defs =
+      customFieldDefinitionsProp === undefined
+        ? loadCustomFieldDefinitionsFromStorage()
+        : customFieldDefinitionsProp;
+    const cleaned = pruneCustomResponsesToDefinitions(formData, defs);
+
+    // Sanitize dates — save-draft never rejects incomplete forms
+    const payload = sanitizeForApi(cleaned);
+
+    const result = await saveApplicationDraft(payload);
+
+    if (result.ok) {
+      try {
+        localStorage.setItem(
+          "elitepic_application_draft",
+          JSON.stringify(formData),
+        );
+      } catch {
+        /* ignore storage errors */
+      }
+      alert("Draft saved successfully.");
+    } else {
+      // Fall back to local-only save if API fails
+      try {
+        localStorage.setItem(
+          "elitepic_application_draft",
+          JSON.stringify(formData),
+        );
+        alert("Saved locally on this device (server unavailable).");
+      } catch {
+        alert("Could not save draft.");
+      }
     }
   };
 
@@ -299,21 +507,80 @@ export default function CandidateApplicationForm({
             Application form
           </h1>
           <p className="mt-2 text-sm font-bold text-gray-500">
-            Complete each section. Your progress is stepped so the form stays easy to
-            follow.
+            Complete each section. Your progress is stepped so the form stays
+            easy to follow.
           </p>
         </>
       )}
 
       {embedded && variant === "admin" && (
         <p className="mb-4 text-sm font-bold text-gray-500">
-          Same application fields as the candidate portal. Data is saved to the client record using one shared structure.
+          Same application fields as the candidate portal. Data is saved to the
+          client record using one shared structure.
         </p>
       )}
 
-      <FormProgress step={step} labels={APPLICATION_STEP_LABELS} />
+      {/* Loading skeleton shown while fetching saved draft */}
+      {draftLoading && (
+        <div className="flex flex-col items-center gap-3 py-16 text-sm font-bold text-gray-400">
+          <svg
+            className="h-7 w-7 animate-spin text-secondary"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12" cy="12" r="10"
+              stroke="currentColor" strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+            />
+          </svg>
+          Restoring your saved progress…
+        </div>
+      )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      {!draftLoading && (
+        <>
+          {/* Draft-restored banner */}
+          {draftRestored && variant === "candidate" && (
+            <div className="mb-4 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+              <svg className="mt-0.5 h-4 w-4 shrink-0 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <div>
+                <p className="text-sm font-black text-green-800">Draft restored</p>
+                <p className="text-xs font-bold text-green-700 mt-0.5">
+                  Your previously saved progress has been loaded. You can continue from where you left off.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDraftRestored(false)}
+                className="ml-auto shrink-0 text-green-500 hover:text-green-700"
+                aria-label="Dismiss"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+
+          <FormProgress step={step} labels={APPLICATION_STEP_LABELS} />
+
+          {/* Validation error banner */}
+          {Object.keys(formErrors).length > 0 && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+              Please fix the highlighted fields before continuing.
+            </div>
+          )}
+
+      <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
         {step === 0 && (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
             {show("applicationType") && (
@@ -345,25 +612,52 @@ export default function CandidateApplicationForm({
 
             <SectionTitle>Personal details</SectionTitle>
             {show("firstName") && (
-              <AppInput label="First name" name="firstName" formData={formData} onChange={handleChange} />
+              <AppInput
+                label="First name *"
+                name="firstName"
+                formData={formData}
+                onChange={handleChange}
+                error={formErrors.firstName}
+              />
             )}
             {show("lastName") && (
-              <AppInput label="Last name" name="lastName" formData={formData} onChange={handleChange} />
+              <AppInput
+                label="Last name *"
+                name="lastName"
+                formData={formData}
+                onChange={handleChange}
+                error={formErrors.lastName}
+              />
             )}
             {show("email") && (
-              <AppInput label="Email" name="email" type="email" formData={formData} onChange={handleChange} />
+              <AppInput
+                label="Email *"
+                name="email"
+                type="email"
+                formData={formData}
+                onChange={handleChange}
+                error={formErrors.email}
+              />
             )}
             {show("gender") && (
               <AppSelect
-                label="Gender"
+                label="Gender *"
                 name="gender"
                 formData={formData}
                 onChange={handleChange}
                 options={genderOptions}
+                error={formErrors.gender}
               />
             )}
             {show("contactNumber") && (
-              <AppInput label="Contact number" name="contactNumber" type="tel" formData={formData} onChange={handleChange} />
+              <AppInput
+                label="Contact number *"
+                name="contactNumber"
+                type="tel"
+                formData={formData}
+                onChange={handleChange}
+                error={formErrors.contactNumber}
+              />
             )}
             {show("relationshipStatus") && (
               <AppSelect
@@ -375,7 +669,13 @@ export default function CandidateApplicationForm({
               />
             )}
             {show("address") && (
-              <AppInput label="Current address" name="address" formData={formData} onChange={handleChange} className="md:col-span-2" />
+              <AppInput
+                label="Current address"
+                name="address"
+                formData={formData}
+                onChange={handleChange}
+                className="md:col-span-2"
+              />
             )}
           </div>
         )}
@@ -384,32 +684,82 @@ export default function CandidateApplicationForm({
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
             <SectionTitle>Nationality details</SectionTitle>
             {show("nationality") && (
-              <AppInput label="Country of nationality" name="nationality" formData={formData} onChange={handleChange} />
+              <AppInput
+                label="Country of nationality *"
+                name="nationality"
+                formData={formData}
+                onChange={handleChange}
+                error={formErrors.nationality}
+              />
             )}
             {show("birthCountry") && (
-              <AppInput label="Country of birth" name="birthCountry" formData={formData} onChange={handleChange} />
+              <AppInput
+                label="Country of birth"
+                name="birthCountry"
+                formData={formData}
+                onChange={handleChange}
+              />
             )}
             {show("placeOfBirth") && (
-              <AppInput label="Place of birth" name="placeOfBirth" formData={formData} onChange={handleChange} />
+              <AppInput
+                label="Place of birth"
+                name="placeOfBirth"
+                formData={formData}
+                onChange={handleChange}
+              />
             )}
             {show("dob") && (
-              <AppInput label="Date of birth" name="dob" type="date" formData={formData} onChange={handleChange} />
+              <AppInput
+                label="Date of birth *"
+                name="dob"
+                type="date"
+                formData={formData}
+                onChange={handleChange}
+                error={formErrors.dob}
+              />
             )}
             {show("passportNumber") && (
-              <AppInput label="Passport number" name="passportNumber" formData={formData} onChange={handleChange} />
+              <AppInput
+                label="Passport number"
+                name="passportNumber"
+                formData={formData}
+                onChange={handleChange}
+              />
             )}
             {show("issuingAuthority") && (
-              <AppInput label="Issuing authority" name="issuingAuthority" formData={formData} onChange={handleChange} />
+              <AppInput
+                label="Issuing authority"
+                name="issuingAuthority"
+                formData={formData}
+                onChange={handleChange}
+              />
             )}
             {show("issueDate") && (
-              <AppInput label="Issue date" name="issueDate" type="date" formData={formData} onChange={handleChange} />
+              <AppInput
+                label="Issue date"
+                name="issueDate"
+                type="date"
+                formData={formData}
+                onChange={handleChange}
+              />
             )}
             {show("expiryDate") && (
-              <AppInput label="Expiry date" name="expiryDate" type="date" formData={formData} onChange={handleChange} />
+              <AppInput
+                label="Expiry date"
+                name="expiryDate"
+                type="date"
+                formData={formData}
+                onChange={handleChange}
+              />
             )}
             {show("passportAvailable") && (
               <div className="md:col-span-2">
-                <YesNo label="Confirm passport available?" name="passportAvailable" formData={formData} onChange={handleChange} />
+                <YesNo
+                  label="Confirm passport available?"
+                  name="passportAvailable"
+                  formData={formData}
+                  onChange={handleChange}
+                />
               </div>
             )}
           </div>
@@ -742,7 +1092,12 @@ export default function CandidateApplicationForm({
             <SectionTitle>Visa Issues (UK/Other Countries)</SectionTitle>
             {show("refusedVisa") && (
               <div className="md:col-span-2">
-                <YesNo label="Refused a visa" name="refusedVisa" formData={formData} onChange={handleChange} />
+                <YesNo
+                  label="Refused a visa"
+                  name="refusedVisa"
+                  formData={formData}
+                  onChange={handleChange}
+                />
               </div>
             )}
             {show("refusedEntry") && (
@@ -767,22 +1122,42 @@ export default function CandidateApplicationForm({
             )}
             {show("refusedAsylum") && (
               <div className="md:col-span-2">
-                <YesNo label="Refused asylum" name="refusedAsylum" formData={formData} onChange={handleChange} />
+                <YesNo
+                  label="Refused asylum"
+                  name="refusedAsylum"
+                  formData={formData}
+                  onChange={handleChange}
+                />
               </div>
             )}
             {show("deported") && (
               <div className="md:col-span-2">
-                <YesNo label="Deported" name="deported" formData={formData} onChange={handleChange} />
+                <YesNo
+                  label="Deported"
+                  name="deported"
+                  formData={formData}
+                  onChange={handleChange}
+                />
               </div>
             )}
             {show("removed") && (
               <div className="md:col-span-2">
-                <YesNo label="Removed" name="removed" formData={formData} onChange={handleChange} />
+                <YesNo
+                  label="Removed"
+                  name="removed"
+                  formData={formData}
+                  onChange={handleChange}
+                />
               </div>
             )}
             {show("requiredToLeave") && (
               <div className="md:col-span-2">
-                <YesNo label="Required to leave" name="requiredToLeave" formData={formData} onChange={handleChange} />
+                <YesNo
+                  label="Required to leave"
+                  name="requiredToLeave"
+                  formData={formData}
+                  onChange={handleChange}
+                />
               </div>
             )}
             {show("banned") && (
@@ -903,7 +1278,12 @@ export default function CandidateApplicationForm({
             <SectionTitle>English language</SectionTitle>
             {show("englishProof") && (
               <div className="md:col-span-2">
-                <YesNo label="Have you provided evidence of your English language ability in a previous application?" name="englishProof" formData={formData} onChange={handleChange} />
+                <YesNo
+                  label="Have you provided evidence of your English language ability in a previous application?"
+                  name="englishProof"
+                  formData={formData}
+                  onChange={handleChange}
+                />
               </div>
             )}
 
@@ -971,9 +1351,10 @@ export default function CandidateApplicationForm({
               <button
                 type="button"
                 onClick={handleSaveDraft}
-                className="rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition-colors hover:border-gray-300"
+                disabled={submitting || applicationLoading}
+                className="rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition-colors hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Save draft
+                {applicationLoading ? "Saving…" : "Save draft"}
               </button>
             )}
             <button
@@ -993,25 +1374,36 @@ export default function CandidateApplicationForm({
             >
               Previous
             </button>
-            {step < lastStep ? (
+            {step < lastStep && (
               <button
+                key="next-btn"
                 type="button"
                 onClick={goNext}
                 className="rounded-xl bg-secondary px-6 py-3 text-sm font-black text-white shadow-md shadow-secondary/20 transition-colors hover:bg-secondary-dark"
               >
                 Next
               </button>
-            ) : (
+            )}
+            {step >= lastStep && (
               <button
-                type="submit"
-                className="rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition-colors hover:bg-primary-dark"
+                key="submit-btn"
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting || applicationLoading}
+                className="rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition-colors hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {variant === "admin" ? "Save client" : "Submit application"}
+                {submitting
+                  ? "Submitting…"
+                  : variant === "admin"
+                    ? "Save client"
+                    : "Submit application"}
               </button>
             )}
           </div>
         </div>
       </form>
+        </> // closes {!draftLoading && (
+      )}
     </div>
   );
 }
