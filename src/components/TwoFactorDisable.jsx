@@ -2,8 +2,17 @@ import { useState } from "react";
 import Input from "./Input";
 import Button from "./Button";
 import eliteLogo from "../assets/elitepic_logo.png";
+import { disable2fa } from "../services/auth2faService";
 
-const TwoFactorDisable = ({ token, onDisableComplete, onCancel }) => {
+function getApiError(error) {
+  const d = error?.response?.data;
+  const m = d?.message;
+  if (typeof m === "string") return m;
+  if (Array.isArray(m) && m.length) return m[0];
+  return error?.message || "Something went wrong";
+}
+
+const TwoFactorDisable = ({ onDisableComplete, onCancel }) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,11 +26,14 @@ const TwoFactorDisable = ({ token, onDisableComplete, onCancel }) => {
 
     setLoading(true);
     setError("");
-    // Demo mode - simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    if (onDisableComplete) onDisableComplete({ success: true });
-    setLoading(false);
+    try {
+      await disable2fa({ password });
+      if (onDisableComplete) onDisableComplete({ success: true });
+    } catch (err) {
+      setError(getApiError(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -33,7 +45,7 @@ const TwoFactorDisable = ({ token, onDisableComplete, onCancel }) => {
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
         <p className="text-sm font-bold text-yellow-800">
-          ⚠️ Disabling 2FA will make your account less secure. You can re-enable it at any time from your settings.
+          Disabling 2FA will make your account less secure. You can re-enable it at any time from your settings.
         </p>
       </div>
 
@@ -54,7 +66,6 @@ const TwoFactorDisable = ({ token, onDisableComplete, onCancel }) => {
             setError("");
           }}
           placeholder="••••••••"
-          error={error}
           required
         />
         <Button type="submit" disabled={loading} className="w-full bg-red-600 hover:bg-red-700">

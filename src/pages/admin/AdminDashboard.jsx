@@ -122,7 +122,7 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-  // Transform backend data to KPI cards format
+  // Transform backend data to KPI cards format (matching ReferenceUI structure)
   const kpiCards = dashboardStats ? [
     {
       label: "Total Cases",
@@ -133,14 +133,14 @@ export default function AdminDashboard() {
       to: "/admin/cases",
     },
     {
-      label: "Active Cases",
+      label: "Cases In Progress",
       value: dashboardStats.caseStats?.activeCases?.toString() || "0",
       icon: RiSettings3Line,
       iconColor: "text-orange-500",
       iconBg: "bg-orange-50",
     },
     {
-      label: "Pending Cases",
+      label: "Delayed Cases",
       value: dashboardStats.caseStats?.pendingCases?.toString() || "0",
       icon: RiAlarmWarningLine,
       iconColor: "text-red-500",
@@ -148,14 +148,14 @@ export default function AdminDashboard() {
       to: "/admin/cases",
     },
     {
-      label: "Completed Cases",
+      label: "Completed This Month",
       value: dashboardStats.caseStats?.completedCases?.toString() || "0",
       icon: RiCheckLine,
       iconColor: "text-green-600",
       iconBg: "bg-green-50",
     },
     {
-      label: "Total Caseworkers",
+      label: "Active Caseworkers",
       value: dashboardStats.userStats?.totalCaseworkers?.toString() || "0",
       icon: RiUserLine,
       iconColor: "text-purple-600",
@@ -163,25 +163,25 @@ export default function AdminDashboard() {
       to: "/admin/caseworkers",
     },
     {
-      label: "Total Candidates",
-      value: dashboardStats.userStats?.totalCandidates?.toString() || "0",
-      icon: RiUserLine,
+      label: "Fees Collected",
+      value: "£0",
+      icon: RiMoneyDollarCircleLine,
       iconColor: "text-yellow-600",
       iconBg: "bg-yellow-50",
     },
     {
-      label: "Total Sponsors",
-      value: dashboardStats.userStats?.totalSponsors?.toString() || "0",
+      label: "Visa Expiry Alerts",
+      value: "0",
+      icon: RiErrorWarningLine,
+      iconColor: "text-red-500",
+      iconBg: "bg-red-50",
+    },
+    {
+      label: "Sponsor Licence Expiry",
+      value: "0",
       icon: RiBuildingLine,
       iconColor: "text-orange-500",
       iconBg: "bg-orange-50",
-    },
-    {
-      label: "Total Admins",
-      value: dashboardStats.userStats?.totalAdmins?.toString() || "0",
-      icon: RiErrorWarningLine,
-      iconColor: "text-blue-500",
-      iconBg: "bg-blue-50",
     },
   ] : [];
 

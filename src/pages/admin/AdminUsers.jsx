@@ -6,7 +6,6 @@ import {
   FiPlus,
   FiDownload,
   FiEye,
-  FiRefreshCw,
 } from "react-icons/fi";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -18,20 +17,19 @@ import { useToast } from "../../context/ToastContext";
 import {
   createAdmin,
   updateAdmin,
-  toggleAdminStatus,
-  resetAdminPassword,
   deleteAdmin,
   exportAdmins,
 } from "../../services/adminService";
 
 const ROLE_CHIPS = {
-  admin: "bg-blue-100 text-blue-700",
-  "Admin": "bg-purple-100 text-purple-700",
+  "Super Admin": "bg-purple-100 text-purple-700",
+  Admin: "bg-blue-100 text-blue-700",
 };
 
 const STATUS_CHIPS = {
-  active: "bg-green-100 text-green-700",
-  inactive: "bg-gray-100 text-gray-500",
+  Active: "bg-green-100 text-green-700",
+  Inactive: "bg-gray-100 text-gray-500",
+  Suspended: "bg-red-100 text-red-600",
 };
 
 const AVATAR_COLORS = [
@@ -44,17 +42,29 @@ const AVATAR_COLORS = [
   "bg-teal-500",
 ];
 
-const ROLE_OPTIONS = [{ value: "1", label: "Admin" }];
+const ROLE_OPTIONS = [
+  { value: "1", label: "Admin" },
+  { value: "2", label: "Super Admin" },
+];
+
+// const PERMISSIONS_OPTIONS = [
+//   { value: "Full Access", label: "Full Access" },
+//   { value: "Cases + Finance", label: "Cases + Finance" },
+//   { value: "Cases Only", label: "Cases Only" },
+//   { value: "Finance Only", label: "Finance Only" },
+// ];
 
 const STATUS_FILTER_OPTIONS = [
   { value: "All", label: "All" },
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
+  { value: "suspended", label: "Suspended" },
 ];
 
 const EDIT_STATUS_OPTIONS = [
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
+  { value: "suspended", label: "Suspended" },
 ];
 
 const EMPTY_CREATE = {
@@ -64,14 +74,12 @@ const EMPTY_CREATE = {
   country_code: "+1",
   mobile: "",
   role_id: "1",
+  permissions: "Cases Only",
   password: "",
   confirm_password: "",
+  status: "active",
 };
 
-const EMPTY_RESET = {
-  new_password: "",
-  confirm_password: "",
-};
 
 function getApiError(error) {
   const d = error?.response?.data;
@@ -90,6 +98,7 @@ function displayRoleName(admin) {
 function formatStatusLabel(status) {
   if (status === "active") return "Active";
   if (status === "inactive") return "Inactive";
+  if (status === "suspended") return "Suspended";
   return status || "—";
 }
 
@@ -117,12 +126,10 @@ export default function AdminUsers() {
   const [modal, setModal] = useState({ type: null, data: null });
   const [createForm, setCreateForm] = useState(EMPTY_CREATE);
   const [editForm, setEditForm] = useState(null);
-  const [resetForm, setResetForm] = useState(EMPTY_RESET);
+  const [viewForm, setViewForm] = useState(null);
   const [errors, setErrors] = useState({});
-  const [resetErrors, setResetErrors] = useState({});
 
   const [saving, setSaving] = useState(false);
-  const [toggleId, setToggleId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [exporting, setExporting] = useState(false);
 
@@ -167,9 +174,8 @@ export default function AdminUsers() {
     setModal({ type: null, data: null });
     setCreateForm(EMPTY_CREATE);
     setEditForm(null);
-    setResetForm(EMPTY_RESET);
+    setViewForm(null);
     setErrors({});
-    setResetErrors({});
   };
 
   const openCreate = () => {
@@ -186,24 +192,30 @@ export default function AdminUsers() {
       country_code: row.country_code || "+1",
       mobile: row.mobile || "",
       role_id: String(row.role_id ?? 1),
-      status: row.status === "inactive" ? "inactive" : "active",
+      permissions: row.permissions || "Cases Only",
+      status: row.status === "inactive" ? "inactive" : row.status === "suspended" ? "suspended" : "active",
     });
     setErrors({});
     setModal({ type: "edit", data: row });
   };
 
   const openView = (row) => {
+    setViewForm({
+      first_name: row.first_name || "",
+      last_name: row.last_name || "",
+      email: row.email || "",
+      country_code: row.country_code || "+1",
+      mobile: row.mobile || "",
+      role_id: String(row.role_id ?? 1),
+      permissions: row.permissions || "Cases Only",
+      status: row.status || "active",
+      lastLogin: row.last_login || "Never",
+    });
     setModal({ type: "view", data: row });
   };
 
   const openDelete = (row) => {
     setModal({ type: "delete", data: row });
-  };
-
-  const openReset = (row) => {
-    setResetForm(EMPTY_RESET);
-    setResetErrors({});
-    setModal({ type: "reset", data: row });
   };
 
   const handleCreateChange = (e) => {
@@ -218,12 +230,6 @@ export default function AdminUsers() {
     if (errors[name]) setErrors((p) => ({ ...p, [name]: "" }));
   };
 
-  const handleResetChange = (e) => {
-    const { name, value } = e.target;
-    setResetForm((p) => ({ ...p, [name]: value }));
-    if (resetErrors[name]) setResetErrors((p) => ({ ...p, [name]: "" }));
-  };
-
   const validateCreate = () => {
     const errs = {};
     if (!createForm.first_name.trim()) errs.first_name = "First name is required";
@@ -231,8 +237,7 @@ export default function AdminUsers() {
     if (!createForm.email.trim()) errs.email = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(createForm.email))
       errs.email = "Enter a valid email";
-    if (!createForm.country_code.trim())
-      errs.country_code = "Country code is required";
+    if (!createForm.country_code.trim()) errs.country_code = "Country code is required";
     if (!createForm.mobile.trim()) errs.mobile = "Mobile is required";
     if (!createForm.password) errs.password = "Password is required";
     if (!createForm.confirm_password)
@@ -249,19 +254,8 @@ export default function AdminUsers() {
     if (!editForm.email.trim()) errs.email = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(editForm.email))
       errs.email = "Enter a valid email";
-    if (!editForm.country_code.trim())
-      errs.country_code = "Country code is required";
+    if (!editForm.country_code.trim()) errs.country_code = "Country code is required";
     if (!editForm.mobile.trim()) errs.mobile = "Mobile is required";
-    return errs;
-  };
-
-  const validateReset = () => {
-    const errs = {};
-    if (!resetForm.new_password) errs.new_password = "Password is required";
-    if (!resetForm.confirm_password)
-      errs.confirm_password = "Please confirm password";
-    else if (resetForm.new_password !== resetForm.confirm_password)
-      errs.confirm_password = "Passwords do not match";
     return errs;
   };
 
@@ -280,6 +274,7 @@ export default function AdminUsers() {
         country_code: createForm.country_code.trim(),
         mobile: createForm.mobile.trim(),
         role_id: Number(createForm.role_id),
+        status: createForm.status,
         password: createForm.password,
         confirm_password: createForm.confirm_password,
       });
@@ -347,56 +342,6 @@ export default function AdminUsers() {
     }
   };
 
-  const handleToggle = async (row) => {
-    setToggleId(row.id);
-    try {
-      const res = await toggleAdminStatus(row.id);
-      showToast({
-        message: res.data?.message || "Status updated",
-        variant: "success",
-      });
-      {
-        const r = await fetchAdmins(
-          page,
-          limit,
-          debouncedSearch.trim(),
-          statusParam,
-        );
-        if (!r.ok) {
-          showToast({ message: getApiError(r.error), variant: "danger" });
-        }
-      }
-    } catch (e) {
-      showToast({ message: getApiError(e), variant: "danger" });
-    } finally {
-      setToggleId(null);
-    }
-  };
-
-  const handleResetSubmit = async () => {
-    const errs = validateReset();
-    if (Object.keys(errs).length) {
-      setResetErrors(errs);
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await resetAdminPassword(modal.data.id, {
-        new_password: resetForm.new_password,
-        confirm_password: resetForm.confirm_password,
-      });
-      showToast({
-        message: res.data?.message || "Password reset successfully",
-        variant: "success",
-      });
-      closeModal();
-    } catch (e) {
-      showToast({ message: getApiError(e), variant: "danger" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleDelete = async () => {
     setDeleteId(modal.data.id);
     try {
@@ -433,7 +378,7 @@ export default function AdminUsers() {
         search: debouncedSearch.trim(),
         status: statusParam,
       });
-      
+
       // Create a blob from the response
       const blob = new Blob([res.data], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
@@ -444,7 +389,7 @@ export default function AdminUsers() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       showToast({
         message: "Admins exported successfully",
         variant: "success",
@@ -494,7 +439,7 @@ export default function AdminUsers() {
           </button>
           <Button onClick={openCreate} className="rounded-xl shadow-sm">
             <FiPlus size={14} />
-            Add Admin
+            Create Admin
           </Button>
         </div>
       </div>
@@ -522,7 +467,7 @@ export default function AdminUsers() {
             >
               {STATUS_FILTER_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
-                  {o.label === "All" ? "All status" : o.label}
+                  {o.label === "All" ? "All Status" : o.label}
                 </option>
               ))}
             </select>
@@ -538,7 +483,7 @@ export default function AdminUsers() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 text-left">
-                {["Name", "Email", "Mobile", "Role", "Status", "Actions"].map(
+                {["Name", "Email", "Role", "Status", "Last Active", "Actions"].map(
                   (h) => (
                     <th
                       key={h}
@@ -581,34 +526,27 @@ export default function AdminUsers() {
                     <td className="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">
                       {user.email}
                     </td>
-                    <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">
-                      {user.country_code} {user.mobile}
-                    </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
-                          ROLE_CHIPS[
-                            (user.role?.name || "admin").toLowerCase()
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-black ${ROLE_CHIPS[
+                          (user.role?.name || "admin").toLowerCase()
                           ] ?? "bg-gray-100 text-gray-500"
-                        }`}
+                          }`}
                       >
                         {displayRoleName(user)}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
-                      <button
-                        type="button"
-                        disabled={toggleId === user.id}
-                        onClick={() => handleToggle(user)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-opacity hover:opacity-90 disabled:opacity-50 ${
-                          STATUS_CHIPS[user.status] ??
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-black ${STATUS_CHIPS[formatStatusLabel(user.status)] ??
                           "bg-gray-100 text-gray-500"
-                        }`}
+                          }`}
                       >
-                        {toggleId === user.id
-                          ? "…"
-                          : formatStatusLabel(user.status)}
-                      </button>
+                        {formatStatusLabel(user.status)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-xs text-gray-500 font-mono whitespace-nowrap">
+                      {user.last_login || "Never"}
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-1">
@@ -627,14 +565,6 @@ export default function AdminUsers() {
                           title="Edit user"
                         >
                           <FiEdit2 size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openReset(user)}
-                          className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                          title="Reset password"
-                        >
-                          <FiRefreshCw size={14} />
                         </button>
                         <button
                           type="button"
@@ -720,43 +650,49 @@ export default function AdminUsers() {
         {modal.type === "create" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="First name"
+              label="First Name"
               name="first_name"
               value={createForm.first_name}
               onChange={handleCreateChange}
+              placeholder="Sarah"
               required
               error={errors.first_name}
             />
             <Input
-              label="Last name"
+              label="Last Name"
               name="last_name"
               value={createForm.last_name}
               onChange={handleCreateChange}
+              placeholder="Anand"
               required
               error={errors.last_name}
             />
             <Input
-              label="Email"
+              label="Email Address"
               name="email"
               type="email"
               value={createForm.email}
               onChange={handleCreateChange}
+              placeholder="sarah@example.com"
               required
               error={errors.email}
             />
             <Input
-              label="Country code"
+              label="Country Code"
               name="country_code"
               value={createForm.country_code}
               onChange={handleCreateChange}
+              placeholder="+44"
               required
               error={errors.country_code}
             />
             <Input
               label="Mobile"
               name="mobile"
+              type="tel"
               value={createForm.mobile}
               onChange={handleCreateChange}
+              placeholder="7700 900000"
               required
               error={errors.mobile}
             />
@@ -769,20 +705,30 @@ export default function AdminUsers() {
               required
             />
             <Input
+              label="Status"
+              name="status"
+              value={createForm.status}
+              onChange={handleCreateChange}
+              options={EDIT_STATUS_OPTIONS}
+              required
+            />
+            <Input
               label="Password"
               name="password"
               type="password"
               value={createForm.password}
               onChange={handleCreateChange}
+              placeholder="••••••••"
               required
               error={errors.password}
             />
             <Input
-              label="Confirm password"
+              label="Confirm Password"
               name="confirm_password"
               type="password"
               value={createForm.confirm_password}
               onChange={handleCreateChange}
+              placeholder="••••••••"
               required
               error={errors.confirm_password}
             />
@@ -791,43 +737,49 @@ export default function AdminUsers() {
         {modal.type === "edit" && editForm && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="First name"
+              label="First Name"
               name="first_name"
               value={editForm.first_name}
               onChange={handleEditChange}
+              placeholder="Sarah"
               required
               error={errors.first_name}
             />
             <Input
-              label="Last name"
+              label="Last Name"
               name="last_name"
               value={editForm.last_name}
               onChange={handleEditChange}
+              placeholder="Anand"
               required
               error={errors.last_name}
             />
             <Input
-              label="Email"
+              label="Email Address"
               name="email"
               type="email"
               value={editForm.email}
               onChange={handleEditChange}
+              placeholder="sarah@example.com"
               required
               error={errors.email}
             />
             <Input
-              label="Country code"
+              label="Country Code"
               name="country_code"
               value={editForm.country_code}
               onChange={handleEditChange}
+              placeholder="+44"
               required
               error={errors.country_code}
             />
             <Input
               label="Mobile"
               name="mobile"
+              type="tel"
               value={editForm.mobile}
               onChange={handleEditChange}
+              placeholder="7700 900000"
               required
               error={errors.mobile}
             />
@@ -846,7 +798,24 @@ export default function AdminUsers() {
               onChange={handleEditChange}
               options={EDIT_STATUS_OPTIONS}
               required
-              className="sm:col-span-2"
+            />
+            <Input
+              label="New Password (optional)"
+              name="password"
+              type="password"
+              value={editForm.password}
+              onChange={handleEditChange}
+              placeholder="Leave blank to keep current"
+              error={errors.password}
+            />
+            <Input
+              label="Confirm Password"
+              name="confirm_password"
+              type="password"
+              value={editForm.confirm_password}
+              onChange={handleEditChange}
+              placeholder="••••••••"
+              error={errors.confirm_password}
             />
           </div>
         )}
@@ -881,10 +850,18 @@ export default function AdminUsers() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
+                Country Code
+              </p>
+              <p className="text-sm font-semibold text-gray-800">
+                {viewForm?.country_code || modal.data?.country_code || "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
                 Mobile
               </p>
               <p className="text-sm font-semibold text-gray-800">
-                {modal.data?.country_code} {modal.data?.mobile}
+                {viewForm?.mobile || modal.data?.mobile || "—"}
               </p>
             </div>
             <div>
@@ -892,73 +869,43 @@ export default function AdminUsers() {
                 Role
               </p>
               <span
-                className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${
-                  ROLE_CHIPS[
-                    (modal.data?.role?.name || "admin").toLowerCase()
+                className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${ROLE_CHIPS[
+                  (modal.data?.role?.name || "Admin")
                   ] ?? "bg-gray-100 text-gray-500"
-                }`}
+                  }`}
               >
                 {modal.data ? displayRoleName(modal.data) : ""}
               </span>
             </div>
-            <div className="col-span-2">
+            <div>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
+                Permissions
+              </p>
+              <p className="text-sm font-semibold text-gray-800">
+                {viewForm?.permissions || modal.data?.permissions || "Cases Only"}
+              </p>
+            </div>
+            <div>
               <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
                 Status
               </p>
               <span
-                className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${
-                  STATUS_CHIPS[modal.data?.status] ??
+                className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${STATUS_CHIPS[formatStatusLabel(modal.data?.status)] ??
                   "bg-gray-100 text-gray-500"
-                }`}
+                  }`}
               >
                 {modal.data ? formatStatusLabel(modal.data.status) : ""}
               </span>
             </div>
           </div>
-        </div>
-      </Modal>
-
-      <Modal
-        open={modal.type === "reset"}
-        onClose={closeModal}
-        title="Reset password"
-        maxWidthClass="max-w-md"
-        bodyClassName="px-5 py-5 sm:px-6"
-        footer={
-          <>
-            <Button variant="ghost" onClick={closeModal} className="rounded-xl">
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              disabled={saving}
-              onClick={handleResetSubmit}
-              className="rounded-xl"
-            >
-              {saving ? "Saving…" : "Reset password"}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <Input
-            label="New password"
-            name="new_password"
-            type="password"
-            value={resetForm.new_password}
-            onChange={handleResetChange}
-            required
-            error={resetErrors.new_password}
-          />
-          <Input
-            label="Confirm password"
-            name="confirm_password"
-            type="password"
-            value={resetForm.confirm_password}
-            onChange={handleResetChange}
-            required
-            error={resetErrors.confirm_password}
-          />
+          <div className="pt-2">
+            <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
+              Last Active
+            </p>
+            <p className="text-sm font-semibold text-gray-800">
+              {viewForm?.lastLogin || modal.data?.last_login || "Never"}
+            </p>
+          </div>
         </div>
       </Modal>
 

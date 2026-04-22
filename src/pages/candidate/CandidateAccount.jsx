@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import {
   Download,
   FileText,
@@ -22,6 +22,19 @@ import {
 import Modal from "../../components/Modal";
 import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
+import { useToast } from "../../context/ToastContext";
+import { setCredentials } from "../../store/slices/authSlice";
+import store from "../../store";
+import { getToken } from "../../utils/storage";
+import {
+  fetchCandidateAccount,
+  patchCandidatePreferences,
+  submitCandidateFeedback,
+  postCandidateConsent,
+  postCandidateDataDeletionRequest,
+  updateUserProfile,
+  changeOwnPassword,
+} from "../../services/candidateAccountService";
 
 const RATING_LABELS = ["", "Needs work", "Fair", "Good", "Very good", "Excellent"];
 
@@ -83,8 +96,70 @@ function initialsFromName(name) {
   return name.slice(0, 2).toUpperCase();
 }
 
+function fullNameFromParts(first, last) {
+  return `${first || ""} ${last || ""}`.trim();
+}
+
+function splitFullName(full) {
+  const t = (full || "").trim();
+  if (!t) return { first_name: "-", last_name: "-" };
+  const parts = t.split(/\s+/).filter(Boolean);
+  const first_name = parts[0];
+  const last_name = parts.length > 1 ? parts.slice(1).join(" ") : first_name;
+  return { first_name, last_name };
+}
+
+function formatPhoneDisplay(countryCode, mobile) {
+  const c = (countryCode || "").trim();
+  const m = (mobile || "").trim();
+  if (!c && !m) return "";
+  if (c && m) return `${c} ${m}`;
+  return c || m;
+}
+
+function parsePhoneInput(input, fallbackCode) {
+  const t = (input || "").trim();
+  if (!t) {
+    return { country_code: (fallbackCode || "").trim(), mobile: "" };
+  }
+  const parts = t.split(/\s+/);
+  if (parts[0]?.startsWith("+")) {
+    const country_code = parts[0];
+    const rest = parts.slice(1).join("");
+    const mobile = rest.replace(/\D/g, "");
+    return { country_code, mobile };
+  }
+  return {
+    country_code: (fallbackCode || "").trim() || "+44",
+    mobile: t.replace(/\D/g, ""),
+  };
+}
+
+function formatConsentDate(iso) {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return null;
+  }
+}
+
+function apiErrorMessage(error) {
+  const d = error?.response?.data;
+  const m = d?.message;
+  if (typeof m === "string") return m;
+  if (Array.isArray(m) && m.length) return m[0];
+  return error?.message || "Something went wrong";
+}
+
 const CandidateAccount = () => {
-  const user = useSelector((state) => state.auth.user);
+  const dispatch = useDispatch();
+  const reduxUser = useSelector((state) => state.auth.user);
+  const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const finalSectionRef = useRef(null);
 
@@ -134,10 +209,125 @@ const CandidateAccount = () => {
     }
   }, [tab]);
 
+  const [accountLoading, setAccountLoading] = useState(false);
+  const [prefsSaving, setPrefsSaving] = useState(false);
+
   const [rating, setRating] = useState(4);
   const [expSelected, setExpSelected] = useState(() => new Set(["easy"]));
   const [comments, setComments] = useState("");
-  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [feedbackSending, setFeedbackSending] = useState(false);
+
+  const [fullName, setFullName] = useState(() =>
+    fullNameFromParts(reduxUser?.first_name, reduxUser?.last_name),
+  );
+  const [email, setEmail] = useState(reduxUser?.email ?? "");
+  const [phone, setPhone] = useState("");
+  const [savedCountryCode, setSavedCountryCode] = useState("");
+
+  const [caseInfo, setCaseInfo] = useState(null);
+  const [termsAcceptedAt, setTermsAcceptedAt] = useState(null);
+  const [termsVersion, setTermsVersion] = useState(null);
+  const [dataDeletionRequestedAt, setDataDeletionRequestedAt] = useState(null);
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+
+  const [notifDocs, setNotifDocs] = useState(true);
+  const [notifStatus, setNotifStatus] = useState(true);
+  const [notifPay, setNotifPay] = useState(true);
+  const [notifDeadline, setNotifDeadline] = useState(false);
+
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(
+    !!reduxUser?.two_factor_enabled,
+  );
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+  const [twoFactorMode, setTwoFactorMode] = useState("setup");
+
+  const [consentSaving, setConsentSaving] = useState(false);
+  const [deletionSaving, setDeletionSaving] = useState(false);
+
+  const applyUserToStore = useCallback((u) => {
+    if (!u) return;
+    const token = getToken();
+    if (!token) return;
+    const prev = store.getState().auth.user;
+    dispatch(
+      setCredentials({
+        user: {
+          ...prev,
+          id: u.id ?? prev?.id,
+          first_name: u.first_name ?? prev?.first_name,
+          last_name: u.last_name ?? prev?.last_name,
+          email: u.email ?? prev?.email,
+          role_id: u.role_id ?? prev?.role_id,
+          role_name: prev?.role_name,
+          status: prev?.status,
+          two_factor_enabled:
+            u.two_factor_enabled ?? prev?.two_factor_enabled,
+        },
+        token,
+      }),
+    );
+  }, [dispatch]);
+
+  const loadAccount = useCallback(async () => {
+    setAccountLoading(true);
+    try {
+      const res = await fetchCandidateAccount();
+      const d = res.data?.data;
+      if (!d?.user) return;
+
+      const u = d.user;
+      setFullName(fullNameFromParts(u.first_name, u.last_name));
+      setEmail(u.email || "");
+      setPhone(formatPhoneDisplay(u.country_code, u.mobile));
+      setSavedCountryCode((u.country_code || "").trim());
+      setTwoFactorEnabled(!!u.two_factor_enabled);
+      applyUserToStore(u);
+
+      const s = d.settings || {};
+      setNotifDocs(!!s.notification_document_requests);
+      setNotifStatus(!!s.notification_case_status);
+      setNotifPay(!!s.notification_payment_reminders);
+      setNotifDeadline(!!s.notification_deadline_alerts);
+      setTermsAcceptedAt(s.terms_accepted_at || null);
+      setTermsVersion(s.terms_version || null);
+      setDataDeletionRequestedAt(s.data_deletion_requested_at || null);
+
+      setCaseInfo(d.case || null);
+
+      const lf = d.lastFeedback;
+      if (lf) {
+        setRating(Number(lf.rating) || 4);
+        setExpSelected(new Set(Array.isArray(lf.experience_tags) ? lf.experience_tags : []));
+        setComments(typeof lf.comments === "string" ? lf.comments : "");
+      } else {
+        setRating(4);
+        setExpSelected(new Set(["easy"]));
+        setComments("");
+      }
+    } catch (error) {
+      showToast({
+        variant: "danger",
+        message: apiErrorMessage(error),
+      });
+    } finally {
+      setAccountLoading(false);
+    }
+  }, [applyUserToStore, showToast]);
+
+  useEffect(() => {
+    loadAccount();
+  }, [loadAccount]);
+
+  useEffect(() => {
+    setFullName(fullNameFromParts(reduxUser?.first_name, reduxUser?.last_name));
+    setEmail(reduxUser?.email ?? "");
+    setTwoFactorEnabled(!!reduxUser?.two_factor_enabled);
+  }, [reduxUser?.first_name, reduxUser?.last_name, reduxUser?.email, reduxUser?.two_factor_enabled]);
 
   const toggleExp = (id) => {
     setExpSelected((prev) => {
@@ -148,30 +338,157 @@ const CandidateAccount = () => {
     });
   };
 
-  const [fullName, setFullName] = useState(user?.name ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [phone, setPhone] = useState("+44 7700 900123");
-
-  useEffect(() => {
-    setFullName(user?.name ?? "");
-    setEmail(user?.email ?? "");
-  }, [user?.name, user?.email]);
-
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
-  const [notifDocs, setNotifDocs] = useState(true);
-  const [notifStatus, setNotifStatus] = useState(true);
-  const [notifPay, setNotifPay] = useState(true);
-  const [notifDeadline, setNotifDeadline] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
-  const [twoFactorMode, setTwoFactorMode] = useState("setup"); // setup or disable
-
   const demoDownload = (label) => {
     window.alert(`Demo: "${label}" would download in a live app.`);
   };
+
+  const handleSaveProfile = async () => {
+    const { first_name, last_name } = splitFullName(fullName);
+    const { country_code, mobile } = parsePhoneInput(phone, savedCountryCode);
+    if (!mobile || String(mobile).length < 6) {
+      showToast({
+        variant: "danger",
+        message: "Enter a valid phone number (include country code, e.g. +44 …).",
+      });
+      return;
+    }
+    setProfileSaving(true);
+    try {
+      const res = await updateUserProfile({
+        first_name,
+        last_name,
+        country_code,
+        mobile,
+      });
+      const user = res.data?.data?.user;
+      if (user) {
+        applyUserToStore(user);
+        setPhone(formatPhoneDisplay(user.country_code, user.mobile));
+        setSavedCountryCode((user.country_code || "").trim());
+      }
+      showToast({ message: "Profile saved." });
+    } catch (error) {
+      showToast({ variant: "danger", message: apiErrorMessage(error) });
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword) {
+      showToast({
+        variant: "danger",
+        message: "Enter current and new password.",
+      });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showToast({
+        variant: "danger",
+        message: "New password and confirmation do not match.",
+      });
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      await changeOwnPassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      showToast({ message: "Password updated." });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      showToast({ variant: "danger", message: apiErrorMessage(error) });
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  const handleNotifToggle = async (key, nextVal) => {
+    const payload = {
+      notification_document_requests:
+        key === "notification_document_requests" ? nextVal : notifDocs,
+      notification_case_status:
+        key === "notification_case_status" ? nextVal : notifStatus,
+      notification_payment_reminders:
+        key === "notification_payment_reminders" ? nextVal : notifPay,
+      notification_deadline_alerts:
+        key === "notification_deadline_alerts" ? nextVal : notifDeadline,
+    };
+    if (key === "notification_document_requests") setNotifDocs(nextVal);
+    if (key === "notification_case_status") setNotifStatus(nextVal);
+    if (key === "notification_payment_reminders") setNotifPay(nextVal);
+    if (key === "notification_deadline_alerts") setNotifDeadline(nextVal);
+    setPrefsSaving(true);
+    try {
+      await patchCandidatePreferences(payload);
+      showToast({ message: "Preferences saved." });
+    } catch (error) {
+      if (key === "notification_document_requests") setNotifDocs(!nextVal);
+      if (key === "notification_case_status") setNotifStatus(!nextVal);
+      if (key === "notification_payment_reminders") setNotifPay(!nextVal);
+      if (key === "notification_deadline_alerts") setNotifDeadline(!nextVal);
+      showToast({ variant: "danger", message: apiErrorMessage(error) });
+    } finally {
+      setPrefsSaving(false);
+    }
+  };
+
+  const handleSubmitFeedback = async () => {
+    setFeedbackSending(true);
+    try {
+      await submitCandidateFeedback({
+        rating,
+        experience_tags: Array.from(expSelected),
+        comments,
+      });
+      showToast({ message: "Thanks — your feedback has been recorded." });
+      setRating(4);
+      setExpSelected(new Set(["easy"]));
+      setComments("");
+    } catch (error) {
+      showToast({ variant: "danger", message: apiErrorMessage(error) });
+    } finally {
+      setFeedbackSending(false);
+    }
+  };
+
+  const handleRecordConsent = async () => {
+    setConsentSaving(true);
+    try {
+      const res = await postCandidateConsent({ terms_version: "2026-04" });
+      const s = res.data?.data?.settings;
+      if (s?.terms_accepted_at) setTermsAcceptedAt(s.terms_accepted_at);
+      if (s?.terms_version != null) setTermsVersion(s.terms_version);
+      showToast({ message: "Your acceptance has been recorded." });
+    } catch (error) {
+      showToast({ variant: "danger", message: apiErrorMessage(error) });
+    } finally {
+      setConsentSaving(false);
+    }
+  };
+
+  const handleDataDeletion = async () => {
+    setDeletionSaving(true);
+    try {
+      const res = await postCandidateDataDeletionRequest();
+      const at = res.data?.data?.data_deletion_requested_at;
+      if (at) setDataDeletionRequestedAt(at);
+      showToast({
+        message:
+          res.data?.message ||
+          "Request received. Our team will follow up in line with policy.",
+      });
+    } catch (error) {
+      showToast({ variant: "danger", message: apiErrorMessage(error) });
+    } finally {
+      setDeletionSaving(false);
+    }
+  };
+
+  const consentDateLabel = formatConsentDate(termsAcceptedAt);
 
   return (
     <div className="pb-10 animate-in fade-in duration-500">
@@ -279,88 +596,92 @@ const CandidateAccount = () => {
 
       {tab === "feedback" && (
         <div className="max-w-xl rounded-[1.25rem] border border-gray-100 bg-white p-6 shadow-sm md:p-8">
-          <h2 className="text-base font-black text-gray-900">
-            Share your experience
-          </h2>
-          <p className="text-sm font-bold text-gray-500 mt-1 mb-6">
-            Help us improve the platform with your feedback.
-          </p>
-
-          <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-2">
-            Overall rating
-          </label>
-          <div className="flex gap-2 mb-2" role="group" aria-label="Star rating">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setRating(n)}
-                className={`text-3xl leading-none transition-transform hover:scale-110 ${
-                  n <= rating ? "" : "grayscale opacity-40"
-                }`}
-                aria-label={`${n} star${n > 1 ? "s" : ""}`}
-              >
-                ⭐
-              </button>
-            ))}
-          </div>
-          <p className="text-sm font-black text-amber-600 mb-6">
-            {rating} out of 5 — {RATING_LABELS[rating]}
-          </p>
-
-          <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-2">
-            Experience feedback
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-6">
-            {EXP_TAGS.map((tag) => {
-              const on = expSelected.has(tag.id);
-              return (
-                <button
-                  key={tag.id}
-                  type="button"
-                  onClick={() => toggleExp(tag.id)}
-                  className={`rounded-xl border px-3.5 py-2.5 text-left text-sm font-bold transition-all ${
-                    on
-                      ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                      : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                  }`}
-                >
-                  <span className="mr-1.5" aria-hidden>
-                    {tag.emoji}
-                  </span>
-                  {tag.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <label
-            htmlFor="feedback-comments"
-            className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-2"
-          >
-            Comments
-          </label>
-          <textarea
-            id="feedback-comments"
-            value={comments}
-            onChange={(e) => setComments(e.target.value)}
-            placeholder="Share any specific feedback, suggestions, or comments…"
-            rows={5}
-            className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-3 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none resize-y min-h-[100px] mb-5"
-          />
-
-          {feedbackSent ? (
-            <p className="text-sm font-black text-emerald-600">
-              Thanks — your feedback has been recorded (demo).
-            </p>
+          {accountLoading ? (
+            <p className="text-sm font-bold text-gray-500">Loading…</p>
           ) : (
-            <button
-              type="button"
-              onClick={() => setFeedbackSent(true)}
-              className="rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-md shadow-primary/20 hover:bg-primary-dark transition-colors"
-            >
-              Submit feedback
-            </button>
+            <>
+              <h2 className="text-base font-black text-gray-900">
+                Share your experience
+              </h2>
+              <p className="text-sm font-bold text-gray-500 mt-1 mb-6">
+                Help us improve the platform with your feedback.
+              </p>
+
+              <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-2">
+                Overall rating
+              </label>
+              <div className="flex gap-2 mb-2" role="group" aria-label="Star rating">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setRating(n)}
+                    disabled={feedbackSending}
+                    className={`text-3xl leading-none transition-transform hover:scale-110 ${
+                      n <= rating ? "" : "grayscale opacity-40"
+                    }`}
+                    aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                  >
+                    ⭐
+                  </button>
+                ))}
+              </div>
+              <p className="text-sm font-black text-amber-600 mb-6">
+                {rating} out of 5 — {RATING_LABELS[rating]}
+              </p>
+
+              <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-2">
+                Experience feedback
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-6">
+                {EXP_TAGS.map((tag) => {
+                  const on = expSelected.has(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      disabled={feedbackSending}
+                      onClick={() => toggleExp(tag.id)}
+                      className={`rounded-xl border px-3.5 py-2.5 text-left text-sm font-bold transition-all ${
+                        on
+                          ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                          : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="mr-1.5" aria-hidden>
+                        {tag.emoji}
+                      </span>
+                      {tag.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <label
+                htmlFor="feedback-comments"
+                className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-2"
+              >
+                Comments
+              </label>
+              <textarea
+                id="feedback-comments"
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                disabled={feedbackSending}
+                placeholder="Share any specific feedback, suggestions, or comments…"
+                rows={5}
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-3 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none resize-y min-h-[100px] mb-5"
+              />
+
+              <button
+                type="button"
+                onClick={handleSubmitFeedback}
+                disabled={feedbackSending}
+                className="rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-md shadow-primary/20 hover:bg-primary-dark transition-colors disabled:opacity-60"
+              >
+                {feedbackSending ? "Submitting…" : "Submit feedback"}
+              </button>
+            </>
           )}
         </div>
       )}
@@ -371,70 +692,86 @@ const CandidateAccount = () => {
             <h2 className="text-sm font-black text-gray-900 border-b border-gray-100 pb-3 mb-5 flex items-center gap-2">
               <span aria-hidden>👤</span> Profile information
             </h2>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-secondary to-indigo-500 text-white flex items-center justify-center text-lg font-black shrink-0">
-                {initialsFromName(fullName || user?.name)}
-              </div>
-              <div>
-                <p className="text-sm font-black text-gray-900">
-                  {fullName || user?.name || "Candidate"}
-                </p>
-                <p className="text-xs font-bold text-gray-500 mt-0.5">
-                  Case: VT-2024-0841
-                </p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    window.alert("Demo: photo upload would open here.")
-                  }
-                  className="mt-2 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-black text-gray-600 hover:bg-gray-50"
-                >
-                  Change photo
-                </button>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
-                  Full name
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
-                  Phone
-                </label>
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => window.alert("Demo: profile changes saved.")}
-                className="mt-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-black text-white shadow-md shadow-primary/20 hover:bg-primary-dark"
-              >
-                Save changes
-              </button>
-            </div>
+            {accountLoading ? (
+              <p className="text-sm font-bold text-gray-500 py-8">Loading…</p>
+            ) : (
+              <>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-secondary to-indigo-500 text-white flex items-center justify-center text-lg font-black shrink-0">
+                    {initialsFromName(fullName || fullNameFromParts(reduxUser?.first_name, reduxUser?.last_name))}
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-gray-900">
+                      {fullName ||
+                        fullNameFromParts(reduxUser?.first_name, reduxUser?.last_name) ||
+                        "Candidate"}
+                    </p>
+                    <p className="text-xs font-bold text-gray-500 mt-0.5">
+                      Case:{" "}
+                      {caseInfo?.caseId
+                        ? caseInfo.caseId
+                        : "No case reference yet"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        window.alert("Photo upload is not available yet.")
+                      }
+                      className="mt-2 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-black text-gray-600 hover:bg-gray-50"
+                    >
+                      Change photo
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
+                      Full name
+                    </label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      disabled={profileSaving}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      readOnly
+                      disabled
+                      className="w-full rounded-xl border border-gray-200 bg-gray-100 px-3.5 py-2.5 text-sm font-bold text-gray-600 cursor-not-allowed outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
+                      Phone
+                    </label>
+                    <input
+                      type="text"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      disabled={profileSaving}
+                      placeholder="+44 7700900123"
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveProfile}
+                    disabled={profileSaving}
+                    className="mt-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-black text-white shadow-md shadow-primary/20 hover:bg-primary-dark disabled:opacity-60"
+                  >
+                    {profileSaving ? "Saving…" : "Save changes"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex flex-col gap-5">
@@ -461,25 +798,18 @@ const CandidateAccount = () => {
                       value={val}
                       onChange={(e) => setVal(e.target.value)}
                       placeholder="••••••••"
+                      disabled={passwordSaving}
                       className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
                     />
                   </div>
                 ))}
                 <button
                   type="button"
-                  onClick={() => {
-                    if (newPassword && newPassword !== confirmPassword) {
-                      window.alert("New password and confirmation do not match.");
-                      return;
-                    }
-                    window.alert("Demo: password updated.");
-                    setCurrentPassword("");
-                    setNewPassword("");
-                    setConfirmPassword("");
-                  }}
-                  className="mt-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-black text-white shadow-md shadow-primary/20 hover:bg-primary-dark"
+                  onClick={handleChangePassword}
+                  disabled={passwordSaving}
+                  className="mt-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-black text-white shadow-md shadow-primary/20 hover:bg-primary-dark disabled:opacity-60"
                 >
-                  Update password
+                  {passwordSaving ? "Updating…" : "Update password"}
                 </button>
               </div>
             </div>
@@ -494,11 +824,14 @@ const CandidateAccount = () => {
                     {twoFactorEnabled ? "2FA is enabled" : "2FA is disabled"}
                   </p>
                   <p className="text-xs font-bold text-gray-500 mt-0.5">
-                    {twoFactorEnabled ? "Your account is protected with 2FA" : "Enable 2FA for enhanced security"}
+                    {twoFactorEnabled
+                      ? "Your account is protected with 2FA"
+                      : "Enable 2FA for enhanced security"}
                   </p>
                 </div>
                 {twoFactorEnabled ? (
                   <button
+                    type="button"
                     onClick={() => {
                       setTwoFactorMode("disable");
                       setTwoFactorModalOpen(true);
@@ -509,6 +842,7 @@ const CandidateAccount = () => {
                   </button>
                 ) : (
                   <button
+                    type="button"
                     onClick={() => {
                       setTwoFactorMode("setup");
                       setTwoFactorModalOpen(true);
@@ -521,101 +855,142 @@ const CandidateAccount = () => {
               </div>
             </div>
 
-            {/* <div className="rounded-[1.25rem] border border-gray-100 bg-white p-6 shadow-sm">
+            <div className="rounded-[1.25rem] border border-gray-100 bg-white p-6 shadow-sm">
               <h2 className="text-sm font-black text-gray-900 border-b border-gray-100 pb-3 mb-2 flex items-center gap-2">
                 <span aria-hidden>🔔</span> Notification preferences
+                {prefsSaving ? (
+                  <span className="text-[10px] font-bold text-gray-400 normal-case">
+                    Saving…
+                  </span>
+                ) : null}
               </h2>
-              {[
-                {
-                  title: "Document requests",
-                  sub: "When caseworker requests a document",
-                  on: notifDocs,
-                  set: setNotifDocs,
-                },
-                {
-                  title: "Case status updates",
-                  sub: "When your application stage changes",
-                  on: notifStatus,
-                  set: setNotifStatus,
-                },
-                {
-                  title: "Payment reminders",
-                  sub: "Upcoming payment due dates",
-                  on: notifPay,
-                  set: setNotifPay,
-                },
-                {
-                  title: "Deadline alerts",
-                  sub: "Reminders 48h before deadlines",
-                  on: notifDeadline,
-                  set: setNotifDeadline,
-                },
-              ].map((row, i, arr) => (
-                <div
-                  key={row.title}
-                  className={`flex items-center justify-between gap-3 py-3 ${
-                    i < arr.length - 1 ? "border-b border-gray-100" : ""
-                  }`}
-                >
-                  <div>
-                    <p className="text-sm font-black text-gray-900">
-                      {row.title}
-                    </p>
-                    <p className="text-xs font-bold text-gray-500 mt-0.5">
-                      {row.sub}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={row.on}
-                    onClick={() => row.set(!row.on)}
-                    className={`relative h-[22px] w-10 shrink-0 rounded-full transition-colors ${
-                      row.on ? "bg-secondary" : "bg-gray-200"
+              {accountLoading ? (
+                <p className="text-sm font-bold text-gray-500 py-4">Loading…</p>
+              ) : (
+                [
+                  {
+                    key: "notification_document_requests",
+                    title: "Document requests",
+                    sub: "When caseworker requests a document",
+                    on: notifDocs,
+                  },
+                  {
+                    key: "notification_case_status",
+                    title: "Case status updates",
+                    sub: "When your application stage changes",
+                    on: notifStatus,
+                  },
+                  {
+                    key: "notification_payment_reminders",
+                    title: "Payment reminders",
+                    sub: "Upcoming payment due dates",
+                    on: notifPay,
+                  },
+                  {
+                    key: "notification_deadline_alerts",
+                    title: "Deadline alerts",
+                    sub: "Reminders 48h before deadlines",
+                    on: notifDeadline,
+                  },
+                ].map((row, i, arr) => (
+                  <div
+                    key={row.key}
+                    className={`flex items-center justify-between gap-3 py-3 ${
+                      i < arr.length - 1 ? "border-b border-gray-100" : ""
                     }`}
                   >
-                    <span
-                      className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                        row.on ? "translate-x-[18px]" : ""
-                      }`}
-                    />
-                  </button>
-                </div>
-              ))}
-            </div> */}
+                    <div>
+                      <p className="text-sm font-black text-gray-900">
+                        {row.title}
+                      </p>
+                      <p className="text-xs font-bold text-gray-500 mt-0.5">
+                        {row.sub}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={row.on}
+                      disabled={prefsSaving}
+                      onClick={() => handleNotifToggle(row.key, !row.on)}
+                      className={`relative h-[22px] w-10 shrink-0 rounded-full transition-colors ${
+                        row.on ? "bg-secondary" : "bg-gray-200"
+                      } disabled:opacity-50`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                          row.on ? "translate-x-[18px]" : ""
+                        }`}
+                      />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
 
             <div className="rounded-[1.25rem] border border-gray-100 bg-white p-6 shadow-sm">
               <h2 className="text-sm font-black text-gray-900 border-b border-gray-100 pb-3 mb-4 flex items-center gap-2">
                 <span aria-hidden>📜</span> Consent & terms
               </h2>
-              <p className="text-sm font-bold text-gray-500 leading-relaxed">
-                You agreed to our{" "}
-                <button
-                  type="button"
-                  className="text-secondary font-black hover:underline"
-                >
-                  Terms of service
-                </button>{" "}
-                and{" "}
-                <button
-                  type="button"
-                  className="text-secondary font-black hover:underline"
-                >
-                  Privacy policy
-                </button>{" "}
-                on 5 Apr 2026. Your data is processed securely in line with GDPR.
-              </p>
-              <button
-                type="button"
-                onClick={() =>
-                  window.alert(
-                    "Demo: data deletion request would be submitted to support.",
-                  )
-                }
-                className="mt-4 text-xs font-black text-red-500 hover:text-red-600"
-              >
-                Request data deletion
-              </button>
+              {accountLoading ? (
+                <p className="text-sm font-bold text-gray-500">Loading…</p>
+              ) : (
+                <>
+                  <p className="text-sm font-bold text-gray-500 leading-relaxed">
+                    Our{" "}
+                    <button type="button" className="text-secondary font-black hover:underline">
+                      Terms of service
+                    </button>{" "}
+                    and{" "}
+                    <button type="button" className="text-secondary font-black hover:underline">
+                      Privacy policy
+                    </button>
+                    {consentDateLabel ? (
+                      <>
+                        . You confirmed acceptance on{" "}
+                        <span className="text-gray-800 font-black">
+                          {consentDateLabel}
+                        </span>
+                        {termsVersion ? (
+                          <span className="text-gray-400">
+                            {" "}
+                            (version {termsVersion})
+                          </span>
+                        ) : null}
+                        .
+                      </>
+                    ) : (
+                      <>
+                        .{" "}
+                        <span className="text-gray-700 font-black">
+                          We do not have a recorded acceptance date for your account yet.
+                        </span>
+                      </>
+                    )}{" "}
+                    Your data is processed securely in line with GDPR.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRecordConsent}
+                    disabled={consentSaving}
+                    className="mt-4 rounded-xl border border-secondary/30 bg-secondary/10 px-4 py-2 text-xs font-black text-secondary hover:bg-secondary hover:text-white transition-colors disabled:opacity-60"
+                  >
+                    {consentSaving ? "Recording…" : "Record acceptance"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDataDeletion}
+                    disabled={deletionSaving || !!dataDeletionRequestedAt}
+                    className="mt-4 ml-0 block text-xs font-black text-red-500 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {dataDeletionRequestedAt
+                      ? `Data deletion requested on ${formatConsentDate(dataDeletionRequestedAt) || "—"}`
+                      : deletionSaving
+                        ? "Submitting request…"
+                        : "Request data deletion"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -631,19 +1006,19 @@ const CandidateAccount = () => {
       >
         {twoFactorMode === "setup" ? (
           <TwoFactorSetup
-            token="demo-token"
             onSetupComplete={() => {
               setTwoFactorEnabled(true);
               setTwoFactorModalOpen(false);
+              loadAccount();
             }}
             onCancel={() => setTwoFactorModalOpen(false)}
           />
         ) : (
           <TwoFactorDisable
-            token="demo-token"
             onDisableComplete={() => {
               setTwoFactorEnabled(false);
               setTwoFactorModalOpen(false);
+              loadAccount();
             }}
             onCancel={() => setTwoFactorModalOpen(false)}
           />
