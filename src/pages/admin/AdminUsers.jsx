@@ -371,6 +371,42 @@ export default function AdminUsers() {
     }
   };
 
+  const handleStatusToggle = async (user) => {
+    const statusMap = {
+      active: 'inactive',
+      inactive: 'active',
+      suspended: 'active'
+    };
+    const newStatus = statusMap[user.status] || 'active';
+    
+    try {
+      const res = await updateAdmin(user.id, {
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        country_code: user.country_code,
+        mobile: user.mobile,
+        role_id: user.role_id,
+        status: newStatus,
+      });
+      showToast({
+        message: res.data?.message || "Status updated successfully",
+        variant: "success",
+      });
+      const r = await fetchAdmins(
+        page,
+        limit,
+        debouncedSearch.trim(),
+        statusParam,
+      );
+      if (!r.ok) {
+        showToast({ message: getApiError(r.error), variant: "danger" });
+      }
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    }
+  };
+
   const handleExport = async () => {
     setExporting(true);
     try {
@@ -537,13 +573,15 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-black ${STATUS_CHIPS[formatStatusLabel(user.status)] ??
+                      <button
+                        type="button"
+                        onClick={() => handleStatusToggle(user)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-black cursor-pointer hover:opacity-80 transition-opacity ${STATUS_CHIPS[formatStatusLabel(user.status)] ??
                           "bg-gray-100 text-gray-500"
                           }`}
                       >
                         {formatStatusLabel(user.status)}
-                      </span>
+                      </button>
                     </td>
                     <td className="px-5 py-3.5 text-xs text-gray-500 font-mono whitespace-nowrap">
                       {user.last_login || "Never"}

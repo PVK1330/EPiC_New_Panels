@@ -1,38 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { RiUserAddLine } from "react-icons/ri";
 import { Search, Check } from "lucide-react";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
-import { INITIAL_CASES } from "../../data/casesData";
-
-const CASE_WORKERS = [
-  { id: "alice", name: "Alice Patel", active: 21 },
-  { id: "marcus", name: "Marcus Green", active: 16 },
-  { id: "fatima", name: "Fatima Khan", active: 18 },
-  { id: "james", name: "James Osei", active: 23 },
-  { id: "rina", name: "Rina Mehta", active: 13 },
-];
-
-const CASE_OPTIONS = INITIAL_CASES.map((c) => ({
-  value: c.caseId,
-  label: `${c.caseId} — ${c.candidate}`,
-}));
-
-const ASSIGN_TO_OPTIONS = CASE_WORKERS.map((w) => ({
-  value: w.id,
-  label: `${w.name} (${w.active} active)`,
-}));
-
-const TEAM = [
-  { name: "Alice Patel", pct: 87, val: 21, bar: "bg-blue-500" },
-  { name: "Marcus Green", pct: 65, val: 16, bar: "bg-green-500" },
-  { name: "Fatima Khan", pct: 72, val: 18, bar: "bg-amber-400" },
-  { name: "James Osei", pct: 92, val: 23, bar: "bg-red-500" },
-  { name: "Rina Mehta", pct: 50, val: 13, bar: "bg-blue-400" },
-];
+import { getCases, getCaseworkers, assignCase } from "../../services/caseApi";
 
 const AdminAssign = () => {
+  const [cases, setCases] = useState([]);
+  const [caseworkers, setCaseworkers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [caseId, setCaseId] = useState("");
   const [caseSearch, setCaseSearch] = useState("");
   const [assignTo, setAssignTo] = useState([]);
@@ -40,10 +17,75 @@ const AdminAssign = () => {
   const [reasonErr, setReasonErr] = useState("");
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [casesRes, caseworkersRes] = await Promise.all([
+        getCases(1, 1000),
+        getCaseworkers({ limit: 100 })
+      ]);
+      
+      if (casesRes?.data?.data?.cases) {
+        setCases(casesRes.data.data.cases);
+      }
+      if (caseworkersRes?.data?.data?.caseworkers) {
+        setCaseworkers(caseworkersRes.data.data.caseworkers);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const CASE_OPTIONS = useMemo(() => {
+    return cases.map((c) => ({
+      value: c.caseId,
+      label: `${c.caseId} — ${c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown'}`,
+      caseworkerIds: c.assignedcaseworkerId,
+    }));
+  }, [cases]);
+
+  const ASSIGN_TO_OPTIONS = useMemo(() => {
+    return caseworkers.map((w) => ({
+      value: w.id,
+      label: `${w.first_name} ${w.last_name}`,
+      active: cases.filter(c => c.assignedcaseworkerId?.includes(w.id)).length,
+    }));
+  }, [caseworkers, cases]);
+
+  const TEAM = useMemo(() => {
+    return caseworkers.map((w) => {
+      const activeCount = cases.filter(c => c.assignedcaseworkerId?.includes(w.id)).length;
+      const maxCount = Math.max(...caseworkers.map(cw => cases.filter(c => c.assignedcaseworkerId?.includes(cw.id)).length), 1);
+      const pct = Math.round((activeCount / maxCount) * 100);
+      const colors = ["bg-blue-500", "bg-green-500", "bg-amber-400", "bg-red-500", "bg-purple-500"];
+      return {
+        name: `${w.first_name} ${w.last_name}`,
+        pct,
+        val: activeCount,
+        bar: colors[caseworkers.indexOf(w) % colors.length],
+      };
+    });
+  }, [caseworkers, cases]);
+
   const current = useMemo(() => {
-    const selectedCase = INITIAL_CASES.find((c) => c.caseId === caseId);
-    return selectedCase || { caseworker: "Unassigned", caseLabel: "" };
-  }, [caseId]);
+    const selectedCase = cases.find((c) => c.caseId === caseId);
+    if (!selectedCase) return { caseworker: "Unassigned", caseLabel: "" };
+    
+    const cwNames = selectedCase.assignedcaseworkerId
+      ?.map(id => {
+        const cw = caseworkers.find(c => c.id === id);
+        return cw ? `${cw.first_name} ${cw.last_name}` : null;
+      })
+      .filter(Boolean)
+      .join(", ") || "Unassigned";
+    
+    return { caseworker: cwNames, caseLabel: selectedCase.caseId };
+  }, [caseId, cases, caseworkers]);
 
   const filteredCaseOptions = useMemo(() => {
     if (!caseSearch) return CASE_OPTIONS;
@@ -63,9 +105,14 @@ const AdminAssign = () => {
     });
   };
 
-  const recommended = "Rina Mehta";
+  const recommended = useMemo(() => {
+    if (TEAM.length === 0) return "No caseworkers available";
+    const minActive = Math.min(...TEAM.map(t => t.val));
+    const recommendedWorker = TEAM.find(t => t.val === minActive);
+    return recommendedWorker ? recommendedWorker.name : TEAM[0].name;
+  }, [TEAM]);
 
-  const submit = () => {
+  const submit = async () => {
     if (!caseId) {
       setReasonErr("Please select a case");
       return;
@@ -78,10 +125,39 @@ const AdminAssign = () => {
       setReasonErr("Reason is required");
       return;
     }
-    setReasonErr("");
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    
+    try {
+      const assignToNames = assignTo.map(id => {
+        const cw = caseworkers.find(c => c.id === id);
+        return cw ? `${cw.first_name} ${cw.last_name}` : id;
+      }).join(", ");
+      
+      await assignCase(caseId, {
+        assignTo,
+        assignToName: assignToNames,
+        reason
+      });
+      
+      setReasonErr("");
+      setSaved(true);
+      setCaseId("");
+      setAssignTo([]);
+      setReason("");
+      await fetchData();
+      setTimeout(() => setSaved(false), 2500);
+    } catch (error) {
+      console.error("Error assigning case:", error);
+      setReasonErr("Failed to assign case. Please try again.");
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -150,27 +226,27 @@ const AdminAssign = () => {
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Assign Caseworkers (Max 2)</label>
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {CASE_WORKERS.map((worker) => (
+                {ASSIGN_TO_OPTIONS.map((worker) => (
                   <label
-                    key={worker.id}
+                    key={worker.value}
                     className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                      assignTo.includes(worker.id)
+                      assignTo.includes(worker.value)
                         ? "border-secondary bg-secondary/5"
                         : "border-gray-200 hover:bg-gray-50"
                     }`}
                   >
                     <input
                       type="checkbox"
-                      checked={assignTo.includes(worker.id)}
-                      onChange={() => toggleWorkerSelection(worker.id)}
-                      disabled={!assignTo.includes(worker.id) && assignTo.length >= 2}
+                      checked={assignTo.includes(worker.value)}
+                      onChange={() => toggleWorkerSelection(worker.value)}
+                      disabled={!assignTo.includes(worker.value) && assignTo.length >= 2}
                       className="accent-secondary rounded border-gray-300"
                     />
                     <div className="flex-1">
-                      <p className="text-sm font-bold text-secondary">{worker.name}</p>
+                      <p className="text-sm font-bold text-secondary">{worker.label}</p>
                       <p className="text-xs text-gray-500">{worker.active} active cases</p>
                     </div>
-                    {assignTo.includes(worker.id) && (
+                    {assignTo.includes(worker.value) && (
                       <Check size={16} className="text-green-600" />
                     )}
                   </label>
@@ -215,7 +291,7 @@ const AdminAssign = () => {
             >
               Confirm Reassignment
             </Button>
-            {saved && <p className="text-xs font-bold text-green-600">Reassignment saved locally.</p>}
+            {saved && <p className="text-xs font-bold text-green-600">Case reassigned successfully!</p>}
           </div>
         </div>
 
