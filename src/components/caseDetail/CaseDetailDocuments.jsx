@@ -35,6 +35,9 @@ const CaseDetailDocuments = ({ documents }) => {
         </Button>
       </div>
       <div className="divide-y divide-gray-50">
+        {documents.length === 0 && (
+          <p className="px-5 py-10 text-center text-sm text-gray-400">No documents found.</p>
+        )}
         {documents.map((d) => (
           <div key={d.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-gray-50/80 transition-colors">
             <div className="p-2 rounded-xl bg-gray-100 text-secondary shrink-0 self-start">
