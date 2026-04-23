@@ -546,9 +546,9 @@ export default function Tasks() {
         bodyClassName="p-4 sm:p-6"
       >
         <div className="space-y-4">
-          <p className="text-sm font-bold text-gray-600">
+          {/* <p className="text-sm font-bold text-gray-600">
             Add a task for a case. Dates are saved locally in this demo until workflows are connected to the API.
-          </p>
+          </p> */}
           <div>
             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
               Task name

@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
+import { getCaseworkerCases } from "../../services/caseApi";
 
 const PAGE_SIZE = 7;
 
@@ -210,11 +211,14 @@ function loadColor(load) {
 const Cases = () => {
   const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
-  const [cases, setCases] = useState(() => [...CASES_DATA]);
+  const [cases, setCases] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10 });
   const [search, setSearch] = useState("");
   const [chip, setChip] = useState("all");
-  const [visaFilter, setVisaFilter] = useState("All visa types");
-  const [priorityFilter, setPriorityFilter] = useState("All priorities");
+  const [visaFilter, setVisaFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
   const [page, setPage] = useState(1);
   const [detailCase, setDetailCase] = useState(null);
   const [detailTab, setDetailTab] = useState("overview");
@@ -224,6 +228,71 @@ const Cases = () => {
   const [editCaseId, setEditCaseId] = useState(null);
   const [editCaseForm, setEditCaseForm] = useState(() => caseToEditForm(CASES_DATA[0]));
   const [editCaseErrors, setEditCaseErrors] = useState({});
+
+  // Fetch cases from API
+  useEffect(() => {
+    const fetchCases = async () => {
+      try {
+        setLoading(true);
+        const params = {
+          page,
+          limit: PAGE_SIZE,
+          search,
+          status: chip === "all" ? "" : chip,
+          priority: priorityFilter === "All priorities" ? "" : priorityFilter,
+          visaTypeId: visaFilter === "All visa types" ? "" : visaFilter,
+          sortBy: "created_at",
+          sortOrder: "DESC"
+        };
+        const response = await getCaseworkerCases(params);
+        
+        // Map API response to component structure
+        const mappedCases = response.data.data.cases.map(c => ({
+          caseId: c.caseId || `#C-${c.id}`,
+          candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : "Unknown",
+          business: c.sponsor ? c.sponsor.company_name || c.sponsor.first_name : "Unknown",
+          visa: c.visaType?.name || "Unknown",
+          status: mapApiStatus(c.status),
+          target: c.targetSubmissionDate || c.created_at,
+          priority: c.priority?.toLowerCase() || "medium",
+          payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
+          id: c.id
+        }));
+        
+        setCases(mappedCases);
+        setPagination(response.data.data.pagination);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching cases:", err);
+        setError("Failed to load cases. Please try again.");
+        // Fallback to demo data on error
+        setCases([...CASES_DATA]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCases();
+  }, [page, search, chip, visaFilter, priorityFilter]);
+
+  // Helper functions to map API data to UI format
+  const mapApiStatus = (status) => {
+    const statusMap = {
+      "Pending": "on_track",
+      "In Progress": "on_track",
+      "Completed": "completed",
+      "Approved": "completed",
+      "Rejected": "overdue",
+      "Cancelled": "overdue"
+    };
+    return statusMap[status] || "on_track";
+  };
+
+  const mapPaymentStatus = (paid, total) => {
+    if (!paid || paid === 0) return "outstanding";
+    if (paid >= total) return "paid";
+    return "partial";
+  };
 
   // ── Reassign state ──────────────────────────────────────────────────────────
   const [reassignCaseId, setReassignCaseId] = useState(null);
@@ -376,33 +445,13 @@ const Cases = () => {
   }, [reassignCaseId, reassignForm, closeReassign]);
   // ───────────────────────────────────────────────────────────────────────────
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return cases.filter((c) => {
-      if (q) {
-        const blob = `${c.caseId} ${c.candidate} ${c.business}`.toLowerCase();
-        if (!blob.includes(q)) return false;
-      }
-      if (chip === "active") {
-        if (!["on_track", "due_soon"].includes(c.status)) return false;
-      } else if (chip !== "all" && c.status !== chip) return false;
-
-      if (visaFilter !== "All visa types" && c.visa !== visaFilter) return false;
-      if (priorityFilter !== "All priorities") {
-        const pl = priorityFilter.toLowerCase();
-        if (c.priority !== pl) return false;
-      }
-      return true;
-    });
-  }, [cases, search, chip, visaFilter, priorityFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // Filtering is now handled by the API, so we use cases directly
+  const filtered = cases;
+  
+  // Use API pagination instead of client-side
+  const totalPages = Math.max(1, Math.ceil(pagination.total / PAGE_SIZE));
   const pageClamped = Math.min(page, totalPages);
-  const pageSlice = useMemo(() => {
-    const p = Math.min(page, totalPages);
-    const start = (p - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, page, totalPages]);
+  const pageSlice = cases; // API already paginates
 
   // The case object for the reassign modal title
   const reassignCase = reassignCaseId
@@ -417,7 +466,7 @@ const Cases = () => {
             All assigned cases
           </h1>
           <p className="text-sm font-bold text-gray-600 mt-1">
-            {cases.length} cases assigned to you
+            {pagination.total} cases assigned to you
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -441,70 +490,86 @@ const Cases = () => {
       </div>
 
       <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center">
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            size={18}
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Search cases, candidates…"
-            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {STATUS_CHIPS.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => {
-                setChip(c.id);
-                setPage(1);
-              }}
-              className={`rounded-full border px-3.5 py-1.5 text-xs font-black transition-colors ${chip === c.id
-                  ? "border-secondary bg-secondary/10 text-secondary"
-                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                }`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <select
-            value={visaFilter}
-            onChange={(e) => {
-              setVisaFilter(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-          >
-            {VISA_OPTIONS.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-          <select
-            value={priorityFilter}
-            onChange={(e) => {
-              setPriorityFilter(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-          >
-            {PRIORITY_OPTIONS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </div>
+        {loading && (
+          <div className="w-full py-8 text-center text-sm font-bold text-gray-500">
+            Loading cases...
+          </div>
+        )}
+        {error && (
+          <div className="w-full py-4 px-4 bg-red-50 border border-red-200 rounded-xl text-sm font-bold text-red-700">
+            {error}
+          </div>
+        )}
+        {!loading && !error && (
+          <>
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search cases, candidates…"
+                className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_CHIPS.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    setChip(c.id);
+                    setPage(1);
+                  }}
+                  className={`rounded-full border px-3.5 py-1.5 text-xs font-black transition-colors ${chip === c.id
+                      ? "border-secondary bg-secondary/10 text-secondary"
+                      : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                    }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={visaFilter}
+                onChange={(e) => {
+                  setVisaFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+              >
+                <option value="">All visa types</option>
+                {VISA_OPTIONS.filter((v) => v !== "All visa types").map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={priorityFilter}
+                onChange={(e) => {
+                  setPriorityFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+              >
+                <option value="">All priorities</option>
+                {PRIORITY_OPTIONS.filter((p) => p !== "All priorities").map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
@@ -687,7 +752,7 @@ const Cases = () => {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/80">
           <p className="text-xs font-bold text-gray-500 tabular-nums">
             Showing {(pageClamped - 1) * PAGE_SIZE + 1}–
-            {Math.min(pageClamped * PAGE_SIZE, filtered.length)} of {filtered.length}{" "}
+            {Math.min(pageClamped * PAGE_SIZE, pagination.total)} of {pagination.total}{" "}
             cases
           </p>
           <div className="flex items-center gap-1">
@@ -871,9 +936,9 @@ const Cases = () => {
         bodyClassName="p-4 sm:p-6"
       >
         <div className="space-y-4">
-          <p className="text-sm font-bold text-gray-600">
+          {/* <p className="text-sm font-bold text-gray-600">
             Update case details. Changes apply locally in this demo until the API is connected.
-          </p>
+          </p> */}
           <div>
             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
               Candidate name
