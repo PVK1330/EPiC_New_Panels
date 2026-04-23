@@ -29,21 +29,14 @@ const AdminAssign = () => {
           getTeamCapacity()
         ]);
         
-        console.log('Cases response:', casesRes);
-        console.log('Caseworkers response:', cwRes);
-        console.log('Capacity response:', capacityRes);
-        
         if (casesRes?.data?.data?.cases) {
           setCases(casesRes.data.data.cases);
-          console.log('Cases set:', casesRes.data.data.cases);
         }
         if (cwRes?.data?.data?.caseworkers) {
           setCaseworkers(cwRes.data.data.caseworkers);
-          console.log('Caseworkers set:', cwRes.data.data.caseworkers);
         }
         if (capacityRes?.data?.data) {
           setTeamCapacity(capacityRes.data.data);
-          console.log('Team capacity set:', capacityRes.data.data);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
