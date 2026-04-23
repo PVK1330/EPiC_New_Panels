@@ -84,14 +84,8 @@ export function getDefaultFieldVisibility() {
 const STORAGE_KEY_VISIBILITY = "elitepic_application_field_visibility";
 
 export function loadFieldVisibilityFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_VISIBILITY);
-    if (!raw) return getDefaultFieldVisibility();
-    const parsed = JSON.parse(raw);
-    return { ...getDefaultFieldVisibility(), ...parsed };
-  } catch {
-    return getDefaultFieldVisibility();
-  }
+  // Always return default visibility to show all fields
+  return getDefaultFieldVisibility();
 }
 
 export function saveFieldVisibilityToStorage(visibility) {

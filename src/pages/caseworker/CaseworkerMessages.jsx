@@ -5,15 +5,14 @@ import MessagePanel from "../../components/messaging/MessagePanel";
 import useMessaging from "../../hooks/useMessaging";
 
 const CaseworkerMessages = () => {
-  const { 
-    threads, 
-    messagesByThread, 
-    loading, 
-    fetchThread, 
-    sendMessage: apiSendMessage 
-  } = useMessaging();
-
   const [activeId, setActiveId] = useState(null);
+  const {
+    threads,
+    messagesByThread,
+    loading,
+    fetchThread,
+    sendMessage: apiSendMessage,
+  } = useMessaging({ activeThreadPartnerId: activeId });
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
@@ -27,6 +26,11 @@ const CaseworkerMessages = () => {
     return base;
   }, [threads, activeFilter]);
 
+  const activeCaseId = useMemo(
+    () => threads.find((t) => t.id === activeId)?.caseId ?? null,
+    [threads, activeId],
+  );
+
   // Set first thread as active initially if available
   useEffect(() => {
     if (filteredThreads.length > 0 && !activeId) {
@@ -37,9 +41,9 @@ const CaseworkerMessages = () => {
   // Load messages when active thread changes
   useEffect(() => {
     if (activeId) {
-      fetchThread(activeId);
+      fetchThread(activeId, activeCaseId);
     }
-  }, [activeId, fetchThread]);
+  }, [activeId, activeCaseId, fetchThread]);
 
   const handleSend = async () => {
     const text = draft.trim();
@@ -50,20 +54,26 @@ const CaseworkerMessages = () => {
       return;
     }
     
-    const result = await apiSendMessage(activeId, text);
+    const result = await apiSendMessage(activeId, text, activeCaseId);
     if (result.success) {
       setDraft("");
     }
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] gap-4 pb-6">
-      <div className="flex items-center justify-between px-2 shrink-0">
-        <div>
-          <h1 className="text-2xl font-black text-secondary tracking-tight">Messaging Center</h1>
-          <p className="text-sm font-bold text-gray-500">Manage case communications and team updates.</p>
+    <div className="flex flex-col min-h-0 h-[calc(100dvh-7rem)] sm:h-[calc(100vh-140px)] max-h-[calc(100dvh-4rem)] gap-3 sm:gap-4 pb-4 sm:pb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-2 shrink-0 min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-black text-secondary tracking-tight">
+            Messaging Center
+          </h1>
+          <p className="text-xs sm:text-sm font-bold text-gray-500 line-clamp-2">
+            Manage case communications and team updates.
+          </p>
         </div>
-        <FilterTabs active={activeFilter} onChange={setActiveFilter} />
+        <div className="shrink-0 overflow-x-auto pb-1 -mb-1">
+          <FilterTabs active={activeFilter} onChange={setActiveFilter} />
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
