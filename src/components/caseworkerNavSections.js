@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 /** Caseworker portal sidebar — sectioned nav aligned with portal workflow */
-export const caseworkerNavSections = [
+export const caseworkerNavSections = (taskCount = 0) => [
   {
     title: "Dashboard",
     standalone: true,
@@ -47,7 +47,7 @@ export const caseworkerNavSections = [
         to: "/caseworker/tasks",
         label: "Tasks",
         icon: ListChecks,
-        badge: 5,
+        badge: taskCount > 0 ? taskCount : null,
       },
       {
         to: "/caseworker/calendar",

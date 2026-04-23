@@ -1,8 +1,9 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useSelector } from "react-redux";
-import { Plus, Check } from "lucide-react";
+import { Plus, Check, Search } from "lucide-react";
 import Modal from "../../components/Modal";
 import { INITIAL_CASES } from "../../data/casesData";
+import api from "../../services/api";
 
 const TODAY_ISO = "2026-04-07";
 
@@ -30,17 +31,17 @@ function deriveSection(dueIso) {
 }
 
 function priorityToDisplay(p) {
-  const m = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
+  const m = { high: "High", medium: "Medium", low: "Low" };
   return m[p] || p;
 }
 
 function displayPriorityToKey(label) {
-  const m = { Critical: "critical", High: "high", Medium: "medium", Low: "low" };
+  const m = { High: "high", Medium: "medium", Low: "low" };
   return m[label] || "medium";
 }
 
 function priorityToPrioTone(p) {
-  if (p === "critical" || p === "high") return "red";
+  if (p === "high") return "red";
   if (p === "medium") return "yellow";
   return "gray";
 }
@@ -68,8 +69,7 @@ function buildNewTask(form, caseOptions) {
 
 const TASK_FILTERS = [
   { id: "all", label: "All tasks" },
-  { id: "my", label: "My tasks" },
-  { id: "today", label: "Due today" },
+  { id: "today_due", label: "Due today" },
   { id: "overdue", label: "Overdue" },
   { id: "completed", label: "Completed" },
 ];
@@ -127,6 +127,11 @@ export default function Tasks() {
   const user = useSelector((state) => state.auth.user);
   const [filter, setFilter] = useState("all");
   const [tasks, setTasks] = useState(() => INITIAL_TASKS);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 0 });
+  const [caseOptions, setCaseOptions] = useState([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState(emptyCreateForm);
   const [createErrors, setCreateErrors] = useState({});
@@ -140,21 +145,97 @@ export default function Tasks() {
   });
   const [editErrors, setEditErrors] = useState({});
 
+  // Fetch case options from API
+  useEffect(() => {
+    const fetchCaseOptions = async () => {
+      try {
+        const response = await api.get("/api/cases/dropdown");
+        if (response.data.status === "success") {
+          const options = response.data.data.map(c => ({
+            id: c.id,
+            caseId: c.caseId || `#C-${c.id}`,
+            candidate: c.candidateName || "Unknown"
+          }));
+          setCaseOptions(options);
+        }
+      } catch (error) {
+        console.error("Error fetching case options:", error);
+        setCaseOptions(DEFAULT_CASE_OPTIONS);
+      }
+    };
+
+    fetchCaseOptions();
+  }, []);
+
+  // Fetch tasks from API
+  useEffect(() => {
+    const fetchTasks = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.append("filter", filter);
+        if (search.trim()) params.append("search", search.trim());
+        params.append("page", page);
+        params.append("limit", 10);
+
+        const response = await api.get(`/api/tasks/assign?${params.toString()}`);
+        
+        if (response.data.status === "success") {
+          const apiTasks = response.data.data.tasks || [];
+          setPagination(response.data.data.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 });
+          
+          // Map API response to local task structure
+          const mappedTasks = apiTasks.map((task) => {
+            const dueIso = task.due_date ? task.due_date.split('T')[0] : TODAY_ISO;
+            const section = deriveSection(dueIso);
+            const isCompleted = task.status === "completed";
+            const overdue = section === "overdue" && !isCompleted;
+            
+            return {
+              id: task.id.toString(),
+              name: task.title,
+              caseId: task.case_number || (task.case_id ? `#C-${task.case_id}` : "#C-0000"),
+              candidate: task.candidate_name || task.assignee_name || "Unknown",
+              assignedBy: task.assigned_by_name || "Unknown",
+              due: dueIso,
+              status: isCompleted ? "Done" : overdue ? "Overdue" : task.status === "in-progress" ? "In progress" : "Pending",
+              statusTone: isCompleted ? "green" : overdue ? "red" : task.status === "in-progress" ? "blue" : "yellow",
+              priority: priorityToDisplay(task.priority),
+              prioTone: priorityToPrioTone(task.priority),
+              section,
+              mine: true,
+              done: isCompleted,
+              action: isCompleted ? "View" : overdue ? "Escalate" : "Update",
+            };
+          });
+          
+          setTasks(mappedTasks);
+        }
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, [filter, search, page]);
+
   // Filter case options to show only cases assigned to current caseworker
   const taskCaseOptions = useMemo(() => {
-    if (!user) return DEFAULT_CASE_OPTIONS;
+    if (!user) return caseOptions.length > 0 ? caseOptions : DEFAULT_CASE_OPTIONS;
 
     // Filter cases to show only those assigned to the current caseworker
     // In a real implementation, this would check the user's ID against case.caseworkerIds
     // For demo purposes, we'll show all cases but in production this would filter
-    const filteredCases = DEFAULT_CASE_OPTIONS.filter(option => {
+    const filteredCases = caseOptions.filter(option => {
       // In production: check if user's ID is in the case's caseworkerIds array
       // For now, return all for demo
       return true;
     });
 
-    return filteredCases.length > 0 ? filteredCases : DEFAULT_CASE_OPTIONS;
-  }, [user]);
+    return filteredCases.length > 0 ? filteredCases : caseOptions.length > 0 ? caseOptions : DEFAULT_CASE_OPTIONS;
+  }, [user, caseOptions]);
 
   const caseOptionsForEdit = useMemo(() => {
     const map = new Map();
@@ -179,15 +260,39 @@ export default function Tasks() {
     setCreateForm(emptyCreateForm(taskCaseOptions));
   }, [taskCaseOptions]);
 
-  const submitCreateTask = useCallback(() => {
+  const submitCreateTask = useCallback(async () => {
     const err = {};
     if (!createForm.name.trim()) err.name = "Required";
     if (!createForm.due) err.due = "Required";
     setCreateErrors(err);
     if (Object.keys(err).length) return;
-    const row = buildNewTask(createForm, taskCaseOptions);
-    setTasks((prev) => [row, ...prev]);
-    closeCreateModal();
+
+    try {
+      const selectedCase = taskCaseOptions.find(opt => opt.caseId === createForm.caseId);
+      const caseId = selectedCase?.id || null;
+
+      const data = {
+        title: createForm.name.trim(),
+        due_date: createForm.due,
+        priority: createForm.priority,
+        case_id: caseId,
+      };
+
+      const response = await api.post("/api/tasks", data);
+      
+      if (response.data.status === "success") {
+        // Refresh tasks to get the new task
+        setPage(1);
+        closeCreateModal();
+      }
+    } catch (error) {
+      console.error("Error creating task:", error);
+      if (error.response?.data?.message) {
+        setCreateErrors({ api: error.response.data.message });
+      } else {
+        setCreateErrors({ api: "Failed to create task" });
+      }
+    }
   }, [createForm, closeCreateModal, taskCaseOptions]);
 
   const openTaskView = useCallback((t) => {
@@ -214,7 +319,7 @@ export default function Tasks() {
     setEditErrors({});
   }, []);
 
-  const submitTaskEdit = useCallback(() => {
+  const submitTaskEdit = useCallback(async () => {
     if (!editTaskId) return;
     const err = {};
     if (!editForm.name.trim()) err.name = "Required";
@@ -222,55 +327,36 @@ export default function Tasks() {
     setEditErrors(err);
     if (Object.keys(err).length) return;
 
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id !== editTaskId) return t;
-        const c =
-          caseOptionsForEdit.find((x) => x.caseId === editForm.caseId) ||
-          TASK_CASE_OPTIONS[0];
-        const section = deriveSection(editForm.due);
-        const overdue = section === "overdue";
-        let status = t.status;
-        let statusTone = t.statusTone;
-        let action = t.action;
-        if (t.done) {
-          status = "Done";
-          statusTone = "green";
-          action = "View";
-        } else if (overdue) {
-          status = "Overdue";
-          statusTone = "red";
-          action = "Escalate";
-        } else {
-          action = "Update";
-          if (t.status === "In progress") {
-            status = "In progress";
-            statusTone = "blue";
-          } else {
-            status = "Pending";
-            statusTone = "yellow";
-          }
-        }
-        return {
-          ...t,
-          name: editForm.name.trim(),
-          caseId: c.caseId,
-          candidate: c.candidate,
-          due: editForm.due,
-          priority: priorityToDisplay(editForm.priority),
-          prioTone: priorityToPrioTone(editForm.priority),
-          section,
-          mine: true,
-          status,
-          statusTone,
-          action,
-        };
-      }),
-    );
-    closeTaskEdit();
+    try {
+      const selectedCase = caseOptionsForEdit.find(opt => opt.caseId === editForm.caseId);
+      const caseId = selectedCase?.id || null;
+
+      const data = {
+        title: editForm.name.trim(),
+        due_date: editForm.due,
+        priority: editForm.priority,
+        case_id: caseId,
+      };
+
+      const response = await api.put(`/api/tasks/${editTaskId}`, data);
+      
+      if (response.data.status === "success") {
+        // Refresh tasks to get the updated task
+        setPage(1);
+        closeTaskEdit();
+      }
+    } catch (error) {
+      console.error("Error updating task:", error);
+      if (error.response?.data?.message) {
+        setEditErrors({ api: error.response.data.message });
+      } else {
+        setEditErrors({ api: "Failed to update task" });
+      }
+    }
   }, [editTaskId, editForm, caseOptionsForEdit, closeTaskEdit]);
 
-  const toggleDone = useCallback((id) => {
+  const toggleDone = useCallback(async (id) => {
+    // Optimistically update local state
     setTasks((prev) =>
       prev.map((t) =>
         t.id === id
@@ -278,7 +364,38 @@ export default function Tasks() {
           : t,
       ),
     );
-  }, []);
+
+    try {
+      const task = tasks.find(t => t.id === id);
+      const newStatus = task?.done ? "pending" : "completed";
+      
+      const response = await api.put(`/api/tasks/${id}`, { status: newStatus });
+      
+      if (response.data.status === "success") {
+        // Refresh tasks to ensure sync with server
+        setPage(1);
+      } else {
+        // Revert optimistic update on failure
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === id
+              ? { ...t, done: t.done, status: t.status, statusTone: t.statusTone }
+              : t,
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("Error updating task status:", error);
+      // Revert optimistic update on error
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? { ...t, done: t.done, status: t.status, statusTone: t.statusTone }
+            : t,
+        ),
+      );
+    }
+  }, [tasks]);
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
@@ -494,7 +611,6 @@ export default function Tasks() {
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
-                <option value="critical">Critical</option>
               </select>
             </div>
           </div>
@@ -533,7 +649,8 @@ export default function Tasks() {
               ["Due date", formatDue(viewTask.due)],
               ["Status", viewTask.status],
               ["Priority", viewTask.priority],
-              ["Assigned", viewTask.mine ? "You" : "Team member"],
+              ["Assigned to", viewTask.mine ? "You" : "Team member"],
+              ["Assigned by", viewTask.assignedBy || "Unknown"],
             ].map(([label, val]) => (
               <div key={label}>
                 <dt className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -629,7 +746,6 @@ export default function Tasks() {
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
-                <option value="critical">Critical</option>
               </select>
             </div>
           </div>
@@ -652,21 +768,39 @@ export default function Tasks() {
         </div>
       </Modal>
 
-      <div className="flex flex-wrap gap-2">
-        {TASK_FILTERS.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            onClick={() => setFilter(f.id)}
-            className={`rounded-full border px-3.5 py-1.5 text-xs font-black transition-colors ${
-              filter === f.id
-                ? "border-secondary bg-secondary/10 text-secondary"
-                : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex flex-wrap gap-2">
+          {TASK_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => {
+                setFilter(f.id);
+                setPage(1);
+              }}
+              className={`rounded-full border px-3.5 py-1.5 text-xs font-black transition-colors ${
+                filter === f.id
+                  ? "border-secondary bg-secondary/10 text-secondary"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search tasks..."
+            className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 py-2 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+          />
+        </div>
       </div>
 
       {filter === "all" && (
@@ -708,6 +842,36 @@ export default function Tasks() {
             renderTable(filtered)
           )}
         </section>
+      )}
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+          <p className="text-xs font-bold text-gray-500">
+            Showing {((page - 1) * pagination.limit) + 1} to {Math.min(page * pagination.limit, pagination.total)} of {pagination.total} tasks
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-black text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-bold text-gray-600 py-1.5">
+              Page {page} of {pagination.totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+              disabled={page === pagination.totalPages}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-black text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

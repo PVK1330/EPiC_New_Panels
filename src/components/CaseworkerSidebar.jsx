@@ -3,12 +3,31 @@ import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../store/slices/authSlice";
 import { LogOut, HelpCircle, X } from "lucide-react";
 import eliteLogo from "../assets/elitepic_logo.png";
-import { caseworkerNavSections as navSections } from "./caseworkerNavSections";
+import { caseworkerNavSections } from "./caseworkerNavSections";
+import { useState, useEffect } from "react";
+import api from "../services/api";
 
 const CaseworkerSidebar = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
+  const [taskCount, setTaskCount] = useState(0);
+
+  // Fetch task count
+  useEffect(() => {
+    const fetchTaskCount = async () => {
+      try {
+        const response = await api.get("/api/tasks/assign?filter=overdue&limit=1");
+        if (response.data.status === "success") {
+          setTaskCount(response.data.data.pagination?.total || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching task count:", error);
+      }
+    };
+
+    fetchTaskCount();
+  }, []);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -65,7 +84,7 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
 
         <nav className="flex-1 overflow-y-auto no-scrollbar py-3 min-h-0">
           <div className="px-4 py-3 overflow-y-auto">
-            {navSections.map((section, sectionIdx) => (
+            {caseworkerNavSections(taskCount).map((section, sectionIdx) => (
               <div key={`${section.title}-${sectionIdx}`} className="mb-1">
                 {!section.standalone && section.title && (
                   <p className="text-[9.5px] font-black uppercase tracking-[0.18em] text-gray-400 px-3 pt-3 pb-1.5">
