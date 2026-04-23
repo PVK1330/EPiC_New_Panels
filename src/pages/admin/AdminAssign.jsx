@@ -1,51 +1,61 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { RiUserAddLine } from "react-icons/ri";
 import { Search, Check } from "lucide-react";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
-import { getCases, getCaseworkers, assignCase } from "../../services/caseApi";
+import { getCases, getCaseworkers, assignCase, getTeamCapacity } from "../../services/caseApi";
+import { useToast } from "../../context/ToastContext";
 
 const AdminAssign = () => {
-  const [cases, setCases] = useState([]);
-  const [caseworkers, setCaseworkers] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { showToast } = useToast();
   const [caseId, setCaseId] = useState("");
   const [caseSearch, setCaseSearch] = useState("");
   const [assignTo, setAssignTo] = useState([]);
   const [reason, setReason] = useState("");
   const [reasonErr, setReasonErr] = useState("");
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [cases, setCases] = useState([]);
+  const [caseworkers, setCaseworkers] = useState([]);
+  const [teamCapacity, setTeamCapacity] = useState([]);
 
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [casesRes, cwRes, capacityRes] = await Promise.all([
+          getCases(),
+          getCaseworkers(),
+          getTeamCapacity()
+        ]);
+        
+        console.log('Cases response:', casesRes);
+        console.log('Caseworkers response:', cwRes);
+        console.log('Capacity response:', capacityRes);
+        
+        if (casesRes?.data?.data?.cases) {
+          setCases(casesRes.data.data.cases);
+          console.log('Cases set:', casesRes.data.data.cases);
+        }
+        if (cwRes?.data?.data?.caseworkers) {
+          setCaseworkers(cwRes.data.data.caseworkers);
+          console.log('Caseworkers set:', cwRes.data.data.caseworkers);
+        }
+        if (capacityRes?.data?.data) {
+          setTeamCapacity(capacityRes.data.data);
+          console.log('Team capacity set:', capacityRes.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
     fetchData();
   }, []);
-
-  const fetchData = async () => {
-    try {
-      const [casesRes, caseworkersRes] = await Promise.all([
-        getCases(1, 1000),
-        getCaseworkers({ limit: 100 })
-      ]);
-      
-      if (casesRes?.data?.data?.cases) {
-        setCases(casesRes.data.data.cases);
-      }
-      if (caseworkersRes?.data?.data?.caseworkers) {
-        setCaseworkers(caseworkersRes.data.data.caseworkers);
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const CASE_OPTIONS = useMemo(() => {
     return cases.map((c) => ({
       value: c.caseId,
       label: `${c.caseId} — ${c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown'}`,
-      caseworkerIds: c.assignedcaseworkerId,
     }));
   }, [cases]);
 
@@ -53,38 +63,29 @@ const AdminAssign = () => {
     return caseworkers.map((w) => ({
       value: w.id,
       label: `${w.first_name} ${w.last_name}`,
-      active: cases.filter(c => c.assignedcaseworkerId?.includes(w.id)).length,
     }));
-  }, [caseworkers, cases]);
+  }, [caseworkers]);
 
   const TEAM = useMemo(() => {
-    return caseworkers.map((w) => {
-      const activeCount = cases.filter(c => c.assignedcaseworkerId?.includes(w.id)).length;
-      const maxCount = Math.max(...caseworkers.map(cw => cases.filter(c => c.assignedcaseworkerId?.includes(cw.id)).length), 1);
-      const pct = Math.round((activeCount / maxCount) * 100);
-      const colors = ["bg-blue-500", "bg-green-500", "bg-amber-400", "bg-red-500", "bg-purple-500"];
-      return {
-        name: `${w.first_name} ${w.last_name}`,
-        pct,
-        val: activeCount,
-        bar: colors[caseworkers.indexOf(w) % colors.length],
-      };
-    });
-  }, [caseworkers, cases]);
+    return teamCapacity.map((m) => ({
+      name: m.name,
+      pct: Math.min(100, (m.val / 25) * 100),
+      val: m.val,
+      bar: m.val >= 20 ? "bg-red-500" : m.val >= 15 ? "bg-amber-400" : m.val >= 10 ? "bg-green-500" : "bg-blue-500",
+    }));
+  }, [teamCapacity]);
 
   const current = useMemo(() => {
     const selectedCase = cases.find((c) => c.caseId === caseId);
-    if (!selectedCase) return { caseworker: "Unassigned", caseLabel: "" };
-    
-    const cwNames = selectedCase.assignedcaseworkerId
-      ?.map(id => {
-        const cw = caseworkers.find(c => c.id === id);
-        return cw ? `${cw.first_name} ${cw.last_name}` : null;
-      })
-      .filter(Boolean)
-      .join(", ") || "Unassigned";
-    
-    return { caseworker: cwNames, caseLabel: selectedCase.caseId };
+    const cwIds = selectedCase?.assignedcaseworkerId || [];
+    const cwNames = caseworkers
+      .filter(cw => cwIds.includes(cw.id))
+      .map(cw => `${cw.first_name} ${cw.last_name}`)
+      .join(', ');
+    return {
+      caseworker: cwNames || "Unassigned",
+      caseLabel: selectedCase ? `${selectedCase.caseId} — ${selectedCase.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : 'Unknown'}` : ""
+    };
   }, [caseId, cases, caseworkers]);
 
   const filteredCaseOptions = useMemo(() => {
@@ -106,11 +107,10 @@ const AdminAssign = () => {
   };
 
   const recommended = useMemo(() => {
-    if (TEAM.length === 0) return "No caseworkers available";
-    const minActive = Math.min(...TEAM.map(t => t.val));
-    const recommendedWorker = TEAM.find(t => t.val === minActive);
-    return recommendedWorker ? recommendedWorker.name : TEAM[0].name;
-  }, [TEAM]);
+    if (teamCapacity.length === 0) return null;
+    const lowest = teamCapacity.reduce((min, curr) => curr.val < min.val ? curr : min, teamCapacity[0]);
+    return lowest.name;
+  }, [teamCapacity]);
 
   const submit = async () => {
     if (!caseId) {
@@ -125,39 +125,53 @@ const AdminAssign = () => {
       setReasonErr("Reason is required");
       return;
     }
-    
+    setReasonErr("");
+    setLoading(true);
     try {
-      const assignToNames = assignTo.map(id => {
-        const cw = caseworkers.find(c => c.id === id);
-        return cw ? `${cw.first_name} ${cw.last_name}` : id;
-      }).join(", ");
+      const assignToNames = caseworkers
+        .filter(cw => assignTo.includes(cw.id))
+        .map(cw => `${cw.first_name} ${cw.last_name}`)
+        .join(', ');
       
       await assignCase(caseId, {
-        assignTo,
+        assignTo: assignTo,
         assignToName: assignToNames,
-        reason
+        reason: reason
       });
       
-      setReasonErr("");
-      setSaved(true);
+      showToast({
+        message: "Case reassigned successfully",
+        variant: "success"
+      });
+      
+      // Refresh data
+      const [casesRes, capacityRes] = await Promise.all([
+        getCases(),
+        getTeamCapacity()
+      ]);
+      
+      if (casesRes?.data?.data?.cases) {
+        setCases(casesRes.data.data.cases);
+      }
+      if (capacityRes?.data?.data) {
+        setTeamCapacity(capacityRes.data.data);
+      }
+      
       setCaseId("");
       setAssignTo([]);
       setReason("");
-      await fetchData();
+      setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (error) {
-      console.error("Error assigning case:", error);
-      setReasonErr("Failed to assign case. Please try again.");
+      console.error('Error assigning case:', error);
+      showToast({
+        message: error.response?.data?.message || "Failed to reassign case",
+        variant: "danger"
+      });
+    } finally {
+      setLoading(false);
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <motion.div
@@ -226,27 +240,27 @@ const AdminAssign = () => {
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Assign Caseworkers (Max 2)</label>
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {ASSIGN_TO_OPTIONS.map((worker) => (
+                {caseworkers.map((worker) => (
                   <label
-                    key={worker.value}
+                    key={worker.id}
                     className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                      assignTo.includes(worker.value)
+                      assignTo.includes(worker.id)
                         ? "border-secondary bg-secondary/5"
                         : "border-gray-200 hover:bg-gray-50"
                     }`}
                   >
                     <input
                       type="checkbox"
-                      checked={assignTo.includes(worker.value)}
-                      onChange={() => toggleWorkerSelection(worker.value)}
-                      disabled={!assignTo.includes(worker.value) && assignTo.length >= 2}
+                      checked={assignTo.includes(worker.id)}
+                      onChange={() => toggleWorkerSelection(worker.id)}
+                      disabled={!assignTo.includes(worker.id) && assignTo.length >= 2}
                       className="accent-secondary rounded border-gray-300"
                     />
                     <div className="flex-1">
-                      <p className="text-sm font-bold text-secondary">{worker.label}</p>
-                      <p className="text-xs text-gray-500">{worker.active} active cases</p>
+                      <p className="text-sm font-bold text-secondary">{worker.first_name} {worker.last_name}</p>
+                      <p className="text-xs text-gray-500">{worker.email}</p>
                     </div>
-                    {assignTo.includes(worker.value) && (
+                    {assignTo.includes(worker.id) && (
                       <Check size={16} className="text-green-600" />
                     )}
                   </label>
@@ -287,11 +301,11 @@ const AdminAssign = () => {
               variant="primary"
               className="rounded-xl w-full sm:w-auto"
               onClick={submit}
-              disabled={!caseId || assignTo.length === 0}
+              disabled={!caseId || assignTo.length === 0 || loading}
             >
-              Confirm Reassignment
+              {loading ? 'Assigning...' : 'Confirm Reassignment'}
             </Button>
-            {saved && <p className="text-xs font-bold text-green-600">Case reassigned successfully!</p>}
+            {saved && <p className="text-xs font-bold text-green-600">Reassignment saved successfully.</p>}
           </div>
         </div>
 
@@ -317,7 +331,12 @@ const AdminAssign = () => {
             <p className="text-xs text-gray-500 leading-relaxed">
               <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1.5 align-middle" />
               Recommended:{" "}
-              <span className="font-black text-green-600">{recommended}</span> has lowest active caseload
+              {recommended ? (
+                <span className="font-black text-green-600">{recommended}</span>
+              ) : (
+                <span className="text-gray-400">Loading...</span>
+              )}
+              {recommended && " has lowest active caseload"}
             </p>
           </div>
         </div>
@@ -325,5 +344,6 @@ const AdminAssign = () => {
     </motion.div>
   );
 };
+
 
 export default AdminAssign;

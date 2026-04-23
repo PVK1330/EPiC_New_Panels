@@ -306,6 +306,7 @@ export default function AdminBusinesses() {
     if (!createForm.country_code.trim())
       errs.country_code = "Country code is required";
     if (!createForm.mobile.trim()) errs.mobile = "Mobile is required";
+    if (!createForm.companyName.trim()) errs.companyName = "Company name is required";
     if (!createForm.password) errs.password = "Password is required";
     else if (createForm.password.length < PASSWORD_MIN)
       errs.password = `Password must be at least ${PASSWORD_MIN} characters`;
@@ -326,6 +327,7 @@ export default function AdminBusinesses() {
     if (!editForm.country_code.trim())
       errs.country_code = "Country code is required";
     if (!editForm.mobile.trim()) errs.mobile = "Mobile is required";
+    if (!editForm.companyName.trim()) errs.companyName = "Company name is required";
     return errs;
   };
 
@@ -727,7 +729,7 @@ export default function AdminBusinesses() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 text-left">
-                {["Company", "Status", "Licence Status", "Licence Expiry", "Active Cases", "Sponsored Workers", "Risk Score", "Outstanding", "Actions"].map(
+                {["Company", "User Name", "Status", "Licence Status", "Licence Expiry", "Active Cases", "Sponsored Workers", "Risk Score", "Outstanding", "Actions"].map(
                   (h) => (
                     <th
                       key={h}
@@ -743,7 +745,7 @@ export default function AdminBusinesses() {
               {!loading && sponsors.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-5 py-12 text-center text-sm text-gray-400"
                   >
                     No sponsors found.
@@ -752,7 +754,8 @@ export default function AdminBusinesses() {
               ) : (
                 sponsors.map((user, idx) => {
                   const profile = user.sponsorProfile || {};
-                  const companyName = profile.companyName || `${user.first_name} ${user.last_name}`;
+                  const companyName = profile.companyName || "—";
+                  const userName = `${user.first_name} ${user.last_name}`;
                   const initials = profile.companyName ? profile.companyName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) : initialsFrom(user);
                   const licenceStatus = profile.licenceStatus || "—";
                   const licenceExpiry = profile.licenceExpiryDate ? new Date(profile.licenceExpiryDate).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" }) : "—";
@@ -781,6 +784,9 @@ export default function AdminBusinesses() {
                             {companyName}
                           </span>
                         </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">
+                        {userName}
                       </td>
                       <td className="px-4 py-3.5 whitespace-nowrap">
                         <button

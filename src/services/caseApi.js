@@ -30,3 +30,5 @@ export const getCaseworkers = (params = {}) => api.get(`/api/caseworker`, { para
 export const updateCaseStatus = (id, status) => api.put(`/api/cases/${id}`, { status });
 
 export const exportCases = (params = {}) => api.get(`/api/cases/export`, { params, responseType: 'blob' });
+
+export const getTeamCapacity = () => api.get(`/api/cases/capacity`);

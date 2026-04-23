@@ -39,7 +39,7 @@ const AdminPermissions = () => {
       </div>
 
       {/* ── Navigation Tabs (Sticky) ─────────────────────────────────────────── */}
-      <div className="sticky top-[-1px] z-40 bg-[#fafafa] pt-2 pb-3 border-b border-gray-100 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 transition-shadow">
+      <div className="sticky top-0 z-50 bg-[#fafafa] pt-2 pb-3 border-b border-gray-100 shadow-sm -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         <PermissionsTabBar
           tabs={TABS}
           activeId={activeTab}
