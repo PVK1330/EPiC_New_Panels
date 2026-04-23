@@ -161,14 +161,7 @@ export default function AdminUsers() {
     return () => {
       cancelled = true;
     };
-  }, [
-    page,
-    debouncedSearch,
-    statusFilter,
-    fetchAdmins,
-    showToast,
-    statusParam,
-  ]);
+  }, [page, debouncedSearch, statusParam]);
 
   const closeModal = () => {
     setModal({ type: null, data: null });

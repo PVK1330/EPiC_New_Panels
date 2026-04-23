@@ -150,9 +150,9 @@ const SegregationPanel = () => {
           <h3 className="text-sm font-black text-secondary">Permission Count per Role</h3>
           <p className="text-xs text-gray-400 mt-0.5">Number of permissions assigned to each role</p>
         </div>
-        <div className="overflow-auto max-h-[400px] custom-scrollbar">
+        <div className="overflow-auto max-h-[400px]">
           <table className="w-full text-sm border-separate border-spacing-0">
-            <thead className="sticky top-0 z-10 bg-gray-50">
+            <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
               <tr className="bg-gray-50">
                 <th className="px-5 py-3 text-left text-[11px] font-black text-gray-400 uppercase tracking-wider">Role</th>
                 <th className="px-5 py-3 text-center text-[11px] font-black text-gray-400 uppercase tracking-wider">Permissions</th>
@@ -162,8 +162,8 @@ const SegregationPanel = () => {
             <tbody className="divide-y divide-gray-50 bg-white">
               {rolePermissions?.map((row) => {
                 const maxRolePerms = Math.max(...(rolePermissions.map((r) => r.permissionCount)), 1);
-                const pct = summary?.totalPermissions > 0
-                  ? Math.round((row.permissionCount / summary.totalPermissions) * 100)
+                const pct = maxRolePerms > 0
+                  ? Math.round((row.permissionCount / maxRolePerms) * 100)
                   : 0;
                 return (
                   <tr key={row.roleId} className="hover:bg-gray-50/60 bg-white border-b border-gray-50">

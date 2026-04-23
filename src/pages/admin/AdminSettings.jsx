@@ -851,7 +851,7 @@ VisaFlow Team`,
   const currentEmailDraft = emailDrafts[emailTemplateKey] || { subject: "", body: "" };
 
   return (
-    <div className="space-y-6 sm:space-y-8 pb-10 max-w-[1400px] mx-auto w-full">
+    <div className="space-y-6 sm:space-y-8 pb-10 max-w-[1600px] mx-auto w-full">
       <motion.div
         className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
         initial={{ opacity: 0, y: -12 }}
@@ -878,13 +878,25 @@ VisaFlow Team`,
         </div>
       </motion.div>
 
-      <div className="space-y-3">
-        <h2 className="text-xs font-black text-gray-400 uppercase tracking-wider px-0.5">Settings</h2>
-        <SegmentedTabBar tabs={CONFIG_TABS} activeId={configTab} onChange={setConfigTab} layoutId="admin-settings-config-tab" />
-      </div>
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left Sidebar - Vertical Tabs */}
+        <div className="lg:w-64 shrink-0">
+          <div className="lg:sticky lg:top-6">
+            <h2 className="text-xs font-black text-gray-400 uppercase tracking-wider px-0.5 mb-3">Settings</h2>
+            <SegmentedTabBar 
+              tabs={CONFIG_TABS} 
+              activeId={configTab} 
+              onChange={setConfigTab} 
+              layoutId="admin-settings-config-tab" 
+              vertical={true}
+            />
+          </div>
+        </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden min-h-[200px]">
-        <AnimatePresence mode="wait">
+        {/* Right Content Area */}
+        <div className="flex-1 min-w-0">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden min-h-[500px]">
+            <AnimatePresence mode="wait">
           {configTab === "account" && (
             <motion.div key="account" className="p-5 sm:p-6 space-y-8" {...panelMotion}>
               {loadingMe ? (
@@ -1459,6 +1471,8 @@ VisaFlow Team`,
             </motion.div>
           )}
         </AnimatePresence>
+          </div>
+        </div>
       </div>
 
       <Modal
