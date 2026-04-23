@@ -31,8 +31,6 @@ export const updateCaseStatus = (id, status) => api.put(`/api/cases/${id}`, { st
 
 export const exportCases = (params = {}) => api.get(`/api/cases/export`, { params, responseType: 'blob' });
 
-<<<<<<< HEAD
 export const getCaseworkerCases = (params = {}) => api.get(`/api/caseworker/cases`, { params });
-=======
+
 export const getTeamCapacity = () => api.get(`/api/cases/capacity`);
->>>>>>> 9489559050ccadd98a3af9e5f3b48c3af9e9c59f
