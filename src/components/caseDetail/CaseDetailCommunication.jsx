@@ -3,10 +3,23 @@ import { motion } from "framer-motion";
 import Button from "../Button";
 
 const CaseDetailCommunication = ({ threads, messages }) => {
-  const [activeId, setActiveId] = useState(threads.find((t) => t.active)?.id || threads[0]?.id);
+  const [activeId, setActiveId] = useState(threads.find((t) => t.active)?.id ?? threads[0]?.id ?? null);
   const [draft, setDraft] = useState("");
 
-  const active = threads.find((t) => t.id === activeId) || threads[0];
+  const active = threads.find((t) => t.id === activeId) ?? threads[0] ?? null;
+
+  if (threads.length === 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="bg-white rounded-xl border border-gray-100 shadow-sm p-10 text-center text-sm text-gray-400"
+      >
+        No communications found for this case.
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

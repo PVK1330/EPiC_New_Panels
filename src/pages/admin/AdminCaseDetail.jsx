@@ -17,6 +17,28 @@ import CaseDetailAuditLog from "../../components/caseDetail/CaseDetailAuditLog";
 import { CASE_DETAIL_TABS, TAB_IDS, DEFAULT_CASE_DETAIL } from "../../components/caseDetail/caseDetailData";
 import { getCaseDetails } from "../../services/caseDetailApi";
 
+const DOC_STATUS_LABEL = {
+  missing: "Missing",
+  uploaded: "Uploaded",
+  under_review: "Under Review",
+  approved: "Approved",
+  rejected: "Rejected",
+};
+const DOC_STATUS_CLASS = {
+  missing: "bg-red-100 text-red-700",
+  uploaded: "bg-blue-100 text-blue-800",
+  under_review: "bg-amber-100 text-amber-800",
+  approved: "bg-green-100 text-green-800",
+  rejected: "bg-red-100 text-red-700",
+};
+const TIMELINE_DOT = {
+  case_created: "done", document_uploaded: "done", document_reviewed: "done",
+  payment_received: "done", payment_recorded: "done", case_closed: "done",
+  note_added: "done", communication_sent: "done", communication_received: "done",
+  status_changed: "active", case_updated: "active", case_reopened: "active", assignment_changed: "active",
+  deadline_updated: "warn", reminder_sent: "warn",
+};
+
 const AdminCaseDetail = () => {
   const { caseId } = useParams();
   const [tab, setTab] = useState(TAB_IDS.overview);
@@ -49,21 +71,73 @@ const AdminCaseDetail = () => {
 
   const data = useMemo(() => {
     if (!caseData) {
-      return {
-        ...DEFAULT_CASE_DETAIL,
-        caseId: caseId || DEFAULT_CASE_DETAIL.caseId,
-      };
+      return { ...DEFAULT_CASE_DETAIL, caseId: caseId || DEFAULT_CASE_DETAIL.caseId };
     }
 
-    const { overview, candidate, business, visaType, caseworkers, keyDates, financial, documents, timeline, communications, caseNotes } = caseData;
+    const { overview, candidate, business, visaType, caseworkers, keyDates, financial, documents, timeline, communications, notes } = caseData;
+
+    // Map documents list to component-expected shape
+    const docList = (documents?.list || []).map(doc => ({
+      id: doc.id,
+      name: doc.documentName || doc.userFileName || "Unnamed Document",
+      meta: [
+        doc.uploader ? `Uploaded by ${doc.uploader.first_name} ${doc.uploader.last_name}` : null,
+        doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : null,
+        doc.documentType || null,
+      ].filter(Boolean).join(" · "),
+      status: DOC_STATUS_LABEL[doc.status] || doc.status,
+      statusClass: DOC_STATUS_CLASS[doc.status] || "bg-gray-100 text-gray-600",
+      actions: doc.status === "under_review" ? "review" : null,
+    }));
+
+    // Map timeline to component-expected shape
+    const timelineList = (timeline || []).map(item => ({
+      id: item.id,
+      dot: TIMELINE_DOT[item.actionType] || "done",
+      time: item.actionDate ? new Date(item.actionDate).toLocaleString() : "N/A",
+      desc: item.description,
+      user: item.performer
+        ? `by ${item.performer.first_name} ${item.performer.last_name}`
+        : item.isSystemAction ? "by System (Auto)" : "by Unknown",
+    }));
+
+    // Map payment history to component-expected shape
+    const paymentHistory = (financial?.payments || []).map(p => ({
+      date: p.paymentDate || "N/A",
+      amount: `$${parseFloat(p.amount || 0).toLocaleString()}`,
+      method: p.paymentMethod || "N/A",
+      invoice: p.invoiceNumber || "N/A",
+    }));
+
+    // Map notes to component-expected shape (API returns field as "notes")
+    const notesList = (notes || []).map(n => ({
+      author: n.author ? `${n.author.first_name} ${n.author.last_name}` : "Unknown",
+      date: n.created_at ? new Date(n.created_at).toLocaleDateString() : "N/A",
+      body: n.content || "",
+    }));
+
+    // Map communications to threads shape
+    const threadsList = (communications || []).map((c, i) => ({
+      id: c.id,
+      name: c.sender
+        ? `${c.sender.first_name} ${c.sender.last_name}`
+        : c.recipientEmail || `Thread ${i + 1}`,
+      preview: c.subject || (c.message ? c.message.substring(0, 60) : "No content"),
+      active: i === 0,
+    }));
+
+    const docSummary = documents?.summary || {};
+    const totalFee = parseFloat(financial?.totalFee || 0);
+    const totalPaid = parseFloat(financial?.totalPaid || 0);
+    const outstanding = parseFloat(financial?.outstandingBalance || 0);
 
     return {
       ...DEFAULT_CASE_DETAIL,
-      caseId: overview.caseId,
+      caseId: overview?.caseId,
       candidateName: candidate ? `${candidate.first_name} ${candidate.last_name}` : "Unknown",
-      statusChip: overview.status || "Unknown",
+      statusChip: overview?.status || "Unknown",
       visaChip: visaType?.name || "Unknown",
-      subtitle: `${business?.businessId || 'N/A'} · Assigned to ${caseworkers?.map(cw => `${cw.first_name} ${cw.last_name}`).join(', ') || 'Unassigned'} · Target: ${keyDates?.targetSubmissionDate || 'N/A'}`,
+      subtitle: `${business?.businessId || "N/A"} · Assigned to ${caseworkers?.map(cw => `${cw.first_name} ${cw.last_name}`).join(", ") || "Unassigned"} · Target: ${keyDates?.targetSubmissionDate || "N/A"}`,
       candidate: {
         fullName: candidate ? `${candidate.first_name} ${candidate.last_name}` : "Unknown",
         dob: "N/A",
@@ -77,38 +151,42 @@ const AdminCaseDetail = () => {
         licenceNo: business?.businessId || "N/A",
         licenceStatus: "Active",
         licenceExpiry: "N/A",
-        contact: business?.sponsor ? `${business.sponsor.first_name} ${business.sponsor.last_name}` : "N/A",
-        caseworker: caseworkers?.map(cw => `${cw.first_name} ${cw.last_name}`).join(', ') || "Unassigned",
+        contact: business?.sponsor
+          ? `${business.sponsor.first_name} ${business.sponsor.last_name}`
+          : "N/A",
+        caseworker: caseworkers?.map(cw => `${cw.first_name} ${cw.last_name}`).join(", ") || "Unassigned",
       },
       case: {
         visaType: visaType?.name || "Unknown",
-        caseStatus: overview.status || "Unknown",
+        caseStatus: overview?.status || "Unknown",
         dateOpened: keyDates?.submitted || "N/A",
         targetDate: keyDates?.targetSubmissionDate || "N/A",
         visaExpiry: "N/A",
-        paymentStatus: financial?.outstandingBalance === 0 ? "Fully Paid" : "Partially Paid",
+        paymentStatus: outstanding === 0 ? "Fully Paid" : "Partially Paid",
       },
       progress: {
-        pct: financial?.outstandingBalance === 0 ? 100 : Math.round(((financial?.totalPaid || 0) / (financial?.totalFee || 1)) * 100),
-        documents: documents?.summary || { total: 0, uploaded: 0, approved: 0 },
+        pct: outstanding === 0 ? 100 : Math.round((totalPaid / (totalFee || 1)) * 100),
+        documents: docSummary.total
+          ? `${docSummary.approved ?? 0}/${docSummary.total} approved`
+          : "0/0 approved",
         tasks: "N/A",
-        payment: `$${(financial?.totalPaid || 0).toLocaleString()} paid`,
+        payment: `$${totalPaid.toLocaleString()} paid`,
         daysLeft: "N/A",
       },
-      documents: documents?.list || [],
-      tasks: [],
+      documents: docList,
+      tasks: DEFAULT_CASE_DETAIL.tasks,
       payments: {
-        total: `$${(financial?.totalFee || 0).toLocaleString()}`,
-        paid: `$${(financial?.totalPaid || 0).toLocaleString()}`,
-        balance: `$${(financial?.outstandingBalance || 0).toLocaleString()}`,
-        history: financial?.payments || [],
-        invoiceId: "N/A",
+        total: `$${totalFee.toLocaleString()}`,
+        paid: `$${totalPaid.toLocaleString()}`,
+        balance: `$${outstanding.toLocaleString()}`,
+        history: paymentHistory,
+        invoiceId: financial?.payments?.[0]?.invoiceNumber || "N/A",
       },
-      timeline: timeline || [],
-      threads: communications || [],
+      timeline: timelineList,
+      threads: threadsList,
       messages: [],
-      internalNotes: caseNotes || [],
-      audit: [],
+      internalNotes: notesList,
+      audit: DEFAULT_CASE_DETAIL.audit,
     };
   }, [caseData, caseId]);
 

@@ -1,15 +1,22 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiCalendar, FiDownload, FiSearch, FiChevronLeft, FiChevronRight,
   FiX, FiEye, FiUser, FiCheckCircle, FiAlertCircle, FiClock,
   FiTrendingUp, FiTrendingDown, FiStar, FiFileText, FiArrowLeft,
-  FiFilter,
+  FiFilter, FiRefreshCw,
 } from "react-icons/fi";
 import { RiBarChartLine } from "react-icons/ri";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
+import {
+  getReportingSummary,
+  getCaseAnalytics,
+  getWorkloadReport,
+  getFinancialReport,
+  getPerformanceReport,
+} from "../../services/reportingApi";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -688,6 +695,35 @@ function DateRangeBadge({ startDate, endDate }) {
   );
 }
 
+// ─── Export Utility ────────────────────────────────────────────────────────────
+
+const exportToCsv = (filename, rows) => {
+  if (!rows || !rows.length) return;
+  const separator = ',';
+  const keys = Object.keys(rows[0]);
+  const csvContent =
+    keys.join(separator) +
+    '\n' +
+    rows.map(row => {
+      return keys.map(k => {
+        let cell = row[k] === null || row[k] === undefined ? '' : row[k];
+        cell = cell instanceof Date ? cell.toLocaleString() : cell.toString().replace(/"/g, '""');
+        if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+        return cell;
+      }).join(separator);
+    }).join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 // ─── Performance Detail Modal ─────────────────────────────────────────────────
 
 function PerformanceDetailModal({ caseworker, onClose }) {
@@ -840,7 +876,21 @@ function PerformanceDetailModal({ caseworker, onClose }) {
               variant="primary"
               className="rounded-xl inline-flex items-center gap-2"
               onClick={() => {
-                alert(`Performance report for ${caseworker.name} (${caseworker.id}) would be downloaded.`);
+                const reportRows = caseworker.recentCases.map(c => ({
+                  CaseworkerID: caseworker.id,
+                  CaseworkerName: caseworker.name,
+                  CaseID: c.id,
+                  Client: c.client,
+                  VisaType: c.type,
+                  Status: c.status,
+                  Date: c.date,
+                  SLA: c.sla
+                }));
+                if (reportRows.length === 0) {
+                  alert("No recent cases available to export for this caseworker.");
+                } else {
+                  exportToCsv(`${caseworker.id}_performance_report.csv`, reportRows);
+                }
               }}
             >
               <FiDownload size={14} />
@@ -855,11 +905,13 @@ function PerformanceDetailModal({ caseworker, onClose }) {
 
 // ─── Performance Tab ──────────────────────────────────────────────────────────
 
-function PerformanceTab({ dateRange }) {
+function PerformanceTab({ dateRange, performanceData }) {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [slaFilter, setSlaFilter] = useState("all");
   const [selectedCW, setSelectedCW] = useState(null);
+
+  const dataSource = performanceData && performanceData.length > 0 ? performanceData : PERFORMANCE_CASEWORKERS;
 
   const SLA_OPTIONS = [
     { value: "all", label: "All SLA levels" },
@@ -870,7 +922,7 @@ function PerformanceTab({ dateRange }) {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return PERFORMANCE_CASEWORKERS.filter((cw) => {
+    return dataSource.filter((cw) => {
       const matchSearch =
         !q ||
         cw.name.toLowerCase().includes(q) ||
@@ -887,12 +939,11 @@ function PerformanceTab({ dateRange }) {
   }, [search, deptFilter, slaFilter]);
 
   // Summary KPIs
-  const avgSla = (
-    PERFORMANCE_CASEWORKERS.reduce((s, c) => s + c.slaMetPct, 0) /
-    PERFORMANCE_CASEWORKERS.length
-  ).toFixed(1);
-  const totalCases = PERFORMANCE_CASEWORKERS.reduce((s, c) => s + c.totalCases, 0);
-  const topPerformer = [...PERFORMANCE_CASEWORKERS].sort((a, b) => b.slaMetPct - a.slaMetPct)[0];
+  const avgSla = dataSource.length > 0 ? (
+    dataSource.reduce((s, c) => s + c.slaMetPct, 0) / dataSource.length
+  ).toFixed(1) : "0.0";
+  const totalCases = dataSource.reduce((s, c) => s + c.totalCases, 0);
+  const topPerformer = dataSource.length > 0 ? [...dataSource].sort((a, b) => b.slaMetPct - a.slaMetPct)[0] : null;
 
   return (
     <>
@@ -915,7 +966,7 @@ function PerformanceTab({ dateRange }) {
           <div className="rounded-xl border border-blue-100 p-4 bg-blue-50">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Cases (All Staff)</p>
             <p className="text-3xl font-black text-blue-600">{totalCases.toLocaleString()}</p>
-            <p className="text-xs text-gray-500 mt-1">across {PERFORMANCE_CASEWORKERS.length} caseworkers</p>
+            <p className="text-xs text-gray-500 mt-1">across {dataSource.length} caseworkers</p>
           </div>
           <div className="rounded-xl border border-green-100 p-4 bg-green-50">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Avg SLA Performance</p>
@@ -924,13 +975,19 @@ function PerformanceTab({ dateRange }) {
           </div>
           <div className="rounded-xl border border-amber-100 p-4 bg-amber-50">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Top Performer</p>
-            <div className="flex items-center gap-2 mt-1">
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0 ${topPerformer.avatarBg}`}>
-                {topPerformer.initials}
-              </div>
-              <p className="text-lg font-black text-amber-700">{topPerformer.name}</p>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">{topPerformer.slaMetPct}% SLA · {topPerformer.totalCases} cases</p>
+            {topPerformer ? (
+              <>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0 ${topPerformer.avatarBg}`}>
+                    {topPerformer.initials}
+                  </div>
+                  <p className="text-lg font-black text-amber-700">{topPerformer.name}</p>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{topPerformer.slaMetPct}% SLA · {topPerformer.totalCases} cases</p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500 mt-2">No data available</p>
+            )}
           </div>
         </div>
 
@@ -999,7 +1056,7 @@ function PerformanceTab({ dateRange }) {
             <div>
               <h2 className="text-sm font-black text-secondary">Caseworker Performance Report</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Showing {filtered.length} of {PERFORMANCE_CASEWORKERS.length} caseworkers
+                Showing {filtered.length} of {dataSource.length} caseworkers
                 {dateRange.start && dateRange.end
                   ? ` · ${formatDate(dateRange.start)} – ${formatDate(dateRange.end)}`
                   : ""}
@@ -1009,7 +1066,22 @@ function PerformanceTab({ dateRange }) {
               type="button"
               variant="primary"
               className="rounded-xl inline-flex items-center gap-2 self-start sm:self-auto"
-              onClick={() => alert("Full team performance report export initiated.")}
+              onClick={() => {
+                const rows = filtered.map(cw => ({
+                  ID: cw.id,
+                  Name: cw.name,
+                  Email: cw.email,
+                  Department: cw.department,
+                  ActiveCases: cw.activeCases,
+                  CompletedCases: cw.completedCases,
+                  TotalCases: cw.totalCases,
+                  SLAMetPct: `${cw.slaMetPct}%`,
+                  AvgCompletionDays: cw.avgCompletionDays,
+                  ClientSatisfaction: cw.clientSatisfaction,
+                  Escalations: cw.escalations
+                }));
+                exportToCsv('team_performance_report.csv', rows);
+              }}
             >
               <FiDownload size={14} />
               Export All
@@ -1119,7 +1191,23 @@ function PerformanceTab({ dateRange }) {
                           </button>
                           <button
                             type="button"
-                            onClick={() => alert(`Downloading report for ${cw.name} (${cw.id})...`)}
+                            onClick={() => {
+                              const reportRows = cw.recentCases.map(c => ({
+                                CaseworkerID: cw.id,
+                                CaseworkerName: cw.name,
+                                CaseID: c.id,
+                                Client: c.client,
+                                VisaType: c.type,
+                                Status: c.status,
+                                Date: c.date,
+                                SLA: c.sla
+                              }));
+                              if (reportRows.length === 0) {
+                                alert("No recent cases available to export for this caseworker.");
+                              } else {
+                                exportToCsv(`${cw.id}_performance_report.csv`, reportRows);
+                              }
+                            }}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors whitespace-nowrap"
                           >
                             <FiDownload size={12} />
@@ -1158,20 +1246,138 @@ export default function AdminReports() {
   const [financeSearch, setFinanceSearch] = useState("");
   const [dateRange, setDateRange] = useState({ start: null, end: null });
 
+  // ── API Data State ────────────────────────────────────────────────────────
+  const [apiData, setApiData] = useState({
+    summary:     null,
+    cases:       null,
+    workload:    null,
+    financial:   null,
+    performance: null,
+  });
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError,   setApiError]   = useState(null);
+
+  const buildParams = useCallback(() => {
+    const params = {};
+    if (dateRange.start) params.startDate = dateRange.start.toISOString().split('T')[0];
+    if (dateRange.end)   params.endDate   = dateRange.end.toISOString().split('T')[0];
+    return params;
+  }, [dateRange]);
+
+  const fetchReportData = useCallback(async () => {
+    setApiLoading(true);
+    setApiError(null);
+    const params = buildParams();
+    try {
+      const [summaryRes, casesRes, workloadRes, financialRes, performanceRes] = await Promise.allSettled([
+        getReportingSummary(),
+        getCaseAnalytics(params),
+        getWorkloadReport(params),
+        getFinancialReport(params),
+        getPerformanceReport(params),
+      ]);
+      setApiData({
+        summary:     summaryRes.status     === 'fulfilled' ? summaryRes.value.data?.data     : null,
+        cases:       casesRes.status       === 'fulfilled' ? casesRes.value.data?.data       : null,
+        workload:    workloadRes.status     === 'fulfilled' ? workloadRes.value.data?.data     : null,
+        financial:   financialRes.status    === 'fulfilled' ? financialRes.value.data?.data    : null,
+        performance: performanceRes.status  === 'fulfilled' ? performanceRes.value.data?.data  : null,
+      });
+    } catch {
+      setApiError('Failed to load report data. Showing available data.');
+    } finally {
+      setApiLoading(false);
+    }
+  }, [buildParams]);
+
+  useEffect(() => { fetchReportData(); }, [fetchReportData]);
+
   function handleDateRangeChange({ start, end }) {
     setDateRange({ start, end });
   }
 
+  // ── Derived values from API (with fallback to mock) ───────────────────────
+  const liveKpis = apiData.cases?.summary;
+  const liveCaseKpis = [
+    {
+      id: 'opened',
+      label: 'Cases This Month',
+      value: liveKpis?.thisMonth ?? CASE_KPIS[0].value,
+      sub: liveKpis?.momChangePct != null
+        ? `${liveKpis.momChangePct >= 0 ? '↑' : '↓'} ${Math.abs(liveKpis.momChangePct)}% vs last month`
+        : CASE_KPIS[0].sub,
+      bg: CASE_KPIS[0].bg, border: CASE_KPIS[0].border, valueClass: CASE_KPIS[0].valueClass,
+    },
+    {
+      id: 'total',
+      label: 'Total Cases',
+      value: liveKpis?.totalCases ?? CASE_KPIS[1].value,
+      sub: `Last month: ${liveKpis?.lastMonth ?? '—'}`,
+      bg: CASE_KPIS[1].bg, border: CASE_KPIS[1].border, valueClass: CASE_KPIS[1].valueClass,
+    },
+    {
+      id: 'sla',
+      label: 'SLA Met Rate',
+      value: liveKpis?.slaMetPct != null ? `${liveKpis.slaMetPct}%` : "0%",
+      sub: 'Based on SLA-tracked cases',
+      bg: CASE_KPIS[2].bg, border: CASE_KPIS[2].border, valueClass: CASE_KPIS[2].valueClass,
+    },
+  ];
+
+  // Live visa type breakdown (replaces CASES_BY_VISA when available)
+  const liveCasesByVisa = apiData.cases?.byVisaType?.length
+    ? apiData.cases.byVisaType.map((v, i) => ({
+        id: String(i),
+        name: v.name,
+        cases: v.count,
+        pct: apiData.cases.summary?.totalCases > 0
+          ? Math.round((v.count / apiData.cases.summary.totalCases) * 100)
+          : 0,
+        bar: ['bg-blue-500','bg-purple-500','bg-green-500','bg-amber-400','bg-red-500'][i % 5],
+      }))
+    : CASES_BY_VISA;
+
   const filteredVisaBars = useMemo(() => {
-    if (visaFilter === "all") return CASES_BY_VISA;
-    return CASES_BY_VISA.filter((v) => v.id === visaFilter);
-  }, [visaFilter]);
+    if (visaFilter === "all") return liveCasesByVisa;
+    return liveCasesByVisa.filter((v) => v.id === visaFilter || v.name === visaFilter);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visaFilter, apiData.cases]);
+
+  const visaFilterOptions = useMemo(() => [
+    { value: 'all', label: 'All types' },
+    ...liveCasesByVisa.map(v => ({ value: v.id, label: v.name })),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [apiData.cases]);
+
+  // Live workload (replaces WORKLOAD_ROWS when available)
+  const liveWorkload = apiData.workload?.caseworkers?.length
+    ? apiData.workload.caseworkers.map((cw, i) => ({
+        id: String(cw.id),
+        name: cw.name,
+        initials: cw.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
+        avatarBg: ['bg-blue-500','bg-green-500','bg-red-500','bg-purple-500','bg-amber-500'][i % 5],
+        active: cw.activeCases,
+        completed: cw.completedCases,
+        sla: cw.slaMetCount != null ? `${cw.slaMetCount}/${cw.slaTotalCount}` : '—',
+        slaPct: cw.slaMetPct != null ? `${cw.slaMetPct}%` : '—',
+        slaChip: cw.slaMetPct >= 90
+          ? 'bg-green-100 text-green-700'
+          : cw.slaMetPct >= 75
+          ? 'bg-amber-100 text-amber-800'
+          : 'bg-red-100 text-red-700',
+      }))
+    : WORKLOAD_ROWS;
 
   const filteredWorkload = useMemo(() => {
     const q = workloadSearch.trim().toLowerCase();
-    if (!q) return WORKLOAD_ROWS;
-    return WORKLOAD_ROWS.filter((r) => r.name.toLowerCase().includes(q));
-  }, [workloadSearch]);
+    if (!q) return liveWorkload;
+    return liveWorkload.filter((r) => r.name.toLowerCase().includes(q));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workloadSearch, apiData.workload]);
+
+  // Live financial (replaces FINANCE_BY_VISA when available)
+  const liveFinanceSummary = apiData.financial?.summary;
+  const liveFinanceByStatus = apiData.financial?.statusBreakdown || [];
 
   const filteredFinanceVisa = useMemo(() => {
     const q = financeSearch.trim().toLowerCase();
@@ -1185,13 +1391,32 @@ export default function AdminReports() {
     return FINANCE_BY_SPONSOR.filter((r) => r.label.toLowerCase().includes(q));
   }, [financeSearch]);
 
+
   return (
     <motion.div
-      className="space-y-6 pb-10"
+      className="relative space-y-6 pb-10"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
+      {/* Loading overlay */}
+      {apiLoading && (
+        <div className="absolute inset-0 z-30 bg-white/60 backdrop-blur-[1px] flex items-start justify-center pt-24 rounded-xl">
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-500 bg-white px-4 py-2.5 rounded-xl shadow-md border border-gray-100">
+            <FiRefreshCw className="animate-spin" size={14} />
+            Refreshing data…
+          </div>
+        </div>
+      )}
+
+      {/* Error banner */}
+      {apiError && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-semibold">
+          <FiAlertCircle size={15} />
+          {apiError}
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="flex items-start gap-3">
@@ -1210,6 +1435,15 @@ export default function AdminReports() {
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <DateRangeBadge startDate={dateRange.start} endDate={dateRange.end} />
+          <button
+            type="button"
+            onClick={fetchReportData}
+            disabled={apiLoading}
+            className="p-2 rounded-xl border border-gray-200 bg-white text-gray-400 hover:text-primary hover:border-primary/30 transition-colors"
+            title="Refresh data"
+          >
+            <FiRefreshCw size={15} className={apiLoading ? 'animate-spin' : ''} />
+          </button>
           <Button
             type="button"
             variant="primary"
@@ -1238,7 +1472,7 @@ export default function AdminReports() {
                 name="visaFilter"
                 value={visaFilter}
                 onChange={(e) => setVisaFilter(e.target.value)}
-                options={VISA_FILTER_OPTIONS}
+                options={visaFilterOptions}
               />
             </div>
           )}
@@ -1306,7 +1540,7 @@ export default function AdminReports() {
           className="space-y-6"
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {CASE_KPIS.map((k) => (
+            {liveCaseKpis.map((k) => (
               <div key={k.id} className={`rounded-xl border p-4 ${k.bg} ${k.border}`}>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">{k.label}</p>
                 <p className={`text-3xl font-black ${k.valueClass}`}>{k.value}</p>
@@ -1414,6 +1648,31 @@ export default function AdminReports() {
           transition={{ duration: 0.2 }}
           className="grid grid-cols-1 xl:grid-cols-2 gap-6"
         >
+          {/* Live Financial KPIs */}
+          {liveFinanceSummary && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 xl:col-span-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="rounded-xl bg-green-50 border border-green-100 p-4">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Revenue</p>
+                  <p className="text-2xl font-black text-green-600">£{liveFinanceSummary.totalRevenue.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">{liveFinanceSummary.totalPaid} payments received</p>
+                </div>
+                <div className="rounded-xl bg-amber-50 border border-amber-100 p-4">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Outstanding</p>
+                  <p className="text-2xl font-black text-amber-600">£{liveFinanceSummary.totalOutstanding.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">Pending &amp; overdue payments</p>
+                </div>
+                {liveFinanceByStatus.map(s => (
+                  <div key={s.status} className="rounded-xl bg-gray-50 border border-gray-100 p-4">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1 capitalize">{s.status}</p>
+                    <p className="text-2xl font-black text-secondary">{s.count}</p>
+                    <p className="text-xs text-gray-500 mt-1">£{s.total.toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
             <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
               Revenue by Visa Type
@@ -1458,7 +1717,7 @@ export default function AdminReports() {
 
       {/* ── Performance Tab ── */}
       {activeTab === "performance" && (
-        <PerformanceTab dateRange={dateRange} />
+        <PerformanceTab dateRange={dateRange} performanceData={apiData.performance} />
       )}
     </motion.div>
   );

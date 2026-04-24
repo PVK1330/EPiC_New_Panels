@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   RiLockLine, RiAddLine, RiEditLine, RiDeleteBinLine,
@@ -40,32 +40,99 @@ const getModuleColor = (module, allModules) => {
   return MODULE_COLORS[idx % MODULE_COLORS.length] || MODULE_COLORS[0];
 };
 
+// ── PermissionForm lifted outside to prevent remount on parent re-renders ──
+const PermissionForm = ({ form, setForm, errors }) => (
+  <div className="space-y-3">
+    {errors.submit && (
+      <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{errors.submit}</div>
+    )}
+    <Input
+      label="Permission Name"
+      name="name"
+      value={form.name}
+      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+      placeholder="e.g. cases.read"
+      error={errors.name}
+      required
+    />
+    <Input
+      label="Description"
+      name="description"
+      value={form.description}
+      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+      rows={2}
+      placeholder="What this permission allows"
+    />
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <label className="text-xs font-bold text-gray-600 uppercase tracking-wide block mb-1">
+          Module <span className="text-primary">*</span>
+        </label>
+        <input
+          list="module-list"
+          value={form.module}
+          onChange={(e) => setForm((f) => ({ ...f, module: e.target.value }))}
+          placeholder="e.g. Cases"
+          className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 ${errors.module ? "border-red-400" : "border-gray-200"}`}
+        />
+        <datalist id="module-list">
+          {DEFAULT_MODULES.map((m) => <option key={m} value={m} />)}
+        </datalist>
+        {errors.module && <span className="text-xs text-red-500 mt-0.5">{errors.module}</span>}
+      </div>
+      <div>
+        <label className="text-xs font-bold text-gray-600 uppercase tracking-wide block mb-1">
+          Action <span className="text-primary">*</span>
+        </label>
+        <input
+          list="action-list"
+          value={form.action}
+          onChange={(e) => setForm((f) => ({ ...f, action: e.target.value }))}
+          placeholder="e.g. read"
+          className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 ${errors.action ? "border-red-400" : "border-gray-200"}`}
+        />
+        <datalist id="action-list">
+          {MODULE_ACTION_OPTIONS.map((a) => <option key={a.value} value={a.value} />)}
+        </datalist>
+        {errors.action && <span className="text-xs text-red-500 mt-0.5">{errors.action}</span>}
+      </div>
+    </div>
+    <Input
+      label="Resource (optional)"
+      name="resource"
+      value={form.resource}
+      onChange={(e) => setForm((f) => ({ ...f, resource: e.target.value }))}
+      placeholder="e.g. own, all, assigned"
+    />
+  </div>
+);
+
 const PermissionManagementPanel = () => {
-  const [grouped, setGrouped]           = useState({});
-  const [allModules, setAllModules]     = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState(null);
-  const [search, setSearch]             = useState("");
+  const [grouped, setGrouped] = useState({});
+  const [allModules, setAllModules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
   const [filterModule, setFilterModule] = useState("all");
-  const [collapsed, setCollapsed]       = useState({});
+  const [collapsed, setCollapsed] = useState({});
 
   // Create modal
   const [createModal, setCreateModal] = useState(false);
-  const [createForm, setCreateForm]   = useState(EMPTY_FORM);
+  const [createForm, setCreateForm] = useState(EMPTY_FORM);
   const [createErrors, setCreateErrors] = useState({});
-  const [creating, setCreating]       = useState(false);
+  const [creating, setCreating] = useState(false);
 
   // Edit modal
-  const [editModal, setEditModal]     = useState(false);
-  const [editTarget, setEditTarget]   = useState(null);
-  const [editForm, setEditForm]       = useState(EMPTY_FORM);
-  const [editErrors, setEditErrors]   = useState({});
-  const [editing, setEditing]         = useState(false);
+  const [editModal, setEditModal] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [editForm, setEditForm] = useState(EMPTY_FORM);
+  const [editErrors, setEditErrors] = useState({});
+  const [editing, setEditing] = useState(false);
 
   // Delete confirm
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting]       = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Toast
   const [toast, setToast] = useState(null);
@@ -84,7 +151,7 @@ const PermissionManagementPanel = () => {
         setGrouped(res.data.data.permissions);
         const mods = res.data.data.modules || [];
         setAllModules(mods);
-        // Init collapsed state
+        // Init collapsed state — preserve existing collapsed prefs
         const initCollapsed = {};
         mods.forEach((m) => { initCollapsed[m] = false; });
         setCollapsed((prev) => ({ ...initCollapsed, ...prev }));
@@ -100,7 +167,7 @@ const PermissionManagementPanel = () => {
 
   useEffect(() => { fetchPermissions(); }, []);
 
-  // Filtered view
+  // Filtered view — client-side filter runs on top of whatever the API returned
   const visibleGrouped = useMemo(() => {
     const result = {};
     Object.entries(grouped).forEach(([module, perms]) => {
@@ -109,7 +176,8 @@ const PermissionManagementPanel = () => {
         (p) =>
           p.name.toLowerCase().includes(search.toLowerCase()) ||
           (p.description || "").toLowerCase().includes(search.toLowerCase()) ||
-          p.action.toLowerCase().includes(search.toLowerCase())
+          p.action.toLowerCase().includes(search.toLowerCase()) ||
+          p.module.toLowerCase().includes(search.toLowerCase())
       );
       if (filtered.length > 0) result[module] = filtered;
     });
@@ -121,26 +189,27 @@ const PermissionManagementPanel = () => {
   const toggleCollapse = (mod) =>
     setCollapsed((p) => ({ ...p, [mod]: !p[mod] }));
 
-  // ── Create ────────────────────────────────────────────────────────────────
+  // ── Validation ─────────────────────────────────────────────────────────────
   const validateForm = (form) => {
     const errs = {};
-    if (!form.name.trim())   errs.name   = "Permission name is required";
-    if (!form.module.trim()) errs.module  = "Module is required";
-    if (!form.action.trim()) errs.action  = "Action is required";
+    if (!form.name.trim()) errs.name = "Permission name is required";
+    if (!form.module.trim()) errs.module = "Module is required";
+    if (!form.action.trim()) errs.action = "Action is required";
     return errs;
   };
 
+  // ── Create ─────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
     const errs = validateForm(createForm);
     if (Object.keys(errs).length) { setCreateErrors(errs); return; }
     setCreating(true);
     try {
       const res = await createPermission({
-        name:        createForm.name.trim(),
+        name: createForm.name.trim(),
         description: createForm.description.trim(),
-        module:      createForm.module.trim(),
-        action:      createForm.action.trim(),
-        resource:    createForm.resource.trim() || null,
+        module: createForm.module.trim(),
+        action: createForm.action.trim(),
+        resource: createForm.resource.trim() || null,
       });
       if (res.data?.status === "success") {
         showToast(`Permission "${createForm.name}" created.`);
@@ -157,15 +226,15 @@ const PermissionManagementPanel = () => {
     }
   };
 
-  // ── Edit ──────────────────────────────────────────────────────────────────
+  // ── Edit ───────────────────────────────────────────────────────────────────
   const openEdit = (perm) => {
     setEditTarget(perm);
     setEditForm({
-      name:        perm.name,
+      name: perm.name,
       description: perm.description || "",
-      module:      perm.module,
-      action:      perm.action,
-      resource:    perm.resource || "",
+      module: perm.module,
+      action: perm.action,
+      resource: perm.resource || "",
     });
     setEditErrors({});
     setEditModal(true);
@@ -177,11 +246,11 @@ const PermissionManagementPanel = () => {
     setEditing(true);
     try {
       const res = await updatePermission(editTarget.id, {
-        name:        editForm.name.trim(),
+        name: editForm.name.trim(),
         description: editForm.description.trim(),
-        module:      editForm.module.trim(),
-        action:      editForm.action.trim(),
-        resource:    editForm.resource.trim() || null,
+        module: editForm.module.trim(),
+        action: editForm.action.trim(),
+        resource: editForm.resource.trim() || null,
       });
       if (res.data?.status === "success") {
         showToast(`Permission "${editForm.name}" updated.`);
@@ -223,73 +292,6 @@ const PermissionManagementPanel = () => {
     }
   };
 
-  // ── Form field helpers ─────────────────────────────────────────────────────
-  const PermissionForm = ({ form, setForm, errors }) => (
-    <div className="space-y-3">
-      {errors.submit && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{errors.submit}</div>
-      )}
-      <Input
-        label="Permission Name"
-        name="name"
-        value={form.name}
-        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-        placeholder="e.g. cases.read"
-        error={errors.name}
-        required
-      />
-      <Input
-        label="Description"
-        name="description"
-        value={form.description}
-        onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-        rows={2}
-        placeholder="What this permission allows"
-      />
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs font-bold text-gray-600 uppercase tracking-wide block mb-1">
-            Module <span className="text-primary">*</span>
-          </label>
-          <input
-            list="module-list"
-            value={form.module}
-            onChange={(e) => setForm((f) => ({ ...f, module: e.target.value }))}
-            placeholder="e.g. Cases"
-            className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 ${errors.module ? "border-red-400" : "border-gray-200"}`}
-          />
-          <datalist id="module-list">
-            {DEFAULT_MODULES.map((m) => <option key={m} value={m} />)}
-          </datalist>
-          {errors.module && <span className="text-xs text-red-500 mt-0.5">{errors.module}</span>}
-        </div>
-        <div>
-          <label className="text-xs font-bold text-gray-600 uppercase tracking-wide block mb-1">
-            Action <span className="text-primary">*</span>
-          </label>
-          <input
-            list="action-list"
-            value={form.action}
-            onChange={(e) => setForm((f) => ({ ...f, action: e.target.value }))}
-            placeholder="e.g. read"
-            className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 ${errors.action ? "border-red-400" : "border-gray-200"}`}
-          />
-          <datalist id="action-list">
-            {MODULE_ACTION_OPTIONS.map((a) => <option key={a.value} value={a.value} />)}
-          </datalist>
-          {errors.action && <span className="text-xs text-red-500 mt-0.5">{errors.action}</span>}
-        </div>
-      </div>
-      <Input
-        label="Resource (optional)"
-        name="resource"
-        value={form.resource}
-        onChange={(e) => setForm((f) => ({ ...f, resource: e.target.value }))}
-        placeholder="e.g. own, all, assigned"
-      />
-    </div>
-  );
-
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -319,9 +321,8 @@ const PermissionManagementPanel = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`fixed top-5 right-5 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold ${
-              toast.type === "error" ? "bg-red-600 text-white" : "bg-green-600 text-white"
-            }`}
+            className={`fixed top-5 right-5 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold ${toast.type === "error" ? "bg-red-600 text-white" : "bg-green-600 text-white"
+              }`}
           >
             {toast.type === "error" ? <RiAlertLine size={16} /> : <RiCheckLine size={16} />}
             {toast.msg}
@@ -420,47 +421,47 @@ const PermissionManagementPanel = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 bg-white">
-                        {perms.map((perm) => (
-                          <tr key={perm.id} className="hover:bg-gray-50/60 transition-colors bg-white">
-                            <td className="px-5 py-3 border-b border-gray-50">
-                              <div className="flex items-center gap-2">
-                                <RiLockLine size={13} className="text-gray-300 shrink-0" />
-                                <span className="font-semibold text-secondary text-xs">{perm.name}</span>
-                              </div>
-                            </td>
-                            <td className="px-5 py-3 border-b border-gray-50 hidden sm:table-cell">
-                              <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[11px] font-bold capitalize">
-                                {perm.action}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-xs text-gray-400 border-b border-gray-50 hidden md:table-cell">
-                              {perm.resource || <span className="text-gray-300">—</span>}
-                            </td>
-                            <td className="px-5 py-3 text-xs text-gray-400 truncate max-w-xs border-b border-gray-50 hidden lg:table-cell">
-                              {perm.description || <span className="text-gray-300">No description</span>}
-                            </td>
-                            <td className="px-5 py-3 border-b border-gray-50">
-                              <div className="flex items-center justify-end gap-1">
-                                <button
-                                  onClick={() => openEdit(perm)}
-                                  className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors"
-                                  title="Edit permission"
-                                >
-                                  <RiEditLine size={14} />
-                                </button>
-                                <button
-                                  onClick={() => openDelete(perm)}
-                                  className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                                  title="Delete permission"
-                                >
-                                  <RiDeleteBinLine size={14} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                          {perms.map((perm) => (
+                            <tr key={perm.id} className="hover:bg-gray-50/60 transition-colors bg-white">
+                              <td className="px-5 py-3 border-b border-gray-50">
+                                <div className="flex items-center gap-2">
+                                  <RiLockLine size={13} className="text-gray-300 shrink-0" />
+                                  <span className="font-semibold text-secondary text-xs">{perm.name}</span>
+                                </div>
+                              </td>
+                              <td className="px-5 py-3 border-b border-gray-50 hidden sm:table-cell">
+                                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[11px] font-bold capitalize">
+                                  {perm.action}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3 text-xs text-gray-400 border-b border-gray-50 hidden md:table-cell">
+                                {perm.resource || <span className="text-gray-300">—</span>}
+                              </td>
+                              <td className="px-5 py-3 text-xs text-gray-400 truncate max-w-xs border-b border-gray-50 hidden lg:table-cell">
+                                {perm.description || <span className="text-gray-300">No description</span>}
+                              </td>
+                              <td className="px-5 py-3 border-b border-gray-50">
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    onClick={() => openEdit(perm)}
+                                    className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors"
+                                    title="Edit permission"
+                                  >
+                                    <RiEditLine size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => openDelete(perm)}
+                                    className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                                    title="Delete permission"
+                                  >
+                                    <RiDeleteBinLine size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </motion.div>
                 )}

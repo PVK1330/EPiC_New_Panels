@@ -48,14 +48,22 @@ const CaseDetailPayments = ({ payments }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {payments.history.map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50/80">
-                  <td className="px-4 py-2.5 text-gray-600">{row.date}</td>
-                  <td className="px-4 py-2.5 text-green-600 font-bold">{row.amount}</td>
-                  <td className="px-4 py-2.5 text-gray-600">{row.method}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-gray-400">{row.invoice}</td>
+              {payments.history.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-400">
+                    No payment records yet.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                payments.history.map((row, i) => (
+                  <tr key={i} className="hover:bg-gray-50/80">
+                    <td className="px-4 py-2.5 text-gray-600">{row.date}</td>
+                    <td className="px-4 py-2.5 text-green-600 font-bold">{row.amount}</td>
+                    <td className="px-4 py-2.5 text-gray-600">{row.method}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-gray-400">{row.invoice}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
