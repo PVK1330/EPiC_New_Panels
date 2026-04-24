@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,20 +11,29 @@ import {
   FiMail,
   FiCreditCard,
   FiClock,
-  FiEdit2,
-  FiTrash2,
-  FiPlus,
   FiArrowRight,
+  FiCheckCircle,
+  FiMenu,
+  FiX
 } from "react-icons/fi";
-import { RiSettings3Line } from "react-icons/ri";
-import { Loader2 } from "lucide-react";
-import Button from "../../components/Button";
-import Input from "../../components/Input";
-import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
+
+// Components
 import Modal from "../../components/Modal";
 import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
-import { useSelector } from "react-redux";
+import Button from "../../components/Button";
+import Input from "../../components/Input";
+
+// Settings Sub-components
+import AccountSettings from "../../components/admin/settings/AccountSettings";
+import VisaSettings from "../../components/admin/settings/VisaSettings";
+import EmailSettings from "../../components/admin/settings/EmailSettings";
+import PaymentSettings from "../../components/admin/settings/PaymentSettings";
+import SLASettings from "../../components/admin/settings/SLASettings";
+import DepartmentSettings from "../../components/admin/settings/DepartmentSettings";
+import CategorySettings from "../../components/admin/settings/CategorySettings";
+
+// Services
 import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from "../../services/caseWorker";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -43,53 +52,27 @@ import {
   getCaseCategories,
   createCaseCategory,
   deleteCaseCategory,
-  getSla,
-  updateSla,
+  getSlaRules,
+  createSlaRule,
+  updateSlaRule,
+  deleteSlaRule,
   getEmailTemplates,
+  createEmailTemplate,
   updateEmailTemplate,
+  deleteEmailTemplate,
+  getPaymentSetting,
+  updatePaymentSetting,
 } from "../../services/settingsService";
 
-const timezones = ["UTC-05:00 Eastern Time", "UTC-06:00 Central Time", "UTC-07:00 Mountain Time", "UTC-08:00 Pacific Time"];
-const languages = ["English", "Spanish", "French", "German"];
-const dateFormats = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"];
-
 const CONFIG_TABS = [
-  { id: "account", label: "Your account", icon: <FiUser size={16} /> },
-  { id: "visa", label: "Visa types", icon: <FiLayers size={16} /> },
-  { id: "categories", label: "Case categories", icon: <FiFolder size={16} /> },
-  { id: "departments", label: "Departments", icon: <FiFolder size={16} /> },
-  { id: "roles", label: "Role permissions", icon: <FiShield size={16} /> },
-  { id: "email", label: "Email templates", icon: <FiMail size={16} /> },
-  { id: "payment", label: "Payment config", icon: <FiCreditCard size={16} /> },
-  { id: "sla", label: "SLA rules", icon: <FiClock size={16} /> },
-];
-
-const VISA_FORM_ID = "settings-visa-type-form";
-const PETITION_FORM_ID = "settings-petition-type-form";
-
-const EMAIL_TEMPLATE_OPTIONS = [
-  { value: "payment", label: "Payment reminder" },
-  { value: "doc", label: "Document request" },
-  { value: "opened", label: "Case opened" },
-  { value: "expiry", label: "Visa expiry alert" },
-  { value: "welcome", label: "Welcome email" },
-];
-
-const CURRENCY_OPTIONS = [
-  { value: "GBP", label: "GBP (£)" },
-  { value: "EUR", label: "EUR (€)" },
-  { value: "USD", label: "USD ($)" },
-];
-
-const selectClass =
-  "w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-secondary/30";
-
-const SLA_KEYS = [
-  "skilled_worker_days",
-  "ilr_days",
-  "student_visa_days",
-  "escalation_stuck_days",
-  "missing_docs_escalation_days",
+  { id: "account", label: "Account & Profile", icon: <FiUser />, color: "text-blue-500", bg: "bg-blue-50" },
+  { id: "visa", label: "Visa & Petitions", icon: <FiLayers />, color: "text-indigo-500", bg: "bg-indigo-50" },
+  { id: "categories", label: "Case Categories", icon: <FiFolder />, color: "text-emerald-500", bg: "bg-emerald-50" },
+  { id: "departments", label: "Departments", icon: <FiFolder />, color: "text-violet-500", bg: "bg-violet-50" },
+  { id: "roles", label: "Role Permissions", icon: <FiShield />, color: "text-amber-500", bg: "bg-amber-50" },
+  { id: "email", label: "Email Templates", icon: <FiMail />, color: "text-rose-500", bg: "bg-rose-50" },
+  { id: "payment", label: "Payment Config", icon: <FiCreditCard />, color: "text-cyan-500", bg: "bg-cyan-50" },
+  { id: "sla", label: "SLA Rules", icon: <FiClock />, color: "text-orange-500", bg: "bg-orange-50" },
 ];
 
 function getApiError(error) {
@@ -100,1501 +83,533 @@ function getApiError(error) {
   return error?.message || "Something went wrong";
 }
 
-function Toggle({ on, onToggle }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-secondary/40 ${
-        on ? "bg-primary" : "bg-gray-200"
-      }`}
-      aria-pressed={on}
-    >
-      <span
-        className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
-          on ? "translate-x-5" : "translate-x-0"
-        }`}
-      />
-    </button>
-  );
-}
-
-const panelMotion = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -6 },
-  transition: { duration: 0.2 },
-};
-
-function PanelLoader() {
-  return (
-    <div className="flex min-h-[200px] items-center justify-center py-16">
-      <Loader2 className="h-10 w-10 animate-spin text-primary" aria-hidden />
-    </div>
-  );
-}
-
-const emptyProfile = () => ({
-  first_name: "",
-  last_name: "",
-  email: "",
-  country_code: "",
-  mobile: "",
-  avatar_url: "",
-  role_name: "",
-});
-
-const emptyPreferences = () => ({
-  two_factor_enabled: false,
-  email_notifications: true,
-  case_updates: true,
-  payment_alerts: false,
-  timezone: timezones[0],
-  language: languages[0],
-  date_format: dateFormats[0],
-  data_collection: false,
-});
-
-const emptySlaForm = () => ({
-  skilled_worker_days: "",
-  ilr_days: "",
-  student_visa_days: "",
-  escalation_stuck_days: "",
-  missing_docs_escalation_days: "",
-});
-
-const emptyEmailDrafts = () => {
-  const o = {};
-  EMAIL_TEMPLATE_OPTIONS.forEach((opt) => {
-    o[opt.value] = { subject: "", body: "" };
-  });
-  return o;
-};
-
 export default function AdminSettings() {
   const { showToast } = useToast();
-  const slaBaselineRef = useRef(null);
-
   const [configTab, setConfigTab] = useState("account");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const [loadingMe, setLoadingMe] = useState(true);
-  const [savingAccount, setSavingAccount] = useState(false);
-  const [accountError, setAccountError] = useState("");
+  // States
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  const [profile, setProfile] = useState(emptyProfile);
-  const [preferences, setPreferences] = useState(emptyPreferences);
-
-  const [security, setSecurity] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
+  // Account States (DYNAMIC)
+  const [profile, setProfile] = useState({ first_name: "", last_name: "", email: "", country_code: "", mobile: "", avatar_url: "", role_name: "" });
+  const [preferences, setPreferences] = useState({ two_factor_enabled: false, email_notifications: true, case_updates: true, payment_alerts: false, timezone: "UTC-05:00 Eastern Time", language: "English", date_format: "MM/DD/YYYY", data_collection: false });
+  const [security, setSecurity] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [passwordError, setPasswordError] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
-  const [loadingVisaTab, setLoadingVisaTab] = useState(false);
+  // Shared States
   const [visaTypes, setVisaTypes] = useState([]);
+  const [petitionTypes, setPetitionTypes] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [emailTemplates, setEmailTemplates] = useState([]);
+  const [slaRules, setSlaRules] = useState([]);
+  const [paymentConfig, setPaymentConfig] = useState({ currency: "GBP", pay_bank: true, pay_card: true, pay_cheque: false, invoice_prefix: "INV-", stripe_public_key: "", stripe_secret_key: "", paypal_client_id: "", paypal_secret: "", razorpay_key_id: "", razorpay_key_secret: "", active_gateway: "stripe" });
+
+  // Modal States
   const [visaModalOpen, setVisaModalOpen] = useState(false);
   const [visaModalMode, setVisaModalMode] = useState("add");
-  const [departments, setDepartments] = useState([]);
-  const [departmentModalOpen, setDepartmentModalOpen] = useState(false);
-  const [departmentModalMode, setDepartmentModalMode] = useState("add");
-  const [editingDepartment, setEditingDepartment] = useState(null);
-  const [departmentFormName, setDepartmentFormName] = useState("");
-  const [departmentFormError, setDepartmentFormError] = useState("");
   const [editingVisaId, setEditingVisaId] = useState(null);
   const [visaFormName, setVisaFormName] = useState("");
   const [visaFormError, setVisaFormError] = useState("");
-  const [visaTabError, setVisaTabError] = useState("");
 
-  const [petitionTypes, setPetitionTypes] = useState([]);
   const [petitionModalOpen, setPetitionModalOpen] = useState(false);
   const [petitionModalMode, setPetitionModalMode] = useState("add");
   const [editingPetitionId, setEditingPetitionId] = useState(null);
   const [petitionFormName, setPetitionFormName] = useState("");
   const [petitionFormError, setPetitionFormError] = useState("");
-  const [petitionTabError, setPetitionTabError] = useState("");
 
-  const [categoryInput, setCategoryInput] = useState("");
-  const [categories, setCategories] = useState([]);
-  const [loadingCategories, setLoadingCategories] = useState(false);
-  const [categoryTabError, setCategoryTabError] = useState("");
-  const [categorySaving, setCategorySaving] = useState(false);
+  const [departmentModalOpen, setDepartmentModalOpen] = useState(false);
+  const [departmentModalMode, setDepartmentModalMode] = useState("add");
+  const [editingDepartment, setEditingDepartment] = useState(null);
+  const [departmentFormName, setDepartmentFormName] = useState("");
+  const [departmentFormError, setDepartmentFormError] = useState("");
+
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailModalMode, setEmailModalMode] = useState("add");
+  const [editingEmailKey, setEditingEmailKey] = useState(null);
+  const [emailFormKey, setEmailFormKey] = useState("");
+  const [emailFormSubject, setEmailFormSubject] = useState("");
+  const [emailFormBody, setEmailFormBody] = useState("");
+  const [emailFormError, setEmailFormError] = useState("");
+  const [viewEmailModalOpen, setViewEmailModalOpen] = useState(false);
+  const [viewingTemplate, setViewingTemplate] = useState(null);
+
+  const [slaModalOpen, setSlaModalOpen] = useState(false);
+  const [slaModalMode, setSlaModalMode] = useState("add");
+  const [editingSlaId, setEditingSlaId] = useState(null);
+  const [slaFormName, setSlaFormName] = useState("");
+  const [slaFormDays, setSlaFormDays] = useState("");
+  const [slaFormType, setSlaFormType] = useState("Visa");
+  const [slaFormError, setSlaFormError] = useState("");
 
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [twoFactorMode, setTwoFactorMode] = useState("setup");
 
-  useEffect(() => {
-    if (configTab === "departments") {
-      fetchDepartments();
-    }
-  }, [configTab]);
-
-  const fetchDepartments = async () => {
+  // Load Data based on Tab
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      const res = await getDepartments();
-      if (res.data?.status === "success") {
-        setDepartments(res.data.data.departments || []);
-      }
-    } catch (e) {
-      console.error("Failed to fetch departments:", e);
-    }
-  };
-
-  const openDepartmentModalAdd = () => {
-    setDepartmentModalMode("add");
-    setEditingDepartment(null);
-    setDepartmentFormName("");
-    setDepartmentFormError("");
-    setDepartmentModalOpen(true);
-  };
-
-  const openDepartmentModalEdit = (department) => {
-    setDepartmentModalMode("edit");
-    setEditingDepartment(department);
-    setDepartmentFormName(department);
-    setDepartmentFormError("");
-    setDepartmentModalOpen(true);
-  };
-
-  const closeDepartmentModal = () => {
-    setDepartmentModalOpen(false);
-    setDepartmentFormName("");
-    setDepartmentFormError("");
-    setEditingDepartment(null);
-  };
-
-  const submitDepartmentForm = async (e) => {
-    e.preventDefault();
-    const trimmed = departmentFormName.trim();
-    if (!trimmed) {
-      setDepartmentFormError("Name is required");
-      return;
-    }
-    try {
-      if (departmentModalMode === "add") {
-        await createDepartment({ name: trimmed });
-      } else if (editingDepartment) {
-        await updateDepartment({ oldName: editingDepartment, newName: trimmed });
-      }
-      closeDepartmentModal();
-      fetchDepartments();
-    } catch (e) {
-      console.error("Failed to save department:", e);
-      setDepartmentFormError(e.response?.data?.message || "Failed to save department");
-    }
-  };
-
-  const removeDepartment = async (department) => {
-    const result = await Swal.fire({
-      title: "Delete Department",
-      text: `Are you sure you want to delete "${department}"?`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
-      cancelButtonText: "Cancel"
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await deleteDepartment({ name: department });
-        fetchDepartments();
-        Swal.fire({
-          title: "Deleted!",
-          text: `Department "${department}" has been deleted.`,
-          icon: "success"
-        });
-      } catch (e) {
-        console.error("Failed to delete department:", e);
-        Swal.fire({
-          title: "Error",
-          text: e.response?.data?.message || "Failed to delete department",
-          icon: "error"
-        });
-      }
-    }
-  };
-
-  const [emailTemplate, setEmailTemplate] = useState("payment");
-  const [emailSubject, setEmailSubject] = useState("[VisaFlow] Action Required: Outstanding Payment");
-  const [emailBody, setEmailBody] = useState(
-    `Dear {{client_name}},
-
-We wanted to remind you that your outstanding balance of {{amount}} is now {{days_overdue}} days overdue.
-
-Please arrange payment at your earliest convenience.
-
-Best regards,
-VisaFlow Team`,
-  );
-  const [emailTemplateKey, setEmailTemplateKey] = useState("payment");
-  const [emailDrafts, setEmailDrafts] = useState(emptyEmailDrafts);
-  const [loadingEmailTab, setLoadingEmailTab] = useState(false);
-  const [emailTabError, setEmailTabError] = useState("");
-  const [savingEmailTemplate, setSavingEmailTemplate] = useState(false);
-
-  const [currency, setCurrency] = useState("GBP");
-  const [payBank, setPayBank] = useState(true);
-  const [payCard, setPayCard] = useState(true);
-  const [payCheque, setPayCheque] = useState(false);
-  const [invoicePrefix, setInvoicePrefix] = useState("INV-");
-
-  const [slaForm, setSlaForm] = useState(emptySlaForm);
-  const [loadingSlaTab, setLoadingSlaTab] = useState(false);
-  const [slaTabError, setSlaTabError] = useState("");
-  const [savingSla, setSavingSla] = useState(false);
-
-  const applyMeFromPayload = useCallback((data) => {
-    if (!data) return;
-    const { profile: p, preferences: pref } = data;
-    if (p) {
-      setProfile({
-        first_name: p.first_name ?? "",
-        last_name: p.last_name ?? "",
-        email: p.email ?? "",
-        country_code: p.country_code ?? "",
-        mobile: p.mobile ?? "",
-        avatar_url: p.avatar_url ?? "",
-        role_name: p.role_name ?? "",
-      });
-    }
-    if (pref) {
-      setPreferences((prev) => ({
-        ...prev,
-        two_factor_enabled: !!pref.two_factor_enabled,
-        email_notifications: !!pref.email_notifications,
-        case_updates: !!pref.case_updates,
-        payment_alerts: !!pref.payment_alerts,
-        timezone: pref.timezone ?? prev.timezone,
-        language: pref.language ?? prev.language,
-        date_format: pref.date_format ?? prev.date_format,
-        data_collection: !!pref.data_collection,
-      }));
-    }
-  }, []);
-
-  const loadMe = useCallback(async () => {
-    setLoadingMe(true);
-    setAccountError("");
-    try {
-      const res = await getMe();
-      applyMeFromPayload(res.data?.data);
-    } catch (e) {
-      setAccountError(getApiError(e));
-      showToast({ message: getApiError(e), variant: "danger" });
-    } finally {
-      setLoadingMe(false);
-    }
-  }, [applyMeFromPayload, showToast]);
-
-  useEffect(() => {
-    loadMe();
-  }, [loadMe]);
-
-  useEffect(() => {
-    if (configTab !== "visa") return;
-    let alive = true;
-    const run = async () => {
-      setLoadingVisaTab(true);
-      setVisaTabError("");
-      setPetitionTabError("");
-      try {
+      if (configTab === "account") {
+        const res = await getMe();
+        const { profile: p, preferences: pref } = res.data?.data || {};
+        if (p) setProfile(p);
+        if (pref) setPreferences(pref);
+      } else if (configTab === "visa") {
         const [vRes, pRes] = await Promise.all([getVisaTypes(), getPetitionTypes()]);
-        if (!alive) return;
         setVisaTypes(vRes.data?.data?.visa_types ?? []);
         setPetitionTypes(pRes.data?.data?.petition_types ?? []);
-      } catch (e) {
-        if (!alive) return;
-        const msg = getApiError(e);
-        setVisaTabError(msg);
-        setPetitionTabError(msg);
-        showToast({ message: msg, variant: "danger" });
-      } finally {
-        if (alive) setLoadingVisaTab(false);
-      }
-    };
-    run();
-    return () => {
-      alive = false;
-    };
-  }, [configTab, showToast]);
-
-  useEffect(() => {
-    if (configTab !== "categories") return;
-    let alive = true;
-    const run = async () => {
-      setLoadingCategories(true);
-      setCategoryTabError("");
-      try {
+      } else if (configTab === "categories") {
         const res = await getCaseCategories();
-        if (!alive) return;
         setCategories(res.data?.data?.categories ?? []);
-      } catch (e) {
-        if (!alive) return;
-        const msg = getApiError(e);
-        setCategoryTabError(msg);
-        showToast({ message: msg, variant: "danger" });
-      } finally {
-        if (alive) setLoadingCategories(false);
-      }
-    };
-    run();
-    return () => {
-      alive = false;
-    };
-  }, [configTab, showToast]);
-
-  useEffect(() => {
-    if (configTab !== "sla") return;
-    let alive = true;
-    const run = async () => {
-      setLoadingSlaTab(true);
-      setSlaTabError("");
-      try {
-        const res = await getSla();
-        if (!alive) return;
-        const s = res.data?.data?.sla;
-        if (s) {
-          slaBaselineRef.current = { ...s };
-          setSlaForm({
-            skilled_worker_days: String(s.skilled_worker_days ?? ""),
-            ilr_days: String(s.ilr_days ?? ""),
-            student_visa_days: String(s.student_visa_days ?? ""),
-            escalation_stuck_days: String(s.escalation_stuck_days ?? ""),
-            missing_docs_escalation_days: String(s.missing_docs_escalation_days ?? ""),
-          });
-        }
-      } catch (e) {
-        if (!alive) return;
-        const msg = getApiError(e);
-        setSlaTabError(msg);
-        showToast({ message: msg, variant: "danger" });
-      } finally {
-        if (alive) setLoadingSlaTab(false);
-      }
-    };
-    run();
-    return () => {
-      alive = false;
-    };
-  }, [configTab, showToast]);
-
-  useEffect(() => {
-    if (configTab !== "email") return;
-    let alive = true;
-    const run = async () => {
-      setLoadingEmailTab(true);
-      setEmailTabError("");
-      try {
+      } else if (configTab === "departments") {
+        const res = await getDepartments();
+        setDepartments(res.data?.data?.departments ?? []);
+      } else if (configTab === "email") {
         const res = await getEmailTemplates();
-        if (!alive) return;
-        const rows = res.data?.data?.templates ?? [];
-        const next = emptyEmailDrafts();
-        rows.forEach((t) => {
-          if (t?.key) next[t.key] = { subject: t.subject ?? "", body: t.body ?? "" };
-        });
-        setEmailDrafts(next);
-      } catch (e) {
-        if (!alive) return;
-        const msg = getApiError(e);
-        setEmailTabError(msg);
-        showToast({ message: msg, variant: "danger" });
-      } finally {
-        if (alive) setLoadingEmailTab(false);
+        setEmailTemplates(res.data?.data?.templates ?? []);
+      } else if (configTab === "payment") {
+        const res = await getPaymentSetting();
+        if (res.data?.data) setPaymentConfig(res.data.data);
+      } else if (configTab === "sla") {
+        const res = await getSlaRules();
+        setSlaRules(res.data?.data?.rules ?? []);
       }
-    };
-    run();
-    return () => {
-      alive = false;
-    };
-  }, [configTab, showToast]);
-
-  const handleProfile = (e) => {
-    const { name, value } = e.target;
-    setProfile((p) => ({ ...p, [name]: value }));
-  };
-
-  const handleSecurity = (e) => {
-    const { name, value } = e.target;
-    setSecurity((p) => ({ ...p, [name]: value }));
-  };
-
-  const handlePreferenceSelect = (e) => {
-    const { name, value } = e.target;
-    setPreferences((p) => ({ ...p, [name]: value }));
-  };
-
-  const togglePreference = (key) => {
-    setPreferences((p) => ({ ...p, [key]: !p[key] }));
-  };
-
-  const saveProfile = async () => {
-    setSavingAccount(true);
-    setAccountError("");
-    try {
-      await updateMePreferences({
-        two_factor_enabled: preferences.two_factor_enabled,
-        email_notifications: preferences.email_notifications,
-        case_updates: preferences.case_updates,
-        payment_alerts: preferences.payment_alerts,
-        timezone: preferences.timezone,
-        language: preferences.language,
-        date_format: preferences.date_format,
-        data_collection: preferences.data_collection,
-        avatar_url: profile.avatar_url.trim() ? profile.avatar_url.trim() : null,
-      });
-      const profilePayload = {
-        first_name: profile.first_name.trim(),
-        last_name: profile.last_name.trim(),
-        email: profile.email.trim(),
-      };
-      const cc = profile.country_code.trim();
-      const mob = profile.mobile.trim();
-      if (cc) profilePayload.country_code = cc;
-      if (mob) profilePayload.mobile = mob;
-      const profRes = await updateMe(profilePayload);
-      applyMeFromPayload(profRes.data?.data);
-      showToast({ message: profRes.data?.message || "Settings updated." });
     } catch (e) {
       const msg = getApiError(e);
-      setAccountError(msg);
+      setError(msg);
       showToast({ message: msg, variant: "danger" });
-      await loadMe();
     } finally {
-      setSavingAccount(false);
+      setLoading(false);
+    }
+  }, [configTab, showToast]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Account Handlers (DYNAMIC)
+  const handleProfileSave = async () => {
+    setSaving(true);
+    try {
+      // Parallel update for performance
+      await Promise.all([
+        updateMePreferences(preferences),
+        updateMe(profile)
+      ]);
+      showToast({ message: "Profile and preferences updated successfully." });
+      loadData(); // Refresh to ensure sync
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSaving(false);
     }
   };
 
-  const submitPasswordChange = async (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    setPasswordError("");
     if (security.newPassword !== security.confirmPassword) {
       setPasswordError("Passwords do not match");
       return;
     }
     setSavingPassword(true);
+    setPasswordError("");
     try {
-      const res = await changePassword({
-        current_password: security.currentPassword,
-        new_password: security.newPassword,
-      });
-      showToast({ message: res.data?.message || "Password updated successfully." });
+      await changePassword({ current_password: security.currentPassword, new_password: security.newPassword });
+      showToast({ message: "Password updated successfully." });
       setSecurity({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    } catch (err) {
-      const msg = getApiError(err);
-      setPasswordError(msg);
-      showToast({ message: msg, variant: "danger" });
+    } catch (e) {
+      setPasswordError(getApiError(e));
     } finally {
       setSavingPassword(false);
     }
   };
 
-  const handleHeaderSave = async () => {
-    if (configTab === "account") await saveProfile();
-    else if (configTab === "sla") await saveSlaRules();
-    else if (configTab === "email") await saveCurrentEmailTemplate();
-    else if (configTab === "payment") {
-      showToast({ message: "Payment configuration is not synced to the server.", variant: "warning" });
-    } else {
-      showToast({ message: "Use the actions in this section to save changes.", variant: "warning" });
-    }
-  };
-
-  const saveSlaRules = async () => {
-    setSlaTabError("");
-    const base = slaBaselineRef.current || {};
-    const payload = {};
-    for (const k of SLA_KEYS) {
-      const raw = slaForm[k];
-      const n = parseInt(raw, 10);
-      if (Number.isNaN(n) || raw === "") {
-        setSlaTabError("Enter a valid number for each SLA field.");
-        showToast({ message: "Enter a valid number for each SLA field.", variant: "danger" });
-        return;
-      }
-      if (base[k] === undefined || n !== base[k]) {
-        payload[k] = n;
-      }
-    }
-    if (Object.keys(payload).length === 0) {
-      showToast({ message: "No SLA changes to save.", variant: "warning" });
-      return;
-    }
-    setSavingSla(true);
-    try {
-      await updateSla(payload);
-      const res = await getSla();
-      const s = res.data?.data?.sla;
-      if (s) {
-        slaBaselineRef.current = { ...s };
-        setSlaForm({
-          skilled_worker_days: String(s.skilled_worker_days ?? ""),
-          ilr_days: String(s.ilr_days ?? ""),
-          student_visa_days: String(s.student_visa_days ?? ""),
-          escalation_stuck_days: String(s.escalation_stuck_days ?? ""),
-          missing_docs_escalation_days: String(s.missing_docs_escalation_days ?? ""),
-        });
-      }
-      showToast({ message: res.data?.message || "SLA settings saved." });
-    } catch (e) {
-      const msg = getApiError(e);
-      setSlaTabError(msg);
-      showToast({ message: msg, variant: "danger" });
-    } finally {
-      setSavingSla(false);
-    }
-  };
-
-  const saveCurrentEmailTemplate = async () => {
-    const draft = emailDrafts[emailTemplateKey] || { subject: "", body: "" };
-    setSavingEmailTemplate(true);
-    setEmailTabError("");
-    try {
-      const res = await updateEmailTemplate(emailTemplateKey, {
-        subject: draft.subject,
-        body: draft.body,
-      });
-      const t = res.data?.data?.template;
-      if (t?.key) {
-        setEmailDrafts((prev) => ({
-          ...prev,
-          [t.key]: { subject: t.subject ?? "", body: t.body ?? "" },
-        }));
-      }
-      showToast({ message: res.data?.message || "Email template saved." });
-    } catch (e) {
-      const msg = getApiError(e);
-      setEmailTabError(msg);
-      showToast({ message: msg, variant: "danger" });
-    } finally {
-      setSavingEmailTemplate(false);
-    }
-  };
-
-  const handleCancelAccount = async () => {
-    setSecurity({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    setPasswordError("");
-    await loadMe();
-  };
-
-  const refreshVisaTypes = async () => {
-    const res = await getVisaTypes();
-    setVisaTypes(res.data?.data?.visa_types ?? []);
-  };
-
-  const refreshPetitionTypes = async () => {
-    const res = await getPetitionTypes();
-    setPetitionTypes(res.data?.data?.petition_types ?? []);
-  };
-
-  const openVisaModalAdd = () => {
-    setVisaModalMode("add");
-    setEditingVisaId(null);
-    setVisaFormName("");
-    setVisaFormError("");
-    setVisaModalOpen(true);
-  };
-
-  const openVisaModalEdit = (id) => {
-    const row = visaTypes.find((v) => v.id === id);
-    if (!row) return;
-    setVisaModalMode("edit");
-    setEditingVisaId(id);
-    setVisaFormName(row.name);
-    setVisaFormError("");
-    setVisaModalOpen(true);
-  };
-
-  const closeVisaModal = () => {
-    setVisaModalOpen(false);
-    setVisaFormName("");
-    setVisaFormError("");
-    setEditingVisaId(null);
-  };
-
+  // Visa/Petition Handlers
   const submitVisaForm = async (e) => {
     e.preventDefault();
-    const trimmed = visaFormName.trim();
-    if (!trimmed) {
-      setVisaFormError("Name is required");
-      return;
-    }
-    setVisaFormError("");
+    if (!visaFormName.trim()) return setVisaFormError("Name is required");
     try {
-      if (visaModalMode === "add") {
-        await createVisaType({ name: trimmed });
-        showToast({ message: "Visa type created." });
-      } else if (editingVisaId != null) {
-        await updateVisaType(editingVisaId, { name: trimmed });
-        showToast({ message: "Visa type updated." });
-      }
-      await refreshVisaTypes();
-      closeVisaModal();
-    } catch (err) {
-      setVisaFormError(getApiError(err));
-      showToast({ message: getApiError(err), variant: "danger" });
-    }
-  };
-
-  const removeVisa = async (id) => {
-    if (!window.confirm("Delete this visa type?")) return;
-    try {
-      await deleteVisaType(id);
-      await refreshVisaTypes();
-      showToast({ message: "Visa type deleted." });
-    } catch (e) {
-      showToast({ message: getApiError(e), variant: "danger" });
-    }
-  };
-
-  const openPetitionModalAdd = () => {
-    setPetitionModalMode("add");
-    setEditingPetitionId(null);
-    setPetitionFormName("");
-    setPetitionFormError("");
-    setPetitionModalOpen(true);
-  };
-
-  const openPetitionModalEdit = (id) => {
-    const row = petitionTypes.find((v) => v.id === id);
-    if (!row) return;
-    setPetitionModalMode("edit");
-    setEditingPetitionId(id);
-    setPetitionFormName(row.name);
-    setPetitionFormError("");
-    setPetitionModalOpen(true);
-  };
-
-  const closePetitionModal = () => {
-    setPetitionModalOpen(false);
-    setPetitionFormName("");
-    setPetitionFormError("");
-    setEditingPetitionId(null);
+      if (visaModalMode === "add") await createVisaType({ name: visaFormName.trim() });
+      else await updateVisaType(editingVisaId, { name: visaFormName.trim() });
+      loadData();
+      setVisaModalOpen(false);
+      showToast({ message: `Visa type ${visaModalMode === "add" ? "added" : "updated"}.` });
+    } catch (e) { setVisaFormError(getApiError(e)); }
   };
 
   const submitPetitionForm = async (e) => {
     e.preventDefault();
-    const trimmed = petitionFormName.trim();
-    if (!trimmed) {
-      setPetitionFormError("Name is required");
-      return;
-    }
-    setPetitionFormError("");
+    if (!petitionFormName.trim()) return setPetitionFormError("Name is required");
     try {
-      if (petitionModalMode === "add") {
-        await createPetitionType({ name: trimmed });
-        showToast({ message: "Petition type created." });
-      } else if (editingPetitionId != null) {
-        await updatePetitionType(editingPetitionId, { name: trimmed });
-        showToast({ message: "Petition type updated." });
-      }
-      await refreshPetitionTypes();
-      closePetitionModal();
-    } catch (err) {
-      setPetitionFormError(getApiError(err));
-      showToast({ message: getApiError(err), variant: "danger" });
+      if (petitionModalMode === "add") await createPetitionType({ name: petitionFormName.trim() });
+      else await updatePetitionType(editingPetitionId, { name: petitionFormName.trim() });
+      loadData();
+      setPetitionModalOpen(false);
+      showToast({ message: `Petition type ${petitionModalMode === "add" ? "added" : "updated"}.` });
+    } catch (e) { setPetitionFormError(getApiError(e)); }
+  };
+
+  // Department Handlers
+  const submitDepartmentForm = async (e) => {
+    e.preventDefault();
+    if (!departmentFormName.trim()) return setDepartmentFormError("Name is required");
+    try {
+      if (departmentModalMode === "add") await createDepartment({ name: departmentFormName.trim() });
+      else await updateDepartment({ oldName: editingDepartment, newName: departmentFormName.trim() });
+      loadData();
+      setDepartmentModalOpen(false);
+      showToast({ message: `Department ${departmentModalMode === "add" ? "added" : "updated"}.` });
+    } catch (e) { setDepartmentFormError(getApiError(e)); }
+  };
+
+  // Category Handlers
+  const handleCategoryAdd = async (name) => {
+    setSaving(true);
+    try {
+      await createCaseCategory({ category: name });
+      loadData();
+      showToast({ message: "Category added successfully." });
+    } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
+    finally { setSaving(false); }
+  };
+
+  const handleCategoryDelete = async (name) => {
+    const res = await Swal.fire({ title: "Delete Category?", text: `Are you sure you want to remove "${name}"?`, icon: "warning", showCancelButton: true });
+    if (res.isConfirmed) {
+      try {
+        await deleteCaseCategory(name);
+        loadData();
+        showToast({ message: "Category deleted." });
+      } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
     }
   };
 
-  const removePetition = async (id) => {
-    if (!window.confirm("Delete this petition type?")) return;
+  // Email Handlers
+  const submitEmailForm = async (e) => {
+    e.preventDefault();
+    if (!emailFormKey.trim()) return setEmailFormError("Key is required");
     try {
-      await deletePetitionType(id);
-      await refreshPetitionTypes();
-      showToast({ message: "Petition type deleted." });
-    } catch (e) {
-      showToast({ message: getApiError(e), variant: "danger" });
-    }
+      const payload = { template_key: emailFormKey.trim(), subject: emailFormSubject.trim(), body: emailFormBody.trim() };
+      if (emailModalMode === "add") await createEmailTemplate(payload);
+      else await updateEmailTemplate(editingEmailKey, payload);
+      loadData();
+      setEmailModalOpen(false);
+      showToast({ message: "Email template saved." });
+    } catch (e) { setEmailFormError(getApiError(e)); }
   };
 
-  const addCategory = async () => {
-    const t = categoryInput.trim();
-    if (!t) return;
-    setCategorySaving(true);
-    setCategoryTabError("");
+  // Payment Handlers
+  const handlePaymentSave = async () => {
+    setSaving(true);
     try {
-      await createCaseCategory({ name: t });
-      setCategoryInput("");
-      const res = await getCaseCategories();
-      setCategories(res.data?.data?.categories ?? []);
-      showToast({ message: "Category added." });
-    } catch (e) {
-      const msg = getApiError(e);
-      setCategoryTabError(msg);
-      showToast({ message: msg, variant: "danger" });
-    } finally {
-      setCategorySaving(false);
-    }
+      await updatePaymentSetting(paymentConfig);
+      showToast({ message: "Payment configuration updated." });
+    } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
+    finally { setSaving(false); }
   };
 
-  const removeCategory = async (id) => {
-    if (!window.confirm("Delete this category?")) return;
+  // SLA Handlers
+  const submitSlaForm = async (e) => {
+    e.preventDefault();
+    if (!slaFormName.trim() || !slaFormDays) return setSlaFormError("Required fields missing");
     try {
-      await deleteCaseCategory(id);
-      const res = await getCaseCategories();
-      setCategories(res.data?.data?.categories ?? []);
-      showToast({ message: "Category deleted." });
-    } catch (e) {
-      showToast({ message: getApiError(e), variant: "danger" });
-    }
+      const payload = { name: slaFormName.trim(), days: parseInt(slaFormDays), rule_type: slaFormType };
+      if (slaModalMode === "add") await createSlaRule(payload);
+      else await updateSlaRule(editingSlaId, payload);
+      loadData();
+      setSlaModalOpen(false);
+      showToast({ message: "SLA rule saved." });
+    } catch (e) { setSlaFormError(getApiError(e)); }
   };
-
-  const headerSaveDisabled =
-    (configTab === "account" && (savingAccount || loadingMe)) ||
-    (configTab === "sla" && (savingSla || loadingSlaTab)) ||
-    (configTab === "email" && (savingEmailTemplate || loadingEmailTab));
-
-  const profileInitials = `${(profile.first_name || "").trim().charAt(0)}${(profile.last_name || "").trim().charAt(0)}`.toUpperCase() || "?";
-
-  const currentEmailDraft = emailDrafts[emailTemplateKey] || { subject: "", body: "" };
 
   return (
-    <div className="space-y-6 sm:space-y-8 pb-10 max-w-[1600px] mx-auto w-full">
-      <motion.div
-        className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2 sm:gap-3">
-            <RiSettings3Line className="text-primary shrink-0" size={32} />
-            <span className="truncate">Settings</span>
-          </h1>
-          <p className="text-primary font-bold text-sm mt-1">System configuration and preferences</p>
-        </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <Button
-            type="button"
-            className="rounded-xl shadow-sm inline-flex items-center gap-2"
-            onClick={handleHeaderSave}
-            disabled={headerSaveDisabled}
-          >
-            <FiSettings size={16} aria-hidden />
-            Save changes
-          </Button>
-        </div>
-      </motion.div>
-
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left Sidebar - Vertical Tabs */}
-        <div className="lg:w-64 shrink-0">
-          <div className="lg:sticky lg:top-6">
-            <h2 className="text-xs font-black text-gray-400 uppercase tracking-wider px-0.5 mb-3">Settings</h2>
-            <SegmentedTabBar 
-              tabs={CONFIG_TABS} 
-              activeId={configTab} 
-              onChange={setConfigTab} 
-              layoutId="admin-settings-config-tab" 
-              vertical={true}
-            />
+    <div className="min-h-screen bg-gray-50/50 flex flex-col md:flex-row overflow-hidden font-sans">
+      {/* Sidebar - Desktop */}
+      <aside className="hidden md:flex w-72 flex-col bg-white border-r border-gray-100 h-screen sticky top-0 shadow-sm">
+        <div className="p-8 pb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-primary rounded-xl text-white shadow-lg shadow-primary/20">
+              <FiSettings size={22} />
+            </div>
+            <h1 className="text-xl font-black text-secondary tracking-tight">Admin Central</h1>
           </div>
+          <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-black">System Preferences</p>
         </div>
-
-        {/* Right Content Area */}
-        <div className="flex-1 min-w-0">
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden min-h-[500px]">
-            <AnimatePresence mode="wait">
-          {configTab === "account" && (
-            <motion.div key="account" className="p-5 sm:p-6 space-y-8" {...panelMotion}>
-              {loadingMe ? (
-                <PanelLoader />
-              ) : (
-                <>
-                  {accountError && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{accountError}</div>
-                  )}
-                  <div>
-                    <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Profile settings</h3>
-                    <div className="space-y-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-                        <div className="h-20 w-20 rounded-full bg-secondary/10 flex items-center justify-center shrink-0 overflow-hidden">
-                          {profile.avatar_url ? (
-                            <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <span className="text-2xl font-black text-secondary">{profileInitials}</span>
-                          )}
-                        </div>
-                        <div>
-                          <input
-                            type="file"
-                            id="avatar-upload"
-                            accept="image/jpeg,image/gif,image/png"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files[0];
-                              if (file) {
-                                if (file.size > 2 * 1024 * 1024) {
-                                  showToast({ message: "File size must be less than 2MB", variant: "danger" });
-                                  return;
-                                }
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  setProfile((p) => ({ ...p, avatar_url: reader.result }));
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            className="rounded-xl"
-                            onClick={() => document.getElementById("avatar-upload")?.click?.()}
-                          >
-                            Change avatar
-                          </Button>
-                          <p className="mt-1 text-xs text-gray-500">JPG, GIF or PNG. Max size of 2MB</p>
-                        </div>
-                      </div>
-                      <Input
-                        label="Avatar URL"
-                        name="avatar_url"
-                        value={profile.avatar_url}
-                        onChange={handleProfile}
-                        placeholder="https://…"
-                      />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input label="First name" name="first_name" value={profile.first_name} onChange={handleProfile} />
-                        <Input label="Last name" name="last_name" value={profile.last_name} onChange={handleProfile} />
-                      </div>
-                      <Input label="Email address" name="email" type="email" value={profile.email} onChange={handleProfile} />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input label="Country code" name="country_code" value={profile.country_code} onChange={handleProfile} placeholder="+1" />
-                        <Input label="Mobile" name="mobile" value={profile.mobile} onChange={handleProfile} />
-                      </div>
-                      <Input label="Role" name="role_name" value={profile.role_name} onChange={() => {}} readOnly />
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Security settings</h3>
-                    <form onSubmit={submitPasswordChange} className="space-y-6">
-                      {passwordError && (
-                        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{passwordError}</div>
-                      )}
-                      <Input
-                        label="Current password"
-                        name="currentPassword"
-                        type="password"
-                        value={security.currentPassword}
-                        onChange={handleSecurity}
-                      />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input label="New password" name="newPassword" type="password" value={security.newPassword} onChange={handleSecurity} />
-                        <Input label="Confirm new password" name="confirmPassword" type="password" value={security.confirmPassword} onChange={handleSecurity} />
-                      </div>
-                      <Button type="submit" className="rounded-xl" disabled={savingPassword}>
-                        {savingPassword ? "Updating…" : "Update password"}
-                      </Button>
-                    </form>
-                    <div className="space-y-3 mt-8 pt-6 border-t border-gray-100">
-                      <p className="text-sm font-black text-secondary">Two-factor authentication</p>
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium text-gray-700">
-                            {preferences.two_factor_enabled ? "2FA is enabled" : "2FA is disabled"}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {preferences.two_factor_enabled ? "Your account is protected with 2FA" : "Enable 2FA for enhanced security"}
-                          </p>
-                        </div>
-                        {preferences.two_factor_enabled ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="rounded-xl text-red-600 hover:bg-red-50"
-                            onClick={() => {
-                              setTwoFactorMode("disable");
-                              setTwoFactorModalOpen(true);
-                            }}
-                          >
-                            Disable 2FA
-                          </Button>
-                        ) : (
-                          <Button
-                            type="button"
-                            className="rounded-xl"
-                            onClick={() => {
-                              setTwoFactorMode("setup");
-                              setTwoFactorModalOpen(true);
-                            }}
-                          >
-                            Enable 2FA
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Notification preferences</h3>
-                    <div className="space-y-5">
-                      {[
-                        { key: "email_notifications", label: "Email notifications", desc: "Receive notifications via email" },
-                        { key: "case_updates", label: "Case updates", desc: "Get notified about case status changes" },
-                        { key: "payment_alerts", label: "Payment alerts", desc: "Receive payment due and overdue notifications" },
-                      ].map(({ key, label, desc }) => (
-                        <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-bold text-secondary">{label}</p>
-                            <p className="text-xs text-gray-500">{desc}</p>
-                          </div>
-                          <Toggle on={preferences[key]} onToggle={() => togglePreference(key)} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">System settings</h3>
-                    <div className="space-y-6">
-                      <div className="flex flex-col gap-1">
-                        <label htmlFor="sys-tz" className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                          Time zone
-                        </label>
-                        <select
-                          id="sys-tz"
-                          name="timezone"
-                          value={preferences.timezone}
-                          onChange={handlePreferenceSelect}
-                          className={selectClass}
-                        >
-                          {timezones.map((tz) => (
-                            <option key={tz} value={tz}>
-                              {tz}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label htmlFor="sys-lang" className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                          Language
-                        </label>
-                        <select
-                          id="sys-lang"
-                          name="language"
-                          value={preferences.language}
-                          onChange={handlePreferenceSelect}
-                          className={selectClass}
-                        >
-                          {languages.map((l) => (
-                            <option key={l} value={l}>
-                              {l}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label htmlFor="sys-df" className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                          Date format
-                        </label>
-                        <select
-                          id="sys-df"
-                          name="date_format"
-                          value={preferences.date_format}
-                          onChange={handlePreferenceSelect}
-                          className={selectClass}
-                        >
-                          {dateFormats.map((f) => (
-                            <option key={f} value={f}>
-                              {f}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="space-y-3">
-                        <p className="text-sm font-black text-secondary">Data privacy</p>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">Data collection</p>
-                            <p className="text-xs text-gray-500 mt-0.5">Allow collection of usage data for improvement</p>
-                          </div>
-                          <Toggle on={preferences.data_collection} onToggle={() => togglePreference("data_collection")} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2 border-t border-gray-100">
-                    <Button type="button" variant="ghost" className="rounded-xl w-full sm:w-auto" onClick={handleCancelAccount} disabled={loadingMe}>
-                      Cancel
-                    </Button>
-                    <Button type="button" className="rounded-xl w-full sm:w-auto" onClick={saveProfile} disabled={savingAccount || loadingMe}>
-                      {savingAccount ? "Saving…" : "Save changes"}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </motion.div>
-          )}
-
-          {configTab === "visa" && (
-            <motion.div key="visa" className="p-5 sm:p-6 space-y-10" {...panelMotion}>
-              {loadingVisaTab ? (
-                <PanelLoader />
-              ) : (
-                <>
-                  {(visaTabError || petitionTabError) && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{visaTabError || petitionTabError}</div>
-                  )}
-                  <div>
-                    <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Visa types</h3>
-                    <div className="hidden sm:grid sm:grid-cols-[1fr_auto_auto] gap-2 text-[11px] font-black uppercase tracking-wide text-gray-400 px-1 mb-2">
-                      <span>Name</span>
-                      <span className="text-center">Sort</span>
-                      <span className="text-right">Actions</span>
-                    </div>
-                    <div className="flex flex-col gap-2.5 mb-5">
-                      {visaTypes.map((row) => (
-                        <div
-                          key={row.id}
-                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 rounded-xl bg-gray-50 border border-gray-100"
-                        >
-                          <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4 min-w-0 flex-1">
-                            <span className="text-sm font-semibold text-secondary truncate">{row.name}</span>
-                            <span className="text-xs font-bold text-gray-500 sm:text-center">{row.sort_order ?? "—"}</span>
-                          </div>
-                          <div className="flex gap-2 shrink-0">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="rounded-xl text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
-                              onClick={() => openVisaModalEdit(row.id)}
-                            >
-                              <FiEdit2 size={14} aria-hidden />
-                              Edit
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="danger"
-                              className="rounded-xl text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
-                              onClick={() => removeVisa(row.id)}
-                            >
-                              <FiTrash2 size={14} aria-hidden />
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                      {visaTypes.length === 0 && <p className="text-sm text-gray-500">No visa types yet.</p>}
-                    </div>
-                    <Button type="button" className="rounded-xl inline-flex items-center gap-2" onClick={openVisaModalAdd}>
-                      <FiPlus size={16} aria-hidden />
-                      Add visa type
-                    </Button>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Petition types</h3>
-                    <div className="hidden sm:grid sm:grid-cols-[1fr_auto_auto] gap-2 text-[11px] font-black uppercase tracking-wide text-gray-400 px-1 mb-2">
-                      <span>Name</span>
-                      <span className="text-center">Sort</span>
-                      <span className="text-right">Actions</span>
-                    </div>
-                    <div className="flex flex-col gap-2.5 mb-5">
-                      {petitionTypes.map((row) => (
-                        <div
-                          key={row.id}
-                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 rounded-xl bg-gray-50 border border-gray-100"
-                        >
-                          <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4 min-w-0 flex-1">
-                            <span className="text-sm font-semibold text-secondary truncate">{row.name}</span>
-                            <span className="text-xs font-bold text-gray-500 sm:text-center">{row.sort_order ?? "—"}</span>
-                          </div>
-                          <div className="flex gap-2 shrink-0">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="rounded-xl text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
-                              onClick={() => openPetitionModalEdit(row.id)}
-                            >
-                              <FiEdit2 size={14} aria-hidden />
-                              Edit
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="danger"
-                              className="rounded-xl text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
-                              onClick={() => removePetition(row.id)}
-                            >
-                              <FiTrash2 size={14} aria-hidden />
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                      {petitionTypes.length === 0 && <p className="text-sm text-gray-500">No petition types yet.</p>}
-                    </div>
-                    <Button type="button" className="rounded-xl inline-flex items-center gap-2" onClick={openPetitionModalAdd}>
-                      <FiPlus size={16} aria-hidden />
-                      Add petition type
-                    </Button>
-                  </div>
-                </>
-              )}
-            </motion.div>
-          )}
-
-          {configTab === "categories" && (
-            <motion.div key="categories" className="p-5 sm:p-6" {...panelMotion}>
-              {loadingCategories ? (
-                <PanelLoader />
-              ) : (
-                <>
-                  <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Case categories</h3>
-                  {categoryTabError && (
-                    <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{categoryTabError}</div>
-                  )}
-                  <div className="flex flex-col sm:flex-row gap-3 max-w-xl">
-                    <Input
-                      label="Add category"
-                      name="category"
-                      value={categoryInput}
-                      onChange={(e) => setCategoryInput(e.target.value)}
-                      placeholder="e.g. Urgent, VIP, Government…"
-                      className="flex-1"
-                    />
-                    <div className="sm:pt-6">
-                      <Button type="button" className="rounded-xl w-full sm:w-auto" onClick={addCategory} disabled={categorySaving}>
-                        {categorySaving ? "Adding…" : "Add"}
-                      </Button>
-                    </div>
-                  </div>
-                  {categories.length > 0 && (
-                    <ul className="mt-4 flex flex-wrap gap-2">
-                      {categories.map((c) => (
-                        <li
-                          key={c.id}
-                          className="inline-flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-full text-xs font-bold bg-secondary/10 text-secondary border border-secondary/20"
-                        >
-                          <span>{c.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeCategory(c.id)}
-                            className="rounded-full p-1 text-red-600 hover:bg-red-50"
-                            aria-label={`Delete ${c.name}`}
-                          >
-                            <FiTrash2 size={12} />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
-              )}
-            </motion.div>
-          )}
-
-          {configTab === "departments" && (
-            <motion.div key="departments" className="p-5 sm:p-6" {...panelMotion}>
-              <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Departments</h3>
-              <div className="flex flex-col gap-2.5 mb-5">
-                {departments.map((department) => (
-                  <div
-                    key={department}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 rounded-xl bg-gray-50 border border-gray-100"
-                  >
-                    <span className="text-sm font-semibold text-secondary">{department}</span>
-                    <div className="flex gap-2 shrink-0">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="rounded-xl text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
-                        onClick={() => openDepartmentModalEdit(department)}
-                      >
-                        <FiEdit2 size={14} aria-hidden />
-                        Edit
-                      </Button>
-                      <Button type="button" variant="danger" className="rounded-xl text-xs px-3 py-1.5 inline-flex items-center gap-1.5" onClick={() => removeDepartment(department)}>
-                        <FiTrash2 size={14} aria-hidden />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+        
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar pb-8">
+          {CONFIG_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => { setConfigTab(tab.id); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all group relative ${
+                configTab === tab.id 
+                ? "bg-secondary text-white shadow-xl shadow-secondary/20" 
+                : "text-gray-500 hover:bg-gray-50 hover:text-secondary"
+              }`}
+            >
+              <div className={`p-2 rounded-xl transition-colors ${
+                configTab === tab.id ? "bg-white/10" : `${tab.bg} ${tab.color}`
+              }`}>
+                {tab.icon}
               </div>
-              <Button type="button" className="rounded-xl inline-flex items-center gap-2" onClick={openDepartmentModalAdd}>
-                <FiPlus size={16} aria-hidden />
-                Add department
-              </Button>
-            </motion.div>
-          )}
-
-          {configTab === "roles" && (
-            <motion.div key="roles" className="p-5 sm:p-6" {...panelMotion}>
-              <h3 className="text-sm font-black text-secondary pb-3 mb-2 border-b border-gray-100">Role permissions</h3>
-              <p className="text-sm text-gray-500 mb-5 max-w-2xl leading-relaxed">
-                Configure role-level defaults. Use the permissions area for the full RBAC matrix.
-              </p>
-              <Link to="/admin/permissions" className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline">
-                Go to permissions &amp; RBAC
-                <FiArrowRight size={16} aria-hidden />
-              </Link>
-            </motion.div>
-          )}
-
-          {configTab === "email" && (
-            <motion.div key="email" className="p-5 sm:p-6 space-y-4" {...panelMotion}>
-              {loadingEmailTab ? (
-                <PanelLoader />
-              ) : (
-                <>
-                  <h3 className="text-sm font-black text-secondary pb-3 mb-2 border-b border-gray-100">Email templates</h3>
-                  {emailTabError && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{emailTabError}</div>
-                  )}
-                  <Input
-                    label="Template"
-                    name="emailTemplate"
-                    value={emailTemplateKey}
-                    onChange={(e) => setEmailTemplateKey(e.target.value)}
-                    options={EMAIL_TEMPLATE_OPTIONS}
-                  />
-                  <Input
-                    label="Subject"
-                    name="emailSubject"
-                    value={currentEmailDraft.subject}
-                    onChange={(e) =>
-                      setEmailDrafts((prev) => ({
-                        ...prev,
-                        [emailTemplateKey]: { ...currentEmailDraft, subject: e.target.value },
-                      }))
-                    }
-                  />
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="email-body" className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                      Body
-                    </label>
-                    <textarea
-                      id="email-body"
-                      value={currentEmailDraft.body}
-                      onChange={(e) =>
-                        setEmailDrafts((prev) => ({
-                          ...prev,
-                          [emailTemplateKey]: { ...currentEmailDraft, body: e.target.value },
-                        }))
-                      }
-                      rows={8}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 resize-y min-h-[160px]"
-                    />
-                  </div>
-                  <Button type="button" className="rounded-xl" onClick={saveCurrentEmailTemplate} disabled={savingEmailTemplate}>
-                    {savingEmailTemplate ? "Saving…" : "Save template"}
-                  </Button>
-                </>
+              <span className="text-sm font-bold tracking-tight">{tab.label}</span>
+              {configTab === tab.id && (
+                <motion.div layoutId="activeIndicator" className="ml-auto">
+                  <FiArrowRight size={16} />
+                </motion.div>
               )}
-            </motion.div>
-          )}
+            </button>
+          ))}
+        </nav>
 
-          {configTab === "payment" && (
-            <motion.div key="payment" className="p-5 sm:p-6 space-y-5" {...panelMotion}>
-              <h3 className="text-sm font-black text-secondary pb-3 mb-2 border-b border-gray-100">Payment configuration</h3>
-              <Input label="Default payment currency" name="currency" value={currency} onChange={(e) => setCurrency(e.target.value)} options={CURRENCY_OPTIONS} />
-              <div>
-                <p className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Payment methods accepted</p>
-                <div className="space-y-3">
-                  <label className="flex items-center justify-between gap-4 p-3 rounded-xl border border-gray-100 bg-gray-50/80 cursor-pointer">
-                    <span className="text-sm font-medium text-gray-800">Bank transfer</span>
-                    <Toggle on={payBank} onToggle={() => setPayBank((v) => !v)} />
-                  </label>
-                  <label className="flex items-center justify-between gap-4 p-3 rounded-xl border border-gray-100 bg-gray-50/80 cursor-pointer">
-                    <span className="text-sm font-medium text-gray-800">Credit / debit card</span>
-                    <Toggle on={payCard} onToggle={() => setPayCard((v) => !v)} />
-                  </label>
-                  <label className="flex items-center justify-between gap-4 p-3 rounded-xl border border-gray-100 bg-gray-50/80 cursor-pointer">
-                    <span className="text-sm font-medium text-gray-800">Cheque</span>
-                    <Toggle on={payCheque} onToggle={() => setPayCheque((v) => !v)} />
-                  </label>
-                </div>
-              </div>
-              <Input label="Invoice prefix" name="invoicePrefix" value={invoicePrefix} onChange={(e) => setInvoicePrefix(e.target.value)} />
-              <Button type="button" className="rounded-xl">
-                Save config
-              </Button>
-            </motion.div>
-          )}
-
-          {configTab === "sla" && (
-            <motion.div key="sla" className="p-5 sm:p-6 space-y-4" {...panelMotion}>
-              {loadingSlaTab ? (
-                <PanelLoader />
-              ) : (
-                <>
-                  <h3 className="text-sm font-black text-secondary pb-3 mb-2 border-b border-gray-100">SLA rules</h3>
-                  {slaTabError && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{slaTabError}</div>
-                  )}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
-                    <Input
-                      label="Skilled worker — target days"
-                      name="slaSkilled"
-                      type="number"
-                      value={slaForm.skilled_worker_days}
-                      onChange={(e) => setSlaForm((f) => ({ ...f, skilled_worker_days: e.target.value }))}
-                    />
-                    <Input
-                      label="ILR — target days"
-                      name="slaIlr"
-                      type="number"
-                      value={slaForm.ilr_days}
-                      onChange={(e) => setSlaForm((f) => ({ ...f, ilr_days: e.target.value }))}
-                    />
-                    <Input
-                      label="Student visa — target days"
-                      name="slaStudent"
-                      type="number"
-                      value={slaForm.student_visa_days}
-                      onChange={(e) => setSlaForm((f) => ({ ...f, student_visa_days: e.target.value }))}
-                    />
-                    <Input
-                      label="Escalation trigger (days stuck)"
-                      name="slaEscalation"
-                      type="number"
-                      value={slaForm.escalation_stuck_days}
-                      onChange={(e) => setSlaForm((f) => ({ ...f, escalation_stuck_days: e.target.value }))}
-                    />
-                    <Input
-                      label="Missing docs escalation (days)"
-                      name="slaMissingDocs"
-                      type="number"
-                      value={slaForm.missing_docs_escalation_days}
-                      onChange={(e) => setSlaForm((f) => ({ ...f, missing_docs_escalation_days: e.target.value }))}
-                    />
-                  </div>
-                  <Button type="button" className="rounded-xl" onClick={saveSlaRules} disabled={savingSla}>
-                    {savingSla ? "Saving…" : "Save SLA rules"}
-                  </Button>
-                </>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-          </div>
+        <div className="p-6 border-t border-gray-50 bg-gray-50/30">
+          <Link to="/admin/dashboard" className="flex items-center justify-center gap-3 px-4 py-4 rounded-2xl bg-white border border-gray-100 text-primary font-black text-xs uppercase tracking-widest hover:shadow-lg transition-all">
+            Dashboard <FiArrowRight />
+          </Link>
         </div>
+      </aside>
+
+      {/* Mobile Nav */}
+      <div className="md:hidden bg-white border-b border-gray-100 p-4 sticky top-0 z-50 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FiSettings className="text-primary" />
+          <h1 className="text-lg font-black text-secondary uppercase tracking-tighter">Settings</h1>
+        </div>
+        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 bg-gray-50 rounded-xl">
+          {mobileMenuOpen ? <FiX /> : <FiMenu />}
+        </button>
       </div>
+      
+      {mobileMenuOpen && (
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="md:hidden bg-white border-b border-gray-100 p-4 grid grid-cols-2 gap-2 z-40 fixed top-16 left-0 right-0 shadow-2xl">
+          {CONFIG_TABS.map((tab) => (
+            <button key={tab.id} onClick={() => { setConfigTab(tab.id); setMobileMenuOpen(false); }} className={`p-4 rounded-2xl text-xs font-black flex items-center gap-3 ${configTab === tab.id ? "bg-secondary text-white" : "bg-gray-50 text-gray-500"}`}>
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </motion.div>
+      )}
 
-      <Modal
-        open={visaModalOpen}
-        onClose={closeVisaModal}
-        title={visaModalMode === "add" ? "Add visa type" : "Edit visa type"}
-        footer={
-          <>
-            <Button type="button" variant="ghost" className="rounded-xl" onClick={closeVisaModal}>
-              Cancel
-            </Button>
-            <Button type="button" className="rounded-xl" onClick={submitVisaForm}>
-              {visaModalMode === "add" ? "Add" : "Save"}
-            </Button>
-          </>
-        }
-      >
-        <form id={VISA_FORM_ID} onSubmit={submitVisaForm} className="space-y-4">
-          <Input
-            label="Visa type name"
-            name="name"
-            value={visaFormName}
-            onChange={(e) => setVisaFormName(e.target.value)}
-            error={visaFormError}
-            placeholder="e.g. Skilled Worker Visa"
-          />
-        </form>
-      </Modal>
-
-      <Modal
-        open={departmentModalOpen}
-        onClose={closeDepartmentModal}
-        title={departmentModalMode === "add" ? "Add department" : "Edit department"}
-        footer={
-          <div className="flex gap-3 pt-4 mt-4 border-t border-gray-100">
-            <Button type="button" variant="ghost" className="rounded-xl flex-1" onClick={closeDepartmentModal}>
-              Cancel
-            </Button>
-            <Button type="button" className="rounded-xl flex-1" onClick={submitDepartmentForm}>
-              {departmentModalMode === "add" ? "Add" : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <form onSubmit={submitDepartmentForm} className="p-2">
-          <div className="mb-4">
-            <label htmlFor="department-name" className="block text-sm font-bold text-gray-700 mb-2">
-              Department name
-            </label>
-            <input
-              id="department-name"
-              type="text"
-              value={departmentFormName}
-              onChange={(e) => setDepartmentFormName(e.target.value)}
-              placeholder="e.g. Immigration"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm"
-              autoFocus
-            />
-            {departmentFormError && (
-              <p className="mt-2 text-xs text-red-500 font-medium">{departmentFormError}</p>
+      {/* Main Content Area */}
+      <main className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto max-w-[1600px] mx-auto w-full">
+        <header className="mb-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-black text-secondary tracking-tight mb-2">
+                {CONFIG_TABS.find(t => t.id === configTab)?.label}
+              </h2>
+              <div className="flex items-center gap-3 text-gray-500">
+                <span className="text-sm font-medium">Control Center</span>
+                <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                <span className="text-sm font-medium">{configTab.charAt(0).toUpperCase() + configTab.slice(1)}</span>
+              </div>
+            </div>
+            {configTab === "account" && (
+              <div className="flex items-center gap-3 px-5 py-2.5 bg-blue-50 text-blue-700 rounded-2xl border border-blue-100 shadow-sm">
+                <FiCheckCircle size={18} />
+                <span className="text-xs font-black uppercase tracking-widest">Real-time Sync</span>
+              </div>
             )}
           </div>
+        </header>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={configTab}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3, ease: "circOut" }}
+          >
+            {configTab === "account" && (
+              <AccountSettings 
+                profile={profile} 
+                preferences={preferences}
+                onProfileChange={(e) => setProfile({...profile, [e.target.name]: e.target.value})}
+                onPreferenceChange={(e) => setPreferences({...preferences, [e.target.name]: e.target.value})}
+                onPreferenceToggle={(id) => setPreferences({...preferences, [id]: !preferences[id]})}
+                onSave={handleProfileSave}
+                saving={saving}
+                security={security}
+                onSecurityChange={(e) => setSecurity({...security, [e.target.name]: e.target.value})}
+                onPasswordSubmit={handlePasswordSubmit}
+                savingPassword={savingPassword}
+                passwordError={passwordError}
+                onReset2FA={() => { setTwoFactorMode("setup"); setTwoFactorModalOpen(true); }}
+                onDisable2FA={() => { setTwoFactorMode("disable"); setTwoFactorModalOpen(true); }}
+              />
+            )}
+
+            {configTab === "visa" && (
+              <VisaSettings 
+                visaTypes={visaTypes}
+                petitionTypes={petitionTypes}
+                loading={loading}
+                onAddVisa={() => { setVisaModalMode("add"); setVisaFormName(""); setVisaModalOpen(true); }}
+                onEditVisa={(id) => { const v = visaTypes.find(x => x.id === id); setVisaModalMode("edit"); setEditingVisaId(id); setVisaFormName(v.name); setVisaModalOpen(true); }}
+                onDeleteVisa={async (id) => { const r = await Swal.fire({ title: "Delete Visa Type?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteVisaType(id); loadData(); } }}
+                onAddPetition={() => { setPetitionModalMode("add"); setPetitionFormName(""); setPetitionModalOpen(true); }}
+                onEditPetition={(id) => { const p = petitionTypes.find(x => x.id === id); setPetitionModalMode("edit"); setEditingPetitionId(id); setPetitionFormName(p.name); setPetitionModalOpen(true); }}
+                onDeletePetition={async (id) => { const r = await Swal.fire({ title: "Delete Petition Type?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deletePetitionType(id); loadData(); } }}
+                error={error}
+              />
+            )}
+
+            {configTab === "categories" && (
+              <CategorySettings 
+                categories={categories}
+                loading={loading}
+                onAdd={handleCategoryAdd}
+                onDelete={handleCategoryDelete}
+                saving={saving}
+                error={error}
+              />
+            )}
+
+            {configTab === "departments" && (
+              <DepartmentSettings 
+                departments={departments}
+                loading={loading}
+                onAdd={() => { setDepartmentModalMode("add"); setDepartmentFormName(""); setDepartmentModalOpen(true); }}
+                onEdit={(name) => { setDepartmentModalMode("edit"); setEditingDepartment(name); setDepartmentFormName(name); setDepartmentModalOpen(true); }}
+                onDelete={async (name) => { const r = await Swal.fire({ title: "Delete Department?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteDepartment({ name }); loadData(); } }}
+                error={error}
+              />
+            )}
+
+            {configTab === "roles" && (
+              <div className="bg-white p-12 md:p-20 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/20 text-center">
+                <div className="inline-flex p-8 bg-amber-50 rounded-full mb-8 text-amber-500 shadow-inner">
+                  <FiShield size={64} />
+                </div>
+                <h3 className="text-2xl font-black text-secondary mb-4 tracking-tight">Access Control & Roles</h3>
+                <p className="text-gray-500 max-w-xl mx-auto mb-10 text-lg font-medium leading-relaxed">
+                  Manage user permissions, define hierarchical roles, and secure your system with granular RBAC settings in the specialized permissions module.
+                </p>
+                <Link 
+                  to="/admin/permissions" 
+                  className="inline-flex items-center gap-4 px-10 py-5 bg-secondary text-white rounded-2xl font-black text-sm shadow-2xl shadow-secondary/30 hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  Configure RBAC Matrix <FiArrowRight />
+                </Link>
+              </div>
+            )}
+
+            {configTab === "email" && (
+              <EmailSettings 
+                templates={emailTemplates}
+                loading={loading}
+                onAdd={() => { setEmailModalMode("add"); setEmailFormKey(""); setEmailFormSubject(""); setEmailFormBody(""); setEmailModalOpen(true); }}
+                onEdit={(key) => { const t = emailTemplates.find(x => x.template_key === key); setEmailModalMode("edit"); setEditingEmailKey(key); setEmailFormKey(t.template_key); setEmailFormSubject(t.subject); setEmailFormBody(t.body); setEmailModalOpen(true); }}
+                onDelete={async (key) => { const r = await Swal.fire({ title: "Delete Template?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteEmailTemplate(key); loadData(); } }}
+                onView={(key) => { setViewingTemplate(emailTemplates.find(x => x.template_key === key)); setViewEmailModalOpen(true); }}
+                error={error}
+              />
+            )}
+
+            {configTab === "payment" && (
+              <PaymentSettings 
+                config={paymentConfig}
+                onConfigChange={(key, val) => setPaymentConfig({...paymentConfig, [key]: val})}
+                onToggle={(key) => setPaymentConfig({...paymentConfig, [key]: !paymentConfig[key]})}
+                onSave={handlePaymentSave}
+                saving={saving}
+                loading={loading}
+                error={error}
+              />
+            )}
+
+            {configTab === "sla" && (
+              <SLASettings 
+                rules={slaRules}
+                loading={loading}
+                onAdd={() => { setSlaModalMode("add"); setSlaFormName(""); setSlaFormDays(""); setSlaModalOpen(true); }}
+                onEdit={(id) => { const r = slaRules.find(x => x.id === id); setSlaModalMode("edit"); setEditingSlaId(id); setSlaFormName(r.name); setSlaFormDays(r.days); setSlaFormType(r.rule_type); setSlaModalOpen(true); }}
+                onDelete={async (id) => { const r = await Swal.fire({ title: "Delete SLA?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteSlaRule(id); loadData(); } }}
+                error={error}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      {/* Modals */}
+      <Modal open={visaModalOpen} onClose={() => setVisaModalOpen(false)} title="Visa Type Configuration">
+        <form onSubmit={submitVisaForm} className="space-y-6 p-2">
+          <Input label="Visa Designation" value={visaFormName} onChange={(e) => setVisaFormName(e.target.value)} error={visaFormError} placeholder="e.g. EB-1 Extraordinary Ability" autoFocus />
+          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Save Configuration</Button>
         </form>
       </Modal>
 
-      <Modal
-        open={petitionModalOpen}
-        onClose={closePetitionModal}
-        title={petitionModalMode === "add" ? "Add petition type" : "Edit petition type"}
-        maxWidthClass="max-w-md"
-        bodyClassName="px-5 py-5 sm:px-6"
-        footer={
-          <>
-            <Button type="button" variant="ghost" className="rounded-xl" onClick={closePetitionModal}>
-              Cancel
-            </Button>
-            <Button type="submit" form={PETITION_FORM_ID} className="rounded-xl">
-              {petitionModalMode === "add" ? "Add" : "Save"}
-            </Button>
-          </>
-        }
-      >
-        <form id={PETITION_FORM_ID} onSubmit={submitPetitionForm} className="space-y-4">
-          <Input
-            label="Petition type name"
-            name="petitionName"
-            value={petitionFormName}
-            onChange={(e) => {
-              setPetitionFormName(e.target.value);
-              if (petitionFormError) setPetitionFormError("");
-            }}
-            placeholder="e.g. I-129 Petition"
-            required
-            error={petitionFormError}
-          />
+      <Modal open={petitionModalOpen} onClose={() => setPetitionModalOpen(false)} title="Petition Type Setup">
+        <form onSubmit={submitPetitionForm} className="space-y-6 p-2">
+          <Input label="Petition Identifier" value={petitionFormName} onChange={(e) => setPetitionFormName(e.target.value)} error={petitionFormError} placeholder="e.g. Form I-140" autoFocus />
+          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Initialize Petition</Button>
         </form>
       </Modal>
 
-      <Modal
-        open={twoFactorModalOpen}
-        onClose={() => setTwoFactorModalOpen(false)}
-        title=""
-        maxWidthClass="max-w-md"
-        bodyClassName="p-0"
-        footer={null}
-      >
+      <Modal open={departmentModalOpen} onClose={() => setDepartmentModalOpen(false)} title="Department Management">
+        <form onSubmit={submitDepartmentForm} className="space-y-6 p-2">
+          <Input label="Department Designation" value={departmentFormName} onChange={(e) => setDepartmentFormName(e.target.value)} error={departmentFormError} placeholder="e.g. Legal Compliance" autoFocus />
+          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Update Registry</Button>
+        </form>
+      </Modal>
+
+      <Modal open={emailModalOpen} onClose={() => setEmailModalOpen(false)} title="Template Architect" maxWidthClass="max-w-3xl">
+        <form onSubmit={submitEmailForm} className="space-y-6 p-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Input label="Unique Key" value={emailFormKey} onChange={(e) => setEmailFormKey(e.target.value)} disabled={emailModalMode === "edit"} error={emailFormError} placeholder="system_alert" />
+            <Input label="Email Subject" value={emailFormSubject} onChange={(e) => setEmailFormSubject(e.target.value)} placeholder="Action Required: Case Update" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Source Code / Body Content</label>
+            <textarea value={emailFormBody} onChange={(e) => setEmailFormBody(e.target.value)} rows={12} className="w-full border-2 border-gray-100 rounded-[2rem] px-6 py-5 text-sm font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all outline-none custom-scrollbar" />
+          </div>
+          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Commit Template</Button>
+        </form>
+      </Modal>
+
+      <Modal open={viewEmailModalOpen} onClose={() => setViewEmailModalOpen(false)} title="Template Visualizer" maxWidthClass="max-w-4xl">
+        {viewingTemplate && (
+          <div className="space-y-8 p-2">
+            <div className="p-6 bg-gray-50 rounded-[2rem] border border-gray-100">
+              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Subject Header</span>
+              <div className="text-lg font-black text-secondary">{viewingTemplate.subject}</div>
+            </div>
+            <div className="p-10 bg-white rounded-[3rem] border-2 border-gray-50 shadow-inner min-h-[400px] whitespace-pre-wrap text-base leading-relaxed text-gray-700 font-medium">
+              {viewingTemplate.body}
+            </div>
+            <Button onClick={() => setViewEmailModalOpen(false)} className="w-full rounded-2xl py-4">Close Visualizer</Button>
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={slaModalOpen} onClose={() => setSlaModalOpen(false)} title="SLA Rule Matrix">
+        <form onSubmit={submitSlaForm} className="space-y-6 p-2">
+          <Input label="Rule Designation" value={slaFormName} onChange={(e) => setSlaFormName(e.target.value)} placeholder="e.g. Standard Processing" autoFocus />
+          <Input label="Target Duration (Days)" type="number" value={slaFormDays} onChange={(e) => setSlaFormDays(e.target.value)} placeholder="45" />
+          <div className="flex flex-col gap-3">
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Policy Scope</label>
+            <select className="w-full border-2 border-gray-100 rounded-2xl px-6 py-4 bg-white text-sm font-bold outline-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all" value={slaFormType} onChange={(e) => setSlaFormType(e.target.value)}>
+              <option value="Visa">Visa Type Specific</option>
+              <option value="Global">Global Enterprise Policy</option>
+            </select>
+          </div>
+          {slaFormError && <p className="text-xs text-red-500 font-black px-2 flex items-center gap-2"><FiX /> {slaFormError}</p>}
+          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Enforce Policy</Button>
+        </form>
+      </Modal>
+
+      <Modal open={twoFactorModalOpen} onClose={() => setTwoFactorModalOpen(false)} title="" maxWidthClass="max-w-md" bodyClassName="p-0" footer={null}>
         {twoFactorMode === "setup" ? (
-          <TwoFactorSetup
-            onSetupComplete={() => {
-              setTwoFactorModalOpen(false);
-              loadMe();
-            }}
-            onCancel={() => setTwoFactorModalOpen(false)}
-          />
+          <TwoFactorSetup onSetupComplete={() => { setTwoFactorModalOpen(false); loadData(); }} onCancel={() => setTwoFactorModalOpen(false)} />
         ) : (
-          <TwoFactorDisable
-            onDisableComplete={() => {
-              setTwoFactorModalOpen(false);
-              loadMe();
-            }}
-            onCancel={() => setTwoFactorModalOpen(false)}
-          />
+          <TwoFactorDisable onDisableComplete={() => { setTwoFactorModalOpen(false); loadData(); }} onCancel={() => setTwoFactorModalOpen(false)} />
         )}
       </Modal>
     </div>

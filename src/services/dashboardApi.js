@@ -1,7 +1,7 @@
 import api from "./api";
 
 // Get Dashboard Statistics
-export const getDashboardStats = () => api.get("/api/dashboard/stats");
+export const getDashboardStats = (params = {}) => api.get("/api/dashboard/stats", { params });
 
 // Get Recent Cases
 export const getRecentCases = (params = {}) => api.get("/api/dashboard/recent-cases", { params });
@@ -14,3 +14,9 @@ export const getRecentActivities = (params = {}) => api.get("/api/dashboard/rece
 
 // Get Quick Actions
 export const getQuickActions = () => api.get("/api/dashboard/quick-actions");
+
+// Export Dashboard Snapshot
+export const exportDashboardSnapshot = () => api.get("/api/dashboard/export-snapshot", { responseType: 'blob' });
+
+// Export Dashboard PDF (Backend Generated)
+export const exportDashboardPDF = () => api.get("/api/dashboard/export-pdf", { responseType: 'blob' });

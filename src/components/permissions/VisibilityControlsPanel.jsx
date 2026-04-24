@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   RiTeamLine, RiShieldLine, RiSearchLine, RiRefreshLine,
@@ -193,7 +193,7 @@ const UserRolePanel = () => {
             </thead>
             <tbody className="bg-white">
             {visibleUsers.map((user) => (
-              <>
+              <Fragment key={user.id}>
                 <tr
                   key={user.id}
                   className={`border-b border-gray-50 hover:bg-gray-50/60 transition-colors bg-white ${expandedUser === user.id ? "bg-indigo-50/30" : ""}`}
@@ -292,7 +292,7 @@ const UserRolePanel = () => {
                     </tr>
                   )}
                 </AnimatePresence>
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

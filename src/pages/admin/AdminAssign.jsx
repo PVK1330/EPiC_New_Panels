@@ -4,7 +4,7 @@ import { RiUserAddLine } from "react-icons/ri";
 import { Search, Check } from "lucide-react";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
-import { getCases, getCaseworkers, assignCase, getTeamCapacity } from "../../services/caseApi";
+import { getCaseworkers, assignCase, getTeamCapacity, getAllCasesForDropdown } from "../../services/caseApi";
 import { useToast } from "../../context/ToastContext";
 
 const AdminAssign = () => {
@@ -16,16 +16,20 @@ const AdminAssign = () => {
   const [reasonErr, setReasonErr] = useState("");
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [cases, setCases] = useState([]);
   const [caseworkers, setCaseworkers] = useState([]);
   const [teamCapacity, setTeamCapacity] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
+      setFetchLoading(true);
+      setFetchError(null);
       try {
         const [casesRes, cwRes, capacityRes] = await Promise.all([
-          getCases(),
-          getCaseworkers(),
+          getAllCasesForDropdown(),
+          getCaseworkers({ limit: 999 }),
           getTeamCapacity()
         ]);
         
@@ -34,12 +38,17 @@ const AdminAssign = () => {
         }
         if (cwRes?.data?.data?.caseworkers) {
           setCaseworkers(cwRes.data.data.caseworkers);
+        } else if (Array.isArray(cwRes?.data?.data)) {
+          setCaseworkers(cwRes.data.data);
         }
         if (capacityRes?.data?.data) {
           setTeamCapacity(capacityRes.data.data);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        setFetchError(error.response?.data?.message || 'Failed to load cases and caseworkers. Please refresh.');
+      } finally {
+        setFetchLoading(false);
       }
     };
     fetchData();
@@ -86,7 +95,7 @@ const AdminAssign = () => {
     return CASE_OPTIONS.filter((c) =>
       c.label.toLowerCase().includes(caseSearch.toLowerCase())
     );
-  }, [caseSearch]);
+  }, [caseSearch, CASE_OPTIONS]);
 
   const toggleWorkerSelection = (workerId) => {
     setAssignTo((prev) => {
@@ -181,6 +190,19 @@ const AdminAssign = () => {
         </div>
       </div>
 
+      {/* API error banner */}
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between gap-3">
+          <p className="text-sm text-red-700 font-medium">{fetchError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-xs font-bold text-red-600 underline shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
           <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Reassign Case</h2>
@@ -199,11 +221,17 @@ const AdminAssign = () => {
               </div>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Case ID</label>
+              <label className="text-sm font-medium text-gray-700">
+                Case ID
+                {fetchLoading && <span className="ml-2 text-xs text-gray-400 font-normal animate-pulse">Loading cases…</span>}
+                {!fetchLoading && cases.length === 0 && !fetchError && <span className="ml-2 text-xs text-amber-500 font-normal">No cases found</span>}
+                {!fetchLoading && cases.length > 0 && <span className="ml-2 text-xs text-gray-400 font-normal">({filteredCaseOptions.length} available)</span>}
+              </label>
               <select
                 value={caseId}
                 onChange={(e) => setCaseId(e.target.value)}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                disabled={fetchLoading}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none disabled:opacity-60 disabled:cursor-wait"
               >
                 <option value="">Select a case</option>
                 {filteredCaseOptions.map((c) => (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   RiShieldLine, RiEditLine, RiDeleteBinLine, RiFileCopyLine,
@@ -214,18 +214,30 @@ const RoleAssignmentPanel = () => {
       </AnimatePresence>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-black text-secondary">Role Management</h2>
-          <p className="text-xs text-gray-400 mt-0.5">View, edit, delete and clone roles. System roles (1–4) are protected.</p>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "var(--color-secondary)" }}
+          >
+            <RiShieldLine size={18} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-base font-black text-secondary">Role Management</h2>
+            <p className="text-xs text-gray-400">View, edit, delete and clone roles. System roles (1–4) are protected.</p>
+          </div>
         </div>
-        <button onClick={fetchRoles} className="text-gray-400 hover:text-primary transition-colors" title="Refresh">
-          <RiRefreshLine size={16} />
+        <button
+          onClick={fetchRoles}
+          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-secondary transition-colors font-semibold px-3 py-2 rounded-lg hover:bg-secondary/5"
+          title="Refresh"
+        >
+          <RiRefreshLine size={15} /> Refresh
         </button>
       </div>
 
       {/* Roles Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-auto max-h-[500px] custom-scrollbar">
           <table className="w-full text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
@@ -238,7 +250,7 @@ const RoleAssignmentPanel = () => {
             </thead>
             <tbody className="bg-white">
             {roles.map((role) => (
-              <>
+              <Fragment key={role.id}>
                 <tr
                   key={role.id}
                   className={`border-b border-gray-50 hover:bg-gray-50/60 transition-colors bg-white ${expandedRole === role.id ? "bg-indigo-50/30" : ""}`}
@@ -280,7 +292,7 @@ const RoleAssignmentPanel = () => {
                       </button>
                       <button
                         onClick={() => openEdit(role)}
-                        className="p-2 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors"
+                        className="p-2 rounded-lg hover:bg-secondary/5 text-gray-400 hover:text-secondary transition-colors"
                         title="Edit role"
                       >
                         <RiEditLine size={16} />
@@ -342,7 +354,7 @@ const RoleAssignmentPanel = () => {
                     </tr>
                   )}
                 </AnimatePresence>
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>
