@@ -51,11 +51,13 @@ const NotificationList = ({ showUnreadOnly = false }) => {
     }
   };
 
-  const filteredNotifications = showUnreadOnly
-    ? notifications.filter(n => !n.isRead)
-    : notifications;
+  const safeNotifications = notifications || [];
 
-  if (loading && notifications.length === 0) {
+  const filteredNotifications = showUnreadOnly
+    ? safeNotifications.filter(n => !n.isRead)
+    : safeNotifications;
+
+  if (loading && safeNotifications.length === 0) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -157,7 +159,7 @@ const NotificationList = ({ showUnreadOnly = false }) => {
       {pagination.total > 0 && (
         <div className="border-t border-gray-200 px-4 py-3 bg-gray-50">
           <p className="text-xs text-gray-500">
-            Showing {notifications.length} of {pagination.total} notifications
+            Showing {safeNotifications.length} of {pagination.total} notifications
           </p>
         </div>
       )}

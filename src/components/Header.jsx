@@ -13,7 +13,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { logout } from "../store/slices/authSlice";
 import NotificationDropdown from "./Notifications/NotificationDropdown";
-
+import MessageDropdown from "./Notifications/MessageDropdown";
 const Header = ({ onMenuClick }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -21,6 +21,10 @@ const Header = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
+  
+  const fullName = user?.first_name 
+    ? `${user.first_name} ${user.last_name || ''}`.trim() 
+    : user?.email?.split('@')[0] || "User";
 
   const roleLabel =
     user?.role === "caseworker"
@@ -117,6 +121,9 @@ const Header = ({ onMenuClick }) => {
           </span>
         </button>
 
+        {/* Messages with real-time count */}
+        <MessageDropdown />
+
         {/* Notifications with real-time count */}
         <NotificationDropdown />
 
@@ -130,11 +137,11 @@ const Header = ({ onMenuClick }) => {
               }`}
           >
             <div className="w-9 h-9 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold text-sm shadow-inner">
-              {user?.name?.charAt(0) || "U"}
+              {fullName.charAt(0).toUpperCase()}
             </div>
             <div className="text-left hidden sm:block">
               <p className="text-sm font-bold text-gray-900 leading-none">
-                {user?.name || "User"}
+                {fullName}
               </p>
               <p className="text-xs text-gray-500 mt-1">{roleLabel}</p>
             </div>
@@ -144,7 +151,7 @@ const Header = ({ onMenuClick }) => {
             <div className="absolute right-0 mt-3 w-56 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden py-2 animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="px-4 py-2 border-b border-gray-100 mb-2">
                 <p className="text-sm font-bold text-gray-900">
-                  {user?.name || "User"}
+                  {fullName}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
                   {user?.email || "user@example.com"}
