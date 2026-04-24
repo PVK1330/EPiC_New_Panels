@@ -15,10 +15,11 @@ import {
   X,
   CalendarClock,
   ArrowRightLeft,
+  Clock,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
-import { getCaseworkerCases } from "../../services/caseApi";
+import { getCaseworkerCases, getVisaTypes, getPetitionTypes, getAllUsers, createCaseworkerCase, updateCaseworkerCase, getDepartments, getCaseworkerCaseDetails, getCaseDocuments, uploadDocument, updateDocument, deleteDocument, updateDocumentStatus, downloadDocument, getCaseNotes, createCaseNote, updateCaseNote, deleteCaseNote, getTasks, getTaskByCaseId, createTask, updateTask, deleteTask } from "../../services/caseApi";
 
 const PAGE_SIZE = 7;
 
@@ -26,7 +27,7 @@ const PAGE_SIZE = 7;
 const CASES_DATA = [
   { caseId: "#C-2401", candidate: "Ahmed Al-Rashid", business: "TechCorp Ltd", visa: "Tier 2", status: "on_track", target: "2026-04-18", priority: "high", payment: "paid" },
   { caseId: "#C-2398", candidate: "Priya Sharma", business: "Nexus Group", visa: "Skilled Worker", status: "due_soon", target: "2026-04-12", priority: "medium", payment: "partial" },
-  { caseId: "#C-2391", candidate: "Carlos Mendes", business: "BuildRight Inc", visa: "Intra-Co", status: "overdue", target: "2026-04-03", priority: "critical", payment: "outstanding" },
+  { caseId: "#C-2391", candidate: "Carlos Mendes", business: "BuildRight Inc", visa: "Intra-Co", status: "overdue", target: "2026-04-03", priority: "urgent", payment: "outstanding" },
   { caseId: "#C-2389", candidate: "Mei Lin Chen", business: "Global Finance", visa: "Graduate", status: "on_track", target: "2026-05-02", priority: "low", payment: "paid" },
   { caseId: "#C-2385", candidate: "Ivan Petrov", business: "EnviroTech", visa: "Tier 2", status: "on_track", target: "2026-05-15", priority: "low", payment: "paid" },
   { caseId: "#C-2380", candidate: "Fatima Al-Zahra", business: "MediCare Group", visa: "Health & Care", status: "due_soon", target: "2026-04-20", priority: "medium", payment: "partial" },
@@ -34,7 +35,7 @@ const CASES_DATA = [
   { caseId: "#C-2370", candidate: "Sofia Nielsen", business: "Nordic AI Ltd", visa: "Skilled Worker", status: "on_track", target: "2026-06-12", priority: "medium", payment: "paid" },
   { caseId: "#C-2365", candidate: "James O'Connor", business: "Celtic Foods", visa: "Tier 2", status: "due_soon", target: "2026-04-25", priority: "high", payment: "partial" },
   { caseId: "#C-2360", candidate: "Yuki Tanaka", business: "Tokyo Trade UK", visa: "Intra-Co", status: "on_track", target: "2026-07-01", priority: "low", payment: "paid" },
-  { caseId: "#C-2355", candidate: "Elena Popov", business: "EuroBuild", visa: "Skilled Worker", status: "overdue", target: "2026-03-28", priority: "critical", payment: "outstanding" },
+  { caseId: "#C-2355", candidate: "Elena Popov", business: "EuroBuild", visa: "Skilled Worker", status: "overdue", target: "2026-03-28", priority: "urgent", payment: "outstanding" },
   { caseId: "#C-2350", candidate: "Marcus Webb", business: "Webb Legal", visa: "Graduate", status: "completed", target: "2026-03-01", priority: "low", payment: "paid" },
   { caseId: "#C-2344", candidate: "Nomsa Dlamini", business: "HealthFirst", visa: "Health & Care", status: "on_track", target: "2026-05-30", priority: "medium", payment: "paid" },
   { caseId: "#C-2339", candidate: "Lukas Meyer", business: "AutoParts DE UK", visa: "Tier 2", status: "on_track", target: "2026-06-20", priority: "low", payment: "partial" },
@@ -89,7 +90,7 @@ const VISA_OPTIONS = [
 
 const PRIORITY_OPTIONS = [
   "All priorities",
-  "Critical",
+  "Urgent",
   "High",
   "Medium",
   "Low",
@@ -111,22 +112,50 @@ const CASE_PAYMENT_EDIT = [
 ];
 
 const emptyNewCaseForm = () => ({
-  candidate: "",
-  business: "",
-  visa: "Tier 2",
+  candidateName: "",
+  candidateId: "",
+  nationality: "",
+  jobTitle: "",
+  department: "",
+  businessName: "",
+  businessId: "",
+  sponsorId: "",
+  visaTypeId: "",
+  petitionTypeId: "",
   priority: "medium",
-  target: "",
+  targetSubmissionDate: "",
+  lcaNumber: "",
+  receiptNumber: "",
+  assignedCaseworkerIds: [],
+  salaryOffered: 0,
+  totalAmount: 0,
+  paidAmount: 0,
   notes: "",
 });
 
 const caseToEditForm = (c) => ({
-  candidate: c.candidate,
-  business: c.business,
-  visa: c.visa,
-  status: c.status,
-  target: c.target,
-  priority: c.priority,
-  payment: c.payment,
+  candidate: c.candidate?.first_name && c.candidate?.last_name ? `${c.candidate.first_name} ${c.candidate.last_name}` : c.candidate || '',
+  business: c.business?.sponsor?.first_name && c.business?.sponsor?.last_name ? `${c.business.sponsor.first_name} ${c.business.sponsor.last_name}` : c.business || '',
+  visa: c.visaType?.name || c.visa || '',
+  status: c.status || c.overview?.status || '',
+  target: c.target || c.targetSubmissionDate || c.overview?.targetSubmissionDate || '',
+  priority: c.priority || c.overview?.priority || '',
+  payment: c.payment || '',
+  candidateId: c.candidateId || c.candidate?.id || '',
+  sponsorId: c.sponsorId || c.business?.sponsor?.id || '',
+  businessId: c.businessId || c.business?.businessId || '',
+  visaTypeId: c.visaTypeId || c.visaType?.id || '',
+  petitionTypeId: c.petitionTypeId || c.petitionType?.id || '',
+  lcaNumber: c.lcaNumber || c.additional?.lcaNumber || '',
+  receiptNumber: c.receiptNumber || c.additional?.receiptNumber || '',
+  assignedcaseworkerId: c.assignedcaseworkerId || '',
+  salaryOffered: c.salaryOffered || c.financial?.salaryOffered || '',
+  totalAmount: c.totalAmount || c.financial?.totalFee || '',
+  paidAmount: c.paidAmount || c.financial?.totalPaid || '',
+  notes: c.notes || c.additional?.notes || '',
+  nationality: c.nationality || c.candidate?.nationality || '',
+  jobTitle: c.jobTitle || c.additional?.jobTitle || '',
+  department: c.departmentId || c.department?.id || c.additional?.departmentId || '',
 });
 
 const emptyReassignForm = () => ({
@@ -173,7 +202,7 @@ function badgeStatus(status) {
 
 function badgePriority(p) {
   const m = {
-    critical: "bg-red-50 text-red-800 border-red-200",
+    urgent: "bg-red-50 text-red-800 border-red-200",
     high: "bg-red-50 text-red-800 border-red-200",
     medium: "bg-amber-50 text-amber-800 border-amber-200",
     low: "bg-gray-100 text-gray-700 border-gray-200",
@@ -198,14 +227,120 @@ function badgeVisa(v) {
     : "bg-sky-50 text-sky-800 border-sky-200";
 }
 
-function priorityLabel(p) {
+const priorityLabel = (p) => {
   return p.charAt(0).toUpperCase() + p.slice(1);
-}
+};
 
-function loadColor(load) {
-  if (load <= 5) return "text-emerald-600 bg-emerald-50 border-emerald-200";
-  if (load <= 10) return "text-amber-600 bg-amber-50 border-amber-200";
-  return "text-red-600 bg-red-50 border-red-200";
+const priorityLevels = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "urgent", label: "Urgent" },
+];
+
+const priorityBadge = {
+  low: "bg-gray-100 text-gray-700",
+  medium: "bg-blue-100 text-blue-700",
+  high: "bg-orange-100 text-orange-700",
+  urgent: "bg-red-100 text-red-700",
+};
+
+function CaseworkerMultiSelect({ options, value, onChange, error }) {
+  const [open, setOpen] = useState(false);
+
+  const toggleId = (id) => {
+    if (value.includes(id)) {
+      onChange(value.filter((x) => x !== id));
+    } else if (value.length < 2) {
+      onChange([...value, id]);
+    }
+  };
+
+  const summaryText = value.length
+    ? value
+        .map((id) => {
+          const o = options.find((x) => x.id === id);
+          return o ? `${o.name} (${o.id})` : id;
+        })
+        .join(" · ")
+    : "";
+
+  return (
+    <div className="relative md:col-span-2 space-y-2">
+      <label className="text-sm font-medium text-gray-700">
+        Caseworker Assignment <span className="text-red-500">*</span>
+        <span className="text-gray-400 font-normal ml-1">(1–2 workers)</span>
+      </label>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-left text-sm bg-white border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary ${
+          error ? "border-red-400" : ""
+        }`}
+      >
+        <span
+          className={
+            value.length ? "text-gray-900 font-semibold" : "text-gray-400"
+          }
+        >
+          {value.length ? summaryText : "Choose caseworkers…"}
+        </span>
+        <span className="text-xs font-bold text-gray-400 tabular-nums shrink-0">
+          {value.length}/2
+        </span>
+      </button>
+      {open && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-[60] cursor-default bg-transparent"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute z-[70] left-0 right-0 mt-1 border border-gray-200 rounded-xl bg-white shadow-xl py-1 max-h-60 overflow-y-auto">
+            {options.map((o) => {
+              const checked = value.includes(o.id);
+              const disabled = !checked && value.length >= 2;
+              return (
+                <label
+                  key={o.id}
+                  className={`flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${
+                    disabled
+                      ? "opacity-40 cursor-not-allowed"
+                      : "cursor-pointer hover:bg-secondary/5"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="accent-secondary rounded border-gray-300"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={() => toggleId(o.id)}
+                  />
+                  <span className="font-semibold text-gray-800">{o.name}</span>
+                  <span className="text-xs font-mono text-gray-500 ml-auto">
+                    {o.id}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </>
+      )}
+      {value.length > 0 && (
+        <p className="text-xs text-gray-600 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
+          <span className="font-bold text-secondary">Assigned:</span>{" "}
+          {value
+            .map((id) => {
+              const o = options.find((x) => x.id === id);
+              return o ? `${o.name} — ${o.id}` : id;
+            })
+            .join(" · ")}
+        </p>
+      )}
+      {error && <span className="text-xs text-red-500">{error}</span>}
+    </div>
+  );
 }
 
 const Cases = () => {
@@ -228,6 +363,13 @@ const Cases = () => {
   const [editCaseId, setEditCaseId] = useState(null);
   const [editCaseForm, setEditCaseForm] = useState(() => caseToEditForm(CASES_DATA[0]));
   const [editCaseErrors, setEditCaseErrors] = useState({});
+  const [visaTypes, setVisaTypes] = useState([]);
+  const [petitionTypes, setPetitionTypes] = useState([]);
+  const [candidates, setCandidates] = useState([]);
+  const [sponsors, setSponsors] = useState([]);
+  const [caseworkers, setCaseworkers] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Fetch cases from API
   useEffect(() => {
@@ -239,7 +381,7 @@ const Cases = () => {
           limit: PAGE_SIZE,
           search,
           status: chip === "all" ? "" : chip,
-          priority: priorityFilter === "All priorities" ? "" : priorityFilter,
+          priority: priorityFilter === "All priorities" ? "" : priorityFilter.toLowerCase(),
           visaTypeId: visaFilter === "All visa types" ? "" : visaFilter,
           sortBy: "created_at",
           sortOrder: "DESC"
@@ -250,13 +392,21 @@ const Cases = () => {
         const mappedCases = response.data.data.cases.map(c => ({
           caseId: c.caseId || `#C-${c.id}`,
           candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : "Unknown",
-          business: c.sponsor ? c.sponsor.company_name || c.sponsor.first_name : "Unknown",
+          business: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || c.sponsor?.first_name || "Unknown",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           target: c.targetSubmissionDate || c.created_at,
           priority: c.priority?.toLowerCase() || "medium",
           payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
-          id: c.id
+          id: c.id,
+          candidateId: c.candidateId,
+          sponsorId: c.sponsorId,
+          businessId: c.businessId,
+          department: c.department,
+          sponsor: c.sponsor,
+          caseworker: c.caseworkers && c.caseworkers.length > 0
+            ? c.caseworkers.map(cw => `${cw.first_name} ${cw.last_name}`).join(', ')
+            : "Unassigned"
         }));
         
         setCases(mappedCases);
@@ -274,6 +424,42 @@ const Cases = () => {
 
     fetchCases();
   }, [page, search, chip, visaFilter, priorityFilter]);
+
+  // Fetch dropdown data for new case form
+  useEffect(() => {
+    const fetchDropdownData = async () => {
+      try {
+        const [visaRes, petitionRes, usersRes, deptRes] = await Promise.all([
+          getVisaTypes(),
+          getPetitionTypes(),
+          getAllUsers(),
+          getDepartments(),
+        ]);
+
+        if (visaRes?.data?.data?.visa_types) {
+          setVisaTypes(visaRes.data.data.visa_types);
+        }
+
+        if (petitionRes?.data?.data?.petition_types) {
+          setPetitionTypes(petitionRes.data.data.petition_types);
+        }
+
+        if (usersRes?.data?.data) {
+          const { candidate, sponsor, caseworker } = usersRes.data.data;
+          setCandidates(candidate || []);
+          setSponsors(sponsor || []);
+          setCaseworkers(caseworker || []);
+        }
+
+        if (deptRes?.data?.data?.departments) {
+          setDepartments(deptRes.data.data.departments);
+        }
+      } catch (error) {
+        console.error("Error fetching dropdown data:", error);
+      }
+    };
+    fetchDropdownData();
+  }, []);
 
   // Helper functions to map API data to UI format
   const mapApiStatus = (status) => {
@@ -335,7 +521,7 @@ const Cases = () => {
     setEditCaseErrors({});
   }, []);
 
-  const submitCaseEdit = useCallback(() => {
+  const submitCaseEdit = useCallback(async () => {
     const err = {};
     if (!editCaseForm.candidate.trim()) err.candidate = "Required";
     if (!editCaseForm.business.trim()) err.business = "Required";
@@ -343,22 +529,72 @@ const Cases = () => {
     setEditCaseErrors(err);
     if (Object.keys(err).length) return;
 
-    const next = {
-      candidate: editCaseForm.candidate.trim(),
-      business: editCaseForm.business.trim(),
-      visa: editCaseForm.visa,
-      status: editCaseForm.status,
-      target: editCaseForm.target,
-      priority: editCaseForm.priority,
-      payment: editCaseForm.payment,
-    };
+    try {
+      const caseData = {
+        candidateId: editCaseForm.candidateId,
+        sponsorId: editCaseForm.sponsorId,
+        businessId: editCaseForm.businessId,
+        visaTypeId: editCaseForm.visaTypeId,
+        petitionTypeId: editCaseForm.petitionTypeId,
+        priority: editCaseForm.priority,
+        status: editCaseForm.status,
+        targetSubmissionDate: editCaseForm.target,
+        lcaNumber: editCaseForm.lcaNumber,
+        receiptNumber: editCaseForm.receiptNumber,
+        assignedcaseworkerId: editCaseForm.assignedcaseworkerId,
+        salaryOffered: editCaseForm.salaryOffered,
+        totalAmount: editCaseForm.totalAmount,
+        paidAmount: editCaseForm.paidAmount,
+        notes: editCaseForm.notes,
+        nationality: editCaseForm.nationality,
+        jobTitle: editCaseForm.jobTitle,
+        departmentId: editCaseForm.department,
+      };
 
-    setCases((prev) =>
-      prev.map((c) => (c.caseId === editCaseId ? { ...c, ...next } : c)),
-    );
-    setDetailCase((d) => (d && d.caseId === editCaseId ? { ...d, ...next } : d));
-    closeCaseEdit();
-  }, [editCaseId, editCaseForm, closeCaseEdit]);
+      await updateCaseworkerCase(editCaseId, caseData);
+
+      // Refresh cases from API
+      const params = {
+        page: 1,
+        limit: PAGE_SIZE,
+        search,
+        status: chip === "all" ? "" : chip,
+        priority: priorityFilter === "All priorities" ? "" : priorityFilter.toLowerCase(),
+        visaTypeId: visaFilter === "All visa types" ? "" : visaFilter,
+        sortBy: "created_at",
+        sortOrder: "DESC"
+      };
+      const response = await getCaseworkerCases(params);
+
+      if (response?.data?.data?.cases) {
+        const mappedCases = response.data.data.cases.map(c => ({
+          caseId: c.caseId || `#C-${c.id}`,
+          candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : "Unknown",
+          business: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || c.sponsor?.first_name || "Unknown",
+          visa: c.visaType?.name || "Unknown",
+          status: mapApiStatus(c.status),
+          target: c.targetSubmissionDate || c.created_at,
+          priority: c.priority?.toLowerCase() || "medium",
+          payment: c.paidAmount >= c.totalAmount ? "paid" : (c.paidAmount > 0 ? "partial" : "outstanding"),
+          id: c.id,
+          candidateId: c.candidateId,
+          sponsorId: c.sponsorId,
+          businessId: c.businessId,
+          department: c.department,
+          sponsor: c.sponsor,
+          caseworker: c.caseworkers && c.caseworkers.length > 0
+            ? c.caseworkers.map(cw => `${cw.first_name} ${cw.last_name}`).join(', ')
+            : "Unassigned"
+        }));
+        setCases(mappedCases);
+      }
+
+      closeCaseEdit();
+    } catch (error) {
+      console.error("Error updating case:", error);
+      alert("Failed to update case. Please try again.");
+    }
+  }, [editCaseId, editCaseForm, closeCaseEdit, search, chip, priorityFilter, visaFilter]);
 
   const closeNewCaseModal = useCallback(() => {
     setNewCaseOpen(false);
@@ -366,37 +602,108 @@ const Cases = () => {
     setNewCaseForm(emptyNewCaseForm());
   }, []);
 
-  const submitNewCase = useCallback(() => {
-    const err = {};
-    if (!newCaseForm.candidate.trim()) err.candidate = "Required";
-    if (!newCaseForm.business.trim()) err.business = "Required";
-    if (!newCaseForm.target) err.target = "Required";
-    setNewCaseErrors(err);
-    if (Object.keys(err).length) return;
-
-    const nums = cases
-      .map((c) => parseInt(c.caseId.replace(/^#C-/, ""), 10))
-      .filter((n) => !Number.isNaN(n));
-    const maxId = nums.length ? Math.max(...nums) : 2400;
-    const caseId = `#C-${maxId + 1}`;
-    const priority = newCaseForm.priority.toLowerCase();
-
-    setCases((prev) => [
-      {
-        caseId,
-        candidate: newCaseForm.candidate.trim(),
-        business: newCaseForm.business.trim(),
-        visa: newCaseForm.visa,
-        status: "on_track",
-        target: newCaseForm.target,
-        priority,
-        payment: "outstanding",
-      },
+  const handleInputChange = (e) => {
+    const { name, value, type } = e.target;
+    setNewCaseForm((prev) => ({
       ...prev,
-    ]);
-    closeNewCaseModal();
-    setPage(1);
-  }, [cases, newCaseForm, closeNewCaseModal]);
+      [name]: type === "number" ? parseFloat(value) || 0 : value,
+    }));
+    if (newCaseErrors[name]) setNewCaseErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+
+  const handleCaseworkerIdsChange = (ids) => {
+    setNewCaseForm((prev) => ({ ...prev, assignedCaseworkerIds: ids }));
+    if (newCaseErrors.assignedCaseworkers)
+      setNewCaseErrors((prev) => ({ ...prev, assignedCaseworkers: "" }));
+  };
+
+  const validateNewCase = () => {
+    const e = {};
+    if (!newCaseForm.candidateId) e.candidateId = "Required";
+    if (!newCaseForm.businessId) e.businessId = "Required";
+    if (!newCaseForm.visaTypeId) e.visaTypeId = "Required";
+    const n = newCaseForm.assignedCaseworkerIds?.length || 0;
+    if (n < 1 || n > 2) e.assignedCaseworkers = "Select 1 or 2 caseworkers";
+    if (!newCaseForm.targetSubmissionDate) e.targetSubmissionDate = "Required";
+    if (newCaseForm.totalAmount <= 0) e.totalAmount = "Must be > 0";
+    setNewCaseErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const submitNewCase = useCallback(async () => {
+    if (!validateNewCase()) return;
+    setIsLoading(true);
+    try {
+      const cwIds = newCaseForm.assignedCaseworkerIds || [];
+      const caseData = {
+        candidateId: parseInt(newCaseForm.candidateId) || null,
+        sponsorId: parseInt(newCaseForm.sponsorId) || null,
+        businessId: parseInt(newCaseForm.businessId) || null,
+        visaTypeId: parseInt(newCaseForm.visaTypeId) || null,
+        petitionTypeId: parseInt(newCaseForm.petitionTypeId) || null,
+        priority: newCaseForm.priority,
+        targetSubmissionDate: newCaseForm.targetSubmissionDate,
+        lcaNumber: newCaseForm.lcaNumber,
+        receiptNumber: newCaseForm.receiptNumber,
+        assignedcaseworkerId: cwIds,
+        salaryOffered: newCaseForm.salaryOffered,
+        totalAmount: newCaseForm.totalAmount,
+        paidAmount: newCaseForm.paidAmount,
+        notes: newCaseForm.notes,
+        nationality: newCaseForm.nationality,
+        jobTitle: newCaseForm.jobTitle,
+        departmentId: parseInt(newCaseForm.department) || null,
+      };
+      await createCaseworkerCase(caseData);
+      
+      // Refresh cases from API
+      const params = {
+        page: 1,
+        limit: PAGE_SIZE,
+        search,
+        status: chip === "all" ? "" : chip,
+        priority: priorityFilter === "All priorities" ? "" : priorityFilter.toLowerCase(),
+        visaTypeId: visaFilter === "All visa types" ? "" : visaFilter,
+        sortBy: "created_at",
+        sortOrder: "DESC"
+      };
+      const response = await getCaseworkerCases(params);
+      
+      if (response?.data?.data?.cases) {
+        const mappedCases = response.data.data.cases.map(c => ({
+          caseId: c.caseId || `#C-${c.id}`,
+          candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : "Unknown",
+          business: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || c.sponsor?.first_name || "Unknown",
+          visa: c.visaType?.name || "Unknown",
+          status: mapApiStatus(c.status),
+          target: c.targetSubmissionDate || c.created_at,
+          priority: c.priority?.toLowerCase() || "medium",
+          payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
+          id: c.id,
+          candidateId: c.candidateId,
+          sponsorId: c.sponsorId,
+          businessId: c.businessId,
+          department: c.department,
+          sponsor: c.sponsor,
+          caseworker: c.caseworkers && c.caseworkers.length > 0
+            ? c.caseworkers.map(cw => `${cw.first_name} ${cw.last_name}`).join(', ')
+            : "Unassigned"
+        }));
+        setCases(mappedCases);
+        setPagination(response.data.data.pagination);
+      }
+      
+      setIsLoading(false);
+      closeNewCaseModal();
+      setNewCaseForm(emptyNewCaseForm());
+      setNewCaseErrors({});
+      setPage(1);
+    } catch (error) {
+      setIsLoading(false);
+      console.error("Error creating case:", error);
+      alert("Error creating case. Please ensure Candidate ID, Business ID, Visa Type, and Petition Type are provided.");
+    }
+  }, [newCaseForm, newCaseErrors, closeNewCaseModal, search, chip, priorityFilter, visaFilter]);
 
   // ── Reassign handlers ───────────────────────────────────────────────────────
   const openReassign = useCallback((c) => {
@@ -458,15 +765,47 @@ const Cases = () => {
     ? cases.find((c) => c.caseId === reassignCaseId)
     : null;
 
+  // Calculate stats for summary cards
+  const stats = [
+    {
+      label: "Total Cases",
+      value: cases.length,
+      bg: "bg-blue-50",
+      color: "text-blue-600",
+      Icon: FileText,
+    },
+    {
+      label: "Pending",
+      value: cases.filter(c => c.status === 'on_track' || c.status === 'due_soon').length,
+      bg: "bg-yellow-50",
+      color: "text-yellow-600",
+      Icon: Clock,
+    },
+    {
+      label: "Approved",
+      value: cases.filter(c => c.status === 'completed').length,
+      bg: "bg-green-50",
+      color: "text-green-600",
+      Icon: Check,
+    },
+    {
+      label: "Rejected",
+      value: cases.filter(c => c.status === 'overdue').length,
+      bg: "bg-red-50",
+      color: "text-red-600",
+      Icon: X,
+    },
+  ];
+
   return (
     <div className="space-y-6 pb-10 animate-in fade-in duration-500">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-secondary tracking-tight">
-            All assigned cases
+            Case Management
           </h1>
           <p className="text-sm font-bold text-gray-600 mt-1">
-            {pagination.total} cases assigned to you
+            Manage visa cases and applications
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -484,92 +823,111 @@ const Cases = () => {
             className="inline-flex items-center gap-2 rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
           >
             <Plus size={18} strokeWidth={2.5} />
-            New case
+            Add New Case
           </button>
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center">
-        {loading && (
-          <div className="w-full py-8 text-center text-sm font-bold text-gray-500">
-            Loading cases...
-          </div>
-        )}
-        {error && (
-          <div className="w-full py-4 px-4 bg-red-50 border border-red-200 rounded-xl text-sm font-bold text-red-700">
-            {error}
-          </div>
-        )}
-        {!loading && !error && (
-          <>
-            <div className="relative flex-1 min-w-[200px] max-w-md">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={18}
-              />
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Search cases, candidates…"
-                className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-              />
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <div key={stat.label} className="rounded-xl bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${stat.bg} ${stat.color}`}>
+                <stat.Icon size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+                <p className="text-xl font-bold text-gray-900">{stat.value}</p>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {STATUS_CHIPS.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => {
-                    setChip(c.id);
+          </div>
+        ))}
+      </div>
+
+      {/* Recent Cases Section */}
+      <div>
+        <h2 className="text-lg font-black text-secondary mb-4">Recent Cases</h2>
+        
+        <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center mb-4">
+          {loading && (
+            <div className="w-full py-8 text-center text-sm font-bold text-gray-500">
+              Loading cases...
+            </div>
+          )}
+          {error && (
+            <div className="w-full py-4 px-4 bg-red-50 border border-red-200 rounded-xl text-sm font-bold text-red-700">
+              {error}
+            </div>
+          )}
+          {!loading && !error && (
+            <>
+              <div className="relative flex-1 min-w-[200px] max-w-md">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
                     setPage(1);
                   }}
-                  className={`rounded-full border px-3.5 py-1.5 text-xs font-black transition-colors ${chip === c.id
-                      ? "border-secondary bg-secondary/10 text-secondary"
-                      : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                    }`}
+                  placeholder="Search cases..."
+                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <select
+                  value={chip === "all" ? "" : chip}
+                  onChange={(e) => {
+                    setChip(e.target.value || "all");
+                    setPage(1);
+                  }}
+                  className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
                 >
-                  {c.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <select
-                value={visaFilter}
-                onChange={(e) => {
-                  setVisaFilter(e.target.value);
-                  setPage(1);
-                }}
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-              >
-                <option value="">All visa types</option>
-                {VISA_OPTIONS.filter((v) => v !== "All visa types").map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={priorityFilter}
-                onChange={(e) => {
-                  setPriorityFilter(e.target.value);
-                  setPage(1);
-                }}
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-              >
-                <option value="">All priorities</option>
-                {PRIORITY_OPTIONS.filter((p) => p !== "All priorities").map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </>
-        )}
+                  <option value="">All Statuses</option>
+                  {STATUS_CHIPS.filter((c) => c.id !== "all").map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => {
+                    setPriorityFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                >
+                  <option value="">All Priorities</option>
+                  {PRIORITY_OPTIONS.filter((p) => p !== "All priorities").map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={visaFilter}
+                  onChange={(e) => {
+                    setVisaFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                >
+                  <option value="">All Visa Types</option>
+                  {VISA_OPTIONS.filter((v) => v !== "All visa types").map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
@@ -578,15 +936,16 @@ const Cases = () => {
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 {[
-                  "Case ID",
-                  "Candidate name",
-                  "Business name",
-                  "Visa type",
-                  "Status",
-                  "Target date",
-                  "Priority",
-                  "Payment",
-                  "Actions",
+                  "CASE-ID",
+                  "CANDIDATE",
+                  "BUSINESS",
+                  "DEPARTMENT",
+                  "CASEWORKER(S)",
+                  "VISA TYPE",
+                  "PRIORITY",
+                  "STATUS",
+                  "SUBMITTED",
+                  "ACTIONS",
                 ].map((h) => (
                   <th
                     key={h}
@@ -600,14 +959,13 @@ const Cases = () => {
             <tbody className="divide-y divide-gray-100">
               {pageSlice.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-sm font-bold text-gray-500">
+                  <td colSpan={10} className="py-12 text-center text-sm font-bold text-gray-500">
                     No cases match your filters.
                   </td>
                 </tr>
               ) : (
                 pageSlice.map((c) => {
                   const st = badgeStatus(c.status);
-                  const pay = badgePayment(c.payment);
                   const reassigned = reassignments[c.caseId];
                   return (
                     <>
@@ -617,22 +975,33 @@ const Cases = () => {
                         className={`hover:bg-gray-50/80 cursor-pointer transition-colors ${reassigned ? "border-b-0" : ""}`}
                         onClick={() => openDetail(c)}
                       >
-                        <td className="py-3 px-4">
-                          <span className="font-mono text-xs font-black text-secondary">
-                            {c.caseId}
-                          </span>
+                        <td className="py-3 px-4 text-sm font-bold text-secondary">
+                          {c.caseId}
                         </td>
                         <td className="py-3 px-4 text-sm font-bold text-gray-900">
-                          {c.candidate}
+                          {c.candidate?.first_name && c.candidate?.last_name ? `${c.candidate.first_name} ${c.candidate.last_name}` : c.candidate || "-"}
+                        </td>
+                        <td className="py-3 px-4 text-sm font-bold text-gray-900">
+                          {c.sponsor?.first_name && c.sponsor?.last_name ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : c.business || "-"}
                         </td>
                         <td className="py-3 px-4 text-sm font-bold text-gray-600">
-                          {c.business}
+                          {c.department?.name || c.department || "-"}
+                        </td>
+                        <td className="py-3 px-4 text-sm font-bold text-gray-600">
+                          {c.caseworker || "Unassigned"}
                         </td>
                         <td className="py-3 px-4">
                           <span
                             className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeVisa(c.visa)}`}
                           >
                             {c.visa}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgePriority(c.priority)}`}
+                          >
+                            {priorityLabel(c.priority)}
                           </span>
                         </td>
                         <td className="py-3 px-4">
@@ -645,20 +1014,6 @@ const Cases = () => {
                         <td className="py-3 px-4 text-sm font-bold text-gray-600 tabular-nums whitespace-nowrap">
                           {formatTarget(c.target)}
                         </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgePriority(c.priority)}`}
-                          >
-                            {priorityLabel(c.priority)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${pay.className}`}
-                          >
-                            {pay.label}
-                          </span>
-                        </td>
                         <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                           <div className="flex flex-wrap gap-1.5">
                             <button
@@ -668,7 +1023,6 @@ const Cases = () => {
                               title="View case"
                             >
                               <Eye size={14} />
-                              <span className="hidden sm:inline">View</span>
                             </button>
                             <button
                               type="button"
@@ -677,7 +1031,6 @@ const Cases = () => {
                               title="Edit case"
                             >
                               <Pencil size={14} />
-                              <span className="hidden sm:inline">Edit</span>
                             </button>
                             <button
                               type="button"
@@ -690,7 +1043,6 @@ const Cases = () => {
                               title="Message candidate"
                             >
                               <MessageSquare size={14} />
-                              <span className="hidden sm:inline">Message</span>
                             </button>
                             {/* ── Reassign button ── */}
                             <button
@@ -704,9 +1056,6 @@ const Cases = () => {
                               title="Reassign case"
                             >
                               <ArrowRightLeft size={14} />
-                              <span className="hidden sm:inline">
-                                {reassigned ? "Reassigned" : "Reassign"}
-                              </span>
                             </button>
                           </div>
                         </td>
@@ -795,122 +1144,356 @@ const Cases = () => {
         onClose={closeNewCaseModal}
         title="New case"
         titleId="new-case-modal-title"
-        maxWidthClass="max-w-lg"
+        maxWidthClass="max-w-3xl"
         bodyClassName="p-4 sm:p-6"
       >
-        <div className="space-y-4">
-          <p className="text-sm font-bold text-gray-600">
-            Add a case intake record. This demo saves the row locally until the API is connected.
-          </p>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Candidate name
-            </label>
-            <input
-              type="text"
-              value={newCaseForm.candidate}
-              onChange={(e) =>
-                setNewCaseForm((f) => ({ ...f, candidate: e.target.value }))
-              }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.candidate ? "border-red-300" : "border-gray-200"
-                }`}
-              placeholder="Full name"
-            />
-            {newCaseErrors.candidate && (
-              <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.candidate}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Business / sponsor name
-            </label>
-            <input
-              type="text"
-              value={newCaseForm.business}
-              onChange={(e) =>
-                setNewCaseForm((f) => ({ ...f, business: e.target.value }))
-              }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.business ? "border-red-300" : "border-gray-200"
-                }`}
-              placeholder="Employer or sponsor"
-            />
-            {newCaseErrors.business && (
-              <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.business}</p>
-            )}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Visa type
-              </label>
-              <select
-                value={newCaseForm.visa}
-                onChange={(e) =>
-                  setNewCaseForm((f) => ({ ...f, visa: e.target.value }))
-                }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              >
-                {NEW_CASE_VISA.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
+              <h4 className="text-sm font-black text-secondary mb-4">
+                Candidate Information
+              </h4>
+              <div className="space-y-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">
+                    Candidate <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      name="candidateId"
+                      value={newCaseForm.candidateId}
+                      onChange={(e) => {
+                        const selectedCandidate = candidates.find(c => c.id === parseInt(e.target.value));
+                        setNewCaseForm(prev => ({
+                          ...prev,
+                          candidateId: e.target.value,
+                          candidateName: selectedCandidate ? `${selectedCandidate.first_name} ${selectedCandidate.last_name}` : ''
+                        }));
+                        if (newCaseErrors.candidateId) setNewCaseErrors(prev => ({ ...prev, candidateId: '' }));
+                      }}
+                      className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.candidateId ? "border-red-400" : "border-gray-300"}`}
+                    >
+                      <option value="">Select candidate</option>
+                      {candidates.map((c, idx) => (
+                        <option key={`${c.id}-${idx}`} value={c.id}>
+                          {c.first_name} {c.last_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {newCaseErrors.candidateId && (
+                    <span className="text-xs text-red-500">
+                      {newCaseErrors.candidateId}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Candidate Name
+                  </label>
+                  <input
+                    type="text"
+                    name="candidateName"
+                    value={newCaseForm.candidateName}
+                    onChange={handleInputChange}
+                    placeholder="Auto-filled from selection"
+                    disabled
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-bold outline-none cursor-not-allowed text-gray-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Nationality
+                  </label>
+                  <input
+                    type="text"
+                    name="nationality"
+                    value={newCaseForm.nationality}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Indian"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Job Title
+                  </label>
+                  <input
+                    type="text"
+                    name="jobTitle"
+                    value={newCaseForm.jobTitle}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Software Engineer"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Department
+                  </label>
+                  <select
+                    name="department"
+                    value={newCaseForm.department}
+                    onChange={handleInputChange}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  >
+                    <option value="">Select department</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Priority
-              </label>
-              <select
-                value={newCaseForm.priority}
-                onChange={(e) =>
-                  setNewCaseForm((f) => ({ ...f, priority: e.target.value }))
-                }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              >
-                {["low", "medium", "high", "critical"].map((p) => (
-                  <option key={p} value={p}>
-                    {priorityLabel(p)}
-                  </option>
-                ))}
-              </select>
+              <h4 className="text-sm font-black text-secondary mb-4">
+                Business Information
+              </h4>
+              <div className="space-y-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">
+                    Sponsor <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      name="businessId"
+                      value={newCaseForm.businessId}
+                      onChange={(e) => {
+                        const selectedSponsor = sponsors.find(s => s.id === parseInt(e.target.value));
+                        setNewCaseForm(prev => ({
+                          ...prev,
+                          sponsorId: e.target.value,
+                          businessId: selectedSponsor?.sponsorProfile?.id || e.target.value,
+                          businessName: selectedSponsor?.sponsorProfile?.companyName || selectedSponsor?.sponsorProfile?.tradingName || `${selectedSponsor.first_name} ${selectedSponsor.last_name}`
+                        }));
+                        if (newCaseErrors.businessId) setNewCaseErrors(prev => ({ ...prev, businessId: '' }));
+                      }}
+                      className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.businessId ? "border-red-400" : "border-gray-300"}`}
+                    >
+                      <option value="">Select sponsor</option>
+                      {sponsors.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.first_name} {s.last_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {newCaseErrors.businessId && (
+                    <span className="text-xs text-red-500">
+                      {newCaseErrors.businessId}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Business Name
+                  </label>
+                  <input
+                    type="text"
+                    name="businessName"
+                    value={newCaseForm.businessName}
+                    onChange={handleInputChange}
+                    placeholder="Auto-filled from selection"
+                    disabled
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-bold outline-none cursor-not-allowed text-gray-600"
+                  />
+                </div>
+              </div>
             </div>
           </div>
+
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Target submission date
-            </label>
-            <input
-              type="date"
-              value={newCaseForm.target}
-              onChange={(e) =>
-                setNewCaseForm((f) => ({ ...f, target: e.target.value }))
-              }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.target ? "border-red-300" : "border-gray-200"
-                }`}
-            />
-            {newCaseErrors.target && (
-              <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.target}</p>
-            )}
+            <h4 className="text-sm font-black text-secondary mb-4">
+              Case Details
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Visa Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="visaTypeId"
+                  value={newCaseForm.visaTypeId}
+                  onChange={handleInputChange}
+                  className={`border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.visaTypeId ? "border-red-400" : "border-gray-300"}`}
+                >
+                  <option value="">Select visa type</option>
+                  {visaTypes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                {newCaseErrors.visaTypeId && (
+                  <span className="text-xs text-red-500">
+                    {newCaseErrors.visaTypeId}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Petition Type
+                </label>
+                <select
+                  name="petitionTypeId"
+                  value={newCaseForm.petitionTypeId}
+                  onChange={handleInputChange}
+                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                >
+                  <option value="">Select type</option>
+                  {petitionTypes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Priority Level <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="priority"
+                  value={newCaseForm.priority}
+                  onChange={handleInputChange}
+                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                >
+                  {priorityLevels.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Target Submission Date
+                </label>
+                <input
+                  type="date"
+                  name="targetSubmissionDate"
+                  value={newCaseForm.targetSubmissionDate}
+                  onChange={handleInputChange}
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.targetSubmissionDate ? "border-red-300" : "border-gray-200"}`}
+                />
+                {newCaseErrors.targetSubmissionDate && (
+                  <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.targetSubmissionDate}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  LCA Number
+                </label>
+                <input
+                  type="text"
+                  name="lcaNumber"
+                  value={newCaseForm.lcaNumber}
+                  onChange={handleInputChange}
+                  placeholder="e.g. I-200-24001"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Receipt Number
+                </label>
+                <input
+                  type="text"
+                  name="receiptNumber"
+                  value={newCaseForm.receiptNumber}
+                  onChange={handleInputChange}
+                  placeholder="e.g. EAC240..."
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                />
+              </div>
+            </div>
           </div>
+
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Internal notes <span className="font-bold normal-case text-gray-400">(optional)</span>
+            <h4 className="text-sm font-black text-secondary mb-4">
+              Caseworker Assignment
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CaseworkerMultiSelect
+                options={caseworkers.length > 0 ? caseworkers.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}` })) : []}
+                value={newCaseForm.assignedCaseworkerIds || []}
+                onChange={handleCaseworkerIdsChange}
+                error={newCaseErrors.assignedCaseworkers}
+              />
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-black text-secondary mb-4">
+              Financial Information
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Salary Offered ($)
+                </label>
+                <input
+                  type="number"
+                  name="salaryOffered"
+                  value={newCaseForm.salaryOffered}
+                  onChange={handleInputChange}
+                  placeholder="Annual salary"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Total Amount ($) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="totalAmount"
+                  value={newCaseForm.totalAmount}
+                  onChange={handleInputChange}
+                  placeholder="Total fee"
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.totalAmount ? "border-red-300" : "border-gray-200"}`}
+                />
+                {newCaseErrors.totalAmount && (
+                  <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.totalAmount}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Paid Amount ($)
+                </label>
+                <input
+                  type="number"
+                  name="paidAmount"
+                  value={newCaseForm.paidAmount}
+                  onChange={handleInputChange}
+                  placeholder="Amount paid so far"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">
+              Additional Notes
             </label>
             <textarea
+              name="notes"
               value={newCaseForm.notes}
-              onChange={(e) =>
-                setNewCaseForm((f) => ({ ...f, notes: e.target.value }))
-              }
+              onChange={handleInputChange}
               rows={3}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary resize-y"
-              placeholder="Anything the team should know…"
+              placeholder="Any notes or comments..."
+              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
             />
           </div>
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
             <button
               type="button"
               onClick={closeNewCaseModal}
+              disabled={isLoading}
               className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
             >
               Cancel
@@ -918,9 +1501,10 @@ const Cases = () => {
             <button
               type="button"
               onClick={submitNewCase}
+              disabled={isLoading}
               className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
             >
-              Create case
+              {isLoading ? "Saving..." : "Create Case"}
             </button>
           </div>
         </div>
@@ -1040,7 +1624,7 @@ const Cases = () => {
                 }
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
               >
-                {["low", "medium", "high", "critical"].map((p) => (
+                {["low", "medium", "high", "urgent"].map((p) => (
                   <option key={p} value={p}>
                     {priorityLabel(p)}
                   </option>
@@ -1328,15 +1912,630 @@ const Cases = () => {
               {detailTab === "overview" && (
                 <OverviewTab c={detailCase} userName={user?.name || "You"} />
               )}
-              {detailTab === "documents" && <DocumentsTab />}
-              {detailTab === "tasks" && <TasksTab />}
+              {detailTab === "documents" && <DocumentsTab caseId={detailCase?.id} candidateId={detailCase?.candidateId} />}
+              {detailTab === "tasks" && <TasksTab caseId={detailCase?.id} />}
               {detailTab === "payments" && <PaymentsTab />}
               {detailTab === "comms" && <CommsTab candidate={detailCase.candidate} />}
-              {detailTab === "notes" && <NotesTab userName={user?.name || "Caseworker"} />}
+              {detailTab === "notes" && <NotesTab caseId={detailCase?.id} userName={user?.name || "Caseworker"} />}
               {detailTab === "timeline" && <TimelineTab candidate={detailCase.candidate} />}
             </div>
           </>
         )}
+      </Modal>
+
+      {/* ─────────────────────── NEW CASE MODAL ─────────────────────── */}
+      <Modal
+        open={newCaseOpen}
+        onClose={closeNewCaseModal}
+        title="New case"
+        titleId="new-case-modal-title"
+        maxWidthClass="max-w-3xl"
+        bodyClassName="p-4 sm:p-6"
+      >
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="text-sm font-black text-secondary mb-4">
+                Candidate Information
+              </h4>
+              <div className="space-y-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">
+                    Candidate <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      name="candidateId"
+                      value={newCaseForm.candidateId}
+                      onChange={(e) => {
+                        const selectedCandidate = candidates.find(c => c.id === parseInt(e.target.value));
+                        setNewCaseForm(prev => ({
+                          ...prev,
+                          candidateId: e.target.value,
+                          candidateName: selectedCandidate ? `${selectedCandidate.first_name} ${selectedCandidate.last_name}` : ''
+                        }));
+                        if (newCaseErrors.candidateId) setNewCaseErrors(prev => ({ ...prev, candidateId: '' }));
+                      }}
+                      className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.candidateId ? "border-red-400" : "border-gray-300"}`}
+                    >
+                      <option value="">Select candidate</option>
+                      {candidates.map((c, idx) => (
+                        <option key={`${c.id}-${idx}`} value={c.id}>
+                          {c.first_name} {c.last_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {newCaseErrors.candidateId && (
+                    <span className="text-xs text-red-500">
+                      {newCaseErrors.candidateId}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Candidate Name
+                  </label>
+                  <input
+                    type="text"
+                    name="candidateName"
+                    value={newCaseForm.candidateName}
+                    onChange={handleInputChange}
+                    placeholder="Auto-filled from selection"
+                    disabled
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-bold outline-none cursor-not-allowed text-gray-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Nationality
+                  </label>
+                  <input
+                    type="text"
+                    name="nationality"
+                    value={newCaseForm.nationality}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Indian"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Job Title
+                  </label>
+                  <input
+                    type="text"
+                    name="jobTitle"
+                    value={newCaseForm.jobTitle}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Software Engineer"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Department
+                  </label>
+                  <select
+                    name="department"
+                    value={newCaseForm.department}
+                    onChange={handleInputChange}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  >
+                    <option value="">Select department</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-secondary mb-4">
+                Business Information
+              </h4>
+              <div className="space-y-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">
+                    Sponsor <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      name="businessId"
+                      value={newCaseForm.businessId}
+                      onChange={(e) => {
+                        const selectedSponsor = sponsors.find(s => s.id === parseInt(e.target.value));
+                        setNewCaseForm(prev => ({
+                          ...prev,
+                          sponsorId: e.target.value,
+                          businessId: selectedSponsor?.sponsorProfile?.id || e.target.value,
+                          businessName: selectedSponsor?.sponsorProfile?.companyName || selectedSponsor?.sponsorProfile?.tradingName || `${selectedSponsor.first_name} ${selectedSponsor.last_name}`
+                        }));
+                        if (newCaseErrors.businessId) setNewCaseErrors(prev => ({ ...prev, businessId: '' }));
+                      }}
+                      className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.businessId ? "border-red-400" : "border-gray-300"}`}
+                    >
+                      <option value="">Select sponsor</option>
+                      {sponsors.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.first_name} {s.last_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {newCaseErrors.businessId && (
+                    <span className="text-xs text-red-500">
+                      {newCaseErrors.businessId}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Business Name
+                  </label>
+                  <input
+                    type="text"
+                    name="businessName"
+                    value={newCaseForm.businessName}
+                    onChange={handleInputChange}
+                    placeholder="Auto-filled from selection"
+                    disabled
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-bold outline-none cursor-not-allowed text-gray-600"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-black text-secondary mb-4">
+              Case Details
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Visa Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="visaTypeId"
+                  value={newCaseForm.visaTypeId}
+                  onChange={handleInputChange}
+                  className={`border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.visaTypeId ? "border-red-400" : "border-gray-300"}`}
+                >
+                  <option value="">Select visa type</option>
+                  {visaTypes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                {newCaseErrors.visaTypeId && (
+                  <span className="text-xs text-red-500">
+                    {newCaseErrors.visaTypeId}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Petition Type
+                </label>
+                <select
+                  name="petitionTypeId"
+                  value={newCaseForm.petitionTypeId}
+                  onChange={handleInputChange}
+                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                >
+                  <option value="">Select type</option>
+                  {petitionTypes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Priority Level <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="priority"
+                  value={newCaseForm.priority}
+                  onChange={handleInputChange}
+                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                >
+                  {priorityLevels.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Target Submission Date
+                </label>
+                <input
+                  type="date"
+                  name="targetSubmissionDate"
+                  value={newCaseForm.targetSubmissionDate}
+                  onChange={handleInputChange}
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.targetSubmissionDate ? "border-red-300" : "border-gray-200"}`}
+                />
+                {newCaseErrors.targetSubmissionDate && (
+                  <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.targetSubmissionDate}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  LCA Number
+                </label>
+                <input
+                  type="text"
+                  name="lcaNumber"
+                  value={newCaseForm.lcaNumber}
+                  onChange={handleInputChange}
+                  placeholder="e.g. I-200-24001"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Receipt Number
+                </label>
+                <input
+                  type="text"
+                  name="receiptNumber"
+                  value={newCaseForm.receiptNumber}
+                  onChange={handleInputChange}
+                  placeholder="e.g. EAC240..."
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-black text-secondary mb-4">
+              Caseworker Assignment
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CaseworkerMultiSelect
+                options={caseworkers.length > 0 ? caseworkers.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}` })) : []}
+                value={newCaseForm.assignedCaseworkerIds || []}
+                onChange={handleCaseworkerIdsChange}
+                error={newCaseErrors.assignedCaseworkers}
+              />
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-black text-secondary mb-4">
+              Financial Information
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Salary Offered ($)
+                </label>
+                <input
+                  type="number"
+                  name="salaryOffered"
+                  value={newCaseForm.salaryOffered}
+                  onChange={handleInputChange}
+                  placeholder="Annual salary"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Total Amount ($) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="totalAmount"
+                  value={newCaseForm.totalAmount}
+                  onChange={handleInputChange}
+                  placeholder="Total fee"
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.totalAmount ? "border-red-300" : "border-gray-200"}`}
+                />
+                {newCaseErrors.totalAmount && (
+                  <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.totalAmount}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Paid Amount ($)
+                </label>
+                <input
+                  type="number"
+                  name="paidAmount"
+                  value={newCaseForm.paidAmount}
+                  onChange={handleInputChange}
+                  placeholder="Amount paid so far"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">
+              Additional Notes
+            </label>
+            <textarea
+              name="notes"
+              value={newCaseForm.notes}
+              onChange={handleInputChange}
+              rows={3}
+              placeholder="Any notes or comments..."
+              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={closeNewCaseModal}
+              disabled={isLoading}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitNewCase}
+              disabled={isLoading}
+              className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
+            >
+              {isLoading ? "Saving..." : "Create Case"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ─────────────────────── EDIT CASE MODAL ─────────────────────── */}
+      <Modal
+        open={!!editCaseId}
+        onClose={closeCaseEdit}
+        title={editCaseId ? `Edit case ${editCaseId}` : ""}
+        titleId="case-edit-modal-title"
+        maxWidthClass="max-w-lg"
+        bodyClassName="p-4 sm:p-6"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Candidate name
+            </label>
+            <input
+              type="text"
+              value={editCaseForm.candidate}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, candidate: e.target.value }))
+              }
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.candidate ? "border-red-300" : "border-gray-200"
+                }`}
+            />
+            {editCaseErrors.candidate && (
+              <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.candidate}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Business / sponsor name
+            </label>
+            <input
+              type="text"
+              value={editCaseForm.business}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, business: e.target.value }))
+              }
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.business ? "border-red-300" : "border-gray-200"
+                }`}
+            />
+            {editCaseErrors.business && (
+              <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.business}</p>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Visa type
+              </label>
+              <select
+                value={editCaseForm.visa}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, visa: e.target.value }))
+                }
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              >
+                {NEW_CASE_VISA.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Priority
+              </label>
+              <select
+                value={editCaseForm.priority}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, priority: e.target.value }))
+                }
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              >
+                {["low", "medium", "high", "urgent"].map((p) => (
+                  <option key={p} value={p}>
+                    {priorityLabel(p)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Target submission date
+            </label>
+            <input
+              type="date"
+              value={editCaseForm.target}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, target: e.target.value }))
+              }
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.target ? "border-red-300" : "border-gray-200"
+                }`}
+            />
+            {editCaseErrors.target && (
+              <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.target}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Internal notes <span className="font-bold normal-case text-gray-400">(optional)</span>
+            </label>
+            <textarea
+              value={editCaseForm.notes}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, notes: e.target.value }))
+              }
+              rows={3}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary resize-y"
+              placeholder="Anything the team should know…"
+            />
+          </div>
+          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={closeCaseEdit}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitCaseEdit}
+              className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
+            >
+              Save changes
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ─────────────────────── REASSIGN MODAL ─────────────────────── */}
+      <Modal
+        open={!!reassignCaseId}
+        onClose={() => setReassignCaseId(null)}
+        title="Reassign case"
+        titleId="reassign-modal-title"
+        maxWidthClass="max-w-lg"
+        bodyClassName="p-4 sm:p-6"
+      >
+        <div className="space-y-4">
+          <p className="text-sm font-bold text-gray-600">
+            Reassign {reassignCase?.caseId} to another caseworker. This action will be logged.
+          </p>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              New caseworker
+            </label>
+            <select
+              value={reassignForm.caseworkerId}
+              onChange={(e) =>
+                setReassignForm((f) => ({ ...f, caseworkerId: e.target.value }))
+              }
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${
+                reassignErrors.caseworkerId ? "border-red-300" : "border-gray-200"
+              }`}
+            >
+              <option value="">Select caseworker</option>
+              {CASEWORKERS.map((cw) => (
+                <option key={cw.id} value={cw.id}>
+                  {cw.name} ({cw.role}) — Load: {cw.load}
+                </option>
+              ))}
+            </select>
+            {reassignErrors.caseworkerId && (
+              <p className="text-xs font-bold text-red-600 mt-1">
+                {reassignErrors.caseworkerId}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Reason for reassignment
+            </label>
+            <select
+              value={reassignForm.reasonPreset}
+              onChange={(e) =>
+                setReassignForm((f) => ({
+                  ...f,
+                  reasonPreset: e.target.value,
+                  reasonCustom: "",
+                }))
+              }
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${
+                reassignErrors.reasonPreset ? "border-red-300" : "border-gray-200"
+              }`}
+            >
+              <option value="">Select a reason…</option>
+              {REASSIGN_REASONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+            {reassignErrors.reasonPreset && (
+              <p className="text-xs font-bold text-red-600 mt-1">
+                {reassignErrors.reasonPreset}
+              </p>
+            )}
+          </div>
+          {reassignForm.reasonPreset === "Other" && (
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Custom reason
+              </label>
+              <textarea
+                value={reassignForm.reasonCustom}
+                onChange={(e) =>
+                  setReassignForm((f) => ({ ...f, reasonCustom: e.target.value }))
+                }
+                rows={2}
+                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y ${
+                  reassignErrors.reasonCustom ? "border-red-300" : "border-gray-200"
+                }`}
+                placeholder="Explain the reason…"
+              />
+              {reassignErrors.reasonCustom && (
+                <p className="text-xs font-bold text-red-600 mt-1">
+                  {reassignErrors.reasonCustom}
+                </p>
+              )}
+            </div>
+          )}
+          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setReassignCaseId(null)}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitReassign}
+              className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-md shadow-violet-600/20 hover:bg-violet-700"
+            >
+              Reassign
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
@@ -1445,123 +2644,468 @@ function OverviewTab({ c, userName }) {
   );
 }
 
-function DocumentsTab() {
-  const rows = [
-    { name: "Passport copy", meta: "Uploaded Apr 1 · Expires Jun 2028", badge: "Approved", tone: "green" },
-    { name: "Right to work proof", meta: "Uploaded Apr 3", badge: "Under review", tone: "blue" },
-    { name: "English language cert", meta: "Not yet uploaded", badge: "Missing", tone: "red" },
-  ];
+function DocumentsTab({ caseId, candidateId }) {
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    documentType: 'General',
+    documentCategory: 'candidate',
+    userFileName: '',
+  });
+  const [uploadErrors, setUploadErrors] = useState({});
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (!caseId) return;
+
+    const fetchDocuments = async () => {
+      setLoading(true);
+      try {
+        const response = await getCaseDocuments(caseId);
+        setDocuments(response.data.data.documents || []);
+      } catch (error) {
+        console.error("Error fetching documents:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDocuments();
+  }, [caseId]);
+
+  const getBadgeColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'approved': return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+      case 'rejected': return 'bg-red-50 text-red-800 border-red-200';
+      case 'under review':
+      case 'under_review': return 'bg-sky-50 text-sky-800 border-sky-200';
+      case 'uploaded': return 'bg-gray-50 text-gray-800 border-gray-200';
+      default: return 'bg-gray-50 text-gray-800 border-gray-200';
+    }
+  };
+
+  const openUploadModal = useCallback(() => {
+    setUploadErrors({});
+    setUploadForm({
+      documentType: 'General',
+      documentCategory: 'candidate',
+      userFileName: '',
+    });
+    setSelectedFile(null);
+    setUploadOpen(true);
+  }, []);
+
+  const closeUploadModal = useCallback(() => {
+    setUploadOpen(false);
+    setUploadErrors({});
+    setUploadForm({
+      documentType: 'General',
+      documentCategory: 'candidate',
+      userFileName: '',
+    });
+    setSelectedFile(null);
+  }, []);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      if (!uploadForm.userFileName) {
+        setUploadForm(f => ({ ...f, userFileName: file.name }));
+      }
+    }
+  };
+
+  const submitUploadDocument = useCallback(async () => {
+    const err = {};
+    if (!selectedFile) err.file = "Required";
+    if (!uploadForm.documentType) err.documentType = "Required";
+    setUploadErrors(err);
+    if (Object.keys(err).length) return;
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('documents', selectedFile);
+      formData.append('caseId', caseId);
+      formData.append('userId', candidateId);
+      formData.append('documentType', uploadForm.documentType);
+      formData.append('documentCategory', uploadForm.documentCategory);
+      formData.append('userFileName', uploadForm.userFileName || selectedFile.name);
+
+      const response = await uploadDocument(formData);
+      
+      if (response.data.status === "success") {
+        const documentsResponse = await getCaseDocuments(caseId);
+        setDocuments(documentsResponse.data.data.documents || []);
+        closeUploadModal();
+      }
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      if (error.response?.data?.message) {
+        setUploadErrors({ api: error.response.data.message });
+      } else {
+        setUploadErrors({ api: "Failed to upload document" });
+      }
+    } finally {
+      setUploading(false);
+    }
+  }, [uploadForm, selectedFile, caseId, candidateId, closeUploadModal]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
+        <button type="button" onClick={openUploadModal} className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
           Upload document
-        </button>
-        <button type="button" className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700">
-          Request document
         </button>
       </div>
       <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">
-        Candidate documents
+        Case documents
       </p>
-      {rows.map((r) => (
-        <div
-          key={r.name}
-          className="flex flex-wrap items-center gap-3 border-b border-gray-100 pb-3"
-        >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100">
-            <FileText size={18} className="text-secondary" />
+      {loading ? (
+        <p className="text-sm text-gray-500">Loading documents...</p>
+      ) : documents.length === 0 ? (
+        <p className="text-sm text-gray-500">No documents uploaded yet.</p>
+      ) : (
+        documents.map((doc) => (
+          <div
+            key={doc.id}
+            className="flex flex-wrap items-center gap-3 border-b border-gray-100 pb-3"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+              <FileText size={18} className="text-secondary" />
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <p className="text-sm font-bold text-gray-900">{doc.userFileName || doc.documentName}</p>
+              <p className="text-[11px] font-bold text-gray-500">
+                Uploaded {new Date(doc.uploadedAt).toLocaleDateString()} · {doc.documentType}
+              </p>
+            </div>
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${getBadgeColor(doc.status)}`}
+            >
+              {doc.status || 'Uploaded'}
+            </span>
+            <button
+              type="button"
+              onClick={() => window.open(doc.documentUrl, '_blank')}
+              className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black text-gray-600"
+            >
+              View
+            </button>
           </div>
-          <div className="flex-1 min-w-[140px]">
-            <p className="text-sm font-bold text-gray-900">{r.name}</p>
-            <p className="text-[11px] font-bold text-gray-500">{r.meta}</p>
-          </div>
-          <span
-            className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${r.tone === "green"
-                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                : r.tone === "red"
-                  ? "bg-red-50 text-red-800 border-red-200"
-                  : "bg-sky-50 text-sky-800 border-sky-200"
+        ))
+      )}
+
+      <Modal
+        open={uploadOpen}
+        onClose={closeUploadModal}
+        title="Upload document"
+        titleId="upload-document-modal-title"
+        maxWidthClass="max-w-lg"
+        bodyClassName="p-4 sm:p-6"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Document file
+            </label>
+            <input
+              type="file"
+              onChange={handleFileChange}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
+                uploadErrors.file ? "border-red-300" : "border-gray-200"
               }`}
-          >
-            {r.badge}
-          </span>
-          <button
-            type="button"
-            className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black text-gray-600"
-          >
-            View
-          </button>
-        </div>
-      ))}
-      <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 pt-2">
-        Sponsor documents
-      </p>
-      {["Certificate of sponsorship", "Job offer letter"].map((name) => (
-        <div
-          key={name}
-          className="flex flex-wrap items-center gap-3 border-b border-gray-100 pb-3"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100">
-            <FileText size={18} className="text-secondary" />
+            />
+            {uploadErrors.file && (
+              <p className="text-xs font-bold text-red-600 mt-1">{uploadErrors.file}</p>
+            )}
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-gray-900">{name}</p>
-            <p className="text-[11px] text-gray-500">Uploaded Mar 28 · by sponsor HR</p>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Document name
+            </label>
+            <input
+              type="text"
+              value={uploadForm.userFileName}
+              onChange={(e) => setUploadForm((f) => ({ ...f, userFileName: e.target.value }))}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              placeholder="e.g. Passport copy"
+            />
           </div>
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-800">
-            Approved
-          </span>
-          <button
-            type="button"
-            className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black"
-          >
-            View
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Document type
+              </label>
+              <select
+                value={uploadForm.documentType}
+                onChange={(e) => setUploadForm((f) => ({ ...f, documentType: e.target.value }))}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              >
+                <option value="General">General</option>
+                <option value="Passport">Passport</option>
+                <option value="Visa">Visa</option>
+                <option value="English Certificate">English Certificate</option>
+                <option value="Right to Work">Right to Work</option>
+                <option value="Education Certificate">Education Certificate</option>
+                <option value="Employment Contract">Employment Contract</option>
+                <option value="Sponsor Documents">Sponsor Documents</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Category
+              </label>
+              <select
+                value={uploadForm.documentCategory}
+                onChange={(e) => setUploadForm((f) => ({ ...f, documentCategory: e.target.value }))}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              >
+                <option value="candidate">Candidate</option>
+                <option value="business">Business</option>
+                <option value="personal">Personal</option>
+                <option value="legal">Legal</option>
+                <option value="financial">Financial</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+          {uploadErrors.api && (
+            <p className="text-xs font-bold text-red-600 mt-1">{uploadErrors.api}</p>
+          )}
+          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={closeUploadModal}
+              disabled={uploading}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitUploadDocument}
+              disabled={uploading}
+              className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90 disabled:opacity-50"
+            >
+              {uploading ? 'Uploading...' : 'Upload document'}
+            </button>
+          </div>
         </div>
-      ))}
+      </Modal>
     </div>
   );
 }
 
-function TasksTab() {
-  const items = [
-    { done: true, title: "Request passport copy", sub: "Completed Apr 1", prio: "high" },
-    { done: true, title: "Collect sponsor documents", sub: "Completed Apr 3", prio: "high" },
-    { done: false, title: "Request English language certificate", sub: "Due Apr 10", prio: "high" },
-    { done: false, title: "Draft visa application form", sub: "Due Apr 14", prio: "med" },
-    { done: false, title: "Submit application to UKVI", sub: "Due Apr 18", prio: "high" },
-  ];
+function TasksTab({ caseId }) {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    due: new Date().toISOString().split('T')[0],
+    priority: "medium",
+  });
+  const [createErrors, setCreateErrors] = useState({});
+
+  useEffect(() => {
+    if (!caseId) return;
+
+    const fetchTasks = async () => {
+      setLoading(true);
+      try {
+        const response = await getTaskByCaseId(caseId);
+        setTasks(response.data.data.tasks || []);
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, [caseId]);
+
+  const getPriorityColor = (priority) => {
+    switch (priority?.toLowerCase()) {
+      case 'high': return 'bg-red-50 text-red-700';
+      case 'medium': return 'bg-amber-50 text-amber-700';
+      case 'low': return 'bg-gray-50 text-gray-700';
+      default: return 'bg-gray-50 text-gray-700';
+    }
+  };
+
+  const openCreateModal = useCallback(() => {
+    setCreateErrors({});
+    setCreateForm({
+      name: "",
+      due: new Date().toISOString().split('T')[0],
+      priority: "medium",
+    });
+    setCreateOpen(true);
+  }, []);
+
+  const closeCreateModal = useCallback(() => {
+    setCreateOpen(false);
+    setCreateErrors({});
+    setCreateForm({
+      name: "",
+      due: new Date().toISOString().split('T')[0],
+      priority: "medium",
+    });
+  }, []);
+
+  const submitCreateTask = useCallback(async () => {
+    const err = {};
+    if (!createForm.name.trim()) err.name = "Required";
+    if (!createForm.due) err.due = "Required";
+    setCreateErrors(err);
+    if (Object.keys(err).length) return;
+
+    try {
+      const data = {
+        title: createForm.name.trim(),
+        due_date: createForm.due,
+        priority: createForm.priority,
+        case_id: caseId,
+      };
+
+      const response = await createTask(data);
+      
+      if (response.data.status === "success") {
+        const tasksResponse = await getTaskByCaseId(caseId);
+        setTasks(tasksResponse.data.data.tasks || []);
+        closeCreateModal();
+      }
+    } catch (error) {
+      console.error("Error creating task:", error);
+      if (error.response?.data?.message) {
+        setCreateErrors({ api: error.response.data.message });
+      } else {
+        setCreateErrors({ api: "Failed to create task" });
+      }
+    }
+  }, [createForm, caseId, closeCreateModal]);
+
   return (
     <div className="space-y-3">
-      <button type="button" className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
+      <button type="button" onClick={openCreateModal} className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
         Create task
       </button>
-      {items.map((t, i) => (
-        <div
-          key={i}
-          className="flex items-center gap-3 rounded-xl p-3 hover:bg-gray-50 border border-transparent hover:border-gray-100"
-        >
+      {loading ? (
+        <p className="text-sm text-gray-500">Loading tasks...</p>
+      ) : tasks.length === 0 ? (
+        <p className="text-sm text-gray-500">No tasks created yet.</p>
+      ) : (
+        tasks.map((task) => (
           <div
-            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 ${t.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-gray-300"
-              }`}
+            key={task.id}
+            className="flex items-center gap-3 rounded-xl p-3 hover:bg-gray-50 border border-transparent hover:border-gray-100"
           >
-            {t.done ? <Check size={10} strokeWidth={3} /> : null}
+            <div
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 ${task.status === 'completed' ? "border-emerald-500 bg-emerald-500 text-white" : "border-gray-300"
+                }`}
+            >
+              {task.status === 'completed' ? <Check size={10} strokeWidth={3} /> : null}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-gray-900">{task.title}</p>
+              <p className="text-[11px] text-gray-500">
+                {task.status === 'completed' ? 'Completed' : `Due ${new Date(task.due_date).toLocaleDateString()}`}
+              </p>
+            </div>
+            <span
+              className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${getPriorityColor(task.priority)}`}
+            >
+              {task.priority}
+            </span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900">{t.title}</p>
-            <p className="text-[11px] text-gray-500">{t.sub}</p>
-          </div>
-          <span
-            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${t.prio === "high"
-                ? "bg-red-50 text-red-700"
-                : "bg-amber-50 text-amber-700"
+        ))
+      )}
+
+      <Modal
+        open={createOpen}
+        onClose={closeCreateModal}
+        title="Create task"
+        titleId="create-task-modal-title"
+        maxWidthClass="max-w-lg"
+        bodyClassName="p-4 sm:p-6"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Task name
+            </label>
+            <input
+              type="text"
+              value={createForm.name}
+              onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
+                createErrors.name ? "border-red-300" : "border-gray-200"
               }`}
-          >
-            {t.prio === "high" ? "High" : "Med"}
-          </span>
+              placeholder="e.g. Request English certificate"
+            />
+            {createErrors.name && (
+              <p className="text-xs font-bold text-red-600 mt-1">{createErrors.name}</p>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Due date
+              </label>
+              <input
+                type="date"
+                value={createForm.due}
+                onChange={(e) => setCreateForm((f) => ({ ...f, due: e.target.value }))}
+                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
+                  createErrors.due ? "border-red-300" : "border-gray-200"
+                }`}
+              />
+              {createErrors.due && (
+                <p className="text-xs font-bold text-red-600 mt-1">{createErrors.due}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Priority
+              </label>
+              <select
+                value={createForm.priority}
+                onChange={(e) => setCreateForm((f) => ({ ...f, priority: e.target.value }))}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+          {createErrors.api && (
+            <p className="text-xs font-bold text-red-600 mt-1">{createErrors.api}</p>
+          )}
+          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={closeCreateModal}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitCreateTask}
+              className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
+            >
+              Create task
+            </button>
+          </div>
         </div>
-      ))}
+      </Modal>
     </div>
   );
 }
@@ -1690,36 +3234,76 @@ function CommsTab({ candidate }) {
   );
 }
 
-function NotesTab({ userName }) {
+function NotesTab({ caseId, userName }) {
+  const [notes, setNotes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [newNote, setNewNote] = useState("");
+
+  useEffect(() => {
+    if (!caseId) return;
+
+    const fetchNotes = async () => {
+      setLoading(true);
+      try {
+        const response = await getCaseNotes({ caseId });
+        setNotes(response.data.data.notes || []);
+      } catch (error) {
+        console.error("Error fetching notes:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotes();
+  }, [caseId]);
+
+  const handleSaveNote = async () => {
+    if (!newNote.trim() || !caseId) return;
+
+    try {
+      await createCaseNote({ caseId, content: newNote });
+      setNewNote("");
+      const response = await getCaseNotes({ caseId });
+      setNotes(response.data.data.notes || []);
+    } catch (error) {
+      console.error("Error saving note:", error);
+      alert("Failed to save note. Please try again.");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <textarea
         placeholder="Add an internal note…"
         rows={3}
+        value={newNote}
+        onChange={(e) => setNewNote(e.target.value)}
         className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none resize-y"
       />
-      <button type="button" className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
+      <button
+        type="button"
+        onClick={handleSaveNote}
+        disabled={!newNote.trim()}
+        className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white disabled:opacity-50 disabled:cursor-not-allowed"
+      >
         Save note
       </button>
-      {[
-        {
-          who: userName,
-          when: "3 Apr 2026",
-          text: "Candidate is cooperative. Waiting on English cert. Sponsor HR responsive.",
-        },
-        {
-          who: userName,
-          when: "15 Mar 2026",
-          text: "Initial consultation done. Tier 2 route confirmed. Document checklist started.",
-        },
-      ].map((n, i) => (
-        <div key={i} className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
-          <p className="text-[11px] font-bold text-gray-500 mb-1">
-            {n.who} · {n.when}
-          </p>
-          <p className="text-sm font-bold text-gray-800">{n.text}</p>
-        </div>
-      ))}
+      {loading ? (
+        <p className="text-sm text-gray-500">Loading notes...</p>
+      ) : notes.length === 0 ? (
+        <p className="text-sm text-gray-500">No notes added yet.</p>
+      ) : (
+        notes.map((note) => (
+          <div key={note.id} className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+            <p className="text-[11px] font-bold text-gray-500 mb-1">
+              {note.author?.first_name && note.author?.last_name
+                ? `${note.author.first_name} ${note.author.last_name}`
+                : userName} · {new Date(note.created_at).toLocaleDateString()}
+            </p>
+            <p className="text-sm font-bold text-gray-800">{note.content}</p>
+          </div>
+        ))
+      )}
     </div>
   );
 }
