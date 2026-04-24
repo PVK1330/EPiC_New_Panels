@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   FiClipboard,
@@ -10,126 +10,7 @@ import {
   FiPlay,
 } from "react-icons/fi";
 import Button from "../../components/Button";
-
-const stats = [
-  {
-    label: "Total activities",
-    value: "1,234",
-    bg: "bg-blue-100",
-    color: "text-blue-600",
-    Icon: FiClipboard,
-    filterKey: "status",
-    filterValue: "all",
-  },
-  {
-    label: "Successful",
-    value: "1,198",
-    bg: "bg-green-100",
-    color: "text-green-600",
-    Icon: FiCheckCircle,
-    filterKey: "status",
-    filterValue: "Success",
-  },
-  {
-    label: "Failed",
-    value: "36",
-    bg: "bg-red-100",
-    color: "text-red-600",
-    Icon: FiXCircle,
-    filterKey: "status",
-    filterValue: "Failed",
-  },
-  {
-    label: "Today",
-    value: "89",
-    bg: "bg-purple-100",
-    color: "text-purple-600",
-    Icon: FiClock,
-    filterKey: "dateRange",
-    filterValue: "last7",
-  },
-];
-
-const auditLogs = [
-  {
-    timestamp: "2024-01-20 14:35:22",
-    initials: "JD",
-    user: "John Doe",
-    role: "Administrator",
-    action: "Case Created",
-    actionClass: "bg-blue-100 text-blue-800",
-    resource: "Case #CAS-045",
-    ip: "192.168.1.100",
-    status: "Success",
-    statusClass: "bg-green-100 text-green-800",
-    details: "H-1B visa case created for Tech Solutions Ltd",
-  },
-  {
-    timestamp: "2024-01-20 14:28:15",
-    initials: "EM",
-    user: "Emily Martinez",
-    role: "Caseworker",
-    action: "Case Updated",
-    actionClass: "bg-green-100 text-green-800",
-    resource: "Case #CAS-042",
-    ip: "192.168.1.105",
-    status: "Success",
-    statusClass: "bg-green-100 text-green-800",
-    details: 'Status changed to "Approved"',
-  },
-  {
-    timestamp: "2024-01-20 14:15:33",
-    initials: "JD",
-    user: "John Doe",
-    role: "Administrator",
-    action: "Login",
-    actionClass: "bg-purple-100 text-purple-800",
-    resource: "System",
-    ip: "192.168.1.100",
-    status: "Success",
-    statusClass: "bg-green-100 text-green-800",
-    details: "User logged in successfully",
-  },
-  {
-    timestamp: "2024-01-20 13:45:12",
-    initials: "JD",
-    user: "John Doe",
-    role: "Administrator",
-    action: "Payment Processed",
-    actionClass: "bg-yellow-100 text-yellow-800",
-    resource: "Invoice #INV-023",
-    ip: "192.168.1.100",
-    status: "Success",
-    statusClass: "bg-green-100 text-green-800",
-    details: "Payment of £5,000 processed for Tech Solutions Ltd",
-  },
-  {
-    timestamp: "2024-01-20 13:30:45",
-    initials: "SW",
-    user: "Sophia Wilson",
-    role: "Caseworker",
-    action: "Login Failed",
-    actionClass: "bg-red-100 text-red-800",
-    resource: "System",
-    ip: "192.168.1.108",
-    status: "Failed",
-    statusClass: "bg-red-100 text-red-800",
-    details: "Invalid password - 3rd attempt",
-  },
-  {
-    timestamp: "2024-01-20 12:15:20",
-    initials: "JD",
-    user: "John Doe",
-    role: "Administrator",
-    action: "User Created",
-    actionClass: "bg-indigo-100 text-indigo-800",
-    resource: "User: james.davis@company.com",
-    ip: "192.168.1.100",
-    status: "Success",
-    statusClass: "bg-green-100 text-green-800",
-    details: "New caseworker account created",
-  },
-];
+import { getAuditLogs } from "../../services/auditApi";
 
 const TABLE_COLS = [
   "Timestamp",
@@ -145,11 +26,11 @@ const selectClass =
   "w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-secondary/30";
 
 const DATE_OPTIONS = [
+  { value: "all", label: "All time" },
   { value: "last7", label: "Last 7 days" },
   { value: "last30", label: "Last 30 days" },
   { value: "last90", label: "Last 3 months" },
   { value: "last365", label: "Last year" },
-  { value: "custom", label: "Custom range" },
 ];
 
 const ACTION_OPTIONS = [
@@ -161,27 +42,12 @@ const ACTION_OPTIONS = [
   { value: "user_mgmt", label: "User management" },
 ];
 
-const USER_OPTIONS = [
-  { value: "all", label: "All users" },
-  { value: "John Doe", label: "John Doe" },
-  { value: "Emily Martinez", label: "Emily Martinez" },
-  { value: "James Davis", label: "James Davis" },
-  { value: "Sophia Wilson", label: "Sophia Wilson" },
-];
-
 const STATUS_OPTIONS = [
   { value: "all", label: "All status" },
   { value: "Success", label: "Success" },
   { value: "Failed", label: "Failed" },
   { value: "Pending", label: "Pending" },
 ];
-
-function matchesAction(filter, action) {
-  if (filter === "all") return true;
-  if (filter === "login") return action.includes("Login");
-  if (filter === "user_mgmt") return action.includes("User");
-  return action === filter;
-}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -200,7 +66,47 @@ export default function AdminAuditLogs() {
     user: "all",
     status: "all",
   });
-  const [lastRunAt, setLastRunAt] = useState(null);
+  
+  const [logs, setLogs] = useState([]);
+  const [statistics, setStatistics] = useState({
+    total: 0,
+    success: 0,
+    failed: 0,
+    today: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastRunAt, setLastRunAt] = useState(new Date());
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Create user filter - map "all" to "" if needed
+      const res = await getAuditLogs({
+        page: 1,
+        limit: 100, // For now, just load the most recent 100 or implement pagination
+        dateRange: filters.dateRange,
+        actionType: filters.actionType,
+        user: filters.user,
+        status: filters.status
+      });
+      
+      if (res.data?.status === 'success') {
+        setLogs(res.data.data.logs);
+        setStatistics(res.data.data.statistics);
+        setLastRunAt(new Date());
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch audit logs.");
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const handleFilter = (e) => {
     const { name, value } = e.target;
@@ -211,23 +117,9 @@ export default function AdminAuditLogs() {
     setFilters((prev) => ({ ...prev, [filterKey]: filterValue }));
   };
 
-  const filteredLogs = useMemo(() => {
-    return auditLogs.filter((row) => {
-      if (!matchesAction(filters.actionType, row.action)) return false;
-      if (filters.user !== "all" && row.user !== filters.user) return false;
-      if (filters.status !== "all" && row.status !== filters.status)
-        return false;
-      return true;
-    });
-  }, [filters]);
-
-  const runAudit = useCallback(() => {
-    setLastRunAt(new Date());
-  }, []);
-
   const exportAudit = useCallback(() => {
     const headers = TABLE_COLS.join(",");
-    const lines = filteredLogs.map((row) =>
+    const lines = logs.map((row) =>
       [
         row.timestamp,
         `"${row.user}"`,
@@ -246,7 +138,46 @@ export default function AdminAuditLogs() {
     a.download = `audit-export-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [filteredLogs]);
+  }, [logs]);
+
+  const statsCards = [
+    {
+      label: "Total activities",
+      value: statistics.total,
+      bg: "bg-blue-100",
+      color: "text-blue-600",
+      Icon: FiClipboard,
+      filterKey: "status",
+      filterValue: "all",
+    },
+    {
+      label: "Successful",
+      value: statistics.success,
+      bg: "bg-green-100",
+      color: "text-green-600",
+      Icon: FiCheckCircle,
+      filterKey: "status",
+      filterValue: "Success",
+    },
+    {
+      label: "Failed",
+      value: statistics.failed,
+      bg: "bg-red-100",
+      color: "text-red-600",
+      Icon: FiXCircle,
+      filterKey: "status",
+      filterValue: "Failed",
+    },
+    {
+      label: "Today",
+      value: statistics.today,
+      bg: "bg-purple-100",
+      color: "text-purple-600",
+      Icon: FiClock,
+      filterKey: "dateRange",
+      filterValue: "last7",
+    },
+  ];
 
   return (
     <div className="space-y-8 pb-10">
@@ -279,7 +210,7 @@ export default function AdminAuditLogs() {
             <Button
               type="button"
               className="rounded-xl inline-flex items-center gap-2"
-              onClick={runAudit}
+              onClick={fetchLogs}
             >
               <FiPlay size={16} aria-hidden />
               Run audit
@@ -294,7 +225,7 @@ export default function AdminAuditLogs() {
         initial="hidden"
         animate="visible"
       >
-        {stats.map(({ label, value, bg, color, Icon, filterKey, filterValue }) => {
+        {statsCards.map(({ label, value, bg, color, Icon, filterKey, filterValue }) => {
           const isActive = filters[filterKey] === filterValue;
           return (
             <motion.div
@@ -385,21 +316,17 @@ export default function AdminAuditLogs() {
               htmlFor="audit-user"
               className="text-xs font-bold text-gray-600 uppercase tracking-wide"
             >
-              User
+              User Search
             </label>
-            <select
+            <input
+              type="text"
               id="audit-user"
               name="user"
-              value={filters.user}
-              onChange={handleFilter}
+              value={filters.user === 'all' ? '' : filters.user}
+              onChange={(e) => setFilters(prev => ({...prev, user: e.target.value || 'all'}))}
+              placeholder="Search by name..."
               className={selectClass}
-            >
-              {USER_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label
@@ -426,9 +353,9 @@ export default function AdminAuditLogs() {
         <p className="text-xs text-gray-500 mt-4">
           Showing{" "}
           <span className="font-bold text-secondary">
-            {filteredLogs.length}
+            {logs.length}
           </span>{" "}
-          of {auditLogs.length} entries (mock data).
+          entries.
           {lastRunAt && (
             <span className="ml-2">
               · Last audit run:{" "}
@@ -446,8 +373,9 @@ export default function AdminAuditLogs() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <div className="px-6 py-4 border-b border-gray-100">
+        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
           <h3 className="text-lg font-black text-secondary">Recent activity</h3>
+          {loading && <span className="text-sm text-gray-400 animate-pulse">Loading...</span>}
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100">
@@ -464,19 +392,20 @@ export default function AdminAuditLogs() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {filteredLogs.length === 0 ? (
+              {logs.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}
                     className="px-6 py-12 text-center text-sm text-gray-400"
                   >
-                    No entries match the current filters.
+                    {loading ? "Loading logs..." : "No entries match the current filters."}
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map(
+                logs.map(
                   (
                     {
+                      id,
                       timestamp,
                       initials,
                       user,
@@ -492,7 +421,7 @@ export default function AdminAuditLogs() {
                     index,
                   ) => (
                     <motion.tr
-                      key={`${timestamp}-${user}-${action}-${index}`}
+                      key={id || `${timestamp}-${user}-${action}-${index}`}
                       className="hover:bg-gray-50 transition-colors"
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -536,7 +465,7 @@ export default function AdminAuditLogs() {
                           {status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                      <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate" title={details}>
                         {details}
                       </td>
                     </motion.tr>
@@ -547,7 +476,6 @@ export default function AdminAuditLogs() {
           </table>
         </div>
       </motion.div>
-
-          </div>
+    </div>
   );
 }

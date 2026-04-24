@@ -367,7 +367,11 @@ export default function AdminNotifications() {
       } else if (formData.recipientType === 'managers') {
         payload.recipientRoleId = 1; // Admin/Manager role ID
       } else if (formData.recipientType === 'specific' && formData.specificUsers.length > 0) {
-        payload.recipientUserId = formData.specificUsers[0]; // First user for now
+        if (formData.specificUsers.length === 1) {
+          payload.recipientUserId = formData.specificUsers[0];
+        } else {
+          payload.recipientUserIds = formData.specificUsers;
+        }
       }
 
       await createManualNotification(payload);

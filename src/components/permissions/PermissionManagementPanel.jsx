@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   RiLockLine, RiAddLine, RiEditLine, RiDeleteBinLine,
@@ -39,6 +39,73 @@ const getModuleColor = (module, allModules) => {
   const idx = allModules.indexOf(module);
   return MODULE_COLORS[idx % MODULE_COLORS.length] || MODULE_COLORS[0];
 };
+
+// ── PermissionForm lifted outside to prevent remount on parent re-renders ──
+const PermissionForm = ({ form, setForm, errors }) => (
+  <div className="space-y-3">
+    {errors.submit && (
+      <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{errors.submit}</div>
+    )}
+    <Input
+      label="Permission Name"
+      name="name"
+      value={form.name}
+      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+      placeholder="e.g. cases.read"
+      error={errors.name}
+      required
+    />
+    <Input
+      label="Description"
+      name="description"
+      value={form.description}
+      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+      rows={2}
+      placeholder="What this permission allows"
+    />
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <label className="text-xs font-bold text-gray-600 uppercase tracking-wide block mb-1">
+          Module <span className="text-primary">*</span>
+        </label>
+        <input
+          list="module-list"
+          value={form.module}
+          onChange={(e) => setForm((f) => ({ ...f, module: e.target.value }))}
+          placeholder="e.g. Cases"
+          className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 ${errors.module ? "border-red-400" : "border-gray-200"}`}
+        />
+        <datalist id="module-list">
+          {DEFAULT_MODULES.map((m) => <option key={m} value={m} />)}
+        </datalist>
+        {errors.module && <span className="text-xs text-red-500 mt-0.5">{errors.module}</span>}
+      </div>
+      <div>
+        <label className="text-xs font-bold text-gray-600 uppercase tracking-wide block mb-1">
+          Action <span className="text-primary">*</span>
+        </label>
+        <input
+          list="action-list"
+          value={form.action}
+          onChange={(e) => setForm((f) => ({ ...f, action: e.target.value }))}
+          placeholder="e.g. read"
+          className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 ${errors.action ? "border-red-400" : "border-gray-200"}`}
+        />
+        <datalist id="action-list">
+          {MODULE_ACTION_OPTIONS.map((a) => <option key={a.value} value={a.value} />)}
+        </datalist>
+        {errors.action && <span className="text-xs text-red-500 mt-0.5">{errors.action}</span>}
+      </div>
+    </div>
+    <Input
+      label="Resource (optional)"
+      name="resource"
+      value={form.resource}
+      onChange={(e) => setForm((f) => ({ ...f, resource: e.target.value }))}
+      placeholder="e.g. own, all, assigned"
+    />
+  </div>
+);
 
 const PermissionManagementPanel = () => {
   const [grouped, setGrouped]           = useState({});
@@ -84,7 +151,7 @@ const PermissionManagementPanel = () => {
         setGrouped(res.data.data.permissions);
         const mods = res.data.data.modules || [];
         setAllModules(mods);
-        // Init collapsed state
+        // Init collapsed state — preserve existing collapsed prefs
         const initCollapsed = {};
         mods.forEach((m) => { initCollapsed[m] = false; });
         setCollapsed((prev) => ({ ...initCollapsed, ...prev }));
@@ -100,7 +167,7 @@ const PermissionManagementPanel = () => {
 
   useEffect(() => { fetchPermissions(); }, []);
 
-  // Filtered view
+  // Filtered view — client-side filter runs on top of whatever the API returned
   const visibleGrouped = useMemo(() => {
     const result = {};
     Object.entries(grouped).forEach(([module, perms]) => {
@@ -109,7 +176,8 @@ const PermissionManagementPanel = () => {
         (p) =>
           p.name.toLowerCase().includes(search.toLowerCase()) ||
           (p.description || "").toLowerCase().includes(search.toLowerCase()) ||
-          p.action.toLowerCase().includes(search.toLowerCase())
+          p.action.toLowerCase().includes(search.toLowerCase()) ||
+          p.module.toLowerCase().includes(search.toLowerCase())
       );
       if (filtered.length > 0) result[module] = filtered;
     });
@@ -121,7 +189,7 @@ const PermissionManagementPanel = () => {
   const toggleCollapse = (mod) =>
     setCollapsed((p) => ({ ...p, [mod]: !p[mod] }));
 
-  // ── Create ────────────────────────────────────────────────────────────────
+  // ── Validation ─────────────────────────────────────────────────────────────
   const validateForm = (form) => {
     const errs = {};
     if (!form.name.trim())   errs.name   = "Permission name is required";
@@ -130,6 +198,7 @@ const PermissionManagementPanel = () => {
     return errs;
   };
 
+  // ── Create ─────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
     const errs = validateForm(createForm);
     if (Object.keys(errs).length) { setCreateErrors(errs); return; }
@@ -157,7 +226,7 @@ const PermissionManagementPanel = () => {
     }
   };
 
-  // ── Edit ──────────────────────────────────────────────────────────────────
+  // ── Edit ───────────────────────────────────────────────────────────────────
   const openEdit = (perm) => {
     setEditTarget(perm);
     setEditForm({
@@ -222,73 +291,6 @@ const PermissionManagementPanel = () => {
       setDeleting(false);
     }
   };
-
-  // ── Form field helpers ─────────────────────────────────────────────────────
-  const PermissionForm = ({ form, setForm, errors }) => (
-    <div className="space-y-3">
-      {errors.submit && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{errors.submit}</div>
-      )}
-      <Input
-        label="Permission Name"
-        name="name"
-        value={form.name}
-        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-        placeholder="e.g. cases.read"
-        error={errors.name}
-        required
-      />
-      <Input
-        label="Description"
-        name="description"
-        value={form.description}
-        onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-        rows={2}
-        placeholder="What this permission allows"
-      />
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs font-bold text-gray-600 uppercase tracking-wide block mb-1">
-            Module <span className="text-primary">*</span>
-          </label>
-          <input
-            list="module-list"
-            value={form.module}
-            onChange={(e) => setForm((f) => ({ ...f, module: e.target.value }))}
-            placeholder="e.g. Cases"
-            className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 ${errors.module ? "border-red-400" : "border-gray-200"}`}
-          />
-          <datalist id="module-list">
-            {DEFAULT_MODULES.map((m) => <option key={m} value={m} />)}
-          </datalist>
-          {errors.module && <span className="text-xs text-red-500 mt-0.5">{errors.module}</span>}
-        </div>
-        <div>
-          <label className="text-xs font-bold text-gray-600 uppercase tracking-wide block mb-1">
-            Action <span className="text-primary">*</span>
-          </label>
-          <input
-            list="action-list"
-            value={form.action}
-            onChange={(e) => setForm((f) => ({ ...f, action: e.target.value }))}
-            placeholder="e.g. read"
-            className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 ${errors.action ? "border-red-400" : "border-gray-200"}`}
-          />
-          <datalist id="action-list">
-            {MODULE_ACTION_OPTIONS.map((a) => <option key={a.value} value={a.value} />)}
-          </datalist>
-          {errors.action && <span className="text-xs text-red-500 mt-0.5">{errors.action}</span>}
-        </div>
-      </div>
-      <Input
-        label="Resource (optional)"
-        name="resource"
-        value={form.resource}
-        onChange={(e) => setForm((f) => ({ ...f, resource: e.target.value }))}
-        placeholder="e.g. own, all, assigned"
-      />
-    </div>
-  );
 
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) {

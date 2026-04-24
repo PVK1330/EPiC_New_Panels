@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { toPng } from 'html-to-image';
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -17,6 +18,7 @@ import {
   getDashboardStats,
   getRecentCases,
   getRecentActivities,
+  exportDashboardPDF,
 } from "../../services/dashboardApi";
 
 // ─── Static Data (from index.html dashboard) ──────────────────────────────────
@@ -28,31 +30,8 @@ const today = new Date().toLocaleDateString("en-GB", {
   year: "numeric",
 });
 
-const escalations = [
-  {
-    level: "red",
-    title: "Case #VF-2801 — Critical Deadline",
-    text: "Li Wei's ILR deadline breached. Immediate action required.",
-  },
-  {
-    level: "yellow",
-    title: "Case #VF-2812 — Missing Documents",
-    text: "BioMetric Residence Permit not received. 12 days overdue.",
-  },
-  {
-    level: "yellow",
-    title: "Sponsor TechNova Ltd — Licence Expiry",
-    text: "Sponsor licence expires in 18 days. Renewal pending.",
-  },
-];
+// (Static data removed - now dynamic from API)
 
-const teamWorkload = [
-  { name: "Alice Patel",   pct: 87, cases: 21, bar: "bg-blue-500"   },
-  { name: "Marcus Green",  pct: 65, cases: 16, bar: "bg-green-500"  },
-  { name: "Fatima Khan",   pct: 72, cases: 18, bar: "bg-yellow-500" },
-  { name: "James Osei",    pct: 92, cases: 23, bar: "bg-red-500"    },
-  { name: "Rina Mehta",    pct: 50, cases: 13, bar: "bg-blue-400"   },
-];
 
 const outstandingClients = [
   { name: "TechNova Ltd",    amount: "£12,400", color: "text-red-500"    },
@@ -95,8 +74,11 @@ export default function AdminDashboard() {
   const [dashboardStats, setDashboardStats] = useState(null);
   const [recentCases, setRecentCases] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
+  const [dashboardFilter, setDashboardFilter] = useState('all'); // 'all' or 'this_month'
+  const [isExporting, setIsExporting] = useState(false);
+  const dashboardRef = useRef(null);
 
-  // Fetch dashboard data on component mount
+  // Fetch dashboard data on component mount or when filter changes
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -104,7 +86,7 @@ export default function AdminDashboard() {
         
         // Fetch all dashboard data in parallel
         const [statsRes, casesRes, activitiesRes] = await Promise.all([
-          getDashboardStats(),
+          getDashboardStats({ filter: dashboardFilter }),
           getRecentCases({ limit: 5 }),
           getRecentActivities({ limit: 5 }),
         ]);
@@ -120,7 +102,42 @@ export default function AdminDashboard() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [dashboardFilter]);
+
+  const handleExport = async () => {
+    if (!dashboardRef.current) return;
+    
+    try {
+      setIsExporting(true);
+      
+      // Capture the exact UI as a PNG
+      const dataUrl = await toPng(dashboardRef.current, {
+        cacheBust: true,
+        backgroundColor: '#f9fafb',
+        style: {
+          borderRadius: '0'
+        },
+        // Filter out the buttons/header actions if needed, 
+        // but user wants "exact same", so we capture everything inside the ref
+        filter: (node) => {
+          // Optional: hide buttons if you want it cleaner, 
+          // but for "exact same" we keep most things
+          return true; 
+        }
+      });
+      
+      const link = document.createElement('a');
+      link.download = `EPiC_Dashboard_Snapshot_${new Date().toISOString().split('T')[0]}.png`;
+      link.href = dataUrl;
+      link.click();
+      
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Failed to capture dashboard snapshot. Please ensure your browser supports advanced CSS capturing.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Transform backend data to KPI cards format (matching ReferenceUI structure)
   const kpiCards = dashboardStats ? [
@@ -186,7 +203,7 @@ export default function AdminDashboard() {
   ] : [];
 
   return (
-    <div className="space-y-8 pb-10">
+    <div ref={dashboardRef} className="space-y-8 pb-10 p-4">
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
@@ -208,13 +225,30 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
+          <button 
+            onClick={() => setDashboardFilter(dashboardFilter === 'all' ? 'this_month' : 'all')}
+            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-bold border rounded-xl transition-all shadow-sm ${
+              dashboardFilter === 'this_month' 
+                ? "bg-primary text-white border-primary" 
+                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+            }`}
+          >
             <RiCalendarLine size={15} />
-            This Month
+            {dashboardFilter === 'this_month' ? 'Showing: This Month' : 'This Month'}
           </button>
-          <button className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors shadow-sm">
-            <RiDownloadLine size={15} />
-            Export Snapshot
+          <button 
+            onClick={handleExport}
+            disabled={isExporting}
+            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white rounded-xl transition-all shadow-sm ${
+              isExporting ? "bg-gray-400 cursor-not-allowed" : "bg-primary hover:bg-primary-dark"
+            }`}
+          >
+            {isExporting ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            ) : (
+              <RiDownloadLine size={15} />
+            )}
+            {isExporting ? "Generating PDF..." : "Export Snapshot"}
           </button>
         </div>
       </motion.div>
@@ -314,33 +348,44 @@ export default function AdminDashboard() {
         {/* Active Escalations */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col">
           <h3 className="text-sm font-black text-secondary mb-4">🚩 Active Escalations</h3>
-          <div className="space-y-3 flex-1">
-            {escalations.map((esc, i) => (
-              <div
-                key={i}
-                className={`flex items-start gap-3 p-3.5 rounded-xl ${
-                  esc.level === "red"
-                    ? "bg-red-50 border border-red-100"
-                    : "bg-yellow-50 border border-yellow-100"
-                }`}
-              >
-                <div
-                  className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${
-                    esc.level === "red" ? "bg-red-500" : "bg-yellow-500"
-                  }`}
-                />
-                <div>
-                  <p
-                    className={`text-xs font-black leading-snug ${
-                      esc.level === "red" ? "text-red-700" : "text-yellow-700"
+          <div className="space-y-3 flex-1 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
+            {dashboardStats?.escalations?.length > 0 ? (
+              dashboardStats.escalations.map((esc, i) => {
+                const isCritical = esc.severity === "Critical" || esc.severity === "High";
+                return (
+                  <div
+                    key={esc.id || i}
+                    className={`flex items-start gap-3 p-3.5 rounded-xl border ${
+                      isCritical
+                        ? "bg-red-50 border-red-100"
+                        : "bg-yellow-50 border-yellow-100"
                     }`}
                   >
-                    {esc.title}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">{esc.text}</p>
-                </div>
+                    <div
+                      className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${
+                        isCritical ? "bg-red-500" : "bg-yellow-500"
+                      }`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`text-xs font-black leading-snug truncate ${
+                          isCritical ? "text-red-700" : "text-yellow-700"
+                        }`}
+                        title={esc.caseId}
+                      >
+                        {esc.caseId} — {esc.triggerType || 'Issue'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{esc.trigger || esc.candidate}</p>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 text-center opacity-40">
+                <RiCheckLine size={40} className="text-green-500 mb-2" />
+                <p className="text-xs font-bold">No active escalations</p>
               </div>
-            ))}
+            )}
           </div>
           <button
             onClick={() => navigate("/admin/cases")}
@@ -360,24 +405,28 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col">
           <h3 className="text-sm font-black text-secondary mb-5">👥 Team Workload</h3>
           <div className="space-y-4 flex-1">
-            {teamWorkload.map((member, i) => (
-              <div key={member.name} className="flex items-center gap-3">
-                <p className="text-xs font-semibold text-gray-600 w-28 shrink-0 truncate">
-                  {member.name}
-                </p>
-                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <motion.div
-                    className={`h-full rounded-full ${member.bar}`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${member.pct}%` }}
-                    transition={{ duration: 0.7, delay: 0.4 + i * 0.08, ease: "easeOut" }}
-                  />
+            {dashboardStats?.teamWorkload?.length > 0 ? (
+              dashboardStats.teamWorkload.map((member, i) => (
+                <div key={member.name} className="flex items-center gap-3">
+                  <p className="text-xs font-semibold text-gray-600 w-28 shrink-0 truncate">
+                    {member.name}
+                  </p>
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <motion.div
+                      className={`h-full rounded-full ${member.bar}`}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${member.pct}%` }}
+                      transition={{ duration: 0.7, delay: 0.4 + i * 0.08, ease: "easeOut" }}
+                    />
+                  </div>
+                  <p className="text-xs font-black text-secondary w-6 text-right shrink-0">
+                    {member.cases}
+                  </p>
                 </div>
-                <p className="text-xs font-black text-secondary w-6 text-right shrink-0">
-                  {member.cases}
-                </p>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-xs text-gray-400 py-10 text-center">No active workload data</p>
+            )}
           </div>
           <button
             onClick={() => navigate("/admin/caseworkers")}

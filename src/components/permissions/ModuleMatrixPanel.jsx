@@ -136,8 +136,17 @@ const ModuleMatrixPanel = () => {
     );
   }
 
-  // Build distinct list of all permissions from roles[0] (they're all the same set)
-  const allPerms = matrixData?.roles?.[0]?.permissions || [];
+  // Build a deduplicated permission list across ALL roles (not just roles[0])
+  // The API returns each permission entry per-role, so we use a Map to deduplicate
+  const allPermsMap = new Map();
+  matrixData?.roles?.forEach((role) => {
+    role.permissions.forEach((p) => {
+      if (!allPermsMap.has(p.permissionId)) {
+        allPermsMap.set(p.permissionId, p);
+      }
+    });
+  });
+  const allPerms = Array.from(allPermsMap.values());
   const modules  = ["all", ...(matrixData?.modules || [])];
   const visiblePerms = filterModule === "all"
     ? allPerms
@@ -146,13 +155,13 @@ const ModuleMatrixPanel = () => {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Module</label>
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Filter</label>
           <select
             value={filterModule}
             onChange={(e) => setFilter(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 bg-white font-medium text-secondary"
           >
             {modules.map((m) => (
               <option key={m} value={m}>{m === "all" ? "All Modules" : m}</option>
@@ -162,16 +171,18 @@ const ModuleMatrixPanel = () => {
 
         <div className="flex items-center gap-3">
           {savedMsg && (
-            <span className="text-xs font-bold text-green-600">{savedMsg}</span>
+            <span className="text-xs font-bold text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100">
+              ✓ {savedMsg}
+            </span>
           )}
           {hasDirtyChanges && (
-            <span className="text-xs text-amber-600 font-semibold">
+            <span className="text-xs text-amber-700 font-semibold bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
               {countDirtyRoles()} role(s) have unsaved changes
             </span>
           )}
           <button
             onClick={fetchMatrixData}
-            className="text-gray-400 hover:text-primary transition-colors"
+            className="p-2 text-gray-400 hover:text-secondary transition-colors hover:bg-secondary/5 rounded-lg"
             title="Refresh"
           >
             <FiRefreshCw size={15} />
@@ -179,11 +190,14 @@ const ModuleMatrixPanel = () => {
           <button
             onClick={handleSaveAll}
             disabled={!hasDirtyChanges || saving}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
               hasDirtyChanges && !saving
-                ? "bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/20"
+                ? "text-white shadow-md shadow-indigo-200"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
+            style={hasDirtyChanges && !saving ? {
+              background: "var(--color-secondary)",
+            } : {}}
           >
             <FiSave size={14} />
             {saving ? "Saving…" : "Save Changes"}
@@ -192,8 +206,8 @@ const ModuleMatrixPanel = () => {
       </div>
 
       {/* Matrix Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-gray-50/80 to-white flex items-center justify-between">
           <div>
             <h2 className="text-sm font-black text-secondary">Module Permissions Matrix</h2>
             <p className="text-xs text-gray-400 mt-0.5">
@@ -201,16 +215,16 @@ const ModuleMatrixPanel = () => {
             </p>
           </div>
           <div className="flex items-center gap-4 text-[11px] text-gray-500">
-            <span className="flex items-center gap-1">
-              <span className="w-4 h-4 rounded bg-green-50 border-2 border-green-400 inline-block" />
+            <span className="flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 rounded bg-green-50 border-2 border-green-400 inline-block" />
               Granted
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-4 h-4 rounded bg-amber-50 border-2 border-amber-400 inline-block" />
+            <span className="flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 rounded bg-amber-50 border-2 border-amber-400 inline-block" />
               Pending
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-4 h-4 rounded bg-white border-2 border-gray-200 inline-block" />
+            <span className="flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 rounded bg-white border-2 border-gray-200 inline-block" />
               Denied
             </span>
           </div>
