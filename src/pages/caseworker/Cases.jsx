@@ -178,15 +178,6 @@ const STATUS_CHIPS = [
   { id: "completed", label: "Completed" },
 ];
 
-const VISA_OPTIONS = [
-  "All visa types",
-  "Tier 2",
-  "Skilled Worker",
-  "Graduate",
-  "Intra-Co",
-  "Health & Care",
-];
-
 const PRIORITY_OPTIONS = [
   "All priorities",
   "Urgent",
@@ -194,8 +185,6 @@ const PRIORITY_OPTIONS = [
   "Medium",
   "Low",
 ];
-
-const NEW_CASE_VISA = VISA_OPTIONS.filter((v) => v !== "All visa types");
 
 const CASE_STATUS_EDIT = [
   { value: "on_track", label: "On track" },
@@ -1294,9 +1283,9 @@ const Cases = () => {
                     className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
                   >
                     <option value="">All Visa Types</option>
-                    {VISA_OPTIONS.filter((v) => v !== "All visa types").map((v) => (
-                      <option key={v} value={v}>
-                        {v}
+                    {visaTypes.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
                       </option>
                     ))}
                   </select>
@@ -1392,7 +1381,7 @@ const Cases = () => {
                             {formatTarget(c.target)}
                           </td>
                           <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex flex-wrap gap-1.5">
+                            <div className="flex gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => openDetail(c)}
@@ -2147,15 +2136,16 @@ const Cases = () => {
               Visa type
             </label>
             <select
-              value={editCaseForm.visa}
+              value={editCaseForm.visaTypeId}
               onChange={(e) =>
-                setEditCaseForm((f) => ({ ...f, visa: e.target.value }))
+                setEditCaseForm((f) => ({ ...f, visaTypeId: e.target.value }))
               }
               className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
             >
-              {NEW_CASE_VISA.map((v) => (
-                <option key={v} value={v}>
-                  {v}
+              <option value="">Select visa type</option>
+              {visaTypes.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
                 </option>
               ))}
             </select>
@@ -2374,7 +2364,7 @@ const Cases = () => {
               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary resize-none"
             />
           </div>
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={closeCaseEdit}
@@ -2531,7 +2521,7 @@ const Cases = () => {
             )}
 
             {/* Footer */}
-            <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+            <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
               <button
                 type="button"
                 onClick={closeReassign}
@@ -3070,15 +3060,16 @@ const Cases = () => {
                 Visa type
               </label>
               <select
-                value={editCaseForm.visa}
+                value={editCaseForm.visaTypeId}
                 onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, visa: e.target.value }))
+                  setEditCaseForm((f) => ({ ...f, visaTypeId: e.target.value }))
                 }
                 className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
               >
-                {NEW_CASE_VISA.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
+                <option value="">Select visa type</option>
+                {visaTypes.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
                   </option>
                 ))}
               </select>
@@ -3133,7 +3124,7 @@ const Cases = () => {
               placeholder="Anything the team should know…"
             />
           </div>
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={closeCaseEdit}
@@ -3244,7 +3235,7 @@ const Cases = () => {
               )}
             </div>
           )}
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={() => setReassignCaseId(null)}
@@ -3630,7 +3621,7 @@ function DocumentsTab({ caseId, candidateId }) {
           {uploadErrors.api && (
             <p className="text-xs font-bold text-red-600 mt-1">{uploadErrors.api}</p>
           )}
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={closeUploadModal}
@@ -3865,7 +3856,7 @@ function TasksTab({ caseId }) {
           {createErrors.api && (
             <p className="text-xs font-bold text-red-600 mt-1">{createErrors.api}</p>
           )}
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={closeCreateModal}
