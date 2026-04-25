@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
-import { getCaseworkerCases, getVisaTypes, getPetitionTypes, getAllUsers, createCaseworkerCase, updateCaseworkerCase, getDepartments, getCaseworkerCaseDetails, getCaseDocuments, uploadDocument, updateDocument, deleteDocument, updateDocumentStatus, downloadDocument, getCaseNotes, createCaseNote, updateCaseNote, deleteCaseNote, getTasks, getTaskByCaseId, createTask, updateTask, deleteTask } from "../../services/caseApi";
+import { getCaseworkerCases, getVisaTypes, getPetitionTypes, getAllUsers, createCaseworkerCase, updateCaseworkerCase, getDepartments, getCaseworkerCaseDetails, getCaseDocuments, uploadDocument, updateDocument, deleteDocument, updateDocumentStatus, downloadDocument, getCaseNotes, createCaseNote, updateCaseNote, deleteCaseNote, getTasks, getTaskByCaseId, createTask, updateTask, deleteTask, exportCases } from "../../services/caseApi";
 
 const PAGE_SIZE = 7;
 
@@ -51,16 +51,6 @@ const CASES_DATA = [
   { caseId: "#C-2281", candidate: "Isabelle Fortin", business: "Fortin Avocats UK", visa: "Graduate", status: "completed", target: "2026-01-20", priority: "low", payment: "paid" },
 ];
 
-/** Caseworkers pool for reassignment */
-const CASEWORKERS = [
-  { id: "cw-01", name: "Sarah Mitchell", role: "Senior Caseworker", avatar: "SM", load: 8 },
-  { id: "cw-02", name: "James Holloway", role: "Caseworker", avatar: "JH", load: 12 },
-  { id: "cw-03", name: "Yvonne Clarke", role: "Senior Caseworker", avatar: "YC", load: 5 },
-  { id: "cw-04", name: "Tariq Hussain", role: "Caseworker", avatar: "TH", load: 14 },
-  { id: "cw-05", name: "Beatrice Osei", role: "Lead Caseworker", avatar: "BO", load: 3 },
-  { id: "cw-06", name: "Nikolai Volkov", role: "Caseworker", avatar: "NV", load: 10 },
-  { id: "cw-07", name: "Preethi Anand", role: "Senior Caseworker", avatar: "PA", load: 7 },
-];
 
 const REASSIGN_REASONS = [
   "Caseworker unavailable / on leave",
@@ -721,7 +711,7 @@ const Cases = () => {
     setReassignForm(emptyReassignForm());
   }, []);
 
-  const submitReassign = useCallback(() => {
+  const submitReassign = useCallback(async () => {
     const err = {};
     if (!reassignForm.caseworkerId) err.caseworkerId = "Please select a caseworker";
     if (!reassignForm.reasonPreset) err.reasonPreset = "Please select a reason";
@@ -733,23 +723,96 @@ const Cases = () => {
     setReassignErrors(err);
     if (Object.keys(err).length) return;
 
-    const cw = CASEWORKERS.find((w) => w.id === reassignForm.caseworkerId);
+    const cw = caseworkers.find((w) => w.id.toString() === reassignForm.caseworkerId.toString());
     const reason =
       reassignForm.reasonPreset === "Other"
         ? reassignForm.reasonCustom.trim()
         : reassignForm.reasonPreset;
 
-    setReassignments((prev) => ({
-      ...prev,
-      [reassignCaseId]: {
-        caseworker: cw.name,
-        caseworkerRole: cw.role,
-        reason,
-        at: new Date(),
-      },
-    }));
-    closeReassign();
-  }, [reassignCaseId, reassignForm, closeReassign]);
+    try {
+      // Get the current case to update
+      const currentCase = cases.find(c => c.caseId === reassignCaseId);
+      if (!currentCase) {
+        alert("Case not found");
+        return;
+      }
+
+      // Update case with new caseworker assignment
+      const updateData = {
+        assignedcaseworkerId: [parseInt(reassignForm.caseworkerId)],
+        notes: `${currentCase.notes || ''}\n[Reassignment]: ${reason} - Reassigned to ${cw.first_name} ${cw.last_name}`
+      };
+
+      await updateCaseworkerCase(currentCase.id, updateData);
+
+      // Refresh cases
+      const params = {
+        page: 1,
+        limit: PAGE_SIZE,
+        search,
+        status: chip === "all" ? "" : chip,
+        priority: priorityFilter === "All priorities" ? "" : priorityFilter.toLowerCase(),
+        visaTypeId: visaFilter === "All visa types" ? "" : visaFilter,
+        sortBy: "created_at",
+        sortOrder: "DESC"
+      };
+      const response = await getCaseworkerCases(params);
+
+      if (response?.data?.data?.cases) {
+        const mappedCases = response.data.data.cases.map(c => ({
+          caseId: c.caseId || `#C-${c.id}`,
+          candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : "Unknown",
+          business: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || c.sponsor?.first_name || "Unknown",
+          visa: c.visaType?.name || "Unknown",
+          status: mapApiStatus(c.status),
+          target: c.targetSubmissionDate || c.created_at,
+          priority: c.priority?.toLowerCase() || "medium",
+          payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
+          id: c.id,
+          candidateId: c.candidateId,
+          sponsorId: c.sponsorId,
+          businessId: c.businessId,
+          department: c.department,
+          sponsor: c.sponsor,
+          caseworker: c.caseworkers && c.caseworkers.length > 0
+            ? c.caseworkers.map(cw => `${cw.first_name} ${cw.last_name}`).join(', ')
+            : "Unassigned"
+        }));
+        setCases(mappedCases);
+      }
+
+      alert("Case reassigned successfully!");
+      closeReassign();
+    } catch (error) {
+      console.error("Error reassigning case:", error);
+      alert("Failed to reassign case. Please try again.");
+    }
+  }, [reassignCaseId, reassignForm, closeReassign, cases, caseworkers, search, chip, priorityFilter, visaFilter]);
+
+  // ── Export handler ───────────────────────────────────────────────────────────
+  const handleExport = useCallback(async () => {
+    try {
+      const params = {
+        search,
+        status: chip === "all" ? "" : chip,
+        priority: priorityFilter === "All priorities" ? "" : priorityFilter.toLowerCase(),
+        visaTypeId: visaFilter === "All visa types" ? "" : visaFilter,
+      };
+      const response = await exportCases(params);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `cases_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("Error exporting cases:", error);
+      alert("Failed to export cases. Please try again.");
+    }
+  }, [search, chip, priorityFilter, visaFilter]);
   // ───────────────────────────────────────────────────────────────────────────
 
   // Filtering is now handled by the API, so we use cases directly
@@ -811,7 +874,7 @@ const Cases = () => {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => window.alert("Demo: export would download a CSV/spreadsheet.")}
+            onClick={handleExport}
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 shadow-sm hover:bg-gray-50"
           >
             <Download size={18} />
@@ -1699,47 +1762,48 @@ const Cases = () => {
                 Select new caseworker
               </label>
               <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {CASEWORKERS.map((cw) => {
-                  const selected = reassignForm.caseworkerId === cw.id;
-                  return (
-                    <button
-                      key={cw.id}
-                      type="button"
-                      onClick={() =>
-                        setReassignForm((f) => ({ ...f, caseworkerId: cw.id }))
-                      }
-                      className={`w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${
-                        selected
-                          ? "border-violet-400 bg-violet-50 ring-2 ring-violet-200"
-                          : "border-gray-200 bg-white hover:border-violet-200 hover:bg-violet-50/40"
-                      }`}
-                    >
-                      {/* Avatar */}
-                      <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
+                {caseworkers.length === 0 ? (
+                  <p className="text-sm font-bold text-gray-500">No caseworkers available</p>
+                ) : (
+                  caseworkers.map((cw) => {
+                    const selected = reassignForm.caseworkerId === cw.id.toString();
+                    const initials = `${cw.first_name?.[0] || ''}${cw.last_name?.[0] || ''}`.toUpperCase();
+                    return (
+                      <button
+                        key={cw.id}
+                        type="button"
+                        onClick={() =>
+                          setReassignForm((f) => ({ ...f, caseworkerId: cw.id.toString() }))
+                        }
+                        className={`w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${
                           selected
-                            ? "bg-violet-600 text-white"
-                            : "bg-gray-100 text-gray-600"
+                            ? "border-violet-400 bg-violet-50 ring-2 ring-violet-200"
+                            : "border-gray-200 bg-white hover:border-violet-200 hover:bg-violet-50/40"
                         }`}
                       >
-                        {cw.avatar}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-black ${selected ? "text-violet-900" : "text-gray-900"}`}>
-                          {cw.name}
-                        </p>
-                        <p className="text-[11px] font-bold text-gray-500">{cw.role}</p>
-                      </div>
-                      {/* Current load badge */}
-                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black ${loadColor(cw.load)}`}>
-                        {cw.load} active
-                      </span>
-                      {selected && (
-                        <Check size={16} className="shrink-0 text-violet-600" strokeWidth={3} />
-                      )}
-                    </button>
-                  );
-                })}
+                        {/* Avatar */}
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
+                            selected
+                              ? "bg-violet-600 text-white"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-black ${selected ? "text-violet-900" : "text-gray-900"}`}>
+                            {cw.first_name} {cw.last_name}
+                          </p>
+                          <p className="text-[11px] font-bold text-gray-500">Caseworker</p>
+                        </div>
+                        {selected && (
+                          <Check size={16} className="shrink-0 text-violet-600" strokeWidth={3} />
+                        )}
+                      </button>
+                    );
+                  })
+                )}
               </div>
               {reassignErrors.caseworkerId && (
                 <p className="text-xs font-bold text-red-600 mt-1.5">
@@ -2454,9 +2518,9 @@ const Cases = () => {
               }`}
             >
               <option value="">Select caseworker</option>
-              {CASEWORKERS.map((cw) => (
+              {caseworkers.map((cw) => (
                 <option key={cw.id} value={cw.id}>
-                  {cw.name} ({cw.role}) — Load: {cw.load}
+                  {cw.first_name} {cw.last_name} — Caseworker
                 </option>
               ))}
             </select>
@@ -2648,10 +2712,13 @@ function DocumentsTab({ caseId, candidateId }) {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [viewDocumentOpen, setViewDocumentOpen] = useState(false);
+  const [viewDocumentUrl, setViewDocumentUrl] = useState('');
   const [uploadForm, setUploadForm] = useState({
     documentType: 'General',
     documentCategory: 'candidate',
     userFileName: '',
+    expiryDate: '',
   });
   const [uploadErrors, setUploadErrors] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
@@ -2734,9 +2801,12 @@ function DocumentsTab({ caseId, candidateId }) {
       formData.append('documentType', uploadForm.documentType);
       formData.append('documentCategory', uploadForm.documentCategory);
       formData.append('userFileName', uploadForm.userFileName || selectedFile.name);
+      if (uploadForm.expiryDate) {
+        formData.append('expiryDate', uploadForm.expiryDate);
+      }
 
       const response = await uploadDocument(formData);
-      
+
       if (response.data.status === "success") {
         const documentsResponse = await getCaseDocuments(caseId);
         setDocuments(documentsResponse.data.data.documents || []);
@@ -2753,6 +2823,16 @@ function DocumentsTab({ caseId, candidateId }) {
       setUploading(false);
     }
   }, [uploadForm, selectedFile, caseId, candidateId, closeUploadModal]);
+
+  const openViewDocument = useCallback((url) => {
+    setViewDocumentUrl(url);
+    setViewDocumentOpen(true);
+  }, []);
+
+  const closeViewDocument = useCallback(() => {
+    setViewDocumentOpen(false);
+    setViewDocumentUrl('');
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -2781,6 +2861,7 @@ function DocumentsTab({ caseId, candidateId }) {
               <p className="text-sm font-bold text-gray-900">{doc.userFileName || doc.documentName}</p>
               <p className="text-[11px] font-bold text-gray-500">
                 Uploaded {new Date(doc.uploadedAt).toLocaleDateString()} · {doc.documentType}
+                {doc.expiryDate && ` · Expires: ${new Date(doc.expiryDate).toLocaleDateString()}`}
               </p>
             </div>
             <span
@@ -2790,7 +2871,7 @@ function DocumentsTab({ caseId, candidateId }) {
             </span>
             <button
               type="button"
-              onClick={() => window.open(doc.documentUrl, '_blank')}
+              onClick={() => openViewDocument(doc.documentUrl)}
               className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black text-gray-600"
             >
               View
@@ -2833,6 +2914,17 @@ function DocumentsTab({ caseId, candidateId }) {
               onChange={(e) => setUploadForm((f) => ({ ...f, userFileName: e.target.value }))}
               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
               placeholder="e.g. Passport copy"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Expiry date (optional)
+            </label>
+            <input
+              type="date"
+              value={uploadForm.expiryDate}
+              onChange={(e) => setUploadForm((f) => ({ ...f, expiryDate: e.target.value }))}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2895,6 +2987,30 @@ function DocumentsTab({ caseId, candidateId }) {
               {uploading ? 'Uploading...' : 'Upload document'}
             </button>
           </div>
+        </div>
+      </Modal>
+
+      {/* View Document Modal */}
+      <Modal
+        open={viewDocumentOpen}
+        onClose={closeViewDocument}
+        title="View Document"
+        titleId="view-document-modal-title"
+        maxWidthClass="max-w-4xl"
+        bodyClassName="p-0"
+      >
+        <div className="w-full h-[600px] bg-gray-50">
+          {viewDocumentUrl ? (
+            <iframe
+              src={viewDocumentUrl}
+              className="w-full h-full border-0"
+              title="Document Viewer"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-500">
+              No document to display
+            </div>
+          )}
         </div>
       </Modal>
     </div>

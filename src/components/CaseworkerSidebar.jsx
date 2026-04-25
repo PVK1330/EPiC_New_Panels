@@ -144,21 +144,32 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
 
         <div className="mt-auto border-t border-gray-100 shrink-0 p-6">
           <div className="flex items-center gap-3 p-3.5 rounded-3xl bg-gray-100 border border-gray-200 transition-all hover:bg-white hover:shadow-md">
-            <div className="w-11 h-11 bg-white shadow-sm border border-gray-200 text-primary rounded-xl flex items-center justify-center font-black text-sm shrink-0">
-              {user?.name?.charAt(0) || "U"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-gray-900 truncate">
-                {user?.name || "User"}
-              </p>
-              <p className="text-[10px] font-bold text-gray-600 truncate uppercase tracking-wider">
-                Profile
-              </p>
+            <div 
+              className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+              onClick={() => {
+                navigate("/caseworker/my-account");
+                onClose();
+              }}
+            >
+              <div className="w-11 h-11 bg-white shadow-sm border border-gray-200 text-primary rounded-xl flex items-center justify-center font-black text-sm shrink-0">
+                {user?.name?.charAt(0) || "U"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black text-gray-900 truncate">
+                  {user?.name || "User"}
+                </p>
+                <p className="text-[10px] font-bold text-gray-600 truncate uppercase tracking-wider">
+                  Profile
+                </p>
+              </div>
             </div>
             <button
               type="button"
-              onClick={handleLogout}
-              className="p-2 text-gray-600 hover:text-primary hover:bg-primary/10 rounded-xl transition-all shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLogout();
+              }}
+              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shrink-0"
               title="Sign out"
             >
               <LogOut size={18} />

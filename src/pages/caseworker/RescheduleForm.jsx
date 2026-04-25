@@ -47,20 +47,21 @@ const InputField = ({
 
 const RescheduleForm = () => {
   const [history, setHistory] = useState([]);
+  const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     caseId: "",
-    targetSubmissionDate: "",
-    biometricsDate: "",
-    submissionDate: "",
-    decisionDate: "",
+    fieldToReschedule: "",
+    newDate: "",
+    newTime: "",
     reason: "",
   });
 
   useEffect(() => {
     fetchRescheduleHistory();
+    fetchCases();
   }, []);
 
   const fetchRescheduleHistory = async () => {
@@ -75,6 +76,15 @@ const RescheduleForm = () => {
     }
   };
 
+  const fetchCases = async () => {
+    try {
+      const response = await api.get("/api/caseworker/cases");
+      setCases(response.data.data.cases || []);
+    } catch (error) {
+      console.error("Error fetching cases:", error);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -82,30 +92,44 @@ const RescheduleForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("Form data:", formData);
+
+    if (!formData.caseId || !formData.fieldToReschedule || !formData.newDate || !formData.reason) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
     try {
-      const response = await api.patch(`/api/cases/reschedule/${formData.caseId}`, {
-        targetSubmissionDate: formData.targetSubmissionDate || null,
-        biometricsDate: formData.biometricsDate || null,
-        submissionDate: formData.submissionDate || null,
-        decisionDate: formData.decisionDate || null,
+      const fieldMap = {
+        'targetSubmissionDate': 'targetSubmissionDate',
+        'biometricsDate': 'biometricsDate',
+        'submissionDate': 'submissionDate',
+        'decisionDate': 'decisionDate',
+      };
+
+      const payload = {
+        [fieldMap[formData.fieldToReschedule]]: formData.newDate,
         reason: formData.reason,
-      });
+      };
+
+      console.log("Payload:", payload);
+      const response = await api.patch(`/api/cases/reschedule/${formData.caseId}`, payload);
       setSubmitted(true);
       setTimeout(() => {
         setSubmitted(false);
         setModalOpen(false);
         setFormData({
           caseId: "",
-          targetSubmissionDate: "",
-          biometricsDate: "",
-          submissionDate: "",
-          decisionDate: "",
+          fieldToReschedule: "",
+          newDate: "",
+          newTime: "",
           reason: "",
         });
         fetchRescheduleHistory();
       }, 2000);
     } catch (error) {
       console.error("Error submitting reschedule request:", error);
+      alert(error.response?.data?.message || "Failed to submit reschedule request");
     }
   };
 
@@ -119,10 +143,9 @@ const RescheduleForm = () => {
     setSubmitted(false);
     setFormData({
       caseId: "",
-      targetSubmissionDate: "",
-      biometricsDate: "",
-      submissionDate: "",
-      decisionDate: "",
+      fieldToReschedule: "",
+      newDate: "",
+      newTime: "",
       reason: "",
     });
   };
@@ -274,54 +297,71 @@ const RescheduleForm = () => {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Case ID */}
-                  <InputField
-                    label="Case ID"
-                    icon={CalendarClock}
-                    placeholder="Enter case ID (e.g., 123)"
-                    required
-                    value={formData.caseId}
-                    onChange={handleInputChange}
-                    name="caseId"
-                  />
-
-                  {/* Date Fields */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <InputField
-                      label="Target Submission Date"
-                      type="date"
-                      icon={Calendar}
-                      value={formData.targetSubmissionDate}
+                  {/* Case Selection */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                      Select Case <span className="text-primary">*</span>
+                    </label>
+                    <select
+                      value={formData.caseId}
                       onChange={handleInputChange}
-                      name="targetSubmissionDate"
-                    />
-                    <InputField
-                      label="Biometrics Date"
-                      type="date"
-                      icon={Calendar}
-                      value={formData.biometricsDate}
-                      onChange={handleInputChange}
-                      name="biometricsDate"
-                    />
+                      name="caseId"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                    >
+                      <option value="">Select a case...</option>
+                      {cases.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.caseId} - {c.candidate?.first_name} {c.candidate?.last_name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
+                  {/* Field to Reschedule */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                      Appointment Type <span className="text-primary">*</span>
+                    </label>
+                    <select
+                      value={formData.fieldToReschedule}
+                      onChange={handleInputChange}
+                      name="fieldToReschedule"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                    >
+                      <option value="">Select appointment type...</option>
+                      <option value="targetSubmissionDate">Target Submission Date</option>
+                      <option value="biometricsDate">Biometrics Date</option>
+                      <option value="submissionDate">Submission Date</option>
+                      <option value="decisionDate">Decision Date</option>
+                    </select>
+                  </div>
+
+                  {/* New Appointment Date */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <InputField
-                      label="Submission Date"
-                      type="date"
-                      icon={Calendar}
-                      value={formData.submissionDate}
-                      onChange={handleInputChange}
-                      name="submissionDate"
-                    />
-                    <InputField
-                      label="Decision Date"
-                      type="date"
-                      icon={Calendar}
-                      value={formData.decisionDate}
-                      onChange={handleInputChange}
-                      name="decisionDate"
-                    />
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                        New Appointment Date <span className="text-primary">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.newDate}
+                        onChange={handleInputChange}
+                        name="newDate"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                        New Appointment Time <span className="text-primary">*</span>
+                      </label>
+                      <input
+                        type="time"
+                        value={formData.newTime}
+                        onChange={handleInputChange}
+                        name="newTime"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                      />
+                    </div>
                   </div>
 
                   {/* Reason Textarea */}
@@ -333,7 +373,6 @@ const RescheduleForm = () => {
                     <textarea
                       rows={4}
                       placeholder="Briefly explain why you need to reschedule..."
-                      required
                       value={formData.reason}
                       onChange={handleInputChange}
                       name="reason"

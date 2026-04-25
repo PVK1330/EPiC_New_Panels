@@ -35,12 +35,15 @@ export default function SetPasswordPage() {
     if (Object.keys(errs).length) return setErrors(errs);
     setIsLoading(true);
     try {
+      const resetToken = sessionStorage.getItem("reset_token");
       await setNewPassword({
         email,
         password: form.password,
         confirmPassword: form.confirmPassword,
+        resetToken,
       });
       sessionStorage.removeItem("pending_reset_email");
+      sessionStorage.removeItem("reset_token");
       navigate("/login");
     } catch (err) {
       setApiError(err.message || "Failed to set new password");

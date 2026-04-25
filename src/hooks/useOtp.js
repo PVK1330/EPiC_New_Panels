@@ -39,7 +39,11 @@ const useOtp = (type = "register") => {
         sessionStorage.removeItem("pending_otp_email");
         navigate("/login");
       } else {
-        await verifyResetOtp({ email, otp });
+        const response = await verifyResetOtp({ email, otp });
+        // Save the reset token for the set-password page
+        if (response.data?.reset_token) {
+          sessionStorage.setItem("reset_token", response.data.reset_token);
+        }
         navigate("/set-password");
       }
     } catch (err) {
