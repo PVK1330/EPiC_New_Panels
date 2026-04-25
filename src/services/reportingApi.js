@@ -16,6 +16,10 @@ export const getWorkloadReport = (params = {}) =>
 export const getFinancialReport = (params = {}) =>
   api.get("/api/reports/financial", { params });
 
+// Financial Transactions
+export const getFinancialTransactions = (params = {}) =>
+  api.get("/api/reports/financial-transactions", { params });
+
 // Performance & KPI report
 export const getPerformanceReport = (params = {}) =>
   api.get("/api/reports/performance", { params });

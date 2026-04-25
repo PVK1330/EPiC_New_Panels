@@ -75,32 +75,37 @@ export default function EmailSettings({
               {templates.map((t) => (
                 <div 
                   key={t.template_key} 
-                  className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-gray-100 bg-gray-50/50 hover:bg-white hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all"
+                  className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl border border-gray-100 bg-gray-50/30 hover:bg-white hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300"
                 >
-                  <div className="flex flex-col sm:grid sm:grid-cols-[1.5fr_2fr] gap-4 min-w-0 flex-1">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-white rounded-xl text-primary shadow-sm border border-gray-50">
-                        <FiCode size={14} />
+                  <div className="flex flex-col sm:grid sm:grid-cols-[1.2fr_2fr] gap-6 min-w-0 flex-1">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 flex items-center justify-center bg-primary/5 rounded-2xl text-primary border border-primary/10 group-hover:bg-primary group-hover:text-white transition-all duration-300">
+                        <FiCode size={20} />
                       </div>
-                      <span className="text-sm font-black text-secondary truncate uppercase tracking-tight">
-                        {t.template_key}
-                      </span>
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Template ID</span>
+                        <span className="text-sm font-black text-secondary truncate uppercase tracking-tighter">
+                          {t.template_key}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center min-w-0">
-                      <span className="text-xs text-gray-500 font-medium truncate italic">
-                        {t.subject || "(No Subject)"}
+                    <div className="flex flex-col justify-center min-w-0">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Subject</span>
+                      <span className="text-sm text-gray-600 font-bold truncate leading-none">
+                        {t.subject || "(No Subject Defined)"}
                       </span>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0 bg-white/50 p-1.5 rounded-2xl border border-gray-100/50">
                     <button 
                       onClick={() => onView(t.template_key)}
-                      className="p-2.5 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
+                      className="flex items-center gap-2 px-3 py-2 text-[11px] font-black text-gray-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-all uppercase tracking-wider"
                       title="Preview"
                     >
-                      <FiEye size={16} />
+                      <FiEye size={14} /> Preview
                     </button>
+                    <div className="w-px h-4 bg-gray-200 mx-1" />
                     <button 
                       onClick={() => onEdit(t.template_key)}
                       className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"

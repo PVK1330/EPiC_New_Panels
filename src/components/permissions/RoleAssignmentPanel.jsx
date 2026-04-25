@@ -8,11 +8,19 @@ import {
 import Modal from "../Modal";
 import Button from "../Button";
 import Input from "../Input";
-import { getAllRoles, updateRole, deleteRole, cloneRolePermissions, getRoleWithPermissions } from "../../services/rolesApi";
+import { getAllRoles, createRole, updateRole, deleteRole, cloneRolePermissions, getRoleWithPermissions, assignPermissionsToRole } from "../../services/rolesApi";
+import { getAllPermissions } from "../../services/permissionsApi";
 
 const SYSTEM_ROLE_IDS = [1, 2, 3, 4];
 
 const EMPTY_EDIT_FORM = { name: "", description: "" };
+
+const humanize = (str) => {
+  if (!str) return "";
+  let cleaned = str.replace(/^admin\./i, "");
+  cleaned = cleaned.replace(/[._]/g, " ");
+  return cleaned.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+};
 
 const RoleAssignmentPanel = () => {
   const [roles, setRoles]               = useState([]);
@@ -21,6 +29,15 @@ const RoleAssignmentPanel = () => {
   const [expandedRole, setExpanded]     = useState(null);
   const [rolePerms, setRolePerms]       = useState({});      // { roleId: Permission[] }
   const [loadingPerms, setLoadingPerms] = useState({});
+  const [allPermissions, setAllPermissions] = useState([]); // For the create modal
+  const [modules, setModules] = useState([]);
+  const [createAccess, setCreateAccess] = useState({}); // { moduleName: level }
+
+  // Create modal
+  const [createModal, setCreateModal] = useState(false);
+  const [createForm, setCreateForm]   = useState(EMPTY_EDIT_FORM);
+  const [createErrors, setCreateErrors] = useState({});
+  const [creating, setCreating]       = useState(false);
 
   // Edit modal
   const [editModal, setEditModal]   = useState(false);
@@ -51,17 +68,76 @@ const RoleAssignmentPanel = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getAllRoles();
-      if (res.data?.status === "success") setRoles(res.data.data);
-      else setError("Unexpected response from server.");
+      const [roleRes, permRes] = await Promise.all([
+        getAllRoles(),
+        getAllPermissions()
+      ]);
+      
+      if (roleRes.data?.status === "success") setRoles(roleRes.data.data);
+      if (permRes.data?.status === "success") {
+        // Flatten permissions from grouped object if necessary
+        const grouped = permRes.data.data.permissions || {};
+        const flat = Object.values(grouped).flat();
+        setAllPermissions(flat);
+        setModules(permRes.data.data.modules || []);
+      }
     } catch {
-      setError("Failed to load roles.");
+      setError("Failed to load roles and permissions.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => { fetchRoles(); }, []);
+
+  // ── Create ────────────────────────────────────────────────────────────────
+  const handleCreate = async () => {
+    if (!createForm.name.trim()) { setCreateErrors({ name: "Role name is required" }); return; }
+    setCreating(true);
+    try {
+      const res = await createRole({
+        name: createForm.name.trim(),
+        description: createForm.description.trim(),
+      });
+      
+      if (res.data?.status === "success") {
+        const newRoleId = res.data.data.role.id;
+        
+        // Collect permission IDs based on selected access levels
+        const permissionIds = [];
+        Object.entries(createAccess).forEach(([modName, level]) => {
+          if (level === "none") return;
+          
+          const modPerms = allPermissions.filter(p => p.module.trim() === modName);
+          modPerms.forEach(p => {
+            let shouldAdd = false;
+            if (level === "admin") shouldAdd = true;
+            else if (level === "viewer") shouldAdd = (p.action === "read" || p.action === "view");
+            else if (level === "editor") shouldAdd = ["read", "view", "write", "update", "edit"].includes(p.action);
+            
+            if (shouldAdd) permissionIds.push(p.id);
+          });
+        });
+        
+        // If any permissions selected, assign them
+        if (permissionIds.length > 0) {
+          await assignPermissionsToRole(newRoleId, { permissionIds });
+        }
+
+        showToast(`Role "${createForm.name}" created with module access.`);
+        setCreateModal(false);
+        setCreateForm(EMPTY_EDIT_FORM);
+        setCreateAccess({});
+        fetchRoles();
+      } else {
+        setCreateErrors({ submit: res.data?.message || "Create failed." });
+      }
+    } catch (err) {
+      setCreateErrors({ submit: err.response?.data?.message || "Failed to create role." });
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const toggleExpand = async (roleId) => {
     if (expandedRole === roleId) {
@@ -213,39 +289,45 @@ const RoleAssignmentPanel = () => {
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "var(--color-secondary)" }}
-          >
-            <RiShieldLine size={18} className="text-white" />
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center shrink-0 shadow-lg shadow-secondary/20">
+            <RiShieldLine size={24} className="text-white" />
           </div>
           <div>
-            <h2 className="text-base font-black text-secondary">Role Management</h2>
-            <p className="text-xs text-gray-400">View, edit, delete and clone roles. System roles (1–4) are protected.</p>
+            <h2 className="text-xl font-black text-secondary tracking-tight">Role Management</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Configure system-wide roles and their descriptions.</p>
           </div>
         </div>
-        <button
-          onClick={fetchRoles}
-          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-secondary transition-colors font-semibold px-3 py-2 rounded-lg hover:bg-secondary/5"
-          title="Refresh"
-        >
-          <RiRefreshLine size={15} /> Refresh
-        </button>
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchRoles}
+            className="p-2.5 text-gray-400 hover:text-secondary hover:bg-gray-100 rounded-xl transition-colors"
+            title="Refresh"
+          >
+            <RiRefreshLine size={18} />
+          </button>
+          <button
+            onClick={() => { setCreateForm(EMPTY_EDIT_FORM); setCreateErrors({}); setCreateModal(true); }}
+            className="flex items-center gap-2 px-5 py-2.5 bg-secondary text-white rounded-xl text-sm font-bold shadow-md shadow-secondary/10 hover:opacity-90 transition-all"
+          >
+            <RiShieldLine size={16} />
+            Create New Role
+          </button>
+        </div>
       </div>
 
       {/* Roles Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-auto max-h-[500px] custom-scrollbar">
           <table className="w-full text-sm border-separate border-spacing-0">
-            <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-5 py-3 text-left text-[11px] font-black text-gray-400 uppercase tracking-wider">Role</th>
-                <th className="px-5 py-3 text-center text-[11px] font-black text-gray-400 uppercase tracking-wider">Users</th>
-                <th className="px-5 py-3 text-center text-[11px] font-black text-gray-400 uppercase tracking-wider">Permissions</th>
-                <th className="px-5 py-3 text-right text-[11px] font-black text-gray-400 uppercase tracking-wider">Actions</th>
+            <thead>
+              <tr className="bg-gray-50/50">
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest sticky top-0 bg-gray-50 z-10 border-b border-gray-100">Role & Description</th>
+                <th className="px-6 py-4 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest sticky top-0 bg-gray-50 z-10 border-b border-gray-100">Users</th>
+                <th className="px-6 py-4 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest sticky top-0 bg-gray-50 z-10 border-b border-gray-100">Permissions</th>
+                <th className="px-6 py-4 text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest sticky top-0 bg-gray-50 z-10 border-b border-gray-100">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white">
@@ -321,31 +403,70 @@ const RoleAssignmentPanel = () => {
                 <AnimatePresence>
                   {expandedRole === role.id && (
                     <tr key={`${role.id}-expanded`} className="bg-white">
-                      <td colSpan={4} className="px-5 pb-4 bg-indigo-50/30 border-b border-gray-50">
+                      <td colSpan={4} className="px-5 pb-4 bg-gray-50/50 border-b border-gray-50">
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.2 }}
                         >
-                          <div className="pt-2">
-                            <p className="text-[11px] font-black text-gray-400 uppercase tracking-wide mb-2">
-                              Permissions assigned to {role.name}
-                            </p>
-                            {loadingPerms[role.id] ? (
-                              <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
-                                <RiRefreshLine className="animate-spin" size={14} />
-                                Loading permissions…
+                          <div className="pt-4 px-2">
+                            <div className="flex items-center justify-between mb-4">
+                              <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                                Role Access Summary — {role.name}
+                              </p>
+                              <div className="flex items-center gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded bg-blue-400" /> View</span>
+                                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded bg-indigo-400" /> Edit</span>
+                                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded bg-secondary" /> Admin</span>
                               </div>
-                            ) : rolePerms[role.id]?.length === 0 ? (
-                              <p className="text-xs text-gray-400 italic">No permissions assigned.</p>
+                            </div>
+
+                            {loadingPerms[role.id] ? (
+                              <div className="flex items-center justify-center py-10 gap-3 text-sm text-gray-400">
+                                <RiRefreshLine className="animate-spin text-secondary" size={20} />
+                                Analyzing role permissions...
+                              </div>
+                            ) : !rolePerms[role.id] || rolePerms[role.id].length === 0 ? (
+                              <div className="py-8 text-center text-sm text-gray-400 italic bg-white rounded-2xl border border-dashed border-gray-200">
+                                No permissions assigned to this role yet.
+                              </div>
                             ) : (
-                              <div className="flex flex-wrap gap-1.5">
-                                {rolePerms[role.id]?.map((p) => (
-                                  <span key={p.id} className="px-2.5 py-1 bg-white border border-indigo-200 text-indigo-700 rounded-lg text-[11px] font-semibold">
-                                    {p.name}
-                                  </span>
-                                ))}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                {Object.entries(
+                                  rolePerms[role.id].reduce((acc, p) => {
+                                    const mod = p.module.trim();
+                                    if (!acc[mod]) acc[mod] = [];
+                                    acc[mod].push(p);
+                                    return acc;
+                                  }, {})
+                                ).sort().map(([modName, perms]) => {
+                                  // Determine level
+                                  const totalModPerms = allPermissions.filter(p => p.module.trim() === modName).length;
+                                  const grantedCount = perms.length;
+                                  
+                                  let level = "custom";
+                                  let color = "bg-amber-50 text-amber-600 border-amber-100";
+                                  let label = "Custom Mix";
+                                  
+                                  if (grantedCount === 0) { level = "none"; label = "No Access"; color = "bg-gray-100 text-gray-400 border-gray-200"; }
+                                  else if (grantedCount === totalModPerms) { level = "admin"; label = "Full Admin"; color = "bg-secondary text-white border-secondary"; }
+                                  else {
+                                    const isViewer = perms.every(p => p.action === "read" || p.action === "view");
+                                    const isEditor = perms.every(p => ["read", "view", "write", "update", "edit"].includes(p.action));
+                                    if (isViewer) { level = "viewer"; label = "Viewer Only"; color = "bg-blue-50 text-blue-600 border-blue-100"; }
+                                    else if (isEditor) { level = "editor"; label = "Editor Access"; color = "bg-indigo-50 text-indigo-600 border-indigo-100"; }
+                                  }
+
+                                  return (
+                                    <div key={modName} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-secondary/20 transition-colors">
+                                      <span className="text-xs font-bold text-secondary">{modName}</span>
+                                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border ${color}`}>
+                                        {label}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -364,6 +485,82 @@ const RoleAssignmentPanel = () => {
         </div>
       </div>
 
+      {/* ── Create Modal ───────────────────────────────────────────────────── */}
+      <Modal
+        open={createModal}
+        onClose={() => setCreateModal(false)}
+        title="Create New Role"
+        maxWidthClass="max-w-2xl"
+        bodyClassName="px-5 py-5"
+        footer={
+          <>
+            <button
+              onClick={() => setCreateModal(false)}
+              className="px-5 py-2.5 text-sm font-bold text-gray-500 hover:text-secondary transition-colors"
+              disabled={creating}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreate}
+              className="px-6 py-2.5 bg-secondary text-white rounded-xl text-sm font-bold shadow-md shadow-secondary/10 hover:opacity-90 transition-all disabled:opacity-50"
+              disabled={creating}
+            >
+              {creating ? "Creating..." : "Create Role"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-6">
+          {createErrors.submit && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{createErrors.submit}</div>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <Input
+                label="Role Name"
+                name="name"
+                value={createForm.name}
+                onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+                error={createErrors.name}
+                placeholder="e.g. Content Manager"
+                required
+              />
+              <Input
+                label="Description"
+                name="description"
+                value={createForm.description}
+                onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
+                rows={4}
+                placeholder="Briefly describe what this role does"
+              />
+            </div>
+            
+            <div className="bg-gray-50 rounded-2xl border border-gray-100 p-4">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">Initial Module Access</label>
+              <div className="space-y-2 max-h-[220px] overflow-auto custom-scrollbar pr-2">
+                {modules.map(mod => (
+                  <div key={mod} className="flex items-center justify-between gap-3 bg-white p-2 rounded-xl border border-gray-100">
+                    <span className="text-xs font-bold text-secondary">{mod}</span>
+                    <select
+                      value={createAccess[mod] || "none"}
+                      onChange={(e) => setCreateAccess(prev => ({ ...prev, [mod]: e.target.value }))}
+                      className="text-[10px] font-black uppercase tracking-wider bg-transparent border-none focus:ring-0 cursor-pointer text-secondary"
+                    >
+                      <option value="none">None</option>
+                      <option value="viewer">Viewer</option>
+                      <option value="editor">Editor</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
       {/* ── Edit Modal ──────────────────────────────────────────────────────── */}
       <Modal
         open={editModal}
@@ -373,10 +570,20 @@ const RoleAssignmentPanel = () => {
         bodyClassName="px-5 py-5"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setEditModal(false)} disabled={editSaving}>Cancel</Button>
-            <Button variant="primary" onClick={handleEditSave} disabled={editSaving}>
-              {editSaving ? "Saving…" : "Save Changes"}
-            </Button>
+            <button
+              onClick={() => setEditModal(false)}
+              className="px-5 py-2.5 text-sm font-bold text-gray-500 hover:text-secondary transition-colors"
+              disabled={editSaving}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleEditSave}
+              className="px-6 py-2.5 bg-secondary text-white rounded-xl text-sm font-bold shadow-md shadow-secondary/10 hover:opacity-90 transition-all disabled:opacity-50"
+              disabled={editSaving}
+            >
+              {editSaving ? "Saving..." : "Save Changes"}
+            </button>
           </>
         }
       >
@@ -398,7 +605,6 @@ const RoleAssignmentPanel = () => {
             value={editForm.description}
             onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
             rows={3}
-            placeholder="What this role is allowed to do"
           />
         </div>
       </Modal>
@@ -412,10 +618,20 @@ const RoleAssignmentPanel = () => {
         bodyClassName="px-5 py-5"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setDeleteModal(false)} disabled={deleting}>Cancel</Button>
-            <Button variant="danger" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Deleting…" : "Yes, Delete"}
-            </Button>
+            <button
+              onClick={() => setDeleteModal(false)}
+              className="px-5 py-2.5 text-sm font-bold text-gray-500 hover:text-secondary transition-colors"
+              disabled={deleting}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-6 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold shadow-md shadow-red-100 hover:bg-red-700 transition-all disabled:opacity-50"
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Yes, Delete"}
+            </button>
           </>
         }
       >
@@ -423,7 +639,6 @@ const RoleAssignmentPanel = () => {
           <RiAlertLine className="text-red-500 shrink-0 mt-0.5" size={20} />
           <p className="text-sm text-gray-700">
             Are you sure you want to delete the role <strong className="text-secondary">"{deleteTarget?.name}"</strong>?
-            This action cannot be undone.
           </p>
         </div>
       </Modal>
@@ -432,37 +647,44 @@ const RoleAssignmentPanel = () => {
       <Modal
         open={cloneModal}
         onClose={() => setCloneModal(false)}
-        title={`Clone Permissions from "${cloneSource?.name}"`}
+        title="Clone Permissions"
         maxWidthClass="max-w-sm"
         bodyClassName="px-5 py-5"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setCloneModal(false)} disabled={cloning}>Cancel</Button>
-            <Button variant="primary" onClick={handleClone} disabled={cloning || !cloneTarget}>
-              {cloning ? "Cloning…" : "Clone Permissions"}
-            </Button>
+            <button
+              onClick={() => setCloneModal(false)}
+              className="px-5 py-2.5 text-sm font-bold text-gray-500 hover:text-secondary transition-colors"
+              disabled={cloning}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleClone}
+              className="px-6 py-2.5 bg-secondary text-white rounded-xl text-sm font-bold shadow-md shadow-secondary/10 hover:opacity-90 transition-all disabled:opacity-50"
+              disabled={cloning || !cloneTarget}
+            >
+              {cloning ? "Cloning..." : "Clone Now"}
+            </button>
           </>
         }
       >
         <div className="space-y-3">
           <p className="text-sm text-gray-600">
-            This will <strong>replace</strong> the target role's permissions with those from <strong>{cloneSource?.name}</strong>.
+            Copy permissions from <strong className="text-secondary">{cloneSource?.name}</strong> to:
           </p>
-          <div>
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wide block mb-1.5">Target Role</label>
-            <select
-              value={cloneTarget}
-              onChange={(e) => setCloneTarget(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="">Select a role…</option>
-              {roles
-                .filter((r) => r.id !== cloneSource?.id)
-                .map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-            </select>
-          </div>
+          <select
+            value={cloneTarget}
+            onChange={(e) => setCloneTarget(e.target.value)}
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-secondary/20"
+          >
+            <option value="">Select target role…</option>
+            {roles
+              .filter((r) => r.id !== cloneSource?.id)
+              .map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+          </select>
         </div>
       </Modal>
     </div>

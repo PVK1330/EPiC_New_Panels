@@ -17,6 +17,8 @@ import {
   getFinancialReport,
   getPerformanceReport,
 } from "../../services/reportingApi";
+import { getVisaTypes } from "../../services/settingsService";
+import { getDepartments } from "../../services/caseWorker";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -27,262 +29,9 @@ const TABS = [
   { id: "performance", label: "Performance Reports" },
 ];
 
-const CASE_KPIS = [
-  {
-    id: "opened",
-    label: "Cases Opened (Month)",
-    value: "84",
-    sub: "↑ 14% vs last month",
-    bg: "bg-blue-50",
-    border: "border-blue-100",
-    valueClass: "text-blue-600",
-  },
-  {
-    id: "closed",
-    label: "Cases Closed (Month)",
-    value: "218",
-    sub: "↑ 18% vs last month",
-    bg: "bg-green-50",
-    border: "border-green-100",
-    valueClass: "text-green-600",
-  },
-  {
-    id: "avg",
-    label: "Avg Completion Time",
-    value: "4.8d",
-    sub: "↓ 0.4 days improvement",
-    bg: "bg-amber-50",
-    border: "border-amber-100",
-    valueClass: "text-amber-700",
-  },
-];
 
-const CASES_BY_VISA = [
-  { id: "sw", name: "Skilled Worker", cases: 412, pct: 32, bar: "bg-blue-500" },
-  { id: "ilr", name: "ILR", cases: 284, pct: 22, bar: "bg-purple-500" },
-  { id: "stu", name: "Student Visa", cases: 218, pct: 17, bar: "bg-green-500" },
-  { id: "grad", name: "Graduate Visa", cases: 192, pct: 15, bar: "bg-amber-400" },
-  { id: "spon", name: "Sponsor Licence", cases: 178, pct: 14, bar: "bg-red-500" },
-];
-
-const VISA_FILTER_OPTIONS = [
-  { value: "all", label: "All visa types" },
-  ...CASES_BY_VISA.map((v) => ({ value: v.id, label: v.name })),
-];
-
-const WORKLOAD_ROWS = [
-  {
-    id: "ap",
-    name: "Alice Patel",
-    initials: "AP",
-    avatarBg: "bg-blue-500",
-    active: 21,
-    completed: 84,
-    sla: "78/84",
-    slaPct: "92.8%",
-    slaChip: "bg-green-100 text-green-700",
-  },
-  {
-    id: "mg",
-    name: "Marcus Green",
-    initials: "MG",
-    avatarBg: "bg-green-500",
-    active: 16,
-    completed: 61,
-    sla: "48/61",
-    slaPct: "78.7%",
-    slaChip: "bg-amber-100 text-amber-800",
-  },
-  {
-    id: "jo",
-    name: "James Osei",
-    initials: "JO",
-    avatarBg: "bg-red-500",
-    active: 23,
-    completed: 42,
-    sla: "26/42",
-    slaPct: "61.9%",
-    slaChip: "bg-red-100 text-red-700",
-  },
-];
-
-const FINANCE_BY_VISA = [
-  { id: "sw", label: "Skilled Worker", amount: "£112,400" },
-  { id: "ilr", label: "ILR", amount: "£68,200" },
-  { id: "spon", label: "Sponsor Licence", amount: "£54,800" },
-  { id: "stu", label: "Student Visa", amount: "£28,400" },
-  { id: "grad", label: "Graduate Visa", amount: "£20,400" },
-];
-
-const FINANCE_BY_SPONSOR = [
-  { id: "tn", label: "TechNova Ltd", amount: "£48,200" },
-  { id: "gh", label: "GlobalHire Inc", amount: "£34,100" },
-  { id: "ac", label: "Apex Consulting", amount: "£22,800" },
-  { id: "bs", label: "BlueSky Co", amount: "£18,200" },
-];
-
-const OUTSTANDING = "£61,400";
 
 // ─── Performance Data ─────────────────────────────────────────────────────────
-
-const PERFORMANCE_CASEWORKERS = [
-  {
-    id: "CW-001",
-    name: "Alice Patel",
-    initials: "AP",
-    avatarBg: "bg-blue-500",
-    department: "Immigration",
-    email: "alice.patel@firm.co.uk",
-    joinDate: "Mar 2021",
-    totalCases: 412,
-    activeCases: 21,
-    completedCases: 391,
-    slaMetPct: 92.8,
-    avgCompletionDays: 3.9,
-    clientSatisfaction: 4.8,
-    escalations: 3,
-    visaBreakdown: [
-      { type: "Skilled Worker", count: 180 },
-      { type: "ILR", count: 110 },
-      { type: "Student Visa", count: 72 },
-      { type: "Graduate Visa", count: 50 },
-    ],
-    recentCases: [
-      { id: "CS-4412", client: "TechNova Ltd", type: "Skilled Worker", status: "Completed", date: "12 Jun 2025", sla: "Met" },
-      { id: "CS-4389", client: "GlobalHire Inc", type: "ILR", status: "Completed", date: "10 Jun 2025", sla: "Met" },
-      { id: "CS-4401", client: "Apex Consulting", type: "Student Visa", status: "In Progress", date: "14 Jun 2025", sla: "On Track" },
-      { id: "CS-4377", client: "BlueSky Co", type: "Graduate Visa", status: "Completed", date: "08 Jun 2025", sla: "Met" },
-      { id: "CS-4355", client: "TechNova Ltd", type: "Sponsor Licence", status: "Completed", date: "04 Jun 2025", sla: "Breached" },
-    ],
-    monthlyTrend: [62, 68, 71, 75, 80, 78, 84, 91, 88, 95, 84, 91],
-  },
-  {
-    id: "CW-002",
-    name: "Marcus Green",
-    initials: "MG",
-    avatarBg: "bg-green-500",
-    department: "Immigration",
-    email: "marcus.green@firm.co.uk",
-    joinDate: "Jul 2022",
-    totalCases: 284,
-    activeCases: 16,
-    completedCases: 268,
-    slaMetPct: 78.7,
-    avgCompletionDays: 5.2,
-    clientSatisfaction: 4.2,
-    escalations: 9,
-    visaBreakdown: [
-      { type: "Skilled Worker", count: 95 },
-      { type: "Sponsor Licence", count: 88 },
-      { type: "ILR", count: 61 },
-      { type: "Student Visa", count: 40 },
-    ],
-    recentCases: [
-      { id: "CS-4410", client: "BlueSky Co", type: "Sponsor Licence", status: "Completed", date: "13 Jun 2025", sla: "Breached" },
-      { id: "CS-4398", client: "TechNova Ltd", type: "Skilled Worker", status: "In Progress", date: "11 Jun 2025", sla: "At Risk" },
-      { id: "CS-4382", client: "GlobalHire Inc", type: "ILR", status: "Completed", date: "09 Jun 2025", sla: "Met" },
-      { id: "CS-4370", client: "Apex Consulting", type: "Student Visa", status: "Completed", date: "06 Jun 2025", sla: "Met" },
-      { id: "CS-4351", client: "BlueSky Co", type: "Skilled Worker", status: "Completed", date: "02 Jun 2025", sla: "Breached" },
-    ],
-    monthlyTrend: [40, 45, 48, 52, 55, 50, 58, 61, 65, 60, 62, 68],
-  },
-  {
-    id: "CW-003",
-    name: "James Osei",
-    initials: "JO",
-    avatarBg: "bg-red-500",
-    department: "Compliance",
-    email: "james.osei@firm.co.uk",
-    joinDate: "Jan 2023",
-    totalCases: 198,
-    activeCases: 23,
-    completedCases: 175,
-    slaMetPct: 61.9,
-    avgCompletionDays: 6.8,
-    clientSatisfaction: 3.6,
-    escalations: 18,
-    visaBreakdown: [
-      { type: "Sponsor Licence", count: 90 },
-      { type: "Skilled Worker", count: 55 },
-      { type: "ILR", count: 35 },
-      { type: "Graduate Visa", count: 18 },
-    ],
-    recentCases: [
-      { id: "CS-4415", client: "Apex Consulting", type: "Sponsor Licence", status: "In Progress", date: "14 Jun 2025", sla: "At Risk" },
-      { id: "CS-4405", client: "TechNova Ltd", type: "Skilled Worker", status: "Completed", date: "12 Jun 2025", sla: "Breached" },
-      { id: "CS-4390", client: "GlobalHire Inc", type: "ILR", status: "In Progress", date: "10 Jun 2025", sla: "At Risk" },
-      { id: "CS-4372", client: "BlueSky Co", type: "Graduate Visa", status: "Completed", date: "07 Jun 2025", sla: "Met" },
-      { id: "CS-4348", client: "TechNova Ltd", type: "Sponsor Licence", status: "Completed", date: "01 Jun 2025", sla: "Breached" },
-    ],
-    monthlyTrend: [28, 30, 26, 32, 35, 31, 38, 42, 40, 44, 42, 48],
-  },
-  {
-    id: "CW-004",
-    name: "Sophie Turner",
-    initials: "ST",
-    avatarBg: "bg-purple-500",
-    department: "Immigration",
-    email: "sophie.turner@firm.co.uk",
-    joinDate: "Sep 2020",
-    totalCases: 531,
-    activeCases: 14,
-    completedCases: 517,
-    slaMetPct: 96.1,
-    avgCompletionDays: 3.2,
-    clientSatisfaction: 4.9,
-    escalations: 1,
-    visaBreakdown: [
-      { type: "Skilled Worker", count: 220 },
-      { type: "ILR", count: 160 },
-      { type: "Graduate Visa", count: 90 },
-      { type: "Student Visa", count: 61 },
-    ],
-    recentCases: [
-      { id: "CS-4416", client: "GlobalHire Inc", type: "Skilled Worker", status: "In Progress", date: "14 Jun 2025", sla: "On Track" },
-      { id: "CS-4407", client: "TechNova Ltd", type: "ILR", status: "Completed", date: "12 Jun 2025", sla: "Met" },
-      { id: "CS-4393", client: "Apex Consulting", type: "Graduate Visa", status: "Completed", date: "10 Jun 2025", sla: "Met" },
-      { id: "CS-4380", client: "BlueSky Co", type: "Student Visa", status: "Completed", date: "08 Jun 2025", sla: "Met" },
-      { id: "CS-4362", client: "GlobalHire Inc", type: "Skilled Worker", status: "Completed", date: "05 Jun 2025", sla: "Met" },
-    ],
-    monthlyTrend: [75, 80, 82, 88, 90, 88, 95, 98, 102, 108, 104, 110],
-  },
-  {
-    id: "CW-005",
-    name: "David Nwosu",
-    initials: "DN",
-    avatarBg: "bg-amber-500",
-    department: "Compliance",
-    email: "david.nwosu@firm.co.uk",
-    joinDate: "May 2022",
-    totalCases: 319,
-    activeCases: 18,
-    completedCases: 301,
-    slaMetPct: 85.4,
-    avgCompletionDays: 4.5,
-    clientSatisfaction: 4.5,
-    escalations: 6,
-    visaBreakdown: [
-      { type: "ILR", count: 120 },
-      { type: "Skilled Worker", count: 95 },
-      { type: "Sponsor Licence", count: 62 },
-      { type: "Student Visa", count: 42 },
-    ],
-    recentCases: [
-      { id: "CS-4414", client: "BlueSky Co", type: "ILR", status: "Completed", date: "13 Jun 2025", sla: "Met" },
-      { id: "CS-4402", client: "Apex Consulting", type: "Skilled Worker", status: "In Progress", date: "11 Jun 2025", sla: "On Track" },
-      { id: "CS-4388", client: "TechNova Ltd", type: "Sponsor Licence", status: "Completed", date: "09 Jun 2025", sla: "Met" },
-      { id: "CS-4375", client: "GlobalHire Inc", type: "ILR", status: "Completed", date: "07 Jun 2025", sla: "Breached" },
-      { id: "CS-4358", client: "BlueSky Co", type: "Student Visa", status: "Completed", date: "03 Jun 2025", sla: "Met" },
-    ],
-    monthlyTrend: [48, 52, 55, 58, 60, 57, 65, 68, 70, 74, 72, 78],
-  },
-];
-
-const DEPT_OPTIONS = [
-  { value: "all", label: "All departments" },
-  { value: "Immigration", label: "Immigration" },
-  { value: "Compliance", label: "Compliance" },
-];
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -905,13 +654,13 @@ function PerformanceDetailModal({ caseworker, onClose }) {
 
 // ─── Performance Tab ──────────────────────────────────────────────────────────
 
-function PerformanceTab({ dateRange, performanceData }) {
+function PerformanceTab({ dateRange, performanceData, deptOptions }) {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [slaFilter, setSlaFilter] = useState("all");
   const [selectedCW, setSelectedCW] = useState(null);
 
-  const dataSource = performanceData && performanceData.length > 0 ? performanceData : PERFORMANCE_CASEWORKERS;
+  const dataSource = performanceData || [];
 
   const SLA_OPTIONS = [
     { value: "all", label: "All SLA levels" },
@@ -1022,7 +771,7 @@ function PerformanceTab({ dateRange, performanceData }) {
                 name="deptFilter"
                 value={deptFilter}
                 onChange={(e) => setDeptFilter(e.target.value)}
-                options={DEPT_OPTIONS}
+                options={deptOptions}
               />
             </div>
 
@@ -1256,6 +1005,24 @@ export default function AdminReports() {
   });
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError,   setApiError]   = useState(null);
+  const [deptOptions, setDeptOptions] = useState([{ value: "all", label: "All departments" }]);
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const dRes = await getDepartments();
+        if (dRes.data?.departments) {
+          setDeptOptions([
+            { value: "all", label: "All departments" },
+            ...dRes.data.departments.map(d => ({ value: d, label: d }))
+          ]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch departments", err);
+      }
+    };
+    fetchOptions();
+  }, []);
 
   const buildParams = useCallback(() => {
     const params = {};
@@ -1302,27 +1069,28 @@ export default function AdminReports() {
     {
       id: 'opened',
       label: 'Cases This Month',
-      value: liveKpis?.thisMonth ?? CASE_KPIS[0].value,
+      value: liveKpis?.thisMonth ?? 0,
       sub: liveKpis?.momChangePct != null
         ? `${liveKpis.momChangePct >= 0 ? '↑' : '↓'} ${Math.abs(liveKpis.momChangePct)}% vs last month`
-        : CASE_KPIS[0].sub,
-      bg: CASE_KPIS[0].bg, border: CASE_KPIS[0].border, valueClass: CASE_KPIS[0].valueClass,
+        : '0% change',
+      bg: 'bg-blue-50', border: 'border-blue-100', valueClass: 'text-blue-600',
     },
     {
       id: 'total',
       label: 'Total Cases',
-      value: liveKpis?.totalCases ?? CASE_KPIS[1].value,
-      sub: `Last month: ${liveKpis?.lastMonth ?? '—'}`,
-      bg: CASE_KPIS[1].bg, border: CASE_KPIS[1].border, valueClass: CASE_KPIS[1].valueClass,
+      value: liveKpis?.totalCases ?? 0,
+      sub: `Last month: ${liveKpis?.lastMonth ?? '0'}`,
+      bg: 'bg-green-50', border: 'border-green-100', valueClass: 'text-green-600',
     },
     {
       id: 'sla',
       label: 'SLA Met Rate',
       value: liveKpis?.slaMetPct != null ? `${liveKpis.slaMetPct}%` : "0%",
       sub: 'Based on SLA-tracked cases',
-      bg: CASE_KPIS[2].bg, border: CASE_KPIS[2].border, valueClass: CASE_KPIS[2].valueClass,
+      bg: 'bg-amber-50', border: 'border-amber-100', valueClass: 'text-amber-700',
     },
   ];
+
 
   // Live visa type breakdown (replaces CASES_BY_VISA when available)
   const liveCasesByVisa = apiData.cases?.byVisaType?.length
@@ -1335,7 +1103,8 @@ export default function AdminReports() {
           : 0,
         bar: ['bg-blue-500','bg-purple-500','bg-green-500','bg-amber-400','bg-red-500'][i % 5],
       }))
-    : CASES_BY_VISA;
+    : [];
+
 
   const filteredVisaBars = useMemo(() => {
     if (visaFilter === "all") return liveCasesByVisa;
@@ -1366,7 +1135,8 @@ export default function AdminReports() {
           ? 'bg-amber-100 text-amber-800'
           : 'bg-red-100 text-red-700',
       }))
-    : WORKLOAD_ROWS;
+    : [];
+
 
   const filteredWorkload = useMemo(() => {
     const q = workloadSearch.trim().toLowerCase();
@@ -1378,18 +1148,20 @@ export default function AdminReports() {
   // Live financial (replaces FINANCE_BY_VISA when available)
   const liveFinanceSummary = apiData.financial?.summary;
   const liveFinanceByStatus = apiData.financial?.statusBreakdown || [];
+  const liveFinanceByVisa = apiData.financial?.byVisaType || [];
+  const liveFinanceBySponsor = apiData.financial?.bySponsor || [];
 
   const filteredFinanceVisa = useMemo(() => {
     const q = financeSearch.trim().toLowerCase();
-    if (!q) return FINANCE_BY_VISA;
-    return FINANCE_BY_VISA.filter((r) => r.label.toLowerCase().includes(q));
-  }, [financeSearch]);
+    if (!q) return liveFinanceByVisa;
+    return liveFinanceByVisa.filter((r) => r.name.toLowerCase().includes(q));
+  }, [financeSearch, liveFinanceByVisa]);
 
   const filteredFinanceSponsor = useMemo(() => {
     const q = financeSearch.trim().toLowerCase();
-    if (!q) return FINANCE_BY_SPONSOR;
-    return FINANCE_BY_SPONSOR.filter((r) => r.label.toLowerCase().includes(q));
-  }, [financeSearch]);
+    if (!q) return liveFinanceBySponsor;
+    return liveFinanceBySponsor.filter((r) => r.name.toLowerCase().includes(q));
+  }, [financeSearch, liveFinanceBySponsor]);
 
 
   return (
@@ -1678,13 +1450,13 @@ export default function AdminReports() {
               Revenue by Visa Type
             </h2>
             {filteredFinanceVisa.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">No lines match your search.</p>
+              <p className="text-sm text-gray-400 text-center py-8">No records match your search.</p>
             ) : (
               <div className="flex flex-col gap-2.5">
-                {filteredFinanceVisa.map((row) => (
-                  <div key={row.id} className="flex justify-between items-center text-sm gap-4">
-                    <span className="text-gray-700 font-medium">{row.label}</span>
-                    <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">{row.amount}</span>
+                {filteredFinanceVisa.map((row, i) => (
+                  <div key={i} className="flex justify-between items-center text-sm gap-4">
+                    <span className="text-gray-700 font-medium">{row.name}</span>
+                    <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">£{row.total.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
@@ -1699,25 +1471,30 @@ export default function AdminReports() {
               <p className="text-sm text-gray-400 text-center py-8">No sponsors match your search.</p>
             ) : (
               <div className="flex flex-col gap-2.5">
-                {filteredFinanceSponsor.map((row) => (
-                  <div key={row.id} className="flex justify-between items-center text-sm gap-4">
-                    <span className="text-gray-700 font-medium">{row.label}</span>
-                    <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">{row.amount}</span>
+                {filteredFinanceSponsor.map((row, i) => (
+                  <div key={i} className="flex justify-between items-center text-sm gap-4">
+                    <span className="text-gray-700 font-medium">{row.name}</span>
+                    <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">£{row.total.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
             )}
             <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center gap-4">
               <span className="text-sm text-gray-500">Outstanding Payments</span>
-              <span className="font-mono font-bold text-red-600 tabular-nums">{OUTSTANDING}</span>
+              <span className="font-mono font-bold text-red-600 tabular-nums">£{(apiData.financial?.summary?.totalOutstanding || 0).toLocaleString()}</span>
             </div>
           </div>
+
         </motion.div>
       )}
 
       {/* ── Performance Tab ── */}
       {activeTab === "performance" && (
-        <PerformanceTab dateRange={dateRange} performanceData={apiData.performance} />
+        <PerformanceTab 
+          dateRange={dateRange} 
+          performanceData={apiData.performance} 
+          deptOptions={deptOptions}
+        />
       )}
     </motion.div>
   );

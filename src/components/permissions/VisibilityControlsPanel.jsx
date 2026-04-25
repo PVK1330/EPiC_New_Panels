@@ -9,6 +9,13 @@ import Button from "../Button";
 import { getUsersWithRolesAndPermissions, updateUserRole } from "../../services/rbacApi";
 import { getAllRoles } from "../../services/rolesApi";
 
+const humanize = (str) => {
+  if (!str) return "";
+  let cleaned = str.replace(/^admin\./i, "");
+  cleaned = cleaned.replace(/[._]/g, " ");
+  return cleaned.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+};
+
 const UserRolePanel = () => {
   const [users, setUsers]           = useState([]);
   const [roles, setRoles]           = useState([]);
@@ -145,35 +152,52 @@ const UserRolePanel = () => {
         )}
       </AnimatePresence>
 
+      {/* Main Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center shrink-0 shadow-lg shadow-secondary/20">
+            <RiTeamLine size={24} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-secondary tracking-tight">User Role Assignments</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Manage user access by assigning system roles and reviewing effective permissions.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="relative flex-1 max-w-xs">
-            <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-2 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="flex items-center gap-2 flex-1 min-w-[280px]">
+          <div className="relative flex-1">
+            <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or email…"
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="Search by name or email..."
+              className="w-full pl-12 pr-4 py-3 text-sm bg-gray-50/50 border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/20 placeholder:text-gray-400 font-medium"
             />
           </div>
-          <div className="flex items-center gap-1.5">
-            <RiShieldLine className="text-gray-400" size={15} />
+          <div className="flex items-center gap-2 bg-gray-50/50 px-3 py-1.5 rounded-xl border border-transparent hover:border-gray-100 transition-colors">
+            <RiShieldLine className="text-gray-400" size={16} />
             <select
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 max-w-[150px] truncate"
+              className="bg-transparent text-sm border-none focus:ring-0 font-bold text-secondary cursor-pointer min-w-[120px]"
             >
               <option value="all">All Roles</option>
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
-          <span className="text-xs text-gray-400 font-semibold">{visibleUsers.length} users</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={fetchData} className="text-gray-400 hover:text-primary transition-colors" title="Refresh">
-            <RiRefreshLine size={16} />
+        <div className="flex items-center gap-3 px-2">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{visibleUsers.length} Users Listed</span>
+          <button
+            onClick={fetchData}
+            className={`p-2.5 rounded-xl transition-all ${loading ? 'text-secondary bg-secondary/5' : 'text-gray-400 hover:bg-gray-100 hover:text-secondary'}`}
+            title="Refresh list"
+          >
+            <RiRefreshLine size={18} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
       </div>
@@ -254,36 +278,57 @@ const UserRolePanel = () => {
                 <AnimatePresence>
                   {expandedUser === user.id && (
                     <tr key={`${user.id}-expanded`} className="bg-white">
-                      <td colSpan={5} className="px-5 pb-4 bg-indigo-50/30 border-b border-gray-50">
+                      <td colSpan={5} className="px-5 pb-4 bg-gray-50/50 border-b border-gray-50">
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.2 }}
                         >
-                          <div className="pt-2">
-                            <p className="text-[11px] font-black text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                              <RiShieldLine size={14} />
-                              Effective Permissions for {user.first_name} ({user.totalPermissions || 0} total)
-                            </p>
-                            {!user.role || user.totalPermissions === 0 ? (
-                              <p className="text-xs text-gray-500 italic">User has no permissions via their current role.</p>
+                          <div className="pt-4 px-2">
+                            <div className="flex items-center justify-between mb-4">
+                              <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                <RiShieldLine className="text-secondary" />
+                                Effective Access Summary for {user.first_name}
+                              </p>
+                              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
+                                Via Role: {user.role?.name || "None"}
+                              </span>
+                            </div>
+
+                            {!user.role || !user.permissions || Object.keys(user.permissions).length === 0 ? (
+                              <div className="py-8 text-center text-sm text-gray-400 italic bg-white rounded-2xl border border-dashed border-gray-200">
+                                This user currently has no effective permissions.
+                              </div>
                             ) : (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                {Object.entries(user.permissions || {}).map(([module, perms]) => (
-                                  <div key={module} className="bg-white rounded-lg p-2.5 shadow-sm border border-indigo-100">
-                                    <div className="text-[10px] font-black text-indigo-800 uppercase tracking-wide mb-1.5 border-b border-indigo-50 pb-1">
-                                      {module}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                {Object.entries(user.permissions).sort().map(([module, perms]) => {
+                                  // Determine level based on perms
+                                  const modName = module.trim();
+                                  const grantedCount = perms.length;
+                                  
+                                  // For the simplified UI, we approximate level from the action list
+                                  let level = "custom";
+                                  let color = "bg-amber-50 text-amber-600 border-amber-100";
+                                  let label = "Custom Mix";
+                                  
+                                  const isViewer = perms.every(p => p.action === "read" || p.action === "view");
+                                  const isEditor = perms.every(p => ["read", "view", "write", "update", "edit"].includes(p.action));
+                                  // We don't have total permissions per module in the user object easily, 
+                                  // so we assume if they have > 3 perms it might be admin or editor
+                                  if (isViewer) { label = "Viewer Only"; color = "bg-blue-50 text-blue-600 border-blue-100"; }
+                                  else if (isEditor) { label = "Editor Access"; color = "bg-indigo-50 text-indigo-600 border-indigo-100"; }
+                                  else if (grantedCount >= 4) { label = "Full Admin"; color = "bg-secondary text-white border-secondary"; }
+
+                                  return (
+                                    <div key={module} className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-secondary/20 transition-all hover:-translate-y-0.5">
+                                      <span className="text-xs font-bold text-secondary">{humanize(modName)}</span>
+                                      <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border ${color}`}>
+                                        {label}
+                                      </span>
                                     </div>
-                                    <div className="flex flex-wrap gap-1">
-                                      {perms.map(p => (
-                                        <span key={p.id} className="text-[10px] bg-gray-50 text-gray-600 px-1.5 py-0.5 rounded border border-gray-100 font-semibold" title={p.description}>
-                                          {p.action}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             )}
                           </div>

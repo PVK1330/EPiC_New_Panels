@@ -32,6 +32,8 @@ import PaymentSettings from "../../components/admin/settings/PaymentSettings";
 import SLASettings from "../../components/admin/settings/SLASettings";
 import DepartmentSettings from "../../components/admin/settings/DepartmentSettings";
 import CategorySettings from "../../components/admin/settings/CategorySettings";
+import EmailTemplateEditor from "../../components/admin/settings/EmailTemplateEditor";
+import EmailTemplatePreview from "../../components/admin/settings/EmailTemplatePreview";
 
 // Services
 import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from "../../services/caseWorker";
@@ -283,18 +285,18 @@ export default function AdminSettings() {
   const handleCategoryAdd = async (name) => {
     setSaving(true);
     try {
-      await createCaseCategory({ category: name });
+      await createCaseCategory({ name: name });
       loadData();
       showToast({ message: "Category added successfully." });
     } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
     finally { setSaving(false); }
   };
 
-  const handleCategoryDelete = async (name) => {
-    const res = await Swal.fire({ title: "Delete Category?", text: `Are you sure you want to remove "${name}"?`, icon: "warning", showCancelButton: true });
+  const handleCategoryDelete = async (cat) => {
+    const res = await Swal.fire({ title: "Delete Category?", text: `Are you sure you want to remove "${cat.name}"?`, icon: "warning", showCancelButton: true });
     if (res.isConfirmed) {
       try {
-        await deleteCaseCategory(name);
+        await deleteCaseCategory(cat.id);
         loadData();
         showToast({ message: "Category deleted." });
       } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
@@ -302,11 +304,10 @@ export default function AdminSettings() {
   };
 
   // Email Handlers
-  const submitEmailForm = async (e) => {
-    e.preventDefault();
-    if (!emailFormKey.trim()) return setEmailFormError("Key is required");
+  const submitEmailForm = async (data) => {
+    if (!data.template_key.trim()) return setEmailFormError("Key is required");
     try {
-      const payload = { template_key: emailFormKey.trim(), subject: emailFormSubject.trim(), body: emailFormBody.trim() };
+      const payload = { template_key: data.template_key.trim(), subject: data.subject.trim(), body: data.body.trim() };
       if (emailModalMode === "add") await createEmailTemplate(payload);
       else await updateEmailTemplate(editingEmailKey, payload);
       loadData();
@@ -574,33 +575,38 @@ export default function AdminSettings() {
         </form>
       </Modal>
 
-      <Modal open={emailModalOpen} onClose={() => setEmailModalOpen(false)} title="Template Architect" maxWidthClass="max-w-3xl">
-        <form onSubmit={submitEmailForm} className="space-y-6 p-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input label="Unique Key" value={emailFormKey} onChange={(e) => setEmailFormKey(e.target.value)} disabled={emailModalMode === "edit"} error={emailFormError} placeholder="system_alert" />
-            <Input label="Email Subject" value={emailFormSubject} onChange={(e) => setEmailFormSubject(e.target.value)} placeholder="Action Required: Case Update" />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Source Code / Body Content</label>
-            <textarea value={emailFormBody} onChange={(e) => setEmailFormBody(e.target.value)} rows={12} className="w-full border-2 border-gray-100 rounded-[2rem] px-6 py-5 text-sm font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all outline-none custom-scrollbar" />
-          </div>
-          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Commit Template</Button>
-        </form>
+      {/* Email Editor Modal */}
+      <Modal 
+        open={emailModalOpen} 
+        onClose={() => setEmailModalOpen(false)} 
+        title=""
+        maxWidthClass="max-w-6xl" 
+        bodyClassName="p-0"
+        footer={null}
+      >
+        <EmailTemplateEditor 
+          initialData={emailModalMode === "add" ? null : { template_key: editingEmailKey, subject: emailFormSubject, body: emailFormBody }}
+          mode={emailModalMode}
+          onSave={submitEmailForm}
+          onCancel={() => setEmailModalOpen(false)}
+          error={emailFormError}
+          saving={saving}
+        />
       </Modal>
 
-      <Modal open={viewEmailModalOpen} onClose={() => setViewEmailModalOpen(false)} title="Template Visualizer" maxWidthClass="max-w-4xl">
-        {viewingTemplate && (
-          <div className="space-y-8 p-2">
-            <div className="p-6 bg-gray-50 rounded-[2rem] border border-gray-100">
-              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Subject Header</span>
-              <div className="text-lg font-black text-secondary">{viewingTemplate.subject}</div>
-            </div>
-            <div className="p-10 bg-white rounded-[3rem] border-2 border-gray-50 shadow-inner min-h-[400px] whitespace-pre-wrap text-base leading-relaxed text-gray-700 font-medium">
-              {viewingTemplate.body}
-            </div>
-            <Button onClick={() => setViewEmailModalOpen(false)} className="w-full rounded-2xl py-4">Close Visualizer</Button>
-          </div>
-        )}
+      {/* Email Preview Modal */}
+      <Modal 
+        open={viewEmailModalOpen} 
+        onClose={() => setViewEmailModalOpen(false)} 
+        title=""
+        maxWidthClass="max-w-5xl"
+        bodyClassName="p-0"
+        footer={null}
+      >
+        <EmailTemplatePreview 
+          template={viewingTemplate}
+          onClose={() => setViewEmailModalOpen(false)}
+        />
       </Modal>
 
       <Modal open={slaModalOpen} onClose={() => setSlaModalOpen(false)} title="SLA Rule Matrix">

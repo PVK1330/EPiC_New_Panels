@@ -10,7 +10,7 @@ import {
   FiPlay,
 } from "react-icons/fi";
 import Button from "../../components/Button";
-import { getAuditLogs } from "../../services/auditApi";
+import { getAuditLogs, getAuditActionTypes, exportAuditLogs } from "../../services/auditApi";
 
 const TABLE_COLS = [
   "Timestamp",
@@ -35,11 +35,6 @@ const DATE_OPTIONS = [
 
 const ACTION_OPTIONS = [
   { value: "all", label: "All actions" },
-  { value: "login", label: "Login / logout" },
-  { value: "Case Created", label: "Case created" },
-  { value: "Case Updated", label: "Case updated" },
-  { value: "Payment Processed", label: "Payment processed" },
-  { value: "user_mgmt", label: "User management" },
 ];
 
 const STATUS_OPTIONS = [
@@ -78,13 +73,26 @@ export default function AdminAuditLogs() {
   const [error, setError] = useState(null);
   const [lastRunAt, setLastRunAt] = useState(new Date());
 
-  const fetchLogs = useCallback(async () => {
+  const [dynamicActions, setDynamicActions] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0, pages: 1 });
+
+  const fetchActions = useCallback(async () => {
+    try {
+      const res = await getAuditActionTypes();
+      if (res.data?.status === 'success') {
+        setDynamicActions(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch actions:", err);
+    }
+  }, []);
+
+  const fetchLogs = useCallback(async (targetPage = pagination.page) => {
     setLoading(true);
     try {
-      // Create user filter - map "all" to "" if needed
       const res = await getAuditLogs({
-        page: 1,
-        limit: 100, // For now, just load the most recent 100 or implement pagination
+        page: targetPage,
+        limit: 15,
         dateRange: filters.dateRange,
         actionType: filters.actionType,
         user: filters.user,
@@ -94,6 +102,7 @@ export default function AdminAuditLogs() {
       if (res.data?.status === 'success') {
         setLogs(res.data.data.logs);
         setStatistics(res.data.data.statistics);
+        setPagination(res.data.data.pagination);
         setLastRunAt(new Date());
       }
     } catch (err) {
@@ -102,11 +111,19 @@ export default function AdminAuditLogs() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, pagination.page]);
 
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    fetchActions();
+  }, [fetchActions]);
+
+  useEffect(() => {
+    fetchLogs(1); // Reset to page 1 when filters change
+  }, [filters]);
+
+  const handlePageChange = (newPage) => {
+    fetchLogs(newPage);
+  };
 
   const handleFilter = (e) => {
     const { name, value } = e.target;
@@ -117,28 +134,23 @@ export default function AdminAuditLogs() {
     setFilters((prev) => ({ ...prev, [filterKey]: filterValue }));
   };
 
-  const exportAudit = useCallback(() => {
-    const headers = TABLE_COLS.join(",");
-    const lines = logs.map((row) =>
-      [
-        row.timestamp,
-        `"${row.user}"`,
-        `"${row.action}"`,
-        `"${row.resource}"`,
-        row.ip,
-        row.status,
-        `"${row.details.replace(/"/g, '""')}"`,
-      ].join(","),
-    );
-    const csv = [headers, ...lines].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `audit-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [logs]);
+  const exportAudit = async () => {
+    try {
+      const res = await exportAuditLogs({
+        dateRange: filters.dateRange,
+        status: filters.status
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Audit_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Export failed:", err);
+    }
+  };
 
   const statsCards = [
     {
@@ -304,9 +316,10 @@ export default function AdminAuditLogs() {
               onChange={handleFilter}
               className={selectClass}
             >
-              {ACTION_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
+              <option value="all">All actions</option>
+              {dynamicActions.map((action) => (
+                <option key={action} value={action}>
+                  {action}
                 </option>
               ))}
             </select>
@@ -475,6 +488,48 @@ export default function AdminAuditLogs() {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination */}
+        {pagination.pages > 1 && (
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+            <div className="text-sm text-gray-500">
+              Showing <span className="font-semibold text-secondary">{(pagination.page - 1) * pagination.limit + 1}</span> to <span className="font-semibold text-secondary">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of <span className="font-semibold text-secondary">{pagination.total}</span> entries
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page === 1}
+                className="rounded-lg"
+              >
+                Previous
+              </Button>
+              {[...Array(pagination.pages)].map((_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => handlePageChange(i + 1)}
+                  className={`h-8 w-8 rounded-lg text-xs font-bold transition-all ${
+                    pagination.page === i + 1
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              )).slice(Math.max(0, pagination.page - 3), Math.min(pagination.pages, pagination.page + 2))}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page === pagination.pages}
+                className="rounded-lg"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   );
