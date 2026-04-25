@@ -39,6 +39,8 @@ export const exportCases = (params = {}) => api.get(`/api/caseworker/cases/expor
 
 export const getCaseworkerCases = (params = {}) => api.get(`/api/caseworker/cases`, { params });
 
+export const getCaseworkerPipelineCases = () => api.get(`/api/caseworker/cases/pipeline`);
+
 export const getTeamCapacity = () => api.get(`/api/cases/capacity`);
 
 // Caseworker-specific case operations

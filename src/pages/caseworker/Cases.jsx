@@ -16,12 +16,121 @@ import {
   CalendarClock,
   ArrowRightLeft,
   Clock,
+  Table,
+  LayoutGrid,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { FiX, FiCalendar, FiUser, FiBriefcase as FiWork, FiDollarSign } from "react-icons/fi";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  useDroppable,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { getCaseworkerPipelineCases, updatePipelineStage, getCaseById } from "../../services/caseApi";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
 import { getCaseworkerCases, getVisaTypes, getPetitionTypes, getAllUsers, createCaseworkerCase, updateCaseworkerCase, getDepartments, getCaseworkerCaseDetails, getCaseDocuments, uploadDocument, updateDocument, deleteDocument, updateDocumentStatus, downloadDocument, getCaseNotes, createCaseNote, updateCaseNote, deleteCaseNote, getTasks, getTaskByCaseId, createTask, updateTask, deleteTask, exportCases } from "../../services/caseApi";
 
 const PAGE_SIZE = 7;
+
+const STAGES = [
+  { id: "lead", title: "Lead", header: "bg-slate-100 border-slate-200", titleClass: "text-slate-600", countClass: "bg-slate-200/80 text-slate-700" },
+  { id: "onboarded", title: "Onboarded", header: "bg-sky-50 border-sky-100", titleClass: "text-sky-700", countClass: "bg-sky-100 text-sky-800" },
+  { id: "docs", title: "Docs pending", header: "bg-amber-50 border-amber-100", titleClass: "text-amber-700", countClass: "bg-amber-100 text-amber-800" },
+  { id: "draft", title: "Drafting", header: "bg-violet-50 border-violet-100", titleClass: "text-violet-700", countClass: "bg-violet-100 text-violet-800" },
+  { id: "review", title: "Review", header: "bg-teal-50 border-teal-100", titleClass: "text-teal-700", countClass: "bg-teal-100 text-teal-800" },
+  { id: "submitted", title: "Submitted", header: "bg-indigo-50 border-indigo-100", titleClass: "text-indigo-700", countClass: "bg-indigo-100 text-indigo-800" },
+  { id: "decision", title: "Decision", header: "bg-amber-50 border-amber-100", titleClass: "text-amber-800", countClass: "bg-amber-100 text-amber-900" },
+  { id: "closed", title: "Closed", header: "bg-emerald-50 border-emerald-100", titleClass: "text-emerald-700", countClass: "bg-emerald-100 text-emerald-800" },
+];
+
+const CardContent = ({ card }) => (
+  <>
+    <p className="text-[11px] font-mono font-bold text-primary">
+      {card.caseId}
+    </p>
+    <p className="text-sm font-bold text-secondary mt-1 leading-snug">
+      {card.name}
+    </p>
+    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{card.meta}</p>
+    <div className="mt-2.5 pt-2 border-t border-gray-50">
+      <span
+        className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${card.badgeClass}`}
+      >
+        {card.badge}
+      </span>
+    </div>
+  </>
+);
+
+const SortableCard = ({ card, onClick }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: card.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.35 : 1,
+    zIndex: isDragging ? 50 : "auto",
+  };
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={() => onClick(card)}
+      className="group rounded-xl bg-white border border-gray-100 p-3.5 shadow-sm cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md hover:-translate-y-0.5"
+    >
+      <CardContent card={card} />
+    </article>
+  );
+};
+
+const DroppableColumn = ({ stage, children }) => {
+  const { setNodeRef, isOver } = useDroppable({ id: stage.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-1 p-2.5 space-y-2.5 min-h-[120px] max-h-[min(60vh,520px)] overflow-y-auto rounded-b-2xl transition-colors duration-150 ${isOver ? "bg-blue-50/60" : ""}`}
+    >
+      {children}
+    </div>
+  );
+};
+
+const container = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
+};
+
+const colVariant = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] },
+  },
+};
 
 /** Demo dataset — 24 cases */
 const CASES_DATA = [
@@ -146,6 +255,9 @@ const caseToEditForm = (c) => ({
   nationality: c.nationality || c.candidate?.nationality || '',
   jobTitle: c.jobTitle || c.additional?.jobTitle || '',
   department: c.departmentId || c.department?.id || c.additional?.departmentId || '',
+  biometricsDate: c.biometricsDate || c.overview?.biometricsDate || '',
+  submissionDate: c.submissionDate || c.overview?.submissionDate || '',
+  decisionDate: c.decisionDate || c.overview?.decisionDate || '',
 });
 
 const emptyReassignForm = () => ({
@@ -336,6 +448,7 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
 const Cases = () => {
   const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState("table"); // 'table' or 'kanban'
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -360,6 +473,18 @@ const Cases = () => {
   const [caseworkers, setCaseworkers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Pipeline view state
+  const [stages, setStages] = useState(STAGES.map(s => ({ ...s, cards: [] })));
+  const [activeCard, setActiveCard] = useState(null);
+  const [isPipelineLoading, setIsPipelineLoading] = useState(false);
+  const [selectedCase, setSelectedCase] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCaseLoading, setIsCaseLoading] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } } ),
+  );
 
   // Fetch cases from API
   useEffect(() => {
@@ -383,6 +508,7 @@ const Cases = () => {
           caseId: c.caseId || `#C-${c.id}`,
           candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : "Unknown",
           business: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || c.sponsor?.first_name || "Unknown",
+          business_name: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || (c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : "Unknown"),
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           target: c.targetSubmissionDate || c.created_at,
@@ -450,6 +576,46 @@ const Cases = () => {
     };
     fetchDropdownData();
   }, []);
+
+  // Fetch pipeline data when switching to kanban view
+  useEffect(() => {
+    if (viewMode === "kanban") {
+      const fetchPipelineData = async () => {
+        try {
+          setIsPipelineLoading(true);
+          const response = await getCaseworkerPipelineCases();
+          if (response?.data?.data) {
+            const pipeline = response.data.data;
+            
+            const mappedStages = STAGES.map(stage => {
+              const stageCases = pipeline[stage.id] || [];
+
+              return {
+                ...stage,
+                count: stageCases.length,
+                cards: stageCases.map(c => ({
+                  id: c.caseId,
+                  caseId: c.caseId,
+                  name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
+                  meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
+                  badge: c.priority || 'Normal',
+                  badgeClass: c.priority === 'High' ? 'bg-red-100 text-red-800' : c.priority === 'Medium' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600',
+                  status: c.status,
+                })),
+              };
+            });
+            
+            setStages(mappedStages);
+          }
+        } catch (error) {
+          console.error("Error fetching pipeline data:", error);
+        } finally {
+          setIsPipelineLoading(false);
+        }
+      };
+      fetchPipelineData();
+    }
+  }, [viewMode]);
 
   // Helper functions to map API data to UI format
   const mapApiStatus = (status) => {
@@ -539,6 +705,9 @@ const Cases = () => {
         nationality: editCaseForm.nationality,
         jobTitle: editCaseForm.jobTitle,
         departmentId: editCaseForm.department,
+        biometricsDate: editCaseForm.biometricsDate,
+        submissionDate: editCaseForm.submissionDate,
+        decisionDate: editCaseForm.decisionDate,
       };
 
       await updateCaseworkerCase(editCaseId, caseData);
@@ -561,6 +730,7 @@ const Cases = () => {
           caseId: c.caseId || `#C-${c.id}`,
           candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : "Unknown",
           business: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || c.sponsor?.first_name || "Unknown",
+          business_name: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || (c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : "Unknown"),
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           target: c.targetSubmissionDate || c.created_at,
@@ -664,6 +834,7 @@ const Cases = () => {
           caseId: c.caseId || `#C-${c.id}`,
           candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : "Unknown",
           business: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || c.sponsor?.first_name || "Unknown",
+          business_name: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || (c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : "Unknown"),
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           target: c.targetSubmissionDate || c.created_at,
@@ -710,6 +881,120 @@ const Cases = () => {
     setReassignErrors({});
     setReassignForm(emptyReassignForm());
   }, []);
+
+  // ── Pipeline view handlers ───────────────────────────────────────────────────
+  const handleCardClick = async (card) => {
+    setIsCaseLoading(true);
+    setIsModalOpen(true);
+    try {
+      const response = await getCaseById(card.caseId);
+      if (response?.data?.data?.case) {
+        setSelectedCase(response.data.data.case);
+      }
+    } catch (error) {
+      console.error("Error fetching case details:", error);
+    } finally {
+      setIsCaseLoading(false);
+    }
+  };
+
+  const findStageByCardId = (cardId) =>
+    stages.find((s) => s.cards.some((c) => c.id === cardId));
+
+  const handleDragStart = ({ active }) => {
+    const stage = findStageByCardId(active.id);
+    const card = stage?.cards.find((c) => c.id === active.id);
+    setActiveCard(card || null);
+  };
+
+  const handleDragOver = ({ active, over }) => {
+    if (!over) return;
+
+    const activeStage = findStageByCardId(active.id);
+    if (!activeStage) return;
+
+    const overStage = findStageByCardId(over.id);
+    if (!overStage || activeStage.id !== overStage.id) return;
+
+    setStages((prev) =>
+      prev.map((s) => {
+        if (s.id !== activeStage.id) return s;
+        const oldIndex = s.cards.findIndex((c) => c.id === active.id);
+        const newIndex = s.cards.findIndex((c) => c.id === over.id);
+        return { ...s, cards: arrayMove(s.cards, oldIndex, newIndex) };
+      }),
+    );
+  };
+
+  const handleDragEnd = async ({ active, over }) => {
+    setActiveCard(null);
+    if (!over) return;
+
+    const activeStage = findStageByCardId(active.id);
+    if (!activeStage) return;
+
+    const overStage = stages.find((s) => s.id === over.id);
+    
+    if (overStage && activeStage.id !== overStage.id) {
+      const card = activeStage.cards.find((c) => c.id === active.id);
+      if (card) {
+        const statusMap = {
+          lead: 'Lead',
+          onboarded: 'Onboarded',
+          docs: 'Docs Pending',
+          draft: 'Drafting',
+          review: 'Review',
+          submitted: 'Submitted',
+          decision: 'Decision',
+          closed: 'Closed'
+        };
+        
+        const newStatus = statusMap[overStage.id];
+        
+        try {
+          await updatePipelineStage(card.caseId, newStatus);
+          // Refresh pipeline data
+          const response = await getCaseworkerPipelineCases();
+          if (response?.data?.data) {
+            const pipeline = response.data.data;
+            const mappedStages = STAGES.map(stage => {
+              const stageCases = pipeline[stage.id] || [];
+              return {
+                ...stage,
+                count: stageCases.length,
+                cards: stageCases.map(c => ({
+                  id: c.caseId,
+                  caseId: c.caseId,
+                  name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
+                  meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
+                  badge: c.priority || 'Normal',
+                  badgeClass: c.priority === 'High' ? 'bg-red-100 text-red-800' : c.priority === 'Medium' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600',
+                  status: c.status,
+                })),
+              };
+            });
+            setStages(mappedStages);
+          }
+        } catch (error) {
+          console.error("Error updating pipeline stage:", error);
+          alert(`Failed to update status: ${error.message}`);
+          setStages((prev) => prev);
+        }
+      }
+      return;
+    }
+
+    if (activeStage.cards.some((c) => c.id === over.id)) {
+      setStages((prev) =>
+        prev.map((s) => {
+          if (s.id !== activeStage.id) return s;
+          const oldIndex = s.cards.findIndex((c) => c.id === active.id);
+          const newIndex = s.cards.findIndex((c) => c.id === over.id);
+          return { ...s, cards: arrayMove(s.cards, oldIndex, newIndex) };
+        }),
+      );
+    }
+  };
 
   const submitReassign = useCallback(async () => {
     const err = {};
@@ -763,6 +1048,7 @@ const Cases = () => {
           caseId: c.caseId || `#C-${c.id}`,
           candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : "Unknown",
           business: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || c.sponsor?.first_name || "Unknown",
+          business_name: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || (c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : "Unknown"),
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           target: c.targetSubmissionDate || c.created_at,
@@ -872,6 +1158,32 @@ const Cases = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <div className="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setViewMode("table")}
+              className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-black transition-all ${
+                viewMode === "table"
+                  ? "bg-secondary text-white shadow-sm"
+                  : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <Table size={16} />
+              Table
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("kanban")}
+              className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-black transition-all ${
+                viewMode === "kanban"
+                  ? "bg-secondary text-white shadow-sm"
+                  : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <LayoutGrid size={16} />
+              Kanban
+            </button>
+          </div>
           <button
             type="button"
             onClick={handleExport}
@@ -908,298 +1220,508 @@ const Cases = () => {
         ))}
       </div>
 
-      {/* Recent Cases Section */}
-      <div>
-        <h2 className="text-lg font-black text-secondary mb-4">Recent Cases</h2>
+      {/* Recent Cases Section - Only show in table view */}
+      {viewMode === "table" && (
+        <div>
+          <h2 className="text-lg font-black text-secondary mb-4">Recent Cases</h2>
         
-        <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center mb-4">
-          {loading && (
-            <div className="w-full py-8 text-center text-sm font-bold text-gray-500">
-              Loading cases...
-            </div>
-          )}
-          {error && (
-            <div className="w-full py-4 px-4 bg-red-50 border border-red-200 rounded-xl text-sm font-bold text-red-700">
-              {error}
-            </div>
-          )}
-          {!loading && !error && (
-            <>
-              <div className="relative flex-1 min-w-[200px] max-w-md">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Search cases..."
-                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-                />
+          <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center mb-4">
+            {loading && (
+              <div className="w-full py-8 text-center text-sm font-bold text-gray-500">
+                Loading cases...
               </div>
-              <div className="flex flex-wrap gap-2">
-                <select
-                  value={chip === "all" ? "" : chip}
-                  onChange={(e) => {
-                    setChip(e.target.value || "all");
-                    setPage(1);
-                  }}
-                  className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-                >
-                  <option value="">All Statuses</option>
-                  {STATUS_CHIPS.filter((c) => c.id !== "all").map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={priorityFilter}
-                  onChange={(e) => {
-                    setPriorityFilter(e.target.value);
-                    setPage(1);
-                  }}
-                  className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-                >
-                  <option value="">All Priorities</option>
-                  {PRIORITY_OPTIONS.filter((p) => p !== "All priorities").map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={visaFilter}
-                  onChange={(e) => {
-                    setVisaFilter(e.target.value);
-                    setPage(1);
-                  }}
-                  className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-                >
-                  <option value="">All Visa Types</option>
-                  {VISA_OPTIONS.filter((v) => v !== "All visa types").map((v) => (
-                    <option key={v} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
+            )}
+            {error && (
+              <div className="w-full py-4 px-4 bg-red-50 border border-red-200 rounded-xl text-sm font-bold text-red-700">
+                {error}
               </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px]">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                {[
-                  "CASE-ID",
-                  "CANDIDATE",
-                  "BUSINESS",
-                  "DEPARTMENT",
-                  "CASEWORKER(S)",
-                  "VISA TYPE",
-                  "PRIORITY",
-                  "STATUS",
-                  "SUBMITTED",
-                  "ACTIONS",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="py-3 px-4 text-left text-[10px] font-black uppercase tracking-wider text-gray-500 whitespace-nowrap"
+            )}
+            {!loading && !error && (
+              <>
+                <div className="relative flex-1 min-w-[200px] max-w-md">
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    size={18}
+                  />
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="Search cases..."
+                    className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={chip === "all" ? "" : chip}
+                    onChange={(e) => {
+                      setChip(e.target.value || "all");
+                      setPage(1);
+                    }}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
                   >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {pageSlice.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="py-12 text-center text-sm font-bold text-gray-500">
-                    No cases match your filters.
-                  </td>
-                </tr>
-              ) : (
-                pageSlice.map((c) => {
-                  const st = badgeStatus(c.status);
-                  const reassigned = reassignments[c.caseId];
-                  return (
-                    <>
-                      {/* ── Main data row ── */}
-                      <tr
-                        key={c.caseId}
-                        className={`hover:bg-gray-50/80 cursor-pointer transition-colors ${reassigned ? "border-b-0" : ""}`}
-                        onClick={() => openDetail(c)}
-                      >
-                        <td className="py-3 px-4 text-sm font-bold text-secondary">
-                          {c.caseId}
-                        </td>
-                        <td className="py-3 px-4 text-sm font-bold text-gray-900">
-                          {c.candidate?.first_name && c.candidate?.last_name ? `${c.candidate.first_name} ${c.candidate.last_name}` : c.candidate || "-"}
-                        </td>
-                        <td className="py-3 px-4 text-sm font-bold text-gray-900">
-                          {c.sponsor?.first_name && c.sponsor?.last_name ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : c.business || "-"}
-                        </td>
-                        <td className="py-3 px-4 text-sm font-bold text-gray-600">
-                          {c.department?.name || c.department || "-"}
-                        </td>
-                        <td className="py-3 px-4 text-sm font-bold text-gray-600">
-                          {c.caseworker || "Unassigned"}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeVisa(c.visa)}`}
-                          >
-                            {c.visa}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgePriority(c.priority)}`}
-                          >
-                            {priorityLabel(c.priority)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${st.className}`}
-                          >
-                            {st.label}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm font-bold text-gray-600 tabular-nums whitespace-nowrap">
-                          {formatTarget(c.target)}
-                        </td>
-                        <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex flex-wrap gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => openDetail(c)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-gray-600 hover:border-secondary/40 hover:text-secondary transition-colors"
-                              title="View case"
-                            >
-                              <Eye size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openCaseEdit(c)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-secondary hover:bg-secondary/5 transition-colors"
-                              title="Edit case"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                navigate(
-                                  `/caseworker/messages?caseId=${encodeURIComponent(c.caseId)}`,
-                                )
-                              }
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-gray-600 hover:border-primary/40 hover:text-primary transition-colors"
-                              title="Message candidate"
-                            >
-                              <MessageSquare size={14} />
-                            </button>
-                            {/* ── Reassign button ── */}
-                            <button
-                              type="button"
-                              onClick={() => openReassign(c)}
-                              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-black transition-colors ${
-                                reassigned
-                                  ? "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100"
-                                  : "border-gray-200 bg-white text-gray-600 hover:border-violet-300 hover:text-violet-700 hover:bg-violet-50"
-                              }`}
-                              title="Reassign case"
-                            >
-                              <ArrowRightLeft size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                    <option value="">All Statuses</option>
+                    {STATUS_CHIPS.filter((c) => c.id !== "all").map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={priorityFilter}
+                    onChange={(e) => {
+                      setPriorityFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                  >
+                    <option value="">All Priorities</option>
+                    {PRIORITY_OPTIONS.filter((p) => p !== "All priorities").map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={visaFilter}
+                    onChange={(e) => {
+                      setVisaFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                  >
+                    <option value="">All Visa Types</option>
+                    {VISA_OPTIONS.filter((v) => v !== "All visa types").map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
-                      {/* ── Reassignment info banner row ── */}
-                      {reassigned && (
+      {/* Table View */}
+      {viewMode === "table" && (
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1100px]">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  {[
+                    "CASE-ID",
+                    "CANDIDATE",
+                    "BUSINESS",
+                    "DEPARTMENT",
+                    "CASEWORKER(S)",
+                    "VISA TYPE",
+                    "PRIORITY",
+                    "STATUS",
+                    "SUBMITTED",
+                    "ACTIONS",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="py-3 px-4 text-left text-[10px] font-black uppercase tracking-wider text-gray-500 whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {pageSlice.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="py-12 text-center text-sm font-bold text-gray-500">
+                      No cases match your filters.
+                    </td>
+                  </tr>
+                ) : (
+                  pageSlice.map((c) => {
+                    const st = badgeStatus(c.status);
+                    const reassigned = reassignments[c.caseId];
+                    return (
+                      <>
+                        {/* ── Main data row ── */}
                         <tr
-                          key={`${c.caseId}-reassigned`}
-                          className="bg-violet-50/60 border-b border-violet-100"
+                          key={c.caseId}
+                          className={`hover:bg-gray-50/80 cursor-pointer transition-colors ${reassigned ? "border-b-0" : ""}`}
+                          onClick={() => openDetail(c)}
                         >
-                          <td colSpan={9} className="px-4 py-2">
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                              <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-violet-700">
-                                <ArrowRightLeft size={12} />
-                                Reassigned to{" "}
-                                <span className="font-black text-violet-900">
-                                  {reassigned.caseworker}
-                                </span>
-                                <span className="font-bold text-violet-500">
-                                  ({reassigned.caseworkerRole})
-                                </span>
-                              </span>
-                              <span className="text-[11px] font-bold text-violet-600">
-                                Reason:{" "}
-                                <span className="italic">{reassigned.reason}</span>
-                              </span>
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-violet-500 ml-auto">
-                                <CalendarClock size={12} />
-                                {formatDateTime(reassigned.at)}
-                              </span>
+                          <td className="py-3 px-4 text-sm font-bold text-secondary">
+                            {c.caseId}
+                          </td>
+                          <td className="py-3 px-4 text-sm font-bold text-gray-900">
+                            {c.candidate?.first_name && c.candidate?.last_name ? `${c.candidate.first_name} ${c.candidate.last_name}` : c.candidate || "-"}
+                          </td>
+                          <td className="py-3 px-4 text-sm font-bold text-gray-900">
+                            {c.business_name || c.business || "-"}</td>
+                          <td className="py-3 px-4 text-sm font-bold text-gray-600">
+                            {c.department?.name || c.department || "-"}</td>
+                          <td className="py-3 px-4 text-sm font-bold text-gray-600">
+                            {c.caseworker || "Unassigned"}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeVisa(c.visa)}`}
+                            >
+                              {c.visa}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgePriority(c.priority)}`}
+                            >
+                              {priorityLabel(c.priority)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${st.className}`}
+                            >
+                              {st.label}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-sm font-bold text-gray-600 tabular-nums whitespace-nowrap">
+                            {formatTarget(c.target)}
+                          </td>
+                          <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex flex-wrap gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openDetail(c)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-gray-600 hover:border-secondary/40 hover:text-secondary transition-colors"
+                                title="View case"
+                              >
+                                <Eye size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openCaseEdit(c)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-secondary hover:bg-secondary/5 transition-colors"
+                                title="Edit case"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  navigate(
+                                    `/caseworker/messages?caseId=${encodeURIComponent(c.caseId)}`,
+                                  )
+                                }
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-gray-600 hover:border-primary/40 hover:text-primary transition-colors"
+                                title="Message candidate"
+                              >
+                                <MessageSquare size={14} />
+                              </button>
+                              {/* ── Reassign button ── */}
+                              <button
+                                type="button"
+                                onClick={() => openReassign(c)}
+                                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-black transition-colors ${
+                                  reassigned
+                                    ? "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100"
+                                    : "border-gray-200 bg-white text-gray-600 hover:border-violet-300 hover:text-violet-700 hover:bg-violet-50"
+                                }`}
+                                title="Reassign case"
+                              >
+                                <ArrowRightLeft size={14} />
+                              </button>
                             </div>
                           </td>
                         </tr>
-                      )}
-                    </>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/80">
-          <p className="text-xs font-bold text-gray-500 tabular-nums">
-            Showing {(pageClamped - 1) * PAGE_SIZE + 1}–
-            {Math.min(pageClamped * PAGE_SIZE, pagination.total)} of {pagination.total}{" "}
-            cases
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={pageClamped <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
-            >
-              ←
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+
+                        {/* ── Reassignment info banner row ── */}
+                        {reassigned && (
+                          <tr
+                            key={`${c.caseId}-reassigned`}
+                            className="bg-violet-50/60 border-b border-violet-100"
+                          >
+                            <td colSpan={9} className="px-4 py-2">
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-violet-700">
+                                  <ArrowRightLeft size={12} />
+                                  Reassigned to{" "}
+                                  <span className="font-black text-violet-900">
+                                    {reassigned.caseworker}
+                                  </span>
+                                  <span className="font-bold text-violet-500">
+                                    ({reassigned.caseworkerRole})
+                                  </span>
+                                </span>
+                                <span className="text-[11px] font-bold text-violet-600">
+                                  Reason:{" "}
+                                  <span className="italic">{reassigned.reason}</span>
+                                </span>
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-violet-500 ml-auto">
+                                  <CalendarClock size={12} />
+                                  {formatDateTime(reassigned.at)}
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/80">
+            <p className="text-xs font-bold text-gray-500 tabular-nums">
+              Showing {(pageClamped - 1) * PAGE_SIZE + 1}–
+              {Math.min(pageClamped * PAGE_SIZE, pagination.total)} of {pagination.total}{" "}
+              cases
+            </p>
+            <div className="flex items-center gap-1">
               <button
-                key={num}
                 type="button"
-                onClick={() => setPage(num)}
-                className={`min-w-[2rem] rounded-lg border px-2 py-1 text-xs font-black ${pageClamped === num
-                    ? "border-secondary bg-secondary/10 text-secondary"
-                    : "border-gray-200 text-gray-600 hover:bg-white"
-                  }`}
+                disabled={pageClamped <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
               >
-                {num}
+                ←
               </button>
-            ))}
-            <button
-              type="button"
-              disabled={pageClamped >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
-            >
-              →
-            </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => setPage(num)}
+                  className={`min-w-[2rem] rounded-lg border px-2 py-1 text-xs font-black ${pageClamped === num
+                      ? "border-secondary bg-secondary/10 text-secondary"
+                      : "border-gray-200 text-gray-600 hover:bg-white"
+                    }`}
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                type="button"
+                disabled={pageClamped >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
+              >
+                →
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Kanban View */}
+      {viewMode === "kanban" && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <motion.div
+            className="pb-10 min-h-[calc(100vh-8rem)]"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            {isPipelineLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="text-gray-500">Loading pipeline...</div>
+              </div>
+            ) : (
+              <motion.div
+                className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1 [scrollbar-width:thin]"
+                variants={container}
+                initial="hidden"
+                animate="visible"
+              >
+                {stages.map((stage) => (
+                  <motion.section
+                    key={stage.id}
+                    variants={colVariant}
+                    className={`shrink-0 w-[min(100%,280px)] sm:w-72 flex flex-col rounded-2xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/90 shadow-sm overflow-hidden ${stage.header}`}
+                  >
+                    <header className="px-3.5 pt-3.5 pb-2 flex items-center justify-between gap-2 border-b border-gray-100/80 bg-white/60 backdrop-blur-sm">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <h2 className={`text-sm font-black ${stage.titleClass} truncate`}>
+                          {stage.title}
+                        </h2>
+                      </div>
+                      <span className={`text-xs font-black tabular-nums text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg`}>
+                        {stage.cards.length}
+                      </span>
+                    </header>
+                    <SortableContext
+                      items={stage.cards.map((c) => c.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <DroppableColumn stage={stage}>
+                        {stage.cards.map((card) => (
+                          <SortableCard key={card.id} card={card} onClick={handleCardClick} />
+                        ))}
+                        {stage.cards.length === 0 && (
+                          <div className="flex items-center justify-center h-16 rounded-xl border-2 border-dashed border-gray-200 text-xs text-gray-400">
+                            Drop here
+                          </div>
+                        )}
+                      </DroppableColumn>
+                    </SortableContext>
+                  </motion.section>
+                ))}
+              </motion.div>
+            )}
+          </motion.div>
+
+          <DragOverlay dropAnimation={{ duration: 180, easing: "ease" }}>
+            {activeCard && (
+              <article className="rounded-xl bg-white border border-gray-200 p-3.5 shadow-2xl rotate-2 w-72 opacity-95">
+                <CardContent card={activeCard} />
+              </article>
+            )}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {/* Case Details Modal for Kanban View */}
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Case Details"
+        titleId="case-details-modal-title"
+        maxWidthClass="max-w-4xl"
+        bodyClassName="p-4 sm:p-6"
+      >
+        {isCaseLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-gray-500">Loading case details...</div>
+          </div>
+        ) : selectedCase ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Case ID
+                </label>
+                <p className="text-sm font-bold text-secondary">{selectedCase.caseId}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Status
+                </label>
+                <p className="text-sm font-bold text-gray-900">{selectedCase.status}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Priority
+                </label>
+                <p className="text-sm font-bold text-gray-900">{selectedCase.priority || 'Normal'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Target Date
+                </label>
+                <p className="text-sm font-bold text-gray-900">{selectedCase.targetSubmissionDate || 'Not set'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Candidate
+                </label>
+                <p className="text-sm font-bold text-gray-900">
+                  {selectedCase.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : 'Unknown'}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Sponsor
+                </label>
+                <p className="text-sm font-bold text-gray-900">
+                  {selectedCase.sponsor ? `${selectedCase.sponsor.first_name} ${selectedCase.sponsor.last_name}` : 'Unknown'}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Visa Type
+                </label>
+                <p className="text-sm font-bold text-gray-900">{selectedCase.visaType?.name || 'Unknown'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Created
+                </label>
+                <p className="text-sm font-bold text-gray-900">{selectedCase.created_at ? new Date(selectedCase.created_at).toLocaleDateString() : 'Unknown'}</p>
+              </div>
+            </div>
+            {selectedCase.notes && (
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Notes
+                </label>
+                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">{selectedCase.notes}</p>
+              </div>
+            )}
+            
+            {/* Timeline Section */}
+            <div>
+              <h3 className="text-sm font-black text-secondary mb-3">Case Timeline</h3>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {selectedCase.timeline && selectedCase.timeline.length > 0 ? (
+                  selectedCase.timeline.map((item, index) => (
+                    <div key={index} className="flex gap-3 items-start">
+                      <div className="flex flex-col items-center">
+                        <div className="w-2 h-2 rounded-full bg-secondary mt-2"></div>
+                        {index < selectedCase.timeline.length - 1 && (
+                          <div className="w-0.5 h-full bg-gray-200 min-h-[40px]"></div>
+                        )}
+                      </div>
+                      <div className="flex-1 pb-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-gray-900">{item.actionType?.replace(/_/g, ' ').toUpperCase()}</p>
+                          <p className="text-xs text-gray-500">{item.actionDate ? new Date(item.actionDate).toLocaleString() : ''}</p>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                        {item.performer && (
+                          <p className="text-xs text-gray-400 mt-1">by {item.performer.first_name} {item.performer.last_name}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500 italic">No timeline events recorded</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex gap-2 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  const caseData = cases.find(c => c.caseId === selectedCase.caseId);
+                  if (caseData) openCaseEdit(caseData);
+                }}
+                className="inline-flex items-center gap-2 rounded-lg bg-secondary px-4 py-2 text-sm font-black text-white hover:bg-secondary/90"
+              >
+                <Pencil size={16} />
+                Edit Case
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       {/* ─────────────────────── NEW CASE MODAL ─────────────────────── */}
       <Modal
@@ -1579,10 +2101,10 @@ const Cases = () => {
         onClose={closeCaseEdit}
         title={editCaseId ? `Edit case ${editCaseId}` : ""}
         titleId="case-edit-modal-title"
-        maxWidthClass="max-w-lg"
+        maxWidthClass="max-w-4xl"
         bodyClassName="p-4 sm:p-6"
       >
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* <p className="text-sm font-bold text-gray-600">
             Update case details. Changes apply locally in this demo until the API is connected.
           </p> */}
@@ -1620,80 +2142,76 @@ const Cases = () => {
               <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.business}</p>
             )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Visa type
-              </label>
-              <select
-                value={editCaseForm.visa}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, visa: e.target.value }))
-                }
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              >
-                {NEW_CASE_VISA.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Status
-              </label>
-              <select
-                value={editCaseForm.status}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, status: e.target.value }))
-                }
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              >
-                {CASE_STATUS_EDIT.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Visa type
+            </label>
+            <select
+              value={editCaseForm.visa}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, visa: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            >
+              {NEW_CASE_VISA.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Target submission date
-              </label>
-              <input
-                type="date"
-                value={editCaseForm.target}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, target: e.target.value }))
-                }
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.target ? "border-red-300" : "border-gray-200"
-                  }`}
-              />
-              {editCaseErrors.target && (
-                <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.target}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Priority
-              </label>
-              <select
-                value={editCaseForm.priority}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, priority: e.target.value }))
-                }
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              >
-                {["low", "medium", "high", "urgent"].map((p) => (
-                  <option key={p} value={p}>
-                    {priorityLabel(p)}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Status
+            </label>
+            <select
+              value={editCaseForm.status}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, status: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            >
+              {CASE_STATUS_EDIT.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Target submission date
+            </label>
+            <input
+              type="date"
+              value={editCaseForm.target}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, target: e.target.value }))
+              }
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.target ? "border-red-300" : "border-gray-200"
+                }`}
+            />
+            {editCaseErrors.target && (
+              <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.target}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Priority
+            </label>
+            <select
+              value={editCaseForm.priority}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, priority: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            >
+              {["low", "medium", "high", "urgent"].map((p) => (
+                <option key={p} value={p}>
+                  {priorityLabel(p)}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -1712,6 +2230,149 @@ const Cases = () => {
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              LCA Number
+            </label>
+            <input
+              type="text"
+              value={editCaseForm.lcaNumber || ''}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, lcaNumber: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Receipt Number
+            </label>
+            <input
+              type="text"
+              value={editCaseForm.receiptNumber || ''}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, receiptNumber: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Nationality
+            </label>
+            <input
+              type="text"
+              value={editCaseForm.nationality || ''}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, nationality: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Job Title
+            </label>
+            <input
+              type="text"
+              value={editCaseForm.jobTitle || ''}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, jobTitle: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Salary Offered
+            </label>
+            <input
+              type="number"
+              value={editCaseForm.salaryOffered || ''}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, salaryOffered: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Total Amount
+            </label>
+            <input
+              type="number"
+              value={editCaseForm.totalAmount || ''}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, totalAmount: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Paid Amount
+            </label>
+            <input
+              type="number"
+              value={editCaseForm.paidAmount || ''}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, paidAmount: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Biometrics Date
+            </label>
+            <input
+              type="date"
+              value={editCaseForm.biometricsDate || ''}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, biometricsDate: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Submission Date
+            </label>
+            <input
+              type="date"
+              value={editCaseForm.submissionDate || ''}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, submissionDate: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Decision Date
+            </label>
+            <input
+              type="date"
+              value={editCaseForm.decisionDate || ''}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, decisionDate: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Notes
+            </label>
+            <textarea
+              value={editCaseForm.notes || ''}
+              onChange={(e) =>
+                setEditCaseForm((f) => ({ ...f, notes: e.target.value }))
+              }
+              rows={3}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary resize-none"
+            />
           </div>
           <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
             <button
