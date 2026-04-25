@@ -11,6 +11,7 @@ import {
   candidateRowToApplicationForm,
 } from "./applicationFormMapping";
 import useCandidate from "../../hooks/useCandidate";
+import { getCaseworkers } from "../../services/caseWorker";
 
 const inputClass =
   "mt-1 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow";
@@ -233,26 +234,58 @@ function validateStep(stepIndex, data) {
   const errs = {};
 
   if (stepIndex === 0) {
-    if (!data.firstName?.trim())
+    if (!data.firstName?.toString().trim())
       errs.firstName = "First name is required";
-    if (!data.lastName?.trim())
+    if (!data.lastName?.toString().trim())
       errs.lastName = "Last name is required";
-    if (!data.email?.trim()) {
+    if (!data.email?.toString().trim()) {
       errs.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
       errs.email = "Enter a valid email address";
     }
-    if (!data.contactNumber?.trim())
+    if (!data.contactNumber?.toString().trim())
       errs.contactNumber = "Contact number is required";
     if (!data.gender)
       errs.gender = "Please select a gender";
   }
 
   if (stepIndex === 1) {
-    if (!data.nationality?.trim())
-      errs.nationality = "Nationality is required";
-    if (!data.dob)
-      errs.dob = "Date of birth is required";
+    if (!data.nationality?.toString().trim()) errs.nationality = "Nationality is required";
+    if (!data.dob) errs.dob = "Date of birth is required";
+    
+    // If passport number is provided, require details
+    if (data.passportNumber?.toString().trim()) {
+      if (!data.issuingAuthority?.toString().trim()) errs.issuingAuthority = "Issuing authority is required";
+      if (!data.issueDate) errs.issueDate = "Issue date is required";
+      if (!data.expiryDate) errs.expiryDate = "Expiry date is required";
+    }
+  }
+
+  if (stepIndex === 2) {
+    if (data.ukLicense === "Yes" && !data.ukStayDuration?.toString().trim()) {
+      errs.ukStayDuration = "Please specify duration of stay";
+    }
+    // Validation for dates if both provided
+    if (data.startDate && data.endDate) {
+      if (new Date(data.startDate) > new Date(data.endDate)) {
+        errs.endDate = "End date cannot be before start date";
+      }
+    }
+  }
+  
+  if (stepIndex === 3) {
+    if (data.parentName?.toString().trim() && !data.parentRelation?.toString().trim()) {
+      errs.parentRelation = "Relationship is required if name is provided";
+    }
+  }
+
+  if (stepIndex === 5) {
+    if (data.visaType && data.visaType !== "Other" && !data.brpNumber?.toString().trim()) {
+      errs.brpNumber = "BRP number is required for your visa type";
+    }
+    if (data.brpNumber?.toString().trim() && !data.visaEndDate) {
+      errs.visaEndDate = "Visa expiry date is required";
+    }
   }
 
   return errs;
@@ -284,6 +317,8 @@ export default function CandidateApplicationForm({
   const [formErrors, setFormErrors] = useState({});
   const [draftLoading, setDraftLoading] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
+  const [caseworkers, setCaseworkers] = useState([]);
+  const [caseworkersLoading, setCaseworkersLoading] = useState(false);
 
   const isControlled =
     controlledFormData !== undefined && setControlledFormData !== undefined;
@@ -315,7 +350,10 @@ export default function CandidateApplicationForm({
           });
           setInternalForm(restored);
           if (restored.parent2Name) setShowSecondParent(true);
-          setDraftRestored(true);
+          // Only show "Draft restored" banner if it's NOT already submitted
+          if (result.application.status !== "submitted") {
+            setDraftRestored(true);
+          }
         } else {
           // API ok but no record yet — try localStorage fallback
           tryLocalStorageFallback();
@@ -350,6 +388,23 @@ export default function CandidateApplicationForm({
   if (isControlled && controlledFormData?.parent2Name && !showSecondParent) {
     setShowSecondParent(true);
   }
+
+  useEffect(() => {
+    if (variant === "admin") {
+      const fetchCaseworkers = async () => {
+        setCaseworkersLoading(true);
+        try {
+          const res = await getCaseworkers(1, 100);
+          setCaseworkers(res.data?.data?.caseworkers || []);
+        } catch (error) {
+          console.error("Failed to fetch caseworkers:", error);
+        } finally {
+          setCaseworkersLoading(false);
+        }
+      };
+      fetchCaseworkers();
+    }
+  }, [variant]);
 
   const resolvedVisibility =
     fieldVisibilityProp === undefined
@@ -677,6 +732,37 @@ export default function CandidateApplicationForm({
                 className="md:col-span-2"
               />
             )}
+
+            {variant === "admin" && (
+              <div className="md:col-span-2 space-y-4 border-t border-gray-100 pt-6 mt-2">
+                <SectionTitle>Case Assignment (Admin only)</SectionTitle>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <label htmlFor="caseworkerId" className={fieldLabelClass}>
+                      Assign Caseworker
+                    </label>
+                    <select
+                      id="caseworkerId"
+                      name="caseworkerId"
+                      value={formData.caseworkerId || ""}
+                      onChange={handleChange}
+                      className={inputClass}
+                      disabled={caseworkersLoading}
+                    >
+                      <option value="">-- Select Caseworker --</option>
+                      {caseworkers.map((cw) => (
+                        <option key={cw.id} value={cw.id}>
+                          {cw.first_name} {cw.last_name} ({cw.email})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-[10px] text-gray-400 font-bold">
+                      This caseworker will be notified and assigned to handle this candidate&apos;s case.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -768,29 +854,11 @@ export default function CandidateApplicationForm({
         {step === 2 && (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
             <SectionTitle>Identity Details</SectionTitle>
-            {show("nationalIdCardNumber") && (
-              <AppInput
-                label="National ID card number"
-                name="nationalIdCardNumber"
-                placeholder="National ID card number"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
             {show("nationalIdNumber") && (
               <AppInput
                 label="National ID number"
                 name="nationalIdNumber"
-                placeholder="National ID number"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("idIssuingAuthorityCard") && (
-              <AppInput
-                label="ID issuing authority"
-                name="idIssuingAuthorityCard"
-                placeholder="For national ID card"
+                placeholder="Enter ID number"
                 formData={formData}
                 onChange={handleChange}
               />
@@ -799,7 +867,7 @@ export default function CandidateApplicationForm({
               <AppInput
                 label="ID issuing authority"
                 name="idIssuingAuthorityNational"
-                placeholder="For national ID number"
+                placeholder="Enter authority"
                 formData={formData}
                 onChange={handleChange}
               />
@@ -847,7 +915,7 @@ export default function CandidateApplicationForm({
             )}
             {show("contactNumber2") && (
               <AppInput
-                label="Contact number"
+                label="Alternate contact number"
                 name="contactNumber2"
                 type="tel"
                 formData={formData}
@@ -857,19 +925,11 @@ export default function CandidateApplicationForm({
             )}
 
             <SectionTitle>Address Details</SectionTitle>
-            {show("previousFullAddress") && (
-              <AppInput
-                label="Your previous full address"
-                name="previousFullAddress"
-                formData={formData}
-                onChange={handleChange}
-                className="md:col-span-2"
-              />
-            )}
             {show("previousAddress") && (
               <AppInput
-                label="Previous address"
+                label="Previous full address"
                 name="previousAddress"
+                placeholder="Enter your previous address"
                 formData={formData}
                 onChange={handleChange}
                 className="md:col-span-2"

@@ -11,140 +11,103 @@ import {
   CreditCard,
   Send,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
+import { useEffect } from "react";
 import { useSelector } from "react-redux";
+import useCandidate from "../../hooks/useCandidate";
 
-const steps = [
-  { name: "Started", state: "done" },
-  { name: "Docs", state: "current" },
-  { name: "Review", state: "todo" },
-  { name: "Draft", state: "todo" },
-  { name: "Submit", state: "todo" },
-  { name: "Decision", state: "todo" },
-  { name: "Closed", state: "todo" },
+const STAGES = [
+  { name: "Started", key: "started" },
+  { name: "Application", key: "submitted" },
+  { name: "Review", key: "under_review" },
+  { name: "Decision", key: "decision" },
+  { name: "Closed", key: "closed" },
 ];
 
-const widgets = [
-  {
-    label: "Visa Type",
-    value: "Skilled Worker Visa",
-    sub: "Primary application route",
-    Icon: FileText,
-    valueClass: "text-secondary",
-    valueSize: "text-lg md:text-xl leading-snug",
-  },
-  {
-    label: "Case Status",
-    value: "Under Review",
-    sub: "Caseworker is reviewing your file",
-    Icon: ClipboardCheck,
-    valueClass: "text-primary",
-    valueSize: "text-xl md:text-2xl",
-  },
-  {
-    label: "Pending Actions",
-    value: "3",
-    sub: "2 high priority",
-    Icon: CircleCheck,
-    valueClass: "text-amber-600",
-  },
-  {
-    label: "Missing Documents",
-    value: "5",
-    sub: "Upload required",
-    Icon: FileWarning,
-    valueClass: "text-primary",
-  },
-  {
-    label: "Next Deadline",
-    value: "Apr 18",
-    sub: "Passport upload",
-    Icon: Clock3,
-    valueClass: "text-secondary",
-  },
-  {
-    label: "Payment Status",
-    value: "Partial",
-    sub: "GBP 800 remaining",
-    Icon: BadgePoundSterling,
-    valueClass: "text-amber-600",
-  },
-  {
-    label: "Unread Messages",
-    value: "2",
-    sub: "From caseworker",
-    Icon: MessageSquareMore,
-    valueClass: "text-secondary",
-  },
-  {
-    label: "Case Reference",
-    value: "VT-2024-0841",
-    sub: "Tier 2 Skilled Worker",
-    Icon: FileText,
-    valueClass: "text-gray-800",
-  },
-];
-
-const actions = [
-  {
-    text: "Upload Passport Copy",
-    due: "Due: Apr 18, 2026",
-    priorityClass: "bg-primary",
-    cta: "Upload",
-    Icon: Upload,
-  },
-  {
-    text: "Confirm Employment Details",
-    due: "Due: Apr 20, 2026",
-    priorityClass: "bg-primary",
-    cta: "Review",
-    Icon: Eye,
-  },
-  {
-    text: "Pay Remaining Balance",
-    due: "Due: Apr 25, 2026",
-    priorityClass: "bg-amber-500",
-    cta: "Pay now",
-    Icon: CreditCard,
-  },
-];
-
-const messages = [
-  {
-    from: "Sarah Wilson",
-    initials: "SW",
-    text: "Please upload your latest bank statements for final review.",
-    time: "2h ago",
-    unread: true,
-  },
-  {
-    from: "Sarah Wilson",
-    initials: "SW",
-    text: "Your application has been updated. Next step is document review.",
-    time: "Yesterday",
-    unread: true,
-  },
-  {
-    from: "System",
-    initials: "SY",
-    text: "Reminder: Document checklist deadline is approaching.",
-    time: "Apr 10",
-    unread: false,
-  },
-];
+const getStatusColor = (status) => {
+  const map = {
+    Lead: "text-blue-600 bg-blue-50 border-blue-100",
+    Pending: "text-amber-600 bg-amber-50 border-amber-100",
+    "Docs Pending": "text-red-600 bg-red-50 border-red-100",
+    "In Progress": "text-indigo-600 bg-indigo-50 border-indigo-100",
+    Completed: "text-green-600 bg-green-50 border-green-100",
+    Approved: "text-green-600 bg-green-50 border-green-100",
+    Rejected: "text-red-600 bg-red-50 border-red-100",
+  };
+  return map[status] || "text-gray-600 bg-gray-50 border-gray-100";
+};
 
 const CandidateDashboard = () => {
   const user = useSelector((state) => state.auth.user);
-  const currentIndex = steps.findIndex((s) => s.state === "current");
+  const { myApplication, applicationLoading, getMyApplication } = useCandidate();
+
+  useEffect(() => {
+    getMyApplication();
+  }, [getMyApplication]);
+
+  if (applicationLoading && !myApplication) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-secondary" />
+        <p className="text-sm font-bold text-gray-400">Loading your dashboard...</p>
+      </div>
+    );
+  }
+
+  const appStatus = myApplication?.status || "draft";
+  const caseData = myApplication?._relatedData?.cases?.[0] || {};
+  const caseStatus = caseData.status || (appStatus === "submitted" ? "Pending" : "Draft");
+
+  // Determine current step index
+  let currentIndex = 0;
+  if (appStatus === "submitted") currentIndex = 1;
+  if (["under_review", "under review"].includes(appStatus.toLowerCase())) currentIndex = 2;
+  if (["approved", "rejected", "decision"].includes(appStatus.toLowerCase())) currentIndex = 3;
+  if (["closed", "completed"].includes(appStatus.toLowerCase())) currentIndex = 4;
+
+  const widgets = [
+    {
+      label: "Visa Type",
+      value: myApplication?.visaType || "Not specified",
+      sub: "Primary application route",
+      Icon: FileText,
+      valueClass: "text-secondary",
+      valueSize: "text-lg md:text-xl leading-snug",
+    },
+    {
+      label: "Case Status",
+      value: caseStatus,
+      sub: caseData.updatedAt ? `Updated ${new Date(caseData.updatedAt).toLocaleDateString()}` : "Form submission pending",
+      Icon: ClipboardCheck,
+      valueClass: "text-primary",
+      valueSize: "text-xl md:text-2xl",
+    },
+    {
+      label: "Reference",
+      value: caseData.caseId || "N/A",
+      sub: "Use for correspondence",
+      Icon: FileText,
+      valueClass: "text-gray-800",
+      valueSize: "text-xl",
+    },
+    {
+      label: "Next Deadline",
+      value: caseData.targetSubmissionDate ? new Date(caseData.targetSubmissionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : "TBD",
+      sub: "Action required soon",
+      Icon: Clock3,
+      valueClass: "text-secondary",
+    },
+  ];
 
   return (
     <div className="space-y-6 pb-10">
       <div className="animate-in fade-in slide-in-from-top-4 duration-700">
         <h1 className="text-3xl md:text-4xl font-black text-secondary tracking-tight">
-          Good morning, <span className="text-primary">{user?.name || "Arjun"}</span>
+          Welcome back, <span className="text-primary">{user?.first_name || "Guest"}</span>
         </h1>
         <p className="text-gray-500 font-bold text-sm mt-1">
-          Here is your visa application overview for today.
+          Track your UK visa application progress and pending tasks.
         </p>
       </div>
 
@@ -155,16 +118,15 @@ const CandidateDashboard = () => {
               Current Stage
             </p>
             <p className="text-xl md:text-2xl font-black text-secondary mt-1">
-              Documents Pending
+              {STAGES[currentIndex].name}
             </p>
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start gap-1 sm:gap-2 overflow-x-auto pb-2">
-              {steps.map((step, idx) => {
-                const done = step.state === "done";
-                const current = step.state === "current";
-                const linkDone = idx < currentIndex;
+              {STAGES.map((step, idx) => {
+                const done = idx < currentIndex;
+                const current = idx === currentIndex;
                 return (
                   <div key={step.name} className="flex items-start flex-1 min-w-[72px]">
                     <div className="flex flex-col items-center w-full">
@@ -183,10 +145,10 @@ const CandidateDashboard = () => {
                         {step.name}
                       </span>
                     </div>
-                    {idx < steps.length - 1 && (
+                    {idx < STAGES.length - 1 && (
                       <div
                         className={`mt-3 h-0.5 flex-1 min-w-3 ${
-                          linkDone ? "bg-primary" : "bg-gray-300"
+                          done ? "bg-primary" : "bg-gray-300"
                         }`}
                       />
                     )}
@@ -196,13 +158,13 @@ const CandidateDashboard = () => {
             </div>
           </div>
 
-          <span className="shrink-0 self-start xl:self-center rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-black uppercase tracking-wider text-amber-700">
-            In Progress
+          <span className={`shrink-0 self-start xl:self-center rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wider ${getStatusColor(caseStatus)}`}>
+            {caseStatus}
           </span>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {widgets.map(
           ({ label, value, sub, Icon, valueClass, valueSize = "text-3xl" }) => (
           <article
@@ -216,7 +178,7 @@ const CandidateDashboard = () => {
               <Icon size={22} className="text-gray-300 shrink-0" />
             </div>
             <p
-              className={`mt-2 font-black tracking-tight ${valueSize} ${valueClass}`}
+              className={`mt-2 font-black tracking-tight ${valueSize} ${valueClass} truncate`}
             >
               {value}
             </p>
@@ -228,69 +190,51 @@ const CandidateDashboard = () => {
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <h2 className="text-base font-black text-secondary mb-4">Pending Actions</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-black text-secondary">Pending Actions</h2>
+            <span className="bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full">
+              {myApplication?._relatedData?.documents?.filter(d => d.status === 'Pending').length || 0} Required
+            </span>
+          </div>
           <div className="space-y-3">
-            {actions.map(({ text, due, priorityClass, cta, Icon }) => (
+            {myApplication?._relatedData?.documents?.filter(d => d.status === 'Pending').slice(0, 3).map((doc) => (
               <div
-                key={text}
+                key={doc.id}
                 className="rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-3"
               >
                 <div className="flex items-start gap-3">
-                  <span className={`mt-1 h-2 w-2 rounded-full ${priorityClass}`} />
+                  <span className="mt-1 h-2 w-2 rounded-full bg-primary" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-black text-gray-800">{text}</p>
-                    <p className="text-xs font-bold text-gray-500 mt-0.5">{due}</p>
+                    <p className="text-sm font-black text-gray-800">{doc.documentType?.name || "Document Upload"}</p>
+                    <p className="text-xs font-bold text-gray-500 mt-0.5">Required for {myApplication.visaType}</p>
                   </div>
                   <button
                     type="button"
                     className="inline-flex items-center gap-1 rounded-lg border border-primary/25 bg-primary/10 px-3 py-1.5 text-[11px] font-black text-primary hover:bg-primary/15"
                   >
-                    <Icon size={13} />
-                    {cta}
+                    <Upload size={13} />
+                    Upload
                   </button>
                 </div>
               </div>
-            ))}
+            )) || (
+              <p className="text-sm font-bold text-gray-400 py-4 text-center">No pending document actions.</p>
+            )}
           </div>
         </article>
 
         <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm flex flex-col">
-          <h2 className="text-base font-black text-secondary mb-4">Recent Messages</h2>
-          <div className="space-y-3 flex-1">
-            {messages.map((m) => (
-              <div
-                key={`${m.from}-${m.time}-${m.text}`}
-                className="rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-3"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="h-9 w-9 rounded-full bg-secondary text-white text-xs font-black flex items-center justify-center shrink-0">
-                    {m.initials}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-black text-gray-800 truncate">{m.from}</p>
-                      <span className="ml-auto text-[11px] font-bold text-gray-400 shrink-0">
-                        {m.time}
-                      </span>
-                    </div>
-                    <p className="text-xs font-bold text-gray-500 mt-0.5">{m.text}</p>
-                  </div>
-                  {m.unread && <span className="mt-1 h-2 w-2 rounded-full bg-primary" />}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex gap-2">
-            <input
-              type="text"
-              placeholder="Type a message..."
-              className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-            <button
-              type="button"
-              className="rounded-xl bg-primary p-3 text-white shadow-md shadow-primary/20 hover:bg-primary-dark"
-            >
-              <Send size={18} />
+          <h2 className="text-base font-black text-secondary mb-4">Feedback & Support</h2>
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+            <div className="w-12 h-12 rounded-2xl bg-secondary/5 flex items-center justify-center mb-4">
+              <MessageSquareMore className="text-secondary" />
+            </div>
+            <p className="text-sm font-black text-gray-800">Need help with your application?</p>
+            <p className="text-xs font-bold text-gray-500 mt-1 mb-4">
+              Our caseworkers are here to guide you through the process.
+            </p>
+            <button className="bg-secondary text-white text-[11px] font-black px-4 py-2 rounded-xl shadow-lg shadow-secondary/15 hover:bg-secondary-dark transition-all">
+              Chat with Support
             </button>
           </div>
         </article>
@@ -299,9 +243,10 @@ const CandidateDashboard = () => {
       <div className="flex justify-end">
         <button
           type="button"
+          onClick={() => window.location.href = '/candidate/application'}
           className="inline-flex items-center gap-1 text-primary text-sm font-black hover:gap-2 transition-all"
         >
-          View full timeline <ArrowRight size={15} />
+          {appStatus === 'draft' ? "Continue your application" : "View submitted application"} <ArrowRight size={15} />
         </button>
       </div>
     </div>

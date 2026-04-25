@@ -39,7 +39,15 @@ const useOtp = (type = "register") => {
         sessionStorage.removeItem("pending_otp_email");
         navigate("/login");
       } else {
-        await verifyResetOtp({ email, otp });
+        const res = await verifyResetOtp({ email, otp });
+        console.log("Verify Reset OTP Response:", res);
+        const token = res?.data?.reset_token || res?.reset_token;
+        if (token) {
+          sessionStorage.setItem("reset_token", token);
+          console.log("Token stored in sessionStorage");
+        } else {
+          console.error("No token found in response:", res);
+        }
         navigate("/set-password");
       }
     } catch (err) {
@@ -57,7 +65,12 @@ const useOtp = (type = "register") => {
         type === "register"
           ? sessionStorage.getItem("pending_otp_email")
           : sessionStorage.getItem("pending_reset_email");
-      await resendOtp(email);
+      
+      if (type === "register") {
+        await resendOtp(email);
+      } else {
+        await forgotPassword(email);
+      }
       startCountdown();
     } catch (err) {
       setError(err.message);
