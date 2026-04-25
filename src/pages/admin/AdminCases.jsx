@@ -28,6 +28,7 @@ const statusBadge = {
   Pending: "bg-yellow-100 text-yellow-800",
   Rejected: "bg-red-100 text-red-800",
   Review: "bg-blue-100 text-blue-800",
+  Lead: "bg-gray-100 text-gray-800",
 };
 
 const priorityLevels = [
@@ -1025,6 +1026,7 @@ export default function AdminCases() {
     
     const matchesFilter =
       filterType === "all" ||
+      (filterType.toLowerCase() === "lead" && c.status?.toLowerCase() === "lead") ||
       (filterType === "approved" && c.status === "Approved") ||
       (filterType === "pending" && c.status === "Pending") ||
       (filterType === "rejected" && c.status === "Rejected") ||

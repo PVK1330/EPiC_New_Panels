@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { verifyOtp, resendOtp, verifyResetOtp } from "../services/auth.service";
+import { verifyOtp, resendOtp, verifyResetOtp, forgotPassword } from "../services/auth.service";
 
 const useOtp = (type = "register") => {
   const navigate = useNavigate();
@@ -39,10 +39,14 @@ const useOtp = (type = "register") => {
         sessionStorage.removeItem("pending_otp_email");
         navigate("/login");
       } else {
-        const response = await verifyResetOtp({ email, otp });
-        // Save the reset token for the set-password page
-        if (response.data?.reset_token) {
-          sessionStorage.setItem("reset_token", response.data.reset_token);
+        const res = await verifyResetOtp({ email, otp });
+        console.log("Verify Reset OTP Response:", res);
+        const token = res?.data?.reset_token || res?.reset_token;
+        if (token) {
+          sessionStorage.setItem("reset_token", token);
+          console.log("Token stored in sessionStorage");
+        } else {
+          console.error("No token found in response:", res);
         }
         navigate("/set-password");
       }
@@ -61,7 +65,12 @@ const useOtp = (type = "register") => {
         type === "register"
           ? sessionStorage.getItem("pending_otp_email")
           : sessionStorage.getItem("pending_reset_email");
-      await resendOtp(email);
+      
+      if (type === "register") {
+        await resendOtp(email);
+      } else {
+        await forgotPassword(email);
+      }
       startCountdown();
     } catch (err) {
       setError(err.message);

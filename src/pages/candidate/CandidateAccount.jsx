@@ -162,6 +162,7 @@ const CandidateAccount = () => {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const finalSectionRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const tabParam = searchParams.get("tab");
   const tab = useMemo(() => {
@@ -215,6 +216,7 @@ const CandidateAccount = () => {
   const [rating, setRating] = useState(4);
   const [expSelected, setExpSelected] = useState(() => new Set(["easy"]));
   const [comments, setComments] = useState("");
+  const [selectedStaffId, setSelectedStaffId] = useState(null);
   const [feedbackSending, setFeedbackSending] = useState(false);
 
   const [fullName, setFullName] = useState(() =>
@@ -234,6 +236,9 @@ const CandidateAccount = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [gender, setGender] = useState("");
+  const [profilePicFile, setProfilePicFile] = useState(null);
+  const [profilePicPreview, setProfilePicPreview] = useState(null);
 
   const [notifDocs, setNotifDocs] = useState(true);
   const [notifStatus, setNotifStatus] = useState(true);
@@ -265,6 +270,8 @@ const CandidateAccount = () => {
           role_id: u.role_id ?? prev?.role_id,
           role_name: prev?.role_name,
           status: prev?.status,
+          gender: u.gender ?? prev?.gender,
+          profile_pic: u.profile_pic ?? prev?.profile_pic,
           two_factor_enabled:
             u.two_factor_enabled ?? prev?.two_factor_enabled,
         },
@@ -285,6 +292,8 @@ const CandidateAccount = () => {
       setEmail(u.email || "");
       setPhone(formatPhoneDisplay(u.country_code, u.mobile));
       setSavedCountryCode((u.country_code || "").trim());
+      setGender(u.gender || "");
+      setProfilePicPreview(u.profile_pic || null);
       setTwoFactorEnabled(!!u.two_factor_enabled);
       applyUserToStore(u);
 
@@ -327,7 +336,8 @@ const CandidateAccount = () => {
     setFullName(fullNameFromParts(reduxUser?.first_name, reduxUser?.last_name));
     setEmail(reduxUser?.email ?? "");
     setTwoFactorEnabled(!!reduxUser?.two_factor_enabled);
-  }, [reduxUser?.first_name, reduxUser?.last_name, reduxUser?.email, reduxUser?.two_factor_enabled]);
+    setGender(reduxUser?.gender || "");
+  }, [reduxUser?.first_name, reduxUser?.last_name, reduxUser?.email, reduxUser?.two_factor_enabled, reduxUser?.gender]);
 
   const toggleExp = (id) => {
     setExpSelected((prev) => {
@@ -342,6 +352,22 @@ const CandidateAccount = () => {
     window.alert(`Demo: "${label}" would download in a live app.`);
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast({ variant: "danger", message: "File size must be under 5MB" });
+        return;
+      }
+      setProfilePicFile(file);
+      setProfilePicPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleSaveProfile = async () => {
     const { first_name, last_name } = splitFullName(fullName);
     const { country_code, mobile } = parsePhoneInput(phone, savedCountryCode);
@@ -354,17 +380,26 @@ const CandidateAccount = () => {
     }
     setProfileSaving(true);
     try {
-      const res = await updateUserProfile({
-        first_name,
-        last_name,
-        country_code,
-        mobile,
-      });
+      const formData = new FormData();
+      formData.append("first_name", first_name);
+      formData.append("last_name", last_name);
+      formData.append("country_code", country_code);
+      formData.append("mobile", mobile);
+      formData.append("gender", gender);
+      if (profilePicFile) {
+        formData.append("profile_pic", profilePicFile, profilePicFile.name);
+      }
+
+      const res = await updateUserProfile(formData);
       const user = res.data?.data?.user;
       if (user) {
         applyUserToStore(user);
+        setFullName(fullNameFromParts(user.first_name, user.last_name));
         setPhone(formatPhoneDisplay(user.country_code, user.mobile));
         setSavedCountryCode((user.country_code || "").trim());
+        setGender(user.gender || "");
+        setProfilePicPreview(user.profile_pic || null);
+        setProfilePicFile(null);
       }
       showToast({ message: "Profile saved." });
     } catch (error) {
@@ -443,6 +478,7 @@ const CandidateAccount = () => {
         rating,
         experience_tags: Array.from(expSelected),
         comments,
+        caseworker_id: selectedStaffId,
       });
       showToast({ message: "Thanks — your feedback has been recorded." });
       setRating(4);
@@ -603,9 +639,54 @@ const CandidateAccount = () => {
               <h2 className="text-base font-black text-gray-900">
                 Share your experience
               </h2>
-              <p className="text-sm font-bold text-gray-500 mt-1 mb-6">
-                Help us improve the platform with your feedback.
-              </p>
+              {caseInfo?.assignedStaff?.length > 0 ? (
+                <div className="mb-6 space-y-3">
+                  <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500">
+                    Select staff to provide feedback for
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {caseInfo.assignedStaff.map((staff) => (
+                      <button
+                        key={staff.id}
+                        type="button"
+                        onClick={() => setSelectedStaffId(staff.id)}
+                        className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black transition-all ${
+                          selectedStaffId === staff.id
+                            ? "border-secondary bg-secondary/10 text-secondary"
+                            : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                        }`}
+                      >
+                        <div
+                          className={`h-2 w-2 rounded-full ${
+                            selectedStaffId === staff.id
+                              ? "bg-secondary"
+                              : "bg-gray-300"
+                          }`}
+                        />
+                        {staff.first_name} {staff.last_name}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStaffId(null)}
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black transition-all ${
+                        selectedStaffId === null
+                          ? "border-amber-500 bg-amber-50 text-amber-700"
+                          : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      General Service
+                    </button>
+                  </div>
+                  <p className="text-[10px] font-bold text-gray-400">
+                    Application: {caseInfo.caseId}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm font-bold text-gray-500 mt-1 mb-6 italic">
+                  Help us improve the platform with your feedback.
+                </p>
+              )}
 
               <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-2">
                 Overall rating
@@ -697,13 +778,47 @@ const CandidateAccount = () => {
             ) : (
               <>
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-secondary to-indigo-500 text-white flex items-center justify-center text-lg font-black shrink-0">
-                    {initialsFromName(fullName || fullNameFromParts(reduxUser?.first_name, reduxUser?.last_name))}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    name="profile_pic"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                  <div className="relative group">
+                    {profilePicPreview ? (
+                      <img
+                        src={profilePicPreview}
+                        alt="Profile"
+                        className="w-16 h-16 rounded-full object-cover border-2 border-secondary/20 shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-secondary to-indigo-500 text-white flex items-center justify-center text-lg font-black shrink-0">
+                        {initialsFromName(
+                          fullName ||
+                            fullNameFromParts(
+                              reduxUser?.first_name,
+                              reduxUser?.last_name,
+                            ),
+                        )}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={triggerFileInput}
+                      className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Settings size={16} />
+                    </button>
                   </div>
                   <div>
                     <p className="text-sm font-black text-gray-900">
                       {fullName ||
-                        fullNameFromParts(reduxUser?.first_name, reduxUser?.last_name) ||
+                        fullNameFromParts(
+                          reduxUser?.first_name,
+                          reduxUser?.last_name,
+                        ) ||
                         "Candidate"}
                     </p>
                     <p className="text-xs font-bold text-gray-500 mt-0.5">
@@ -714,12 +829,10 @@ const CandidateAccount = () => {
                     </p>
                     <button
                       type="button"
-                      onClick={() =>
-                        window.alert("Photo upload is not available yet.")
-                      }
+                      onClick={triggerFileInput}
                       className="mt-2 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-black text-gray-600 hover:bg-gray-50"
                     >
-                      Change photo
+                      {profilePicPreview ? "Change photo" : "Upload photo"}
                     </button>
                   </div>
                 </div>
@@ -760,6 +873,22 @@ const CandidateAccount = () => {
                       placeholder="+44 7700900123"
                       className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
+                      Gender
+                    </label>
+                    <select
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      disabled={profileSaving}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none appearance-none"
+                    >
+                      <option value="">Prefer not to say</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
                   </div>
                   <button
                     type="button"

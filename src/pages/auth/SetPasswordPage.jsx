@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
@@ -13,6 +13,13 @@ export default function SetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const email = sessionStorage.getItem("pending_reset_email") || "";
+  const [token, setToken] = useState(sessionStorage.getItem("reset_token") || "");
+
+  useEffect(() => {
+    if (!sessionStorage.getItem("reset_token")) {
+      setApiError("Reset session expired. Please verify OTP again.");
+    }
+  }, []);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -35,12 +42,12 @@ export default function SetPasswordPage() {
     if (Object.keys(errs).length) return setErrors(errs);
     setIsLoading(true);
     try {
-      const resetToken = sessionStorage.getItem("reset_token");
+      console.log("Submitting password reset with token:", token ? "Exists" : "MISSING");
       await setNewPassword({
         email,
         password: form.password,
         confirmPassword: form.confirmPassword,
-        resetToken,
+        resetToken: token,
       });
       sessionStorage.removeItem("pending_reset_email");
       sessionStorage.removeItem("reset_token");

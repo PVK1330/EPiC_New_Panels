@@ -511,6 +511,16 @@ export default function AdminCaseworkers() {
     }
   };
 
+  const aggregateMetrics = (caseworkers || []).reduce(
+    (acc, cw) => {
+      const p = cw.performance || {};
+      acc.totalActive += p.inProgressCases || 0;
+      acc.totalOverdue += p.overdueCases || 0;
+      acc.totalCompleted += p.completedCases || 0;
+      return acc;
+    },
+    { totalActive: 0, totalOverdue: 0, totalCompleted: 0 },
+  );
   const isFormModal = modal.type === "create" || modal.type === "edit";
   const totalPages = pagination.pages || 1;
   const startIdx =
@@ -567,21 +577,21 @@ export default function AdminCaseworkers() {
 
       {/* KPI Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-blue-50 rounded-xl p-4 border border-gray-100">
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Caseworkers</p>
-          <p className="text-3xl font-black text-blue-600">{pagination.total || 0}</p>
+          <p className="text-3xl font-black text-secondary">{pagination.total || 0}</p>
         </div>
-        <div className="bg-green-50 rounded-xl p-4 border border-gray-100">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Active</p>
-          <p className="text-3xl font-black text-green-600">{caseworkers.filter(c => c.status === 'active').length}</p>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Active Cases</p>
+          <p className="text-3xl font-black text-blue-600">{aggregateMetrics.totalActive}</p>
         </div>
-        <div className="bg-yellow-50 rounded-xl p-4 border border-gray-100">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">High Load</p>
-          <p className="text-3xl font-black text-yellow-600">{caseworkers.filter(c => c.status === 'high load').length}</p>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Overdue/Pending</p>
+          <p className="text-3xl font-black text-red-500">{aggregateMetrics.totalOverdue}</p>
         </div>
-        <div className="bg-blue-50 rounded-xl p-4 border border-gray-100">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">On Leave</p>
-          <p className="text-3xl font-black text-blue-600">{caseworkers.filter(c => c.status === 'on leave').length}</p>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Completed</p>
+          <p className="text-3xl font-black text-green-600">{aggregateMetrics.totalCompleted}</p>
         </div>
       </div>
 
@@ -669,7 +679,7 @@ export default function AdminCaseworkers() {
                 caseworkers.map((user, idx) => {
                   const perf = user.performance || {};
                   const activeCases = perf.inProgressCases || 0;
-                  const overdue = perf.pendingCases || 0;
+                  const overdue = perf.overdueCases || 0;
                   const completed = perf.completedCases || 0;
                   const performanceRate = parseFloat(perf.completionRate || 0);
                   
