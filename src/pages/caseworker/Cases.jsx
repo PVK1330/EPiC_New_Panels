@@ -16,6 +16,8 @@ import {
   CalendarClock,
   ArrowRightLeft,
   Clock,
+  Table,
+  LayoutGrid,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
@@ -625,6 +627,7 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
 const Cases = () => {
   const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState("table"); // 'table' or 'kanban'
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -846,6 +849,9 @@ const Cases = () => {
         nationality: editCaseForm.nationality,
         jobTitle: editCaseForm.jobTitle,
         departmentId: editCaseForm.department,
+        biometricsDate: editCaseForm.biometricsDate,
+        submissionDate: editCaseForm.submissionDate,
+        decisionDate: editCaseForm.decisionDate,
       };
 
       await updateCaseworkerCase(editCaseId, caseData);
@@ -1917,10 +1923,10 @@ const Cases = () => {
         onClose={closeCaseEdit}
         title={editCaseId ? `Edit case ${editCaseId}` : ""}
         titleId="case-edit-modal-title"
-        maxWidthClass="max-w-lg"
+        maxWidthClass="max-w-4xl"
         bodyClassName="p-4 sm:p-6"
       >
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* <p className="text-sm font-bold text-gray-600">
             Update case details. Changes apply locally in this demo until the API is connected.
           </p> */}
@@ -2241,7 +2247,7 @@ const Cases = () => {
             )}
 
             {/* Footer */}
-            <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+            <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
               <button
                 type="button"
                 onClick={closeReassign}
@@ -2831,15 +2837,16 @@ const Cases = () => {
                 Visa type
               </label>
               <select
-                value={editCaseForm.visa}
+                value={editCaseForm.visaTypeId}
                 onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, visa: e.target.value }))
+                  setEditCaseForm((f) => ({ ...f, visaTypeId: e.target.value }))
                 }
                 className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
               >
-                {NEW_CASE_VISA.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
+                <option value="">Select visa type</option>
+                {visaTypes.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
                   </option>
                 ))}
               </select>
@@ -2900,7 +2907,7 @@ const Cases = () => {
               placeholder="Anything the team should know…"
             />
           </div>
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={closeCaseEdit}
@@ -2949,9 +2956,9 @@ const Cases = () => {
               }`}
             >
               <option value="">Select caseworker</option>
-              {CASEWORKERS.map((cw) => (
+              {caseworkers.map((cw) => (
                 <option key={cw.id} value={cw.id}>
-                  {cw.name} ({cw.role}) — Load: {cw.load}
+                  {cw.first_name} {cw.last_name} — Caseworker
                 </option>
               ))}
             </select>
@@ -3021,7 +3028,7 @@ const Cases = () => {
               )}
             </div>
           )}
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={() => setReassignCaseId(null)}
@@ -3406,7 +3413,7 @@ function DocumentsTab({ caseId, candidateId }) {
               {uploadErrors.api}
             </p>
           )}
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={closeUploadModal}
@@ -3424,6 +3431,30 @@ function DocumentsTab({ caseId, candidateId }) {
               {uploading ? "Uploading..." : "Upload document"}
             </button>
           </div>
+        </div>
+      </Modal>
+
+      {/* View Document Modal */}
+      <Modal
+        open={viewDocumentOpen}
+        onClose={closeViewDocument}
+        title="View Document"
+        titleId="view-document-modal-title"
+        maxWidthClass="max-w-4xl"
+        bodyClassName="p-0"
+      >
+        <div className="w-full h-[600px] bg-gray-50">
+          {viewDocumentUrl ? (
+            <iframe
+              src={viewDocumentUrl}
+              className="w-full h-full border-0"
+              title="Document Viewer"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-500">
+              No document to display
+            </div>
+          )}
         </div>
       </Modal>
     </div>
@@ -3629,7 +3660,7 @@ function TasksTab({ caseId }) {
               {createErrors.api}
             </p>
           )}
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={closeCreateModal}

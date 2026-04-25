@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { verifyOtp, resendOtp, verifyResetOtp } from "../services/auth.service";
+import { verifyOtp, resendOtp, verifyResetOtp, forgotPassword } from "../services/auth.service";
 
 const useOtp = (type = "register") => {
   const navigate = useNavigate();

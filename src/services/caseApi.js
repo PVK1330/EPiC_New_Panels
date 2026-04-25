@@ -35,9 +35,11 @@ export const getCaseworkers = (params = {}) => getAllUsers(params);
 
 export const updateCaseStatus = (id, status) => api.put(`/api/cases/${id}`, { status });
 
-export const exportCases = (params = {}) => api.get(`/api/cases/export`, { params, responseType: 'blob' });
+export const exportCases = (params = {}) => api.get(`/api/caseworker/cases/export`, { params, responseType: 'blob' });
 
 export const getCaseworkerCases = (params = {}) => api.get(`/api/caseworker/cases`, { params });
+
+export const getCaseworkerPipelineCases = () => api.get(`/api/caseworker/cases/pipeline`);
 
 export const getTeamCapacity = () => api.get(`/api/cases/capacity`);
 

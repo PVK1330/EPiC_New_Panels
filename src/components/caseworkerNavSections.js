@@ -39,11 +39,6 @@ export const caseworkerNavSections = (taskCount = 0) => [
     title: "Workflow",
     items: [
       {
-        to: "/caseworker/pipeline",
-        label: "Pipeline view",
-        icon: BarChart3,
-      },
-      {
         to: "/caseworker/tasks",
         label: "Tasks",
         icon: ListChecks,

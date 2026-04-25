@@ -10,6 +10,7 @@ import {
   Globe,
   Lock,
   Shield,
+  Key,
 } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import Modal from "../../components/Modal";
@@ -51,18 +52,21 @@ const InputField = ({
 const MyAccount = () => {
   const user = useSelector((state) => state.auth.user);
   const dispatch = useDispatch();
-  const [gender, setGender] = useState("male");
+  const [activeTab, setActiveTab] = useState("profile"); // profile, password, security
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [twoFactorMode, setTwoFactorMode] = useState("setup"); // setup or disable
   const [passwordForm, setPasswordForm] = useState({
-    current_password: "",
     new_password: "",
     confirm_password: "",
   });
   const [passwordError, setPasswordError] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
 
   const [formData, setFormData] = useState({
     first_name: user?.name?.split(" ")[0] || "",
@@ -70,6 +74,7 @@ const MyAccount = () => {
     email: user?.email || "",
     country_code: "+1",
     mobile: "",
+    gender: user?.gender || "other",
     profile_pic: null,
   });
 
@@ -77,7 +82,7 @@ const MyAccount = () => {
     const fetchProfile = async () => {
       try {
         const response = await api.get("/api/user/profile");
-        const { first_name, last_name, email, country_code, mobile, two_factor_enabled } = response.data.data.user;
+        const { first_name, last_name, email, country_code, mobile, two_factor_enabled, gender, profile_pic } = response.data.data.user;
         setFormData((prev) => ({
           ...prev,
           first_name,
@@ -85,8 +90,21 @@ const MyAccount = () => {
           email,
           country_code: country_code || "+1",
           mobile,
+          gender: gender || "other",
         }));
         setTwoFactorEnabled(two_factor_enabled || false);
+        
+        // Update Redux user state with profile pic and other fields
+        dispatch(
+          setCredentials({
+            user: {
+              ...user,
+              profile_pic,
+              gender,
+            },
+            token: user.token,
+          })
+        );
       } catch (error) {
         console.error("Error fetching profile:", error);
       }
@@ -108,9 +126,42 @@ const MyAccount = () => {
     setPasswordError("");
   };
 
+  const handleSendOtp = async () => {
+    try {
+      setLoading(true);
+      const response = await api.post("/api/auth/send-password-change-otp");
+      setOtpSent(true);
+      setOtpError("");
+    } catch (error) {
+      setOtpError(error.response?.data?.message || "Failed to send OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    try {
+      setLoading(true);
+      const response = await api.post("/api/auth/verifyOtpUser", {
+        email: user?.email,
+        otp: otp,
+      });
+      setOtpVerified(true);
+      setOtpError("");
+    } catch (error) {
+      setOtpError(error.response?.data?.message || "Invalid OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePasswordUpdate = async () => {
-    if (!passwordForm.current_password || !passwordForm.new_password) {
-      setPasswordError("Current password and new password are required");
+    if (!otpVerified) {
+      setPasswordError("Please verify your email first");
+      return;
+    }
+    if (!passwordForm.new_password) {
+      setPasswordError("New password is required");
       return;
     }
     if (passwordForm.new_password !== passwordForm.confirm_password) {
@@ -125,10 +176,12 @@ const MyAccount = () => {
     try {
       setLoading(true);
       await api.post("/api/user/change-password", {
-        current_password: passwordForm.current_password,
         new_password: passwordForm.new_password,
       });
-      setPasswordForm({ current_password: "", new_password: "", confirm_password: "" });
+      setPasswordForm({ new_password: "", confirm_password: "" });
+      setOtpSent(false);
+      setOtpVerified(false);
+      setOtp("");
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (error) {
@@ -158,6 +211,7 @@ const MyAccount = () => {
       data.append("last_name", formData.last_name);
       data.append("country_code", formData.country_code);
       data.append("mobile", formData.mobile);
+      data.append("gender", formData.gender);
       if (formData.profile_pic) {
         data.append("profile_pic", formData.profile_pic);
       }
@@ -170,9 +224,15 @@ const MyAccount = () => {
 
       console.log("Profile update response:", response.status, response.data);
 
+      // Merge the updated user data with existing user data to preserve token and other fields
+      const updatedUser = {
+        ...user,
+        ...response.data.data.user,
+      };
+
       dispatch(
         setCredentials({
-          user: response.data.data.user,
+          user: updatedUser,
           token: user.token,
         })
       );
@@ -180,7 +240,8 @@ const MyAccount = () => {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (error) {
-      console.error("Error updating profile:", error);
+      console.error("Profile update error:", error);
+      alert(error.response?.data?.message || "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -199,14 +260,55 @@ const MyAccount = () => {
         </p>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab("profile")}
+          className={`px-6 py-3 text-sm font-black transition-all ${
+            activeTab === "profile"
+              ? "text-primary border-b-2 border-primary"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Profile
+        </button>
+        <button
+          onClick={() => setActiveTab("password")}
+          className={`px-6 py-3 text-sm font-black transition-all ${
+            activeTab === "password"
+              ? "text-primary border-b-2 border-primary"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Change Password
+        </button>
+        <button
+          onClick={() => setActiveTab("security")}
+          className={`px-6 py-3 text-sm font-black transition-all ${
+            activeTab === "security"
+              ? "text-primary border-b-2 border-primary"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Security (2FA)
+        </button>
+      </div>
+
       {/* Profile Card */}
-      <div className="bg-white p-8 rounded-xl shadow-sm border-2 border-primary/20 max-w-7xl">
+      {activeTab === "profile" && (
+        <div className="bg-white p-8 rounded-xl shadow-sm border-2 border-primary/20 max-w-7xl">
         {/* Avatar */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-primary/20 flex items-center justify-center text-5xl mb-3 shadow-inner overflow-hidden">
             {formData.profile_pic ? (
               <img
                 src={URL.createObjectURL(formData.profile_pic)}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : user?.profile_pic ? (
+              <img
+                src={user.profile_pic}
                 alt="Profile"
                 className="w-full h-full object-cover"
               />
@@ -281,19 +383,19 @@ const MyAccount = () => {
 
         {/* Gender */}
         <div className="flex items-center gap-6 mb-8">
-          {["male", "female"].map((g) => (
+          {["male", "female", "other"].map((g) => (
             <label
               key={g}
               className="flex items-center gap-2 cursor-pointer group"
             >
               <div
-                onClick={() => setGender(g)}
-                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${gender === g
+                onClick={() => setFormData((prev) => ({ ...prev, gender: g }))}
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${formData.gender === g
                     ? "border-orange-500 bg-orange-500"
                     : "border-gray-300"
                   }`}
               >
-                {gender === g && (
+                {formData.gender === g && (
                   <div className="w-1.5 h-1.5 rounded-full bg-white" />
                 )}
               </div>
@@ -304,52 +406,131 @@ const MyAccount = () => {
           ))}
         </div>
 
-        <div className="border-t border-gray-100 pt-6 mb-6">
-          <h2 className="text-base font-black text-secondary mb-5 tracking-tight">
-            Update Password
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <InputField
-              label="Current Password"
-              type="password"
-              placeholder="Current password"
-              value={passwordForm.current_password}
-              onChange={handlePasswordChange("current_password")}
-              icon={Lock}
-            />
-            <InputField
-              label="New Password"
-              type="password"
-              placeholder="New password"
-              value={passwordForm.new_password}
-              onChange={handlePasswordChange("new_password")}
-              icon={Lock}
-            />
-            <InputField
-              label="Confirm Password"
-              type="password"
-              placeholder="Confirm password"
-              value={passwordForm.confirm_password}
-              onChange={handlePasswordChange("confirm_password")}
-              icon={Shield}
-            />
-          </div>
-          {passwordError && (
-            <p className="text-xs font-bold text-red-600 mt-2">{passwordError}</p>
-          )}
+        {/* Actions */}
+        <div className="flex items-center justify-between">
           <button
-            onClick={handlePasswordUpdate}
+            onClick={handleSave}
             disabled={loading}
-            className="mt-4 font-black text-sm px-6 py-3 rounded-xl bg-blue-700 hover:bg-blue-800 text-white transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${saved
+                ? "bg-green-500 text-white"
+                : "bg-blue-700 hover:bg-blue-800 text-white"
+              }`}
           >
-            {loading ? "Updating..." : "Update Password"}
+            {loading ? "Saving..." : saved ? "✓ Saved!" : "Save Changes"}
+          </button>
+          <button
+            onClick={handleLogout}
+            className="bg-primary hover:opacity-90 text-white font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95"
+          >
+            Logout
           </button>
         </div>
+      </div>
+      )}
 
-        <div className="border-t border-gray-100 pt-6 mb-6">
-          <h2 className="text-base font-black text-secondary mb-5 tracking-tight">
+      {/* Password Card */}
+      {activeTab === "password" && (
+        <div className="bg-white p-8 rounded-xl shadow-sm border-2 border-primary/20 max-w-7xl">
+          <h2 className="text-2xl font-black text-secondary mb-6 tracking-tight flex items-center gap-3">
+            <Lock className="text-primary" size={28} />
+            Change Password
+          </h2>
+
+          {!otpVerified ? (
+            <div className="space-y-6">
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <p className="text-sm font-bold text-blue-800">
+                  For security, you must verify your email before changing your password.
+                </p>
+              </div>
+
+              {!otpSent ? (
+                <button
+                  onClick={handleSendOtp}
+                  disabled={loading}
+                  className="w-full font-black text-sm px-6 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {loading ? "Sending..." : "Send Verification OTP"}
+                </button>
+              ) : (
+                <div className="space-y-4">
+                  <InputField
+                    label="Enter OTP"
+                    type="text"
+                    placeholder="Enter 6-digit OTP"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    icon={Key}
+                  />
+                  {otpError && (
+                    <p className="text-xs font-bold text-red-600">{otpError}</p>
+                  )}
+                  <button
+                    onClick={handleVerifyOtp}
+                    disabled={loading || otp.length !== 6}
+                    className="w-full font-black text-sm px-6 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {loading ? "Verifying..." : "Verify OTP"}
+                  </button>
+                  <button
+                    onClick={handleSendOtp}
+                    disabled={loading}
+                    className="w-full font-black text-sm px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-secondary transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {loading ? "Resending..." : "Resend OTP"}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                <p className="text-sm font-bold text-green-800">
+                  ✓ Email verified successfully. You can now change your password.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <InputField
+                  label="New Password"
+                  type="password"
+                  placeholder="New password"
+                  value={passwordForm.new_password}
+                  onChange={handlePasswordChange("new_password")}
+                  icon={Lock}
+                />
+                <InputField
+                  label="Confirm Password"
+                  type="password"
+                  placeholder="Confirm password"
+                  value={passwordForm.confirm_password}
+                  onChange={handlePasswordChange("confirm_password")}
+                  icon={Shield}
+                />
+              </div>
+              {passwordError && (
+                <p className="text-xs font-bold text-red-600">{passwordError}</p>
+              )}
+              <button
+                onClick={handlePasswordUpdate}
+                disabled={loading}
+                className="font-black text-sm px-6 py-3 rounded-xl bg-blue-700 hover:bg-blue-800 text-white transition-all active:scale-95 disabled:opacity-50"
+              >
+                {loading ? "Updating..." : "Update Password"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Security/2FA Card */}
+      {activeTab === "security" && (
+        <div className="bg-white p-8 rounded-xl shadow-sm border-2 border-primary/20 max-w-7xl">
+          <h2 className="text-2xl font-black text-secondary mb-6 tracking-tight flex items-center gap-3">
+            <Shield className="text-primary" size={28} />
             Two-Factor Authentication
           </h2>
+
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
             <div>
               <p className="text-sm font-bold text-secondary">
@@ -382,27 +563,7 @@ const MyAccount = () => {
             )}
           </div>
         </div>
-
-        {/* Actions */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className={`font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${saved
-                ? "bg-green-500 text-white"
-                : "bg-blue-700 hover:bg-blue-800 text-white"
-              }`}
-          >
-            {loading ? "Saving..." : saved ? "✓ Saved!" : "Save Changes"}
-          </button>
-          <button
-            onClick={handleLogout}
-            className="bg-primary hover:opacity-90 text-white font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+      )}
 
       <Modal
         open={twoFactorModalOpen}
