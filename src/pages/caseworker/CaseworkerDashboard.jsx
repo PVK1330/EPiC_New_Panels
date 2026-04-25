@@ -1,154 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { CalendarDays, Check, TrendingUp, Bell, Plus, Send, MessageSquareMore } from "lucide-react";
+import api from "../../services/api";
 
-const STAT_CARDS = [
-  {
-    key: "assigned",
-    label: "Assigned cases",
-    value: "24",
-    borderClass: "border-t-secondary",
-    valueClass: "text-secondary",
-  },
-  {
-    key: "active",
-    label: "Active cases",
-    value: "18",
-    borderClass: "border-t-emerald-500",
-    valueClass: "text-emerald-600",
-  },
-  {
-    key: "overdue",
-    label: "Overdue cases",
-    value: "4",
-    borderClass: "border-t-red-500",
-    valueClass: "text-red-600",
-  },
-  {
-    key: "tasksToday",
-    label: "Tasks due today",
-    value: "7",
-    borderClass: "border-t-amber-500",
-    valueClass: "text-amber-600",
-  },
-  {
-    key: "completedMonth",
-    label: "Completed (month)",
-    value: "11",
-    borderClass: "border-t-teal-500",
-    valueClass: "text-teal-600",
-  },
-  {
-    key: "score",
-    label: "Performance score",
-    value: "87",
-    valueSuffix: "%",
-    borderClass: "border-t-indigo-500",
-    valueClass: "text-indigo-600",
-  },
-];
 
-const RECENT_CASES = [
-  {
-    id: "#C-2401",
-    candidate: "Ahmed Al-Rashid",
-    business: "TechCorp Ltd",
-    visa: "Tier 2",
-    status: "On Track",
-    statusTone: "green",
-    target: "18 Apr 2026",
-    priority: "High",
-    priorityTone: "red",
-  },
-  {
-    id: "#C-2398",
-    candidate: "Priya Sharma",
-    business: "Nexus Group",
-    visa: "Skilled Worker",
-    status: "Due soon",
-    statusTone: "yellow",
-    target: "12 Apr 2026",
-    priority: "Medium",
-    priorityTone: "yellow",
-  },
-  {
-    id: "#C-2391",
-    candidate: "Carlos Mendes",
-    business: "BuildRight Inc",
-    visa: "Intra-Co",
-    status: "Overdue",
-    statusTone: "red",
-    target: "3 Apr 2026",
-    priority: "Critical",
-    priorityTone: "red",
-  },
-  {
-    id: "#C-2389",
-    candidate: "Mei Lin Chen",
-    business: "Global Finance",
-    visa: "Graduate",
-    status: "On track",
-    statusTone: "green",
-    target: "2 May 2026",
-    priority: "Low",
-    priorityTone: "gray",
-  },
-  {
-    id: "#C-2385",
-    candidate: "Ivan Petrov",
-    business: "EnviroTech",
-    visa: "Tier 2",
-    status: "On track",
-    statusTone: "green",
-    target: "15 May 2026",
-    priority: "Low",
-    priorityTone: "gray",
-  },
-];
 
-const TASKS_INITIAL = [
-  {
-    id: "t1",
-    done: true,
-    name: "Request passport copy",
-    caseRef: "#C-2401 · Ahmed Al-Rashid",
-    due: "Done",
-    dueTone: "muted",
-  },
-  {
-    id: "t2",
-    done: false,
-    name: "Draft application form",
-    caseRef: "#C-2398 · Priya Sharma",
-    due: "Due 3pm",
-    dueTone: "amber",
-  },
-  {
-    id: "t3",
-    done: false,
-    name: "Submit visa application",
-    caseRef: "#C-2391 · Carlos Mendes",
-    due: "Overdue",
-    dueTone: "red",
-  },
-  {
-    id: "t4",
-    done: false,
-    name: "Follow up with client",
-    caseRef: "#C-2389 · Mei Lin Chen",
-    due: "Due 5pm",
-    dueTone: "amber",
-  },
-  {
-    id: "t5",
-    done: false,
-    name: "Review sponsor documents",
-    caseRef: "#C-2385 · Ivan Petrov",
-    due: "Due EOD",
-    dueTone: "amber",
-  },
-];
 
 const PERF_ROWS = [
   { label: "SLA compliance", width: 92, barClass: "bg-emerald-500", val: "92%" },
@@ -158,36 +15,6 @@ const PERF_ROWS = [
   { label: "Doc accuracy", width: 88, barClass: "bg-amber-500", val: "88%" },
 ];
 
-const RECENT_MESSAGES = [
-  {
-    from: "Ahmed Al-Rashid",
-    initials: "AA",
-    text: "I've uploaded the passport copy as requested.",
-    time: "1h ago",
-    unread: true,
-  },
-  {
-    from: "Priya Sharma",
-    initials: "PS",
-    text: "Can you clarify the document requirements?",
-    time: "3h ago",
-    unread: true,
-  },
-  {
-    from: "Carlos Mendes",
-    initials: "CM",
-    text: "Thanks for the update on my application status.",
-    time: "Yesterday",
-    unread: false,
-  },
-  {
-    from: "TechCorp Ltd",
-    initials: "TC",
-    text: "We need to update the sponsor details.",
-    time: "Yesterday",
-    unread: false,
-  },
-];
 
 function badgeClass(tone) {
   const map = {
@@ -203,7 +30,11 @@ function badgeClass(tone) {
 const CaseworkerDashboard = () => {
   const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState(TASKS_INITIAL);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({});
+  const [recentCases, setRecentCases] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [recentMessages, setRecentMessages] = useState([]);
 
   const greetingLine = useMemo(() => {
     const d = new Date();
@@ -216,10 +47,148 @@ const CaseworkerDashboard = () => {
     return `${line} · Good morning, ${user?.name?.split(" ")[0] || "there"}`;
   }, [user?.name]);
 
-  const toggleTask = (id) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
-    );
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/api/caseworker/cases/dashboard/stats");
+        const { stats, recentCases, tasksToday } = response.data.data;
+        setStats(stats);
+        setRecentCases(recentCases || []);
+        setTasks(tasksToday || []);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchRecentMessages = async () => {
+      try {
+        const response = await api.get("/api/messages/conversations");
+        const conversations = response.data.data.conversations || [];
+        const formattedMessages = conversations.slice(0, 4).map(conv => ({
+          from: conv.user.first_name + " " + conv.user.last_name,
+          initials: (conv.user.first_name[0] + conv.user.last_name[0]).toUpperCase(),
+          text: conv.lastMessage?.content || "No message",
+          time: new Date(conv.lastMessage?.createdAt).toLocaleString(),
+          unread: conv.unreadCount > 0,
+        }));
+        setRecentMessages(formattedMessages);
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+      }
+    };
+
+    fetchDashboardData();
+    fetchRecentMessages();
+  }, []);
+
+  const toggleTask = async (id) => {
+    try {
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        await api.put(`/api/tasks/${id}`, { status: task.status === 'completed' ? 'pending' : 'completed' });
+        setTasks((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
+        );
+      }
+    } catch (error) {
+      console.error("Error updating task:", error);
+    }
+  };
+
+  const STAT_CARDS = [
+    {
+      key: "assigned",
+      label: "Assigned cases",
+      value: stats.assigned?.toString() || "0",
+      borderClass: "border-t-secondary",
+      valueClass: "text-secondary",
+    },
+    {
+      key: "active",
+      label: "Active cases",
+      value: stats.active?.toString() || "0",
+      borderClass: "border-t-emerald-500",
+      valueClass: "text-emerald-600",
+    },
+    {
+      key: "overdue",
+      label: "Overdue cases",
+      value: stats.overdue?.toString() || "0",
+      borderClass: "border-t-red-500",
+      valueClass: "text-red-600",
+    },
+    {
+      key: "tasksToday",
+      label: "Tasks due today",
+      value: stats.tasksToday?.toString() || "0",
+      borderClass: "border-t-amber-500",
+      valueClass: "text-amber-600",
+    },
+    {
+      key: "completedMonth",
+      label: "Completed (month)",
+      value: stats.completedMonth?.toString() || "0",
+      borderClass: "border-t-teal-500",
+      valueClass: "text-teal-600",
+    },
+    {
+      key: "score",
+      label: "Performance score",
+      value: stats.performanceScore?.toString() || "0",
+      valueSuffix: "%",
+      borderClass: "border-t-indigo-500",
+      valueClass: "text-indigo-600",
+    },
+  ];
+
+  const mapStatusTone = (status) => {
+    const statusLower = status?.toLowerCase() || "";
+    if (statusLower.includes("overdue")) return "red";
+    if (statusLower.includes("pending") || statusLower.includes("due")) return "yellow";
+    if (statusLower.includes("approved") || statusLower.includes("completed") || statusLower.includes("on track")) return "green";
+    return "gray";
+  };
+
+  const mapPriorityTone = (priority) => {
+    const priorityLower = priority?.toLowerCase() || "";
+    if (priorityLower.includes("critical") || priorityLower.includes("high")) return "red";
+    if (priorityLower.includes("medium")) return "yellow";
+    return "gray";
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "N/A";
+    return new Date(dateStr).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const formatTaskDue = (dueDate) => {
+    if (!dueDate) return "Due";
+    const now = new Date();
+    const due = new Date(dueDate);
+    const diffMs = due - now;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    
+    if (diffMs < 0) return "Overdue";
+    if (diffHours < 1) return "Due now";
+    if (diffHours < 24) return `Due ${diffHours}h`;
+    return formatDate(dueDate);
+  };
+
+  const formatTaskDueTone = (dueDate) => {
+    if (!dueDate) return "amber";
+    const now = new Date();
+    const due = new Date(dueDate);
+    const diffMs = due - now;
+    if (diffMs < 0) return "red";
+    if (diffMs < 24 * 60 * 60 * 1000) return "amber";
+    return "muted";
   };
 
   return (
@@ -238,26 +207,32 @@ const CaseworkerDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        {STAT_CARDS.map((s) => (
-          <div
-            key={s.key}
-            className={`relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-colors hover:border-gray-200 border-t-4 ${s.borderClass}`}
-          >
-            <p className="text-[11px] font-black uppercase tracking-wider text-gray-500 mb-2">
-              {s.label}
-            </p>
-            <p
-              className={`text-3xl md:text-4xl font-black tabular-nums leading-none tracking-tight ${s.valueClass}`}
+        {loading ? (
+          <div className="col-span-full text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          STAT_CARDS.map((s) => (
+            <div
+              key={s.key}
+              className={`relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-colors hover:border-gray-200 border-t-4 ${s.borderClass}`}
             >
-              {s.value}
-              {s.valueSuffix ? (
-                <span className="text-lg font-black text-gray-500 ml-0.5">
-                  {s.valueSuffix}
-                </span>
-              ) : null}
-            </p>
-                      </div>
-        ))}
+              <p className="text-[11px] font-black uppercase tracking-wider text-gray-500 mb-2">
+                {s.label}
+              </p>
+              <p
+                className={`text-3xl md:text-4xl font-black tabular-nums leading-none tracking-tight ${s.valueClass}`}
+              >
+                {s.value}
+                {s.valueSuffix ? (
+                  <span className="text-lg font-black text-gray-500 ml-0.5">
+                    {s.valueSuffix}
+                  </span>
+                ) : null}
+              </p>
+            </div>
+          ))
+        )}
       </div>
 
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
@@ -295,48 +270,63 @@ const CaseworkerDashboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {RECENT_CASES.map((row) => (
-                <tr
-                  key={row.id}
-                  className="hover:bg-gray-50/80 transition-colors"
-                >
-                  <td className="py-3 px-4">
-                    <span className="font-mono text-xs font-black text-secondary">
-                      {row.id}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-sm font-bold text-gray-900">
-                    {row.candidate}
-                  </td>
-                  <td className="py-3 px-4 text-sm font-bold text-gray-600">
-                    {row.business}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeClass("blue")}`}
-                    >
-                      {row.visa}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeClass(row.statusTone)}`}
-                    >
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-sm font-bold text-gray-600 tabular-nums">
-                    {row.target}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeClass(row.priorityTone)}`}
-                    >
-                      {row.priority}
-                    </span>
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                   </td>
                 </tr>
-              ))}
+              ) : recentCases.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-sm font-bold text-gray-500">
+                    No recent cases
+                  </td>
+                </tr>
+              ) : (
+                recentCases.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="hover:bg-gray-50/80 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/caseworker/cases`)}
+                  >
+                    <td className="py-3 px-4">
+                      <span className="font-mono text-xs font-black text-secondary">
+                        {row.caseId || `#C-${row.id}`}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-sm font-bold text-gray-900">
+                      {row.candidate ? `${row.candidate.first_name} ${row.candidate.last_name}` : "Unknown"}
+                    </td>
+                    <td className="py-3 px-4 text-sm font-bold text-gray-600">
+                      {row.sponsor?.sponsorProfile?.companyName || row.sponsor?.sponsorProfile?.tradingName || `${row.sponsor?.first_name || ""} ${row.sponsor?.last_name || ""}`.trim() || "Unknown"}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeClass("blue")}`}
+                      >
+                        {row.visaType?.name || "Unknown"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeClass(mapStatusTone(row.status))}`}
+                      >
+                        {row.status || "Unknown"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-sm font-bold text-gray-600 tabular-nums">
+                      {formatDate(row.targetSubmissionDate)}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeClass(mapPriorityTone(row.priority))}`}
+                      >
+                        {row.priority || "Medium"}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -357,45 +347,55 @@ const CaseworkerDashboard = () => {
             </Link>
           </div>
           <div className="p-5 space-y-0 divide-y divide-gray-100">
-            {tasks.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
-              >
-                <button
-                  type="button"
-                  onClick={() => toggleTask(t.id)}
-                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors ${t.done
-                    ? "border-emerald-500 bg-emerald-500 text-white"
-                    : "border-gray-300 hover:border-secondary"
-                    }`}
-                  aria-pressed={t.done}
-                  aria-label={t.done ? "Mark incomplete" : "Mark done"}
-                >
-                  {t.done ? <Check size={10} strokeWidth={3} /> : null}
-                </button>
-                <div className="flex-1 min-w-0">
-                  <p
-                    className={`text-sm font-bold ${t.done ? "text-gray-400 line-through" : "text-gray-900"}`}
-                  >
-                    {t.name}
-                  </p>
-                  <p className="text-[11px] font-mono font-bold text-gray-500 mt-0.5">
-                    {t.caseRef}
-                  </p>
-                </div>
-                <span
-                  className={`text-[11px] font-black shrink-0 ${t.dueTone === "red"
-                    ? "text-red-600"
-                    : t.dueTone === "amber"
-                      ? "text-amber-600"
-                      : "text-gray-500"
-                    }`}
-                >
-                  {t.due}
-                </span>
+            {loading ? (
+              <div className="py-8 text-center">
+                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
               </div>
-            ))}
+            ) : tasks.length === 0 ? (
+              <div className="py-8 text-center text-sm font-bold text-gray-500">
+                No tasks due today
+              </div>
+            ) : (
+              tasks.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleTask(t.id)}
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors ${t.status === 'completed'
+                      ? "border-emerald-500 bg-emerald-500 text-white"
+                      : "border-gray-300 hover:border-secondary"
+                      }`}
+                    aria-pressed={t.status === 'completed'}
+                    aria-label={t.status === 'completed' ? "Mark incomplete" : "Mark done"}
+                  >
+                    {t.status === 'completed' ? <Check size={10} strokeWidth={3} /> : null}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className={`text-sm font-bold ${t.status === 'completed' ? "text-gray-400 line-through" : "text-gray-900"}`}
+                    >
+                      {t.title}
+                    </p>
+                    <p className="text-[11px] font-mono font-bold text-gray-500 mt-0.5">
+                      {t.case ? `${t.case.caseId} · ${t.case.candidate?.first_name} ${t.case.candidate?.last_name}` : "No case"}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-[11px] font-black shrink-0 ${formatTaskDueTone(t.due_date) === "red"
+                      ? "text-red-600"
+                      : formatTaskDueTone(t.due_date) === "amber"
+                        ? "text-amber-600"
+                        : "text-gray-500"
+                      }`}
+                  >
+                    {formatTaskDue(t.due_date)}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -414,28 +414,34 @@ const CaseworkerDashboard = () => {
           </Link>
         </div>
         <div className="p-5 space-y-3 flex-1">
-          {RECENT_MESSAGES.map((m) => (
-            <div
-              key={`${m.from}-${m.time}-${m.text}`}
-              className="rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-3"
-            >
-              <div className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-full bg-secondary text-white text-xs font-black flex items-center justify-center shrink-0">
-                  {m.initials}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-black text-gray-800 truncate">{m.from}</p>
-                    <span className="ml-auto text-[11px] font-bold text-gray-400 shrink-0">
-                      {m.time}
-                    </span>
-                  </div>
-                  <p className="text-xs font-bold text-gray-500 mt-0.5">{m.text}</p>
-                </div>
-                {m.unread && <span className="mt-1 h-2 w-2 rounded-full bg-primary" />}
-              </div>
+          {recentMessages.length === 0 ? (
+            <div className="py-8 text-center text-sm font-bold text-gray-500">
+              No recent messages
             </div>
-          ))}
+          ) : (
+            recentMessages.map((m) => (
+              <div
+                key={`${m.from}-${m.time}`}
+                className="rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-3"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="h-9 w-9 rounded-full bg-secondary text-white text-xs font-black flex items-center justify-center shrink-0">
+                    {m.initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-black text-gray-800 truncate">{m.from}</p>
+                      <span className="ml-auto text-[11px] font-bold text-gray-400 shrink-0">
+                        {m.time}
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-gray-500 mt-0.5">{m.text}</p>
+                  </div>
+                  {m.unread && <span className="mt-1 h-2 w-2 rounded-full bg-primary" />}
+                </div>
+              </div>
+            ))
+          )}
         </div>
         <div className="px-5 py-4 border-t border-gray-100">
           <div className="flex gap-2">
