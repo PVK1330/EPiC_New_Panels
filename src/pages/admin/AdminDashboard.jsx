@@ -20,6 +20,7 @@ import {
   getRecentActivities,
   exportDashboardPDF,
 } from "../../services/dashboardApi";
+import { getConversations } from "../../services/messagingApi";
 
 // ─── Static Data (from index.html dashboard) ──────────────────────────────────
 
@@ -33,11 +34,8 @@ const today = new Date().toLocaleDateString("en-GB", {
 // (Static data removed - now dynamic from API)
 
 
-const outstandingClients = [
-  { name: "TechNova Ltd",    amount: "£12,400", color: "text-red-500"    },
-  { name: "GlobalHire Inc",  amount: "£8,200",  color: "text-red-500"    },
-  { name: "Apex Consulting", amount: "£5,800",  color: "text-yellow-600" },
-];
+// (Static data removed - now dynamic from API)
+
 
 
 // ─── Chip colour map ───────────────────────────────────────────────────────────
@@ -74,6 +72,7 @@ export default function AdminDashboard() {
   const [dashboardStats, setDashboardStats] = useState(null);
   const [recentCases, setRecentCases] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
+  const [recentMessages, setRecentMessages] = useState([]);
   const [dashboardFilter, setDashboardFilter] = useState('all'); // 'all' or 'this_month'
   const [isExporting, setIsExporting] = useState(false);
   const dashboardRef = useRef(null);
@@ -85,15 +84,17 @@ export default function AdminDashboard() {
         setLoading(true);
         
         // Fetch all dashboard data in parallel
-        const [statsRes, casesRes, activitiesRes] = await Promise.all([
+        const [statsRes, casesRes, activitiesRes, messagesRes] = await Promise.all([
           getDashboardStats({ filter: dashboardFilter }),
           getRecentCases({ limit: 5 }),
           getRecentActivities({ limit: 5 }),
+          getConversations(),
         ]);
 
         setDashboardStats(statsRes.data.data);
         setRecentCases(casesRes.data.data.cases || []);
         setRecentActivities(activitiesRes.data.data.activities || []);
+        setRecentMessages(messagesRes.data.data.conversations?.slice(0, 5) || []);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -181,21 +182,22 @@ export default function AdminDashboard() {
     },
     {
       label: "Fees Collected",
-      value: "£0",
+      value: `£${(dashboardStats.financeStats?.totalRevenue || 0).toLocaleString()}`,
       icon: RiMoneyDollarCircleLine,
       iconColor: "text-yellow-600",
       iconBg: "bg-yellow-50",
+      to: "/admin/finance",
     },
     {
       label: "Visa Expiry Alerts",
-      value: "0",
+      value: (dashboardStats.caseStats?.visaExpiryAlerts || 0).toString(),
       icon: RiErrorWarningLine,
       iconColor: "text-red-500",
       iconBg: "bg-red-50",
     },
     {
       label: "Sponsor Licence Expiry",
-      value: "0",
+      value: (dashboardStats.caseStats?.sponsorExpiryAlerts || 0).toString(),
       icon: RiBuildingLine,
       iconColor: "text-orange-500",
       iconBg: "bg-orange-50",
@@ -442,29 +444,34 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-2 gap-3 mb-5">
             <div className="bg-green-50 rounded-xl p-4 text-center">
               <p className="text-[11px] font-bold text-gray-400 mb-1">Total Revenue</p>
-              <p className="text-2xl font-black text-green-600">£284,200</p>
+              <p className="text-2xl font-black text-green-600">£{(dashboardStats?.financeStats?.totalRevenue || 0).toLocaleString()}</p>
             </div>
             <div className="bg-red-50 rounded-xl p-4 text-center">
               <p className="text-[11px] font-bold text-gray-400 mb-1">Outstanding</p>
-              <p className="text-2xl font-black text-red-500">£61,400</p>
+              <p className="text-2xl font-black text-red-500">£{(dashboardStats?.financeStats?.totalOutstanding || 0).toLocaleString()}</p>
             </div>
           </div>
           <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
             Top Outstanding Clients
           </p>
           <div className="flex-1">
-            {outstandingClients.map((c, i) => (
-              <div
-                key={c.name}
-                className={`flex items-center justify-between py-2.5 ${
-                  i < outstandingClients.length - 1 ? "border-b border-gray-50" : ""
-                }`}
-              >
-                <p className="text-xs font-semibold text-gray-700">{c.name}</p>
-                <p className={`text-xs font-black font-mono ${c.color}`}>{c.amount}</p>
-              </div>
-            ))}
+            {dashboardStats?.financeStats?.outstandingSponsors?.length > 0 ? (
+              dashboardStats.financeStats.outstandingSponsors.map((c, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center justify-between py-2.5 ${
+                    i < dashboardStats.financeStats.outstandingSponsors.length - 1 ? "border-b border-gray-50" : ""
+                  }`}
+                >
+                  <p className="text-xs font-semibold text-gray-700">{c.name}</p>
+                  <p className="text-xs font-black font-mono text-red-500">£{c.amount.toLocaleString()}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-gray-400 py-6 text-center">No outstanding payments</p>
+            )}
           </div>
+
           <button
             onClick={() => navigate("/admin/finance")}
             className="mt-4 text-xs font-bold text-gray-500 hover:text-secondary transition-colors self-start"
@@ -474,33 +481,98 @@ export default function AdminDashboard() {
         </div>
       </motion.div>
 
-      {/* ── Recent Activity (existing section — kept) ────────────────────────── */}
+      {/* ── Row: Recent Activity + Recent Messages ─────────────────────────── */}
       <motion.div
-        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
         {...fade(0.4)}
       >
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-black text-secondary">Recent Activity</h3>
-        </div>
-        <div className="divide-y divide-gray-50">
-          {recentActivities.length > 0 ? (
-            recentActivities.map((activity, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
-              >
-                <div>
-                  <p className="text-sm font-bold text-secondary">{activity.title}</p>
-                  <p className="text-xs text-gray-400">{activity.description}</p>
+        {/* Recent Activity */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="text-sm font-black text-secondary">Recent Activity</h3>
+          </div>
+          <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto custom-scrollbar">
+            {recentActivities.length > 0 ? (
+              recentActivities.map((activity, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="min-w-0 pr-4">
+                    <p className="text-sm font-bold text-secondary truncate">{activity.title}</p>
+                    <p className="text-xs text-gray-400 truncate">{activity.description}</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap bg-gray-50 px-2 py-1 rounded-lg">
+                    {new Date(activity.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
-                <span className="text-xs text-gray-400 whitespace-nowrap ml-4">
-                  {new Date(activity.createdAt).toLocaleString()}
-                </span>
+              ))
+            ) : (
+              <div className="px-6 py-10 text-center text-gray-400">
+                <p className="text-xs font-bold">No recent activity</p>
               </div>
-            ))
-          ) : (
-            <div className="px-6 py-4 text-sm text-gray-500">No recent activity</div>
-          )}
+            )}
+          </div>
+        </div>
+
+        {/* Recent Messages */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="text-sm font-black text-secondary">Recent Messages</h3>
+            <button
+              onClick={() => navigate("/admin/messages")}
+              className="text-xs font-bold text-primary hover:underline"
+            >
+              View All →
+            </button>
+          </div>
+          <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto custom-scrollbar">
+            {recentMessages.length > 0 ? (
+              recentMessages.map((conv) => (
+                <div
+                  key={conv.id}
+                  onClick={() => navigate("/admin/messages", { state: { userId: conv.user.id } })}
+                  className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer group"
+                >
+                  <div className="relative shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center border border-gray-100 text-secondary font-black text-xs uppercase tracking-tighter shadow-sm">
+                      {conv.user.first_name[0]}{conv.user.last_name[0]}
+                    </div>
+                    {conv.unreadCount > 0 && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm ring-2 ring-primary/20">
+                        {conv.unreadCount}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 pr-2">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="text-sm font-bold text-secondary truncate group-hover:text-primary transition-colors">
+                        {conv.user.first_name} {conv.user.last_name}
+                      </p>
+                      <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap ml-2">
+                        {new Date(conv.lastMessage.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 truncate leading-relaxed italic">
+                      {conv.lastMessage.content}
+                    </p>
+                    {conv.case && (
+                      <div className="mt-1 flex items-center gap-1.5">
+                         <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-widest">
+                           {conv.case.caseId}
+                         </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="px-6 py-10 text-center text-gray-400 opacity-40">
+                <RiUserLine size={32} className="mx-auto mb-2 opacity-20" />
+                <p className="text-xs font-bold">No recent messages</p>
+              </div>
+            )}
+          </div>
         </div>
       </motion.div>
       </>

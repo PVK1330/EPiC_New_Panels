@@ -45,3 +45,36 @@ button{
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #a1a1a1;
 }
+/* React Quill Custom Styling */
+.quill-container {
+  border: 1px solid #f1f5f9;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  background: white;
+}
+
+.quill-container .ql-toolbar {
+  border: none !important;
+  background: #f8fafc !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding: 12px 16px !important;
+}
+
+.quill-container .ql-container {
+  border: none !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.875rem !important;
+}
+
+.quill-container .ql-editor {
+  min-height: 300px;
+  padding: 24px !important;
+  line-height: 1.6;
+  color: #1e293b;
+}
+
+.quill-container .ql-editor.ql-blank::before {
+  color: #94a3b8;
+  font-style: normal;
+  left: 24px;
+}

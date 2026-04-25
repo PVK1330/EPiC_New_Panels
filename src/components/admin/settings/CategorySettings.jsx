@@ -79,7 +79,7 @@ export default function CategorySettings({
                         </span>
                       </div>
                       <button 
-                        onClick={() => onDelete(cat.id || cat.name || cat)}
+                        onClick={() => onDelete(cat)}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                         title="Delete Category"
                       >

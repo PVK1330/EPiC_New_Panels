@@ -1,21 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { DollarSign, Clock, CheckCircle, TrendingUp, CreditCard, Landmark, Globe, X } from "lucide-react";
+import { DollarSign, Clock, CheckCircle, TrendingUp, CreditCard, Landmark, Globe, X, RefreshCw } from "lucide-react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
+import { getFinancialReport, getFinancialTransactions } from "../../services/reportingApi";
 
-const stats = [
-  { label: "Total Revenue",    value: "£125,000", sub: "+12% from last month", bg: "bg-green-100",  color: "text-green-600",  subColor: "text-green-600",  icon: DollarSign },
-  { label: "Outstanding",      value: "£45,000",  sub: "8 overdue payments",   bg: "bg-yellow-100", color: "text-yellow-600", subColor: "text-yellow-600", icon: Clock },
-  { label: "Paid This Month",  value: "£80,000",  sub: "15 payments processed", bg: "bg-blue-100",  color: "text-blue-600",  subColor: "text-blue-600",   icon: CheckCircle },
-  { label: "Avg. Payment",     value: "£5,333",   sub: "Per case",             bg: "bg-purple-100", color: "text-purple-600", subColor: "text-purple-600", icon: TrendingUp },
-];
-
-const transactions = [
-  { id: "#TRX-001", client: "Tech Solutions Ltd", caseId: "#CAS-001", amount: "£5,000",  type: "Invoice", status: "Paid",      date: "2024-01-15" },
-  { id: "#TRX-002", client: "Global Tech Inc",    caseId: "#CAS-002", amount: "£6,500",  type: "Invoice", status: "Pending",   date: "2024-01-18" },
-  { id: "#TRX-003", client: "Innovation Labs",    caseId: "#CAS-003", amount: "£4,200",  type: "Refund",  status: "Processed", date: "2024-01-20" },
-];
 
 const paymentMethods = [
   { label: "Credit Card",   sub: "45% of transactions", amount: "£56,250", bg: "bg-blue-100",   color: "text-blue-600",   icon: CreditCard },
@@ -82,9 +71,78 @@ const recalcTotals = (items, taxRate) => {
 
 export default function AdminFinance() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData]   = useState(emptyForm());
   const [errors, setErrors]       = useState({});
+
+  const [financeStats, setFinanceStats] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [statsRes, transRes] = await Promise.all([
+        getFinancialReport(),
+        getFinancialTransactions({ page: pagination.page, limit: 10 })
+      ]);
+
+      if (statsRes.data?.status === 'success') {
+        setFinanceStats(statsRes.data.data);
+      }
+      if (transRes.data?.status === 'success') {
+        setTransactions(transRes.data.data.transactions);
+        setPagination(transRes.data.data.pagination);
+      }
+    } catch (error) {
+      console.error("Failed to load finance data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pagination.page]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const stats = [
+    { 
+      label: "Total Revenue",    
+      value: `£${(financeStats?.summary?.totalRevenue || 0).toLocaleString()}`, 
+      sub: `${financeStats?.summary?.totalPaid || 0} payments received`, 
+      bg: "bg-green-100",  
+      color: "text-green-600",  
+      subColor: "text-green-600",  
+      icon: DollarSign 
+    },
+    { 
+      label: "Outstanding",      
+      value: `£${(financeStats?.summary?.totalOutstanding || 0).toLocaleString()}`,  
+      sub: "Pending payments",   
+      bg: "bg-yellow-100", 
+      color: "text-yellow-600", 
+      subColor: "text-yellow-600", 
+      icon: Clock 
+    },
+    { 
+      label: "Revenue Status",  
+      value: financeStats?.statusBreakdown?.find(s => s.status === 'completed')?.count || 0,  
+      sub: "Completed transactions", 
+      bg: "bg-blue-100",  
+      color: "text-blue-600",  
+      subColor: "text-blue-600",   
+      icon: CheckCircle 
+    },
+    { 
+      label: "Avg. Revenue",     
+      value: `£${(financeStats?.summary?.totalRevenue / (financeStats?.summary?.totalPaid || 1)).toLocaleString(undefined, {maximumFractionDigits: 0})}`,   
+      sub: "Per successful payment",             
+      bg: "bg-purple-100", 
+      color: "text-purple-600", 
+      subColor: "text-purple-600", 
+      icon: TrendingUp 
+    },
+  ];
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
@@ -180,7 +238,10 @@ export default function AdminFinance() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="ghost">Export Report</Button>
+          <Button variant="ghost" onClick={loadData} disabled={isLoading}>
+            <RefreshCw size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button onClick={() => setModalOpen(true)}>Generate Invoice</Button>
         </div>
       </motion.div>
@@ -266,7 +327,7 @@ export default function AdminFinance() {
 
       {/* Payment Methods + Upcoming Payments */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Payment Methods */}
+        {/* Revenue Sources (Dynamic from stats) */}
         <motion.div
           className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
@@ -274,27 +335,29 @@ export default function AdminFinance() {
           transition={{ duration: 0.5, delay: 0.4 }}
         >
           <div className="px-6 py-4 border-b border-gray-100">
-            <h3 className="text-lg font-black text-secondary">Payment Methods</h3>
+            <h3 className="text-lg font-black text-secondary">Revenue Sources</h3>
           </div>
           <div className="p-6 space-y-4">
-            {paymentMethods.map(({ label, sub, amount, bg, color, icon: Icon }) => (
-              <div key={label} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            {financeStats?.byVisaType?.map((v, i) => (
+              <div key={v.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 ${bg} rounded-lg`}>
-                    <Icon className={`${color} h-5 w-5`} />
+                  <div className={`p-2 ${['bg-blue-100', 'bg-purple-100', 'bg-green-100', 'bg-amber-100'][i % 4]} rounded-lg`}>
+                    <Globe className={`${['text-blue-600', 'text-purple-600', 'text-green-600', 'text-amber-600'][i % 4]} h-5 w-5`} />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-secondary">{label}</p>
-                    <p className="text-xs text-gray-500">{sub}</p>
+                    <p className="text-sm font-bold text-secondary">{v.name}</p>
+                    <p className="text-xs text-gray-500">Total volume</p>
                   </div>
                 </div>
-                <span className="text-sm font-bold text-secondary">{amount}</span>
+                <span className="text-sm font-bold text-secondary">£{v.total.toLocaleString()}</span>
               </div>
-            ))}
+            )) || (
+              <p className="text-sm text-gray-400 text-center py-4">No data available</p>
+            )}
           </div>
         </motion.div>
 
-        {/* Upcoming Payments */}
+        {/* Pending Payments (Dynamic from transactions) */}
         <motion.div
           className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
@@ -302,25 +365,29 @@ export default function AdminFinance() {
           transition={{ duration: 0.5, delay: 0.5 }}
         >
           <div className="px-6 py-4 border-b border-gray-100">
-            <h3 className="text-lg font-black text-secondary">Upcoming Payments</h3>
+            <h3 className="text-lg font-black text-secondary">Pending Payments</h3>
           </div>
           <div className="p-6 space-y-4">
-            {upcomingPayments.map(({ client, note, amount, overdue }) => (
+            {transactions.filter(t => t.status === 'Pending').map((t) => (
               <div
-                key={client}
-                className={`flex items-center justify-between p-4 rounded-lg border ${
-                  overdue
-                    ? "bg-red-50 border-red-200"
-                    : "bg-yellow-50 border-yellow-200"
-                }`}
+                key={t.id}
+                className="flex items-center justify-between p-4 rounded-lg border bg-yellow-50 border-yellow-200"
               >
                 <div>
-                  <p className="text-sm font-bold text-secondary">{client}</p>
-                  <p className="text-xs text-gray-500">{note}</p>
+                  <p className="text-sm font-bold text-secondary">{t.client}</p>
+                  <p className="text-xs text-gray-500">Case: {t.caseId} · Due soon</p>
                 </div>
-                <span className="text-sm font-bold text-secondary">{amount}</span>
+                <span className="text-sm font-bold text-secondary">{t.amount}</span>
               </div>
-            ))}
+            )) || (
+              <p className="text-sm text-gray-400 text-center py-4">All caught up!</p>
+            )}
+            {transactions.filter(t => t.status === 'Pending').length === 0 && (
+              <div className="p-12 text-center flex flex-col items-center gap-2">
+                 <CheckCircle className="text-green-500" size={32} />
+                 <p className="text-sm text-gray-400 font-bold italic">No pending payments found.</p>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

@@ -10,7 +10,6 @@ import {
   RiBuildingLine,
   RiLockLine,
   RiFolderOpenLine,
-  RiFileTextLine,
   RiGitBranchLine,
   RiUserAddLine,
   RiAlarmWarningLine,
@@ -53,7 +52,6 @@ const navSections = [
     label: "Case Management",
     items: [
       { to: "/admin/cases",       label: "All Cases",        icon: RiFolderOpenLine  },
-      { to: "/admin/case-detail", label: "Case Detail",      icon: RiFileTextLine    },
       { to: "/admin/pipeline",    label: "Pipeline",         icon: RiGitBranchLine   },
       { to: "/admin/assign",      label: "Assign / Reassign",icon: RiUserAddLine     },
       { to: "/admin/escalations", label: "Escalations",      icon: RiAlarmWarningLine},

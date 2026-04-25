@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiArrowLeft, FiFlag, FiSave } from "react-icons/fi";
+import { FiArrowLeft, FiFlag, FiSave, FiDownload, FiChevronDown, FiFileText, FiTable } from "react-icons/fi";
+import { jsPDF } from "jspdf";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
@@ -15,7 +16,7 @@ import CaseDetailCommunication from "../../components/caseDetail/CaseDetailCommu
 import CaseDetailNotes from "../../components/caseDetail/CaseDetailNotes";
 import CaseDetailAuditLog from "../../components/caseDetail/CaseDetailAuditLog";
 import { CASE_DETAIL_TABS, TAB_IDS, DEFAULT_CASE_DETAIL } from "../../components/caseDetail/caseDetailData";
-import { getCaseDetails } from "../../services/caseDetailApi";
+import { getCaseDetails, exportCaseCSV as apiExportCSV, exportCasePDF as apiExportPDF } from "../../services/caseDetailApi";
 
 const DOC_STATUS_LABEL = {
   missing: "Missing",
@@ -47,6 +48,7 @@ const AdminCaseDetail = () => {
   const [flagErr, setFlagErr] = useState("");
   const [loading, setLoading] = useState(true);
   const [caseData, setCaseData] = useState(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     fetchCaseDetails();
@@ -192,6 +194,42 @@ const AdminCaseDetail = () => {
 
   const displayId = `#${data.caseId}`;
 
+  const handleExportPDF = async () => {
+    if (!caseId) return;
+    try {
+      const cleanCaseId = caseId.replace(/^#/, '');
+      const response = await apiExportPDF(cleanCaseId);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Case_${cleanCaseId}_Report.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setExportOpen(false);
+    } catch (error) {
+      console.error("API PDF Export failed:", error);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    if (!caseId) return;
+    try {
+      const cleanCaseId = caseId.replace(/^#/, '');
+      const response = await apiExportCSV(cleanCaseId);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Case_${cleanCaseId}_Data.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setExportOpen(false);
+    } catch (error) {
+      console.error("API CSV Export failed:", error);
+    }
+  };
+
   const submitFlag = () => {
     if (!flagReason.trim()) {
       setFlagErr("Reason is required");
@@ -240,13 +278,49 @@ const AdminCaseDetail = () => {
                 <h1 className="text-2xl sm:text-3xl font-black text-secondary tracking-tight">{data.candidateName}</h1>
                 <p className="text-sm text-gray-500 mt-1">{data.subtitle}</p>
               </div>
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <Link
-                  to="/admin/assign"
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
-                >
-                  Reassign
-                </Link>
+              <div className="flex flex-wrap items-center gap-2 shrink-0 relative">
+                <div className="relative">
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    className="rounded-xl border border-gray-200 shadow-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 pr-2" 
+                    onClick={() => setExportOpen(!exportOpen)}
+                  >
+                    <FiDownload size={14} />
+                    Export Case
+                    <FiChevronDown size={14} className={`ml-1 transition-transform ${exportOpen ? "rotate-180" : ""}`} />
+                  </Button>
+                  
+                  <AnimatePresence>
+                    {exportOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                          className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 rounded-2xl shadow-2xl z-20 py-2"
+                        >
+                          <button 
+                            onClick={handleExportPDF}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors font-semibold"
+                          >
+                            <FiFileText className="text-red-500" />
+                            Comprehensive PDF
+                          </button>
+                          <button 
+                            onClick={handleExportCSV}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors font-semibold"
+                          >
+                            <FiTable className="text-green-600" />
+                            Data Export (CSV)
+                          </button>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 <Button type="button" variant="ghost" className="rounded-xl border border-gray-200 shadow-sm" onClick={() => setFlagOpen(true)}>
                   <FiFlag size={14} />
                   Flag
