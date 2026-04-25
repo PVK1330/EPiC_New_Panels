@@ -57,6 +57,12 @@ const MyAccount = () => {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [twoFactorMode, setTwoFactorMode] = useState("setup"); // setup or disable
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+  const [passwordError, setPasswordError] = useState("");
 
   const [formData, setFormData] = useState({
     first_name: user?.name?.split(" ")[0] || "",
@@ -71,7 +77,7 @@ const MyAccount = () => {
     const fetchProfile = async () => {
       try {
         const response = await api.get("/api/user/profile");
-        const { first_name, last_name, email, country_code, mobile } = response.data.data.user;
+        const { first_name, last_name, email, country_code, mobile, two_factor_enabled } = response.data.data.user;
         setFormData((prev) => ({
           ...prev,
           first_name,
@@ -80,6 +86,7 @@ const MyAccount = () => {
           country_code: country_code || "+1",
           mobile,
         }));
+        setTwoFactorEnabled(two_factor_enabled || false);
       } catch (error) {
         console.error("Error fetching profile:", error);
       }
@@ -94,6 +101,53 @@ const MyAccount = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setFormData((prev) => ({ ...prev, profile_pic: file }));
+  };
+
+  const handlePasswordChange = (field) => (e) => {
+    setPasswordForm((prev) => ({ ...prev, [field]: e.target.value }));
+    setPasswordError("");
+  };
+
+  const handlePasswordUpdate = async () => {
+    if (!passwordForm.current_password || !passwordForm.new_password) {
+      setPasswordError("Current password and new password are required");
+      return;
+    }
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      setPasswordError("Passwords do not match");
+      return;
+    }
+    if (passwordForm.new_password.length < 8) {
+      setPasswordError("Password must be at least 8 characters");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.post("/api/user/change-password", {
+        current_password: passwordForm.current_password,
+        new_password: passwordForm.new_password,
+      });
+      setPasswordForm({ current_password: "", new_password: "", confirm_password: "" });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (error) {
+      setPasswordError(error.response?.data?.message || "Failed to update password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await api.post("/api/auth/logout");
+      dispatch({ type: "auth/logout" });
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout error:", error);
+      dispatch({ type: "auth/logout" });
+      window.location.href = "/login";
+    }
   };
 
   const handleSave = async () => {
@@ -256,18 +310,40 @@ const MyAccount = () => {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <InputField
+              label="Current Password"
+              type="password"
+              placeholder="Current password"
+              value={passwordForm.current_password}
+              onChange={handlePasswordChange("current_password")}
+              icon={Lock}
+            />
+            <InputField
               label="New Password"
               type="password"
               placeholder="New password"
+              value={passwordForm.new_password}
+              onChange={handlePasswordChange("new_password")}
               icon={Lock}
             />
             <InputField
               label="Confirm Password"
               type="password"
               placeholder="Confirm password"
+              value={passwordForm.confirm_password}
+              onChange={handlePasswordChange("confirm_password")}
               icon={Shield}
             />
           </div>
+          {passwordError && (
+            <p className="text-xs font-bold text-red-600 mt-2">{passwordError}</p>
+          )}
+          <button
+            onClick={handlePasswordUpdate}
+            disabled={loading}
+            className="mt-4 font-black text-sm px-6 py-3 rounded-xl bg-blue-700 hover:bg-blue-800 text-white transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? "Updating..." : "Update Password"}
+          </button>
         </div>
 
         <div className="border-t border-gray-100 pt-6 mb-6">
@@ -319,7 +395,10 @@ const MyAccount = () => {
           >
             {loading ? "Saving..." : saved ? "✓ Saved!" : "Save Changes"}
           </button>
-          <button className="bg-primary hover:opacity-90 text-white font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95">
+          <button
+            onClick={handleLogout}
+            className="bg-primary hover:opacity-90 text-white font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95"
+          >
             Logout
           </button>
         </div>
@@ -335,7 +414,7 @@ const MyAccount = () => {
       >
         {twoFactorMode === "setup" ? (
           <TwoFactorSetup
-            token="demo-token"
+            token={user?.token}
             onSetupComplete={() => {
               setTwoFactorEnabled(true);
               setTwoFactorModalOpen(false);
@@ -344,7 +423,7 @@ const MyAccount = () => {
           />
         ) : (
           <TwoFactorDisable
-            token="demo-token"
+            token={user?.token}
             onDisableComplete={() => {
               setTwoFactorEnabled(false);
               setTwoFactorModalOpen(false);

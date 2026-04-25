@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, X, FileText, Briefcase, Phone, Mail, Calendar, MapPin, User, Building, Check, AlertCircle, Clock } from "lucide-react";
+import api from "../../services/api";
 
 const TABS = [
   // { id: "candidates", label: "Candidate Profiles", path: "/caseworker/people/candidates" },
@@ -88,6 +89,9 @@ const CaseworkerClients = () => {
   const [viewModal, setViewModal] = useState({ type: null, data: null });
   const [candidateActiveTab, setCandidateActiveTab] = useState("overview");
   const [sponsorActiveTab, setSponsorActiveTab] = useState("overview");
+  const [sponsors, setSponsors] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedSponsor, setSelectedSponsor] = useState(null);
 
   const activeTab = useMemo(() => {
     return location.pathname.includes("/people/sponsors") ? "sponsors" : "candidates";
@@ -105,6 +109,69 @@ const CaseworkerClients = () => {
 
   const closeViewModal = () => {
     setViewModal({ type: null, data: null });
+    setSelectedSponsor(null);
+  };
+
+  useEffect(() => {
+    const fetchSponsors = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/api/caseworker/sponsors");
+        setSponsors(response.data.data.sponsors || []);
+      } catch (error) {
+        console.error("Error fetching sponsors:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSponsors();
+  }, []);
+
+  const handleSponsorView = async (sponsor) => {
+    try {
+      const response = await api.get(`/api/caseworker/sponsors/${sponsor.id}`);
+      setSelectedSponsor(response.data.data);
+      openViewModal('sponsor', {
+        code: (sponsor.sponsorProfile?.companyName || sponsor.first_name + ' ' + sponsor.last_name).substring(0, 2).toUpperCase(),
+        name: sponsor.sponsorProfile?.companyName || `${sponsor.first_name} ${sponsor.last_name}`,
+        sub: sponsor.sponsorProfile?.industrySector || 'Business',
+        meta: `${sponsor.activeCases || 0} active worker${sponsor.activeCases !== 1 ? 's' : ''} · ${sponsor.sponsorProfile?.licenceStatus || 'Active'}`,
+        badge: sponsor.sponsorProfile?.licenceStatus === 'Active' ? 'Compliant' : sponsor.sponsorProfile?.licenceStatus || 'Review',
+        badgeVariant: sponsor.sponsorProfile?.licenceStatus === 'Active' ? 'green' : 'yellow'
+      });
+    } catch (error) {
+      console.error("Error fetching sponsor details:", error);
+    }
+  };
+
+  const getSponsorCode = (sponsor) => {
+    const name = sponsor.sponsorProfile?.companyName || `${sponsor.first_name} ${sponsor.last_name}`;
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const getSponsorName = (sponsor) => {
+    return sponsor.sponsorProfile?.companyName || `${sponsor.first_name} ${sponsor.last_name}`;
+  };
+
+  const getSponsorSub = (sponsor) => {
+    const industry = sponsor.sponsorProfile?.industrySector || 'Business';
+    const city = sponsor.sponsorProfile?.city || '';
+    return city ? `${industry} · ${city}` : industry;
+  };
+
+  const getSponsorMeta = (sponsor) => {
+    const activeCases = sponsor.activeCases || 0;
+    const sponsoredWorkers = sponsor.sponsoredWorkers || 0;
+    return `${activeCases} active worker${activeCases !== 1 ? 's' : ''} · ${sponsoredWorkers} sponsored`;
+  };
+
+  const getComplianceBadge = (sponsor) => {
+    const licenceStatus = sponsor.sponsorProfile?.licenceStatus;
+    if (licenceStatus === 'Active') return { badge: 'Compliant', variant: 'green' };
+    if (licenceStatus === 'Expired') return { badge: 'Expired', variant: 'red' };
+    if (licenceStatus === 'Pending') return { badge: 'Pending', variant: 'yellow' };
+    return { badge: 'Review', variant: 'yellow' };
   };
 
   return (
@@ -145,12 +212,31 @@ const CaseworkerClients = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <SponsorCard code="TC" name="TechCorp Ltd" sub="Technology · London" meta="1 active worker · Tier 2 sponsor" badge="Compliant" badgeVariant="green" onView={(data) => openViewModal('sponsor', data)} />
-          <SponsorCard code="NG" name="Nexus Group" sub="Finance · Manchester" meta="1 active worker · Skilled sponsor" badge="Compliant" badgeVariant="green" onView={(data) => openViewModal('sponsor', data)} />
-          <SponsorCard code="BR" name="BuildRight Inc" sub="Construction · Birmingham" meta="1 active worker · Intra-Co" badge="Review Due" badgeVariant="yellow" onView={(data) => openViewModal('sponsor', data)} />
-          <SponsorCard code="GF" name="Global Finance" sub="Banking · London" meta="1 active worker · Graduate" badge="Compliant" badgeVariant="green" onView={(data) => openViewModal('sponsor', data)} />
-          <SponsorCard code="MG" name="MediCare Group" sub="Healthcare · Leeds" meta="1 active worker · H&C Worker" badge="Compliant" badgeVariant="green" onView={(data) => openViewModal('sponsor', data)} />
-          <SponsorCard code="ET" name="EnviroTech" sub="Environment · Bristol" meta="1 active worker · Tier 2" badge="Compliant" badgeVariant="green" onView={(data) => openViewModal('sponsor', data)} />
+          {loading ? (
+            <div className="col-span-full text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : sponsors.length === 0 ? (
+            <div className="col-span-full text-center py-8 text-sm font-bold text-gray-500">
+              No sponsors found
+            </div>
+          ) : (
+            sponsors.map((sponsor) => {
+              const { badge, variant } = getComplianceBadge(sponsor);
+              return (
+                <SponsorCard
+                  key={sponsor.id}
+                  code={getSponsorCode(sponsor)}
+                  name={getSponsorName(sponsor)}
+                  sub={getSponsorSub(sponsor)}
+                  meta={getSponsorMeta(sponsor)}
+                  badge={badge}
+                  badgeVariant={variant}
+                  onView={() => handleSponsorView(sponsor)}
+                />
+              );
+            })
+          )}
         </div>
       )}
 
@@ -481,28 +567,28 @@ const CaseworkerClients = () => {
                           <Building size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">Company Name</p>
-                            <p className="text-sm font-bold text-gray-900">{viewModal.data.name}</p>
+                            <p className="text-sm font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.companyName || viewModal.data.name}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <MapPin size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">Address</p>
-                            <p className="text-sm font-bold text-gray-900">123 Business Street, London, UK</p>
+                            <p className="text-sm font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.registeredAddress || 'N/A'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <Mail size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">Email</p>
-                            <p className="text-sm font-bold text-gray-900">hr@company.com</p>
+                            <p className="text-sm font-bold text-gray-900">{selectedSponsor?.sponsor?.email || 'N/A'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <Phone size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">Phone</p>
-                            <p className="text-sm font-bold text-gray-900">+44 20 7123 4567</p>
+                            <p className="text-sm font-bold text-gray-900">{selectedSponsor?.sponsor?.country_code && selectedSponsor?.sponsor?.mobile ? `${selectedSponsor.sponsor.country_code} ${selectedSponsor.sponsor.mobile}` : 'N/A'}</p>
                           </div>
                         </div>
                       </div>
@@ -515,28 +601,28 @@ const CaseworkerClients = () => {
                           <Briefcase size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">Sponsor Code</p>
-                            <p className="text-sm font-bold text-gray-900">{viewModal.data.code}</p>
+                            <p className="text-sm font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.sponsorLicenceNumber || viewModal.data.code}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <FileText size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">License Type</p>
-                            <p className="text-sm font-bold text-gray-900">{viewModal.data.meta}</p>
+                            <p className="text-sm font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.industrySector || viewModal.data.meta}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <Calendar size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">License Expiry</p>
-                            <p className="text-sm font-bold text-gray-900">15 December 2024</p>
+                            <p className="text-sm font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.licenceExpiryDate ? new Date(selectedSponsor.sponsor.sponsorProfile.licenceExpiryDate).toLocaleDateString('en-GB') : 'N/A'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <Check size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">Compliance Status</p>
-                            <p className="text-sm font-bold text-gray-900">{viewModal.data.badge}</p>
+                            <p className="text-sm font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.licenceStatus || viewModal.data.badge}</p>
                           </div>
                         </div>
                       </div>
@@ -545,22 +631,21 @@ const CaseworkerClients = () => {
 
                   {/* Active Workers */}
                   <div>
-                    <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Active Sponsored Workers</h4>
+                    <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Active Sponsored Workers ({selectedSponsor?.stats?.activeCases || 0})</h4>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="text-sm font-medium">Ahmed Al-Rashid</p>
-                          <p className="text-xs text-gray-500">Software Engineer · Tier 2</p>
-                        </div>
-                        <span className="text-xs text-green-600 font-medium">Active</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="text-sm font-medium">Priya Sharma</p>
-                          <p className="text-xs text-gray-500">Data Analyst · Skilled Worker</p>
-                        </div>
-                        <span className="text-xs text-green-600 font-medium">Active</span>
-                      </div>
+                      {selectedSponsor?.activeCases && selectedSponsor.activeCases.length > 0 ? (
+                        selectedSponsor.activeCases.map((activeCase) => (
+                          <div key={activeCase.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                              <p className="text-sm font-medium">{activeCase.candidate ? `${activeCase.candidate.first_name} ${activeCase.candidate.last_name}` : 'Unknown'}</p>
+                              <p className="text-xs text-gray-500">{activeCase.visaType?.name || 'Unknown Visa Type'}</p>
+                            </div>
+                            <span className="text-xs text-green-600 font-medium">Active</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-sm text-gray-500 py-4">No active workers</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -572,31 +657,32 @@ const CaseworkerClients = () => {
                   <div className="space-y-4">
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="flex items-center justify-between mb-3">
-                        <h5 className="text-sm font-bold text-gray-900">Tier 2 General Sponsor License</h5>
-                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">Active</span>
+                        <h5 className="text-sm font-bold text-gray-900">Sponsor License</h5>
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                          selectedSponsor?.sponsor?.sponsorProfile?.licenceStatus === 'Active' ? 'bg-green-100 text-green-700' :
+                          selectedSponsor?.sponsor?.sponsorProfile?.licenceStatus === 'Expired' ? 'bg-red-100 text-red-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {selectedSponsor?.sponsor?.sponsorProfile?.licenceStatus || 'Unknown'}
+                        </span>
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-xs text-gray-500">License Number</p>
-                          <p className="font-bold text-gray-900">SRT-2024-1234</p>
+                          <p className="font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.sponsorLicenceNumber || 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Issue Date</p>
-                          <p className="font-bold text-gray-900">15 December 2023</p>
+                          <p className="font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.licenceIssueDate ? new Date(selectedSponsor.sponsor.sponsorProfile.licenceIssueDate).toLocaleDateString('en-GB') : 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Expiry Date</p>
-                          <p className="font-bold text-gray-900">14 December 2024</p>
+                          <p className="font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.licenceExpiryDate ? new Date(selectedSponsor.sponsor.sponsorProfile.licenceExpiryDate).toLocaleDateString('en-GB') : 'N/A'}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Allocation</p>
-                          <p className="font-bold text-gray-900">5/10 used</p>
+                          <p className="text-xs text-gray-500">COS Allocation</p>
+                          <p className="font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.cosAllocation || 'N/A'}</p>
                         </div>
-                      </div>
-                      <div className="mt-3">
-                        <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
-                          View License
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -605,46 +691,33 @@ const CaseworkerClients = () => {
 
               {sponsorActiveTab === "workers" && (
                 <div className="space-y-6">
-                  <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Sponsored Workers</h4>
+                  <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Sponsored Workers ({selectedSponsor?.stats?.sponsoredWorkers || 0})</h4>
                   <div className="space-y-3">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
+                    {selectedSponsor?.activeCases && selectedSponsor.activeCases.length > 0 ? (
+                      selectedSponsor.activeCases.map((activeCase) => (
+                        <div key={activeCase.id} className="bg-gray-50 p-4 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
                         <div>
-                          <p className="text-sm font-bold text-gray-900">Ahmed Al-Rashid</p>
-                          <p className="text-xs text-gray-500">Software Engineer · Tier 2</p>
+                          <p className="text-sm font-bold text-gray-900">{activeCase.candidate ? `${activeCase.candidate.first_name} ${activeCase.candidate.last_name}` : 'Unknown'}</p>
+                          <p className="text-xs text-gray-500">{activeCase.visaType?.name || 'Unknown Visa Type'}</p>
                         </div>
                         <span className="text-xs text-green-600 font-medium">Active</span>
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-xs">
                         <div>
                           <p className="text-gray-500">Start Date</p>
-                          <p className="font-bold text-gray-900">15 Jan 2024</p>
+                          <p className="font-bold text-gray-900">{activeCase.created_at ? new Date(activeCase.created_at).toLocaleDateString('en-GB') : 'N/A'}</p>
                         </div>
                         <div>
-                          <p className="text-gray-500">Certificate</p>
-                          <p className="font-bold text-gray-900">COS-12345</p>
+                          <p className="text-gray-500">Status</p>
+                          <p className="font-bold text-gray-900">{activeCase.status || 'Active'}</p>
                         </div>
                       </div>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-sm font-bold text-gray-900">Priya Sharma</p>
-                          <p className="text-xs text-gray-500">Data Analyst · Skilled Worker</p>
-                        </div>
-                        <span className="text-xs text-green-600 font-medium">Active</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-xs">
-                        <div>
-                          <p className="text-gray-500">Start Date</p>
-                          <p className="font-bold text-gray-900">20 Feb 2024</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Certificate</p>
-                          <p className="font-bold text-gray-900">COS-12346</p>
-                        </div>
-                      </div>
-                    </div>
+                      ))
+                    ) : (
+                      <div className="text-sm text-gray-500 py-4">No sponsored workers</div>
+                    )}
                   </div>
                 </div>
               )}

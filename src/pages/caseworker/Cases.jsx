@@ -2556,7 +2556,7 @@ function OverviewTab({ c, userName }) {
   const st = badgeStatus(c.status);
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2 pb-4 border-b border-gray-100">
+      {/* <div className="flex flex-wrap gap-2 pb-4 border-b border-gray-100">
         <button
           type="button"
           className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white"
@@ -2575,7 +2575,7 @@ function OverviewTab({ c, userName }) {
         >
           Flag case
         </button>
-      </div>
+      </div> */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <Field label="Case ID">
           <span className="font-mono text-secondary">{c.caseId}</span>
