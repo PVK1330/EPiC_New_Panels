@@ -2,7 +2,6 @@ import { useMemo, useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiArrowLeft, FiFlag, FiSave, FiDownload, FiChevronDown, FiFileText, FiTable } from "react-icons/fi";
-import { jsPDF } from "jspdf";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
@@ -16,7 +15,7 @@ import CaseDetailCommunication from "../../components/caseDetail/CaseDetailCommu
 import CaseDetailNotes from "../../components/caseDetail/CaseDetailNotes";
 import CaseDetailAuditLog from "../../components/caseDetail/CaseDetailAuditLog";
 import { CASE_DETAIL_TABS, TAB_IDS, DEFAULT_CASE_DETAIL } from "../../components/caseDetail/caseDetailData";
-import { getCaseDetails, exportCaseCSV as apiExportCSV, exportCasePDF as apiExportPDF } from "../../services/caseDetailApi";
+import useCaseDetail from "../../hooks/useCaseDetail";
 
 const DOC_STATUS_LABEL = {
   missing: "Missing",
@@ -46,79 +45,146 @@ const AdminCaseDetail = () => {
   const [flagOpen, setFlagOpen] = useState(false);
   const [flagReason, setFlagReason] = useState("");
   const [flagErr, setFlagErr] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [caseData, setCaseData] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
 
+  const {
+    // case
+    caseData,
+    caseLoading,
+    fetchCaseDetail,
+    // documents
+    documents,
+    docsLoading,
+    fetchDocuments,
+    uploadDocument,
+    changeDocumentStatus,
+    downloadDocument,
+    removeDocument,
+    // notes
+    notes,
+    notesLoading,
+    fetchNotes,
+    addNote,
+    removeNote,
+    // tasks
+    tasks,
+    tasksLoading,
+    fetchTasks,
+    addTask,
+    editTask,
+    removeTask,
+    // exports
+    exportPDF,
+    exportCSV,
+  } = useCaseDetail();
+
   useEffect(() => {
-    fetchCaseDetails();
-  }, [caseId]);
-
-  const fetchCaseDetails = async () => {
     if (!caseId) return;
-    setLoading(true);
-    try {
-      // Remove # prefix if present
-      const cleanCaseId = caseId.replace(/^#/, '');
-      const res = await getCaseDetails(cleanCaseId);
-      if (res.data?.status === "success") {
-        setCaseData(res.data.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch case details:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const cleanId = caseId.replace(/^#/, "");
+    fetchCaseDetail(cleanId);
+    fetchTasks(cleanId);
+    fetchNotes(cleanId);
+    fetchDocuments(cleanId);
+  }, [caseId, fetchCaseDetail, fetchTasks, fetchNotes, fetchDocuments]);
 
-  const data = useMemo(() => {
-    if (!caseData) {
-      return { ...DEFAULT_CASE_DETAIL, caseId: caseId || DEFAULT_CASE_DETAIL.caseId };
-    }
+  // Map tasks from hook to component-expected shape
+  const mappedTasks = useMemo(
+    () =>
+      tasks.map((t) => ({
+        id: t.id,
+        title: t.title || "Untitled task",
+        status: t.status || "pending",
+        priority: t.priority || "medium",
+        due: t.due_date || null,
+        assignee: t.assigned_to || null,
+        description: t.description || "",
+      })),
+    [tasks]
+  );
 
-    const { overview, candidate, business, visaType, caseworkers, keyDates, financial, documents, timeline, communications, notes } = caseData;
+  // Map notes from hook to component-expected shape
+  const mappedNotes = useMemo(
+    () =>
+      notes.map((n) => ({
+        id: n.id,
+        author: n.author
+          ? `${n.author.first_name} ${n.author.last_name}`
+          : "Unknown",
+        date: n.created_at
+          ? new Date(n.created_at).toLocaleDateString()
+          : "N/A",
+        body: n.content || "",
+      })),
+    [notes]
+  );
 
-    // Map documents list to component-expected shape
-    const docList = (documents?.list || []).map(doc => ({
+  // Map documents from hook to component-expected shape (supplement main caseData docs with real-time list)
+  const mappedDocuments = useMemo(() => {
+    const source = documents.length > 0 ? documents : caseData?.documents?.list || [];
+    return source.map((doc) => ({
       id: doc.id,
       name: doc.documentName || doc.userFileName || "Unnamed Document",
       meta: [
-        doc.uploader ? `Uploaded by ${doc.uploader.first_name} ${doc.uploader.last_name}` : null,
+        doc.uploader
+          ? `Uploaded by ${doc.uploader.first_name} ${doc.uploader.last_name}`
+          : null,
         doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : null,
         doc.documentType || null,
-      ].filter(Boolean).join(" · "),
+      ]
+        .filter(Boolean)
+        .join(" · "),
       status: DOC_STATUS_LABEL[doc.status] || doc.status,
-      statusClass: DOC_STATUS_CLASS[doc.status] || "bg-gray-100 text-gray-600",
+      statusClass:
+        DOC_STATUS_CLASS[doc.status] || "bg-gray-100 text-gray-600",
       actions: doc.status === "under_review" ? "review" : null,
+      rawStatus: doc.status,
+      documentUrl: doc.documentUrl,
     }));
+  }, [documents, caseData]);
 
-    // Map timeline to component-expected shape
-    const timelineList = (timeline || []).map(item => ({
+  const data = useMemo(() => {
+    if (!caseData) {
+      return {
+        ...DEFAULT_CASE_DETAIL,
+        caseId: caseId || DEFAULT_CASE_DETAIL.caseId,
+        tasks: mappedTasks,
+        internalNotes: mappedNotes,
+        documents: mappedDocuments,
+      };
+    }
+
+    const {
+      overview,
+      candidate,
+      business,
+      visaType,
+      caseworkers,
+      keyDates,
+      financial,
+      documents: caseDocuments,
+      timeline,
+      communications,
+    } = caseData;
+
+    const timelineList = (timeline || []).map((item) => ({
       id: item.id,
       dot: TIMELINE_DOT[item.actionType] || "done",
       time: item.actionDate ? new Date(item.actionDate).toLocaleString() : "N/A",
       desc: item.description,
       user: item.performer
         ? `by ${item.performer.first_name} ${item.performer.last_name}`
-        : item.isSystemAction ? "by System (Auto)" : "by Unknown",
+        : item.isSystemAction
+        ? "by System (Auto)"
+        : "by Unknown",
     }));
 
-    // Map payment history to component-expected shape
-    const paymentHistory = (financial?.payments || []).map(p => ({
+    const paymentHistory = (financial?.payments || []).map((p) => ({
       date: p.paymentDate || "N/A",
       amount: `$${parseFloat(p.amount || 0).toLocaleString()}`,
       method: p.paymentMethod || "N/A",
       invoice: p.invoiceNumber || "N/A",
     }));
 
-    // Map notes to component-expected shape (API returns field as "notes")
-    const notesList = (notes || []).map(n => ({
-      author: n.author ? `${n.author.first_name} ${n.author.last_name}` : "Unknown",
-      date: n.created_at ? new Date(n.created_at).toLocaleDateString() : "N/A",
-      body: n.content || "",
-    }));
-
-    // Map communications to threads shape
     const threadsList = (communications || []).map((c, i) => ({
       id: c.id,
       name: c.sender
@@ -128,7 +194,7 @@ const AdminCaseDetail = () => {
       active: i === 0,
     }));
 
-    const docSummary = documents?.summary || {};
+    const docSummary = caseDocuments?.summary || {};
     const totalFee = parseFloat(financial?.totalFee || 0);
     const totalPaid = parseFloat(financial?.totalPaid || 0);
     const outstanding = parseFloat(financial?.outstandingBalance || 0);
@@ -136,12 +202,20 @@ const AdminCaseDetail = () => {
     return {
       ...DEFAULT_CASE_DETAIL,
       caseId: overview?.caseId,
-      candidateName: candidate ? `${candidate.first_name} ${candidate.last_name}` : "Unknown",
+      candidateName: candidate
+        ? `${candidate.first_name} ${candidate.last_name}`
+        : "Unknown",
       statusChip: overview?.status || "Unknown",
       visaChip: visaType?.name || "Unknown",
-      subtitle: `${business?.businessId || "N/A"} · Assigned to ${caseworkers?.map(cw => `${cw.first_name} ${cw.last_name}`).join(", ") || "Unassigned"} · Target: ${keyDates?.targetSubmissionDate || "N/A"}`,
+      subtitle: `${business?.businessId || "N/A"} · Assigned to ${
+        caseworkers
+          ?.map((cw) => `${cw.first_name} ${cw.last_name}`)
+          .join(", ") || "Unassigned"
+      } · Target: ${keyDates?.targetSubmissionDate || "N/A"}`,
       candidate: {
-        fullName: candidate ? `${candidate.first_name} ${candidate.last_name}` : "Unknown",
+        fullName: candidate
+          ? `${candidate.first_name} ${candidate.last_name}`
+          : "Unknown",
         dob: "N/A",
         nationality: "N/A",
         passport: "N/A",
@@ -156,7 +230,10 @@ const AdminCaseDetail = () => {
         contact: business?.sponsor
           ? `${business.sponsor.first_name} ${business.sponsor.last_name}`
           : "N/A",
-        caseworker: caseworkers?.map(cw => `${cw.first_name} ${cw.last_name}`).join(", ") || "Unassigned",
+        caseworker:
+          caseworkers
+            ?.map((cw) => `${cw.first_name} ${cw.last_name}`)
+            .join(", ") || "Unassigned",
       },
       case: {
         visaType: visaType?.name || "Unknown",
@@ -167,16 +244,24 @@ const AdminCaseDetail = () => {
         paymentStatus: outstanding === 0 ? "Fully Paid" : "Partially Paid",
       },
       progress: {
-        pct: outstanding === 0 ? 100 : Math.round((totalPaid / (totalFee || 1)) * 100),
+        pct:
+          outstanding === 0
+            ? 100
+            : Math.round((totalPaid / (totalFee || 1)) * 100),
         documents: docSummary.total
           ? `${docSummary.approved ?? 0}/${docSummary.total} approved`
           : "0/0 approved",
-        tasks: "N/A",
+        tasks:
+          mappedTasks.length > 0
+            ? `${mappedTasks.filter((t) => t.status === "completed").length}/${mappedTasks.length} done`
+            : "N/A",
         payment: `$${totalPaid.toLocaleString()} paid`,
         daysLeft: "N/A",
       },
-      documents: docList,
-      tasks: DEFAULT_CASE_DETAIL.tasks,
+      // Use real-time docs from hook when available; fall back to case-detail aggregate
+      documents: mappedDocuments.length > 0 ? mappedDocuments : DEFAULT_CASE_DETAIL.documents,
+      // Real tasks from separate /api/tasks/case/:id endpoint
+      tasks: mappedTasks,
       payments: {
         total: `$${totalFee.toLocaleString()}`,
         paid: `$${totalPaid.toLocaleString()}`,
@@ -187,49 +272,52 @@ const AdminCaseDetail = () => {
       timeline: timelineList,
       threads: threadsList,
       messages: [],
-      internalNotes: notesList,
+      // Real notes from /api/case-notes endpoint
+      internalNotes: mappedNotes,
       audit: DEFAULT_CASE_DETAIL.audit,
     };
-  }, [caseData, caseId]);
+  }, [caseData, caseId, mappedTasks, mappedNotes, mappedDocuments]);
 
   const displayId = `#${data.caseId}`;
 
+  // ── Export handlers ────────────────────────────────────────────────────────
   const handleExportPDF = async () => {
     if (!caseId) return;
     try {
-      const cleanCaseId = caseId.replace(/^#/, '');
-      const response = await apiExportPDF(cleanCaseId);
+      const cleanId = caseId.replace(/^#/, "");
+      const response = await exportPDF(cleanId);
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `Case_${cleanCaseId}_Report.pdf`);
+      link.setAttribute("download", `Case_${cleanId}_Report.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       setExportOpen(false);
     } catch (error) {
-      console.error("API PDF Export failed:", error);
+      console.error("PDF Export failed:", error);
     }
   };
 
   const handleExportCSV = async () => {
     if (!caseId) return;
     try {
-      const cleanCaseId = caseId.replace(/^#/, '');
-      const response = await apiExportCSV(cleanCaseId);
+      const cleanId = caseId.replace(/^#/, "");
+      const response = await exportCSV(cleanId);
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `Case_${cleanCaseId}_Data.csv`);
+      link.setAttribute("download", `Case_${cleanId}_Data.csv`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       setExportOpen(false);
     } catch (error) {
-      console.error("API CSV Export failed:", error);
+      console.error("CSV Export failed:", error);
     }
   };
 
+  // ── Flag handler ───────────────────────────────────────────────────────────
   const submitFlag = () => {
     if (!flagReason.trim()) {
       setFlagErr("Reason is required");
@@ -240,20 +328,114 @@ const AdminCaseDetail = () => {
     setFlagErr("");
   };
 
+  // ── Note handlers (passed as props so CaseDetailNotes can wire them up) ───
+  const handleAddNote = async (content) => {
+    if (!caseId || !content?.trim()) return;
+    const cleanId = caseId.replace(/^#/, "");
+    await addNote({ caseId: Number(cleanId), content });
+    await fetchNotes(cleanId);
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    await removeNote(noteId);
+    const cleanId = caseId.replace(/^#/, "");
+    await fetchNotes(cleanId);
+  };
+
+  // ── Task handlers (passed as props so CaseDetailTasks can wire them up) ───
+  const handleAddTask = async (taskData) => {
+    const cleanId = caseId.replace(/^#/, "");
+    await addTask({ ...taskData, case_id: Number(cleanId) });
+    await fetchTasks(cleanId);
+  };
+
+  const handleEditTask = async (id, taskData) => {
+    await editTask(id, taskData);
+    const cleanId = caseId.replace(/^#/, "");
+    await fetchTasks(cleanId);
+  };
+
+  const handleDeleteTask = async (id) => {
+    await removeTask(id);
+    const cleanId = caseId.replace(/^#/, "");
+    await fetchTasks(cleanId);
+  };
+
+  // ── Document handlers ──────────────────────────────────────────────────────
+  const handleUploadDocument = async (formData) => {
+    await uploadDocument(formData);
+    const cleanId = caseId.replace(/^#/, "");
+    await fetchDocuments(cleanId);
+  };
+
+  const handleChangeDocumentStatus = async (docId, status) => {
+    await changeDocumentStatus(docId, { status });
+    const cleanId = caseId.replace(/^#/, "");
+    await fetchDocuments(cleanId);
+  };
+
+  const handleDownloadDocument = async (docId) => {
+    const response = await downloadDocument(docId);
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `document_${docId}`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    await removeDocument(docId);
+    const cleanId = caseId.replace(/^#/, "");
+    await fetchDocuments(cleanId);
+  };
+
   const panels = {
     [TAB_IDS.overview]: <CaseDetailOverview data={data} />,
-    [TAB_IDS.documents]: <CaseDetailDocuments documents={data.documents} />,
-    [TAB_IDS.tasks]: <CaseDetailTasks tasks={data.tasks} />,
+    [TAB_IDS.documents]: (
+      <CaseDetailDocuments
+        documents={data.documents}
+        loading={docsLoading}
+        onUpload={handleUploadDocument}
+        onChangeStatus={handleChangeDocumentStatus}
+        onDownload={handleDownloadDocument}
+        onDelete={handleDeleteDocument}
+      />
+    ),
+    [TAB_IDS.tasks]: (
+      <CaseDetailTasks
+        tasks={data.tasks}
+        loading={tasksLoading}
+        onAdd={handleAddTask}
+        onEdit={handleEditTask}
+        onDelete={handleDeleteTask}
+      />
+    ),
     [TAB_IDS.payments]: <CaseDetailPayments payments={data.payments} />,
     [TAB_IDS.timeline]: <CaseDetailTimeline items={data.timeline} />,
-    [TAB_IDS.communication]: <CaseDetailCommunication threads={data.threads} messages={data.messages} />,
-    [TAB_IDS.notes]: <CaseDetailNotes notes={data.internalNotes} />,
+    [TAB_IDS.communication]: (
+      <CaseDetailCommunication threads={data.threads} messages={data.messages} />
+    ),
+    [TAB_IDS.notes]: (
+      <CaseDetailNotes
+        notes={data.internalNotes}
+        loading={notesLoading}
+        onAdd={handleAddNote}
+        onDelete={handleDeleteNote}
+      />
+    ),
     [TAB_IDS.audit]: <CaseDetailAuditLog rows={data.audit} />,
   };
 
   return (
-    <motion.div className="space-y-6 pb-10" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      {loading ? (
+    <motion.div
+      className="space-y-6 pb-10"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      {caseLoading ? (
         <div className="flex items-center justify-center py-20">
           <div className="text-gray-500">Loading case details...</div>
         </div>
@@ -271,44 +453,58 @@ const AdminCaseDetail = () => {
             <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className="font-mono text-lg font-black text-primary">{displayId}</span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-green-100 text-green-800">{data.statusChip}</span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-blue-100 text-blue-800">{data.visaChip}</span>
+                  <span className="font-mono text-lg font-black text-primary">
+                    {displayId}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-green-100 text-green-800">
+                    {data.statusChip}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-blue-100 text-blue-800">
+                    {data.visaChip}
+                  </span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-secondary tracking-tight">{data.candidateName}</h1>
+                <h1 className="text-2xl sm:text-3xl font-black text-secondary tracking-tight">
+                  {data.candidateName}
+                </h1>
                 <p className="text-sm text-gray-500 mt-1">{data.subtitle}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2 shrink-0 relative">
                 <div className="relative">
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    className="rounded-xl border border-gray-200 shadow-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 pr-2" 
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="rounded-xl border border-gray-200 shadow-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 pr-2"
                     onClick={() => setExportOpen(!exportOpen)}
                   >
                     <FiDownload size={14} />
                     Export Case
-                    <FiChevronDown size={14} className={`ml-1 transition-transform ${exportOpen ? "rotate-180" : ""}`} />
+                    <FiChevronDown
+                      size={14}
+                      className={`ml-1 transition-transform ${exportOpen ? "rotate-180" : ""}`}
+                    />
                   </Button>
-                  
+
                   <AnimatePresence>
                     {exportOpen && (
                       <>
-                        <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
-                        <motion.div 
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setExportOpen(false)}
+                        />
+                        <motion.div
                           initial={{ opacity: 0, scale: 0.95, y: 10 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95, y: 10 }}
                           className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 rounded-2xl shadow-2xl z-20 py-2"
                         >
-                          <button 
+                          <button
                             onClick={handleExportPDF}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors font-semibold"
                           >
                             <FiFileText className="text-red-500" />
                             Comprehensive PDF
                           </button>
-                          <button 
+                          <button
                             onClick={handleExportCSV}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors font-semibold"
                           >
@@ -321,12 +517,21 @@ const AdminCaseDetail = () => {
                   </AnimatePresence>
                 </div>
 
-                <Button type="button" variant="ghost" className="rounded-xl border border-gray-200 shadow-sm" onClick={() => setFlagOpen(true)}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="rounded-xl border border-gray-200 shadow-sm"
+                  onClick={() => setFlagOpen(true)}
+                >
                   <FiFlag size={14} />
                   Flag
                 </Button>
-                <Button type="button" variant="primary" className="rounded-xl shadow-md shadow-primary/20">
-                  <FiSave size={14} />
+                <Button
+                  type="button"
+                  variant="primary"
+                  className="rounded-xl shadow-md shadow-primary/20"
+                >
+                  <FiFlag size={14} style={{ display: "none" }} />
                   Save Changes
                 </Button>
               </div>
@@ -349,16 +554,30 @@ const AdminCaseDetail = () => {
 
           <Modal
             open={flagOpen}
-            onClose={() => { setFlagOpen(false); setFlagReason(""); setFlagErr(""); }}
+            onClose={() => {
+              setFlagOpen(false);
+              setFlagReason("");
+              setFlagErr("");
+            }}
             title="Flag case"
             maxWidthClass="max-w-md"
             bodyClassName="px-5 py-5"
             footer={
               <>
-                <Button variant="ghost" type="button" onClick={() => setFlagOpen(false)} className="rounded-xl">
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => setFlagOpen(false)}
+                  className="rounded-xl"
+                >
                   Cancel
                 </Button>
-                <Button type="button" variant="primary" onClick={submitFlag} className="rounded-xl">
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={submitFlag}
+                  className="rounded-xl"
+                >
                   Submit flag
                 </Button>
               </>
@@ -368,7 +587,10 @@ const AdminCaseDetail = () => {
               label="Reason"
               name="flagReason"
               value={flagReason}
-              onChange={(e) => { setFlagReason(e.target.value); setFlagErr(""); }}
+              onChange={(e) => {
+                setFlagReason(e.target.value);
+                setFlagErr("");
+              }}
               rows={3}
               placeholder="Explain why this case is flagged…"
               required
