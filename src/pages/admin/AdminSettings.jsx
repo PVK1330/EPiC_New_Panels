@@ -95,6 +95,7 @@ export default function AdminSettings() {
 
   // Account States (DYNAMIC)
   const [profile, setProfile] = useState({ first_name: "", last_name: "", email: "", country_code: "", mobile: "", avatar_url: "", role_name: "" });
+  const [profileFile, setProfileFile] = useState(null);
   const [preferences, setPreferences] = useState({ two_factor_enabled: false, email_notifications: true, case_updates: true, payment_alerts: false, timezone: "UTC-05:00 Eastern Time", language: "English", date_format: "MM/DD/YYYY", data_collection: false });
   const [security, setSecurity] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [passwordError, setPasswordError] = useState("");
@@ -196,11 +197,22 @@ export default function AdminSettings() {
   const handleProfileSave = async () => {
     setSaving(true);
     try {
+      let dataToSubmit = profile;
+      if (profileFile) {
+        dataToSubmit = new FormData();
+        Object.keys(profile).forEach(key => {
+          if (profile[key] !== null && profile[key] !== undefined) {
+            dataToSubmit.append(key, profile[key]);
+          }
+        });
+        dataToSubmit.append('profile_pic', profileFile);
+      }
       // Parallel update for performance
       await Promise.all([
         updateMePreferences(preferences),
-        updateMe(profile)
+        updateMe(dataToSubmit)
       ]);
+      setProfileFile(null);
       showToast({ message: "Profile and preferences updated successfully." });
       loadData(); // Refresh to ensure sync
     } catch (e) {
@@ -429,8 +441,10 @@ export default function AdminSettings() {
             {configTab === "account" && (
               <AccountSettings 
                 profile={profile} 
+                profileFile={profileFile}
                 preferences={preferences}
                 onProfileChange={(e) => setProfile({...profile, [e.target.name]: e.target.value})}
+                onProfileFileChange={(f) => setProfileFile(f)}
                 onPreferenceChange={(e) => setPreferences({...preferences, [e.target.name]: e.target.value})}
                 onPreferenceToggle={(id) => setPreferences({...preferences, [id]: !preferences[id]})}
                 onSave={handleProfileSave}

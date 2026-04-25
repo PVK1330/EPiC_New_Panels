@@ -1,7 +1,9 @@
 import api from "./api";
 
 export const getMe = () => api.get("/api/settings/me");
-export const updateMe = (data) => api.patch("/api/settings/me", data);
+export const updateMe = (data) => api.patch("/api/settings/me", data, {
+  headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : {}
+});
 export const updateMePreferences = (data) => api.patch("/api/settings/me/preferences", data);
 export const changePassword = (data) => api.post("/api/settings/change-password", data);
 

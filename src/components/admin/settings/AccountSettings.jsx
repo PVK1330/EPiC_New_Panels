@@ -17,8 +17,10 @@ const dateFormats = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"];
 
 export default function AccountSettings({ 
   profile, 
+  profileFile,
   preferences, 
   onProfileChange, 
+  onProfileFileChange, 
   onPreferenceChange, 
   onPreferenceToggle,
   onSave,
@@ -47,6 +49,47 @@ export default function AccountSettings({
           </div>
         </div>
         <div className="p-4">
+          <div className="flex flex-col md:flex-row items-center gap-6 mb-8 p-4 border border-dashed border-gray-200 rounded-3xl bg-gray-50/30">
+            <div className="relative group">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-xl bg-gray-100 flex items-center justify-center">
+                {profileFile ? (
+                  <img src={URL.createObjectURL(profileFile)} alt="Avatar Preview" className="w-full h-full object-cover" />
+                ) : profile.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Current Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <FiUser size={40} className="text-gray-300" />
+                )}
+              </div>
+              <label className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full cursor-pointer shadow-lg hover:bg-primary-dark transition-colors">
+                <FiUser size={14} />
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      onProfileFileChange(e.target.files[0]);
+                    }
+                  }} 
+                />
+              </label>
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-secondary">Profile Picture</h4>
+              <p className="text-xs text-gray-500 max-w-xs mt-1 leading-relaxed">
+                Upload a professional headshot. Recommended size is 256x256px. Formats: JPG, PNG.
+              </p>
+              {profileFile && (
+                <button 
+                  onClick={() => onProfileFileChange(null)}
+                  className="mt-3 text-[10px] font-black text-red-500 uppercase tracking-widest hover:text-red-600 transition-colors"
+                >
+                  Remove Selected Image
+                </button>
+              )}
+            </div>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input 
               label="First Name" 

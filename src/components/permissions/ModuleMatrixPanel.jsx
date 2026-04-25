@@ -7,8 +7,8 @@ import { assignPermissionsToRole } from "../../services/rolesApi";
 
 // ── Cell ─────────────────────────────────────────────────────────────────────
 const MatrixCell = ({ has, pending, saving, onClick }) => {
-  const isGranted  = pending !== undefined ? pending : has;
-  const isDirty    = pending !== undefined && pending !== has;
+  const isGranted = pending !== undefined ? pending : has;
+  const isDirty = pending !== undefined && pending !== has;
 
   return (
     <button
@@ -16,15 +16,14 @@ const MatrixCell = ({ has, pending, saving, onClick }) => {
       onClick={onClick}
       disabled={saving}
       title={isGranted ? "Revoke permission" : "Grant permission"}
-      className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto transition-all border-2 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary ${
-        isGranted
+      className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto transition-all border-2 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary ${isGranted
           ? isDirty
             ? "border-amber-400 bg-amber-50 text-amber-600"
             : "border-green-400 bg-green-50 text-green-600"
           : isDirty
-          ? "border-amber-300 bg-amber-50 text-amber-400"
-          : "border-gray-200 bg-white text-gray-200 hover:border-gray-300 hover:text-gray-300"
-      }`}
+            ? "border-amber-300 bg-amber-50 text-amber-400"
+            : "border-gray-200 bg-white text-gray-200 hover:border-gray-300 hover:text-gray-300"
+        }`}
     >
       {isGranted ? (
         <FiCheck size={13} strokeWidth={3} />
@@ -37,14 +36,14 @@ const MatrixCell = ({ has, pending, saving, onClick }) => {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 const ModuleMatrixPanel = () => {
-  const [matrixData, setMatrixData]  = useState(null);
-  const [loading, setLoading]        = useState(true);
-  const [error, setError]            = useState(null);
+  const [matrixData, setMatrixData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   // pendingChanges: { [roleId]: Set of permissionIds that should be granted }
   const [pendingChanges, setPending] = useState({});
-  const [saving, setSaving]          = useState(false);
-  const [savedMsg, setSavedMsg]      = useState("");
-  const [filterModule, setFilter]    = useState("all");
+  const [saving, setSaving] = useState(false);
+  const [savedMsg, setSavedMsg] = useState("");
+  const [filterModule, setFilter] = useState("all");
 
   const fetchMatrixData = useCallback(async () => {
     setLoading(true);
@@ -147,7 +146,7 @@ const ModuleMatrixPanel = () => {
     });
   });
   const allPerms = Array.from(allPermsMap.values());
-  const modules  = ["all", ...(matrixData?.modules || [])];
+  const modules = ["all", ...(matrixData?.modules || [])];
   const visiblePerms = filterModule === "all"
     ? allPerms
     : allPerms.filter((p) => p.module === filterModule);
@@ -190,11 +189,10 @@ const ModuleMatrixPanel = () => {
           <button
             onClick={handleSaveAll}
             disabled={!hasDirtyChanges || saving}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
-              hasDirtyChanges && !saving
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${hasDirtyChanges && !saving
                 ? "text-white shadow-md shadow-indigo-200"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
-            }`}
+              }`}
             style={hasDirtyChanges && !saving ? {
               background: "var(--color-secondary)",
             } : {}}
@@ -267,7 +265,7 @@ const ModuleMatrixPanel = () => {
                   {matrixData?.roles?.map((role) => {
                     const rolePerm = role.permissions.find((p) => p.permissionId === perm.permissionId);
                     const originalHas = rolePerm?.hasPermission || false;
-                    const pendingVal  = isPending(role.roleId, perm.permissionId, originalHas);
+                    const pendingVal = isPending(role.roleId, perm.permissionId, originalHas);
                     return (
                       <td key={`${role.roleId}-${perm.permissionId}`} className="px-2 py-2.5 text-center border-b border-gray-50">
                         <MatrixCell

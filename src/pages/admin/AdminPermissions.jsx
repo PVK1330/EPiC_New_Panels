@@ -105,11 +105,10 @@ const AdminPermissions = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-                  active
+                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${active
                     ? "bg-secondary text-white shadow-md"
                     : "text-gray-500 hover:text-secondary hover:bg-secondary/5"
-                }`}
+                  }`}
               >
                 {active && (
                   <motion.span
