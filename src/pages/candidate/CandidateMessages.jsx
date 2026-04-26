@@ -32,19 +32,17 @@ export default function CandidateMessages() {
     }
   }, [activeId, activeCaseId, fetchThread]);
 
-  const handleSend = async () => {
+  const handleSend = async (file) => {
     const text = draft.trim();
-    console.log("CandidateMessages handleSend triggered. Text:", text, "ActiveId:", activeId);
-    
-    if (!text || !activeId) {
-      console.warn("handleSend returning early: missing text or activeId");
-      return;
-    }
-    
-    const result = await apiSendMessage(activeId, text, activeCaseId);
+    if (!text && !file) return false;
+    if (!activeId) return false;
+
+    const result = await apiSendMessage(activeId, text, activeCaseId, file);
     if (result.success) {
       setDraft("");
+      return true;
     }
+    return false;
   };
 
   return (
