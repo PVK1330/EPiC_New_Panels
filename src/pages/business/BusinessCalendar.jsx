@@ -286,7 +286,7 @@ const Calendar = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-secondary">Calendar</h1>
+          <h1 className="text-3xl font-black text-secondary">Business Calendar</h1>
           <p className="text-gray-500 mt-1">
             Schedule events, meetings, and deadlines
           </p>

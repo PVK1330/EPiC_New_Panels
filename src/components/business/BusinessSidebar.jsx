@@ -14,6 +14,7 @@ import {
   DollarSign,
   Briefcase,
   TrendingUp,
+  Calendar,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../store/slices/authSlice";
@@ -91,6 +92,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
       label: "Communication",
       items: [
         { to: "/business/messages", label: "Messages", icon: MessageSquare },
+        { to: "/business/calendar", label: "Calendar", icon: Calendar },
         {
           to: "/business/notifications",
           label: "Notifications",
