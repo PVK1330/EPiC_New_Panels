@@ -1273,13 +1273,11 @@ const Cases = () => {
                   className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
                 >
                   <option value="">All Visa Types</option>
-                  {VISA_OPTIONS.filter((v) => v !== "All visa types").map(
-                    (v) => (
-                      <option key={v} value={v}>
-                        {v}
-                      </option>
-                    ),
-                  )}
+                  {visaTypes.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </>
@@ -1287,6 +1285,7 @@ const Cases = () => {
         </div>
       </div>
 
+      {viewMode === "table" && (
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px]">
@@ -1579,111 +1578,6 @@ const Cases = () => {
         </DndContext>
       )}
 
-      {/* Case Details Modal for Kanban View */}
-      <Modal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Case Details"
-        titleId="case-details-modal-title"
-        maxWidthClass="max-w-4xl"
-        bodyClassName="p-4 sm:p-6"
-      >
-        {isCaseLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-gray-500">Loading case details...</div>
-          </div>
-        ) : selectedCase ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Case ID
-                </label>
-                <p className="text-sm font-bold text-secondary">{selectedCase.caseId}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Status
-                </label>
-                <p className="text-sm font-bold text-gray-900">{selectedCase.status}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Priority
-                </label>
-                <p className="text-sm font-bold text-gray-900">{selectedCase.priority || 'Normal'}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Target Date
-                </label>
-                <p className="text-sm font-bold text-gray-900">{selectedCase.targetSubmissionDate || 'Not set'}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Candidate
-                </label>
-                <p className="text-sm font-bold text-gray-900">
-                  {selectedCase.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : 'Unknown'}
-                </p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Sponsor
-                </label>
-                <p className="text-sm font-bold text-gray-900">
-                  {selectedCase.sponsor ? `${selectedCase.sponsor.first_name} ${selectedCase.sponsor.last_name}` : 'Unknown'}
-                </p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Visa Type
-                </label>
-                <p className="text-sm font-bold text-gray-900">{selectedCase.visaType?.name || 'Unknown'}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Created
-                </label>
-                <p className="text-sm font-bold text-gray-900">{selectedCase.created_at ? new Date(selectedCase.created_at).toLocaleDateString() : 'Unknown'}</p>
-              </div>
-            </div>
-            {selectedCase.notes && (
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Notes
-                </label>
-                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">{selectedCase.notes}</p>
-              </div>
-            )}
-            
-            {/* Timeline Section */}
-            <CaseTimeline caseId={selectedCase.caseId} currentUser={user} />
-            
-            <div className="flex gap-2 pt-4 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsModalOpen(false);
-                  const caseData = cases.find(c => c.caseId === selectedCase.caseId);
-                  if (caseData) openCaseEdit(caseData);
-                }}
-                className="inline-flex items-center gap-2 rounded-lg bg-secondary px-4 py-2 text-sm font-black text-white hover:bg-secondary/90"
-              >
-                <Pencil size={16} />
-                Edit Case
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 hover:bg-gray-50"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
 
       {/* ─────────────────────── NEW CASE MODAL ─────────────────────── */}
       <Modal
@@ -2542,7 +2436,7 @@ const Cases = () => {
                 />
               )}
               {detailTab === "timeline" && (
-                <TimelineTab candidate={detailCase.candidate} />
+                <CaseTimeline caseId={detailCase?.id} currentUser={user} />
               )}
             </div>
           </>
