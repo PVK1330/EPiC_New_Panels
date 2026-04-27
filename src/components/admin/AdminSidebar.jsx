@@ -24,6 +24,7 @@ import {
   RiLogoutBoxRLine,
   RiQuestionLine,
   RiCloseLine,
+  RiCalendarLine,
 } from "react-icons/ri";
 import eliteLogo from "../../assets/elitepic_logo.png";
 
@@ -53,6 +54,7 @@ const navSections = [
     items: [
       { to: "/admin/cases", label: "All Cases", icon: RiFolderOpenLine },
       { to: "/admin/pipeline", label: "Pipeline", icon: RiGitBranchLine },
+      { to: "/admin/calendar", label: "Calendar", icon: RiCalendarLine },
       { to: "/admin/assign", label: "Assign / Reassign", icon: RiUserAddLine },
       { to: "/admin/escalations", label: "Escalations", icon: RiAlarmWarningLine },
     ],
