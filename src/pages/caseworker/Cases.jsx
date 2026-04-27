@@ -22,6 +22,7 @@ import {
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
 import CaseTimeline from "../../components/CaseTimeline";
+import useCaseDetail from "../../hooks/useCaseDetail";
 import { getCaseworkerCases, getVisaTypes, getPetitionTypes, getAllUsers, createCaseworkerCase, updateCaseworkerCase, getDepartments, getCaseworkerCaseDetails, getCaseDocuments, uploadDocument, updateDocument, deleteDocument, updateDocumentStatus, downloadDocument, getCaseNotes, createCaseNote, updateCaseNote, deleteCaseNote, getTasks, getTaskByCaseId, createTask, updateTask, deleteTask, exportCases } from "../../services/caseApi";
 
 const PAGE_SIZE = 7;
