@@ -23,12 +23,10 @@ import { getCaseworkerPipelineCases, updatePipelineStage, getCaseById } from "..
 
 const STAGES = [
   { id: "lead", title: "Lead", header: "bg-slate-100 border-slate-200", titleClass: "text-slate-600", countClass: "bg-slate-200/80 text-slate-700" },
-  { id: "onboarded", title: "Onboarded", header: "bg-sky-50 border-sky-100", titleClass: "text-sky-700", countClass: "bg-sky-100 text-sky-800" },
-  { id: "docs", title: "Docs pending", header: "bg-amber-50 border-amber-100", titleClass: "text-amber-700", countClass: "bg-amber-100 text-amber-800" },
-  { id: "draft", title: "Drafting", header: "bg-violet-50 border-violet-100", titleClass: "text-violet-700", countClass: "bg-violet-100 text-violet-800" },
-  { id: "review", title: "Review", header: "bg-teal-50 border-teal-100", titleClass: "text-teal-700", countClass: "bg-teal-100 text-teal-800" },
-  { id: "submitted", title: "Submitted", header: "bg-indigo-50 border-indigo-100", titleClass: "text-indigo-700", countClass: "bg-indigo-100 text-indigo-800" },
-  { id: "decision", title: "Decision", header: "bg-amber-50 border-amber-100", titleClass: "text-amber-800", countClass: "bg-amber-100 text-amber-900" },
+  { id: "docs", title: "Docs Pending", header: "bg-amber-50 border-amber-100", titleClass: "text-amber-700", countClass: "bg-amber-100 text-amber-800" },
+  { id: "drafting", title: "Drafting", header: "bg-blue-50 border-blue-100", titleClass: "text-blue-700", countClass: "bg-blue-100 text-blue-800" },
+  { id: "submitted", title: "Submitted", header: "bg-purple-50 border-purple-100", titleClass: "text-purple-700", countClass: "bg-purple-100 text-purple-800" },
+  { id: "decision", title: "Decision", header: "bg-orange-50 border-orange-100", titleClass: "text-orange-700", countClass: "bg-orange-100 text-orange-800" },
   { id: "closed", title: "Closed", header: "bg-emerald-50 border-emerald-100", titleClass: "text-emerald-700", countClass: "bg-emerald-100 text-emerald-800" },
 ];
 
@@ -237,10 +235,8 @@ export default function Pipeline() {
       if (card) {
         const statusMap = {
           lead: 'Lead',
-          onboarded: 'Onboarded',
           docs: 'Docs Pending',
-          draft: 'Drafting',
-          review: 'Review',
+          drafting: 'Drafting',
           submitted: 'Submitted',
           decision: 'Decision',
           closed: 'Closed'
