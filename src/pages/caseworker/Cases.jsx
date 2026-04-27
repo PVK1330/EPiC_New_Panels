@@ -40,6 +40,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { getCaseworkerPipelineCases, updatePipelineStage, getCaseById } from "../../services/caseApi";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
+import CaseTimeline from "../../components/CaseTimeline";
 import { getCaseworkerCases, getVisaTypes, getPetitionTypes, getAllUsers, createCaseworkerCase, updateCaseworkerCase, getDepartments, getCaseworkerCaseDetails, getCaseDocuments, uploadDocument, updateDocument, deleteDocument, updateDocumentStatus, downloadDocument, getCaseNotes, createCaseNote, updateCaseNote, deleteCaseNote, getTasks, getTaskByCaseId, createTask, updateTask, deleteTask, exportCases } from "../../services/caseApi";
 
 const PAGE_SIZE = 7;
@@ -1657,35 +1658,7 @@ const Cases = () => {
             )}
             
             {/* Timeline Section */}
-            <div>
-              <h3 className="text-sm font-black text-secondary mb-3">Case Timeline</h3>
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {selectedCase.timeline && selectedCase.timeline.length > 0 ? (
-                  selectedCase.timeline.map((item, index) => (
-                    <div key={index} className="flex gap-3 items-start">
-                      <div className="flex flex-col items-center">
-                        <div className="w-2 h-2 rounded-full bg-secondary mt-2"></div>
-                        {index < selectedCase.timeline.length - 1 && (
-                          <div className="w-0.5 h-full bg-gray-200 min-h-[40px]"></div>
-                        )}
-                      </div>
-                      <div className="flex-1 pb-4">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold text-gray-900">{item.actionType?.replace(/_/g, ' ').toUpperCase()}</p>
-                          <p className="text-xs text-gray-500">{item.actionDate ? new Date(item.actionDate).toLocaleString() : ''}</p>
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                        {item.performer && (
-                          <p className="text-xs text-gray-400 mt-1">by {item.performer.first_name} {item.performer.last_name}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500 italic">No timeline events recorded</p>
-                )}
-              </div>
-            </div>
+            <CaseTimeline caseId={selectedCase.caseId} currentUser={user} />
             
             <div className="flex gap-2 pt-4 border-t border-gray-100">
               <button
