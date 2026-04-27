@@ -18,20 +18,33 @@ const normalizeRoleLabel = (roleName) => {
 };
 
 const mapApiMessageToUi = (msg, myId) => {
-  const contentObj = msg.content;
+  let contentObj = msg.content;
+  try {
+    if (typeof msg.content === 'string' && msg.content.startsWith('{')) {
+      contentObj = JSON.parse(msg.content);
+    }
+  } catch (e) {
+    // Not a valid JSON string, ignore
+  }
+
   const textStr =
     typeof contentObj === "object" && contentObj != null
       ? contentObj?.content
       : contentObj;
+
+  const attachmentUrl = typeof contentObj === "object" && contentObj != null ? contentObj?.url : null;
+  const originalName = typeof contentObj === "object" && contentObj != null ? contentObj?.originalName : null;
+
   return {
     id: msg.id,
     from: Number(msg.senderId) === Number(myId) ? "me" : "them",
-    text: textStr || msg.content || "",
+    text: textStr || (typeof msg.content === 'string' && !msg.content.startsWith('{') ? msg.content : ""),
     meta: new Date(msg.createdAt).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     }),
-    attachment: msg.messageType === "file" ? "Attachment" : null,
+    attachment: msg.messageType === "file" ? (originalName || "Attachment") : null,
+    attachmentUrl: msg.messageType === "file" ? attachmentUrl : null,
     isRead: Boolean(msg.isRead),
   };
 };
@@ -196,14 +209,29 @@ const useMessaging = (opts = {}) => {
   }, []);
 
   const sendMessage = useCallback(
-    async (receiverId, content, caseId = null) => {
+    async (receiverId, content, caseId = null, file = null) => {
       try {
-        await messagingApi.sendMessage({
-          receiverId,
-          content,
-          caseId,
-          messageType: "text",
-        });
+        if (file) {
+          const formData = new FormData();
+          formData.append("receiverId", receiverId);
+          formData.append("content", content || "");
+          if (caseId) formData.append("caseId", caseId);
+          formData.append("messageType", "file");
+          formData.append("file", file);
+
+          await messagingApi.sendMessage(formData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          });
+        } else {
+          await messagingApi.sendMessage({
+            receiverId,
+            content,
+            caseId,
+            messageType: "text",
+          });
+        }
 
         // No local append — avoids duplicate when `message:new` also arrives.
         await Promise.all([fetchConversations(), fetchThread(receiverId, caseId)]);
@@ -259,17 +287,7 @@ const useMessaging = (opts = {}) => {
       if (my !== s && my !== r) return;
 
       const other = my === s ? r : s;
-      const mappedMsg = {
-        id: m.id,
-        from: s === my ? "me" : "them",
-        text: typeof m.content === "string" ? m.content : "",
-        meta: new Date(m.createdAt).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        attachment: m.messageType === "file" ? "Attachment" : null,
-        isRead: Boolean(m.isRead),
-      };
+      const mappedMsg = mapApiMessageToUi(m, my);
 
       setMessagesByThread((prev) => {
         const list = prev[other] || [];

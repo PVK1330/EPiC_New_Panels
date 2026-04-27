@@ -50,7 +50,7 @@ const InputField = ({
 );
 
 const MyAccount = () => {
-  const user = useSelector((state) => state.auth.user);
+  const { user, token } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState("profile"); // profile, password, security
   const [saved, setSaved] = useState(false);
@@ -95,14 +95,16 @@ const MyAccount = () => {
         setTwoFactorEnabled(two_factor_enabled || false);
         
         // Update Redux user state with profile pic and other fields
+        const roleString = response.data.data.user.role?.name?.toLowerCase() || user.role;
         dispatch(
           setCredentials({
             user: {
               ...user,
               profile_pic,
               gender,
+              role: roleString,
             },
-            token: user.token,
+            token: token,
           })
         );
       } catch (error) {
@@ -225,15 +227,17 @@ const MyAccount = () => {
       console.log("Profile update response:", response.status, response.data);
 
       // Merge the updated user data with existing user data to preserve token and other fields
+      const roleString = response.data.data.user.role?.name?.toLowerCase() || user.role;
       const updatedUser = {
         ...user,
         ...response.data.data.user,
+        role: roleString,
       };
 
       dispatch(
         setCredentials({
           user: updatedUser,
-          token: user.token,
+          token: token,
         })
       );
 
@@ -575,7 +579,7 @@ const MyAccount = () => {
       >
         {twoFactorMode === "setup" ? (
           <TwoFactorSetup
-            token={user?.token}
+            token={token}
             onSetupComplete={() => {
               setTwoFactorEnabled(true);
               setTwoFactorModalOpen(false);
@@ -584,7 +588,7 @@ const MyAccount = () => {
           />
         ) : (
           <TwoFactorDisable
-            token={user?.token}
+            token={token}
             onDisableComplete={() => {
               setTwoFactorEnabled(false);
               setTwoFactorModalOpen(false);

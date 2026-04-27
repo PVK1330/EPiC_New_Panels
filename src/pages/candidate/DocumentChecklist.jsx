@@ -267,11 +267,10 @@ const DocumentChecklist = () => {
             key={f.id}
             type="button"
             onClick={() => setFilter(f.id)}
-            className={`rounded-full border px-4 py-2 text-xs font-black uppercase tracking-wide transition-all ${
-              filter === f.id
-                ? "border-secondary bg-secondary text-white shadow-md shadow-secondary/20"
-                : "border-gray-200 bg-white text-gray-600 hover:border-primary/40 hover:text-primary"
-            }`}
+            className={`rounded-full border px-4 py-2 text-xs font-black uppercase tracking-wide transition-all ${filter === f.id
+              ? "border-secondary bg-secondary text-white shadow-md shadow-secondary/20"
+              : "border-gray-200 bg-white text-gray-600 hover:border-primary/40 hover:text-primary"
+              }`}
           >
             {f.label}
           </button>
@@ -307,11 +306,10 @@ const DocumentChecklist = () => {
                             {doc.name}
                           </span>
                           <span
-                            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
-                              doc.mandatory
-                                ? "border-amber-200 bg-amber-50 text-amber-800"
-                                : "border-gray-200 bg-gray-50 text-gray-500"
-                            }`}
+                            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${doc.mandatory
+                              ? "border-amber-200 bg-amber-50 text-amber-800"
+                              : "border-gray-200 bg-gray-50 text-gray-500"
+                              }`}
                           >
                             {doc.mandatory ? "Mandatory" : "Optional"}
                           </span>
@@ -352,9 +350,9 @@ const DocumentChecklist = () => {
                           onClick={() => setViewDoc(doc)}
                           className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600 hover:border-secondary hover:bg-secondary/5 hover:text-secondary"
                         >
-                         <Eye size={14} />
-                           View document
-                       </button>
+                          <Eye size={14} />
+                          View document
+                        </button>
                       )}
                       {doc.status === "rejected" && (
                         <Link

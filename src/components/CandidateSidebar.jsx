@@ -129,8 +129,8 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
                         isActive,
                       );
                       return `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 relative ${matched
-                          ? "bg-primary text-white shadow-lg shadow-primary/20"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                        ? "bg-primary text-white shadow-lg shadow-primary/20"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-primary"
                         }`;
                     }}
                   >
@@ -150,8 +150,8 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
                           <Icon
                             size={17}
                             className={`shrink-0 transition-colors ${matched
-                                ? "text-white"
-                                : "text-gray-400 group-hover:text-primary"
+                              ? "text-white"
+                              : "text-gray-400 group-hover:text-primary"
                               }`}
                           />
                           <span className="truncate">{item.label}</span>
