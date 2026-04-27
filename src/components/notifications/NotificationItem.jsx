@@ -1,5 +1,6 @@
 import React from 'react';
 import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { Bell, MessageSquare, FileText, AlertTriangle, CheckCircle, Clock, User, Trash2 } from 'lucide-react';
 import { markAsRead, removeNotification } from '../../store/slices/notificationSlice';
 
@@ -21,6 +22,7 @@ const formatTimeAgo = (timestamp) => {
 
 const NotificationItem = ({ notification }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const getIcon = (type) => {
     switch (type) {
@@ -75,10 +77,10 @@ const NotificationItem = ({ notification }) => {
     // Handle navigation based on entity type
     if (notification.entityType === 'message' && notification.metadata?.conversationId) {
       // Navigate to conversation
-      window.location.href = `/messages/${notification.metadata.conversationId}`;
+      navigate(`/messages/${notification.metadata.conversationId}`);
     } else if (notification.entityType === 'case' && notification.entityId) {
       // Navigate to case
-      window.location.href = `/cases/${notification.entityId}`;
+      navigate(`/cases/${notification.entityId}`);
     }
   };
 

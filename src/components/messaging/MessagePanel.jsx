@@ -1,4 +1,4 @@
-import { ChevronLeft, FileText, Paperclip, Search, Send } from "lucide-react";
+import { ChevronLeft, FileText, Paperclip, Search, Send, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import useMediaQuery from "../../hooks/useMediaQuery";
 
@@ -32,6 +32,29 @@ const MessagePanel = ({
   const isLg = useMediaQuery("(min-width: 1024px)");
   /** Below lg: list-only vs chat-only */
   const [mobileListOpen, setMobileListOpen] = useState(true);
+
+  const fileInputRef = useRef(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const clearFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleInternalSend = async () => {
+    if (onSend) {
+      const success = await onSend(selectedFile);
+      if (success !== false) {
+        clearFile();
+      }
+    }
+  };
 
   useEffect(() => {
     if (isLg) setMobileListOpen(true);
@@ -233,13 +256,23 @@ const MessagePanel = ({
                         {msg.text}
                         {msg.attachment && (
                           <div
-                            className={`mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold ${msg.from === "me"
-                                ? "bg-white/15 text-white"
-                                : "bg-white border border-gray-200 text-gray-700"
+                            onClick={() => {
+                              if (msg.attachmentUrl) {
+                                // Assume backend is serving uploads directly or prepend API URL
+                                const url = msg.attachmentUrl.startsWith('http') 
+                                  ? msg.attachmentUrl 
+                                  : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${msg.attachmentUrl}`;
+                                window.open(url, '_blank');
+                              }
+                            }}
+                            className={`mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition-colors ${msg.from === "me"
+                                ? "bg-white/15 text-white hover:bg-white/25"
+                                : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                               }`}
+                            title="Click to download"
                           >
                             <FileText size={14} className="shrink-0" />
-                            {msg.attachment}
+                            <span className="truncate">{msg.attachment}</span>
                           </div>
                         )}
                       </div>
@@ -258,9 +291,31 @@ const MessagePanel = ({
               </div>
 
               <div className="p-2 sm:p-3 border-t border-gray-100 bg-gray-50/90 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                {selectedFile && (
+                  <div className="mb-2 px-3 flex items-center gap-2">
+                    <div className="bg-primary/10 border border-primary/20 text-primary px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-bold max-w-full">
+                      <FileText size={14} className="shrink-0" />
+                      <span className="truncate">{selectedFile.name}</span>
+                      <button 
+                        onClick={clearFile}
+                        className="p-1 hover:bg-primary/20 rounded-full transition-colors shrink-0 ml-1"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-2 items-end max-w-full">
+                  <input 
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip"
+                  />
                   <button
                     type="button"
+                    onClick={() => fileInputRef.current?.click()}
                     className="shrink-0 rounded-full border border-gray-200 bg-white p-2.5 sm:p-3 text-gray-500 hover:text-secondary hover:border-secondary/30 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                     title="Attach document"
                   >
@@ -273,7 +328,7 @@ const MessagePanel = ({
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
-                          onSend?.();
+                          handleInternalSend();
                         }
                       }}
                       placeholder={placeholder}
@@ -283,7 +338,7 @@ const MessagePanel = ({
                   </div>
                   <button
                     type="button"
-                    onClick={onSend}
+                    onClick={handleInternalSend}
                     className="shrink-0 rounded-full bg-primary p-2.5 sm:p-3 text-white hover:bg-primary-dark shadow-md shadow-primary/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                     aria-label="Send message"
                   >

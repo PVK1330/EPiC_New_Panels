@@ -155,18 +155,16 @@ function FormProgress({ step, labels }) {
             className="flex min-w-[4.5rem] flex-1 flex-col items-center sm:min-w-0"
           >
             <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm ${
-                idx <= step
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm ${idx <= step
                   ? "bg-secondary text-white shadow-md shadow-secondary/20"
                   : "bg-gray-200 text-gray-600"
-              }`}
+                }`}
             >
               {idx + 1}
             </div>
             <span
-              className={`mt-1.5 text-center text-xs font-bold leading-snug tracking-normal sm:text-sm ${
-                idx <= step ? "text-secondary" : "text-gray-400"
-              }`}
+              className={`mt-1.5 text-center text-xs font-bold leading-snug tracking-normal sm:text-sm ${idx <= step ? "text-secondary" : "text-gray-400"
+                }`}
             >
               {lbl}
             </span>
@@ -252,7 +250,7 @@ function validateStep(stepIndex, data) {
   if (stepIndex === 1) {
     if (!data.nationality?.toString().trim()) errs.nationality = "Nationality is required";
     if (!data.dob) errs.dob = "Date of birth is required";
-    
+
     // If passport number is provided, require details
     if (data.passportNumber?.toString().trim()) {
       if (!data.issuingAuthority?.toString().trim()) errs.issuingAuthority = "Issuing authority is required";
@@ -272,7 +270,7 @@ function validateStep(stepIndex, data) {
       }
     }
   }
-  
+
   if (stepIndex === 3) {
     if (data.parentName?.toString().trim() && !data.parentRelation?.toString().trim()) {
       errs.parentRelation = "Relationship is required if name is provided";
@@ -381,7 +379,7 @@ export default function CandidateApplicationForm({
 
     loadDraft();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Initialize showSecondParent based on existing parent2 details (controlled mode)
@@ -635,833 +633,833 @@ export default function CandidateApplicationForm({
             </div>
           )}
 
-      <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
-        {step === 0 && (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-            {show("applicationType") && (
-              <>
-                <SectionTitle>Application type</SectionTitle>
-                <div className="md:col-span-2">
-                  <span className={fieldLabelClass}>Type</span>
-                  <div className="mt-2 flex flex-wrap gap-6">
-                    {["Single", "Family"].map((val) => (
-                      <label
-                        key={val}
-                        className="inline-flex cursor-pointer items-center gap-2 font-bold text-gray-800"
-                      >
-                        <input
-                          type="radio"
-                          name="applicationType"
-                          value={val}
-                          checked={formData.applicationType === val}
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
+            {step === 0 && (
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+                {show("applicationType") && (
+                  <>
+                    <SectionTitle>Application type</SectionTitle>
+                    <div className="md:col-span-2">
+                      <span className={fieldLabelClass}>Type</span>
+                      <div className="mt-2 flex flex-wrap gap-6">
+                        {["Single", "Family"].map((val) => (
+                          <label
+                            key={val}
+                            className="inline-flex cursor-pointer items-center gap-2 font-bold text-gray-800"
+                          >
+                            <input
+                              type="radio"
+                              name="applicationType"
+                              value={val}
+                              checked={formData.applicationType === val}
+                              onChange={handleChange}
+                              className="accent-secondary"
+                            />
+                            {val}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <SectionTitle>Personal details</SectionTitle>
+                {show("firstName") && (
+                  <AppInput
+                    label="First name *"
+                    name="firstName"
+                    formData={formData}
+                    onChange={handleChange}
+                    error={formErrors.firstName}
+                  />
+                )}
+                {show("lastName") && (
+                  <AppInput
+                    label="Last name *"
+                    name="lastName"
+                    formData={formData}
+                    onChange={handleChange}
+                    error={formErrors.lastName}
+                  />
+                )}
+                {show("email") && (
+                  <AppInput
+                    label="Email *"
+                    name="email"
+                    type="email"
+                    formData={formData}
+                    onChange={handleChange}
+                    error={formErrors.email}
+                  />
+                )}
+                {show("gender") && (
+                  <AppSelect
+                    label="Gender *"
+                    name="gender"
+                    formData={formData}
+                    onChange={handleChange}
+                    options={genderOptions}
+                    error={formErrors.gender}
+                  />
+                )}
+                {show("contactNumber") && (
+                  <AppInput
+                    label="Contact number *"
+                    name="contactNumber"
+                    type="tel"
+                    formData={formData}
+                    onChange={handleChange}
+                    error={formErrors.contactNumber}
+                  />
+                )}
+                {show("relationshipStatus") && (
+                  <AppSelect
+                    label="Relationship status"
+                    name="relationshipStatus"
+                    formData={formData}
+                    onChange={handleChange}
+                    options={relationshipOptions}
+                  />
+                )}
+                {show("address") && (
+                  <AppInput
+                    label="Current address"
+                    name="address"
+                    formData={formData}
+                    onChange={handleChange}
+                    className="md:col-span-2"
+                  />
+                )}
+
+                {variant === "admin" && (
+                  <div className="md:col-span-2 space-y-4 border-t border-gray-100 pt-6 mt-2">
+                    <SectionTitle>Case Assignment (Admin only)</SectionTitle>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="md:col-span-2">
+                        <label htmlFor="caseworkerId" className={fieldLabelClass}>
+                          Assign Caseworker
+                        </label>
+                        <select
+                          id="caseworkerId"
+                          name="caseworkerId"
+                          value={formData.caseworkerId || ""}
                           onChange={handleChange}
-                          className="accent-secondary"
-                        />
-                        {val}
-                      </label>
-                    ))}
+                          className={inputClass}
+                          disabled={caseworkersLoading}
+                        >
+                          <option value="">-- Select Caseworker --</option>
+                          {caseworkers.map((cw) => (
+                            <option key={cw.id} value={cw.id}>
+                              {cw.first_name} {cw.last_name} ({cw.email})
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-1 text-[10px] text-gray-400 font-bold">
+                          This caseworker will be notified and assigned to handle this candidate&apos;s case.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </>
+                )}
+              </div>
             )}
 
-            <SectionTitle>Personal details</SectionTitle>
-            {show("firstName") && (
-              <AppInput
-                label="First name *"
-                name="firstName"
-                formData={formData}
-                onChange={handleChange}
-                error={formErrors.firstName}
-              />
-            )}
-            {show("lastName") && (
-              <AppInput
-                label="Last name *"
-                name="lastName"
-                formData={formData}
-                onChange={handleChange}
-                error={formErrors.lastName}
-              />
-            )}
-            {show("email") && (
-              <AppInput
-                label="Email *"
-                name="email"
-                type="email"
-                formData={formData}
-                onChange={handleChange}
-                error={formErrors.email}
-              />
-            )}
-            {show("gender") && (
-              <AppSelect
-                label="Gender *"
-                name="gender"
-                formData={formData}
-                onChange={handleChange}
-                options={genderOptions}
-                error={formErrors.gender}
-              />
-            )}
-            {show("contactNumber") && (
-              <AppInput
-                label="Contact number *"
-                name="contactNumber"
-                type="tel"
-                formData={formData}
-                onChange={handleChange}
-                error={formErrors.contactNumber}
-              />
-            )}
-            {show("relationshipStatus") && (
-              <AppSelect
-                label="Relationship status"
-                name="relationshipStatus"
-                formData={formData}
-                onChange={handleChange}
-                options={relationshipOptions}
-              />
-            )}
-            {show("address") && (
-              <AppInput
-                label="Current address"
-                name="address"
-                formData={formData}
-                onChange={handleChange}
-                className="md:col-span-2"
-              />
-            )}
-
-            {variant === "admin" && (
-              <div className="md:col-span-2 space-y-4 border-t border-gray-100 pt-6 mt-2">
-                <SectionTitle>Case Assignment (Admin only)</SectionTitle>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {step === 1 && (
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+                <SectionTitle>Nationality details</SectionTitle>
+                {show("nationality") && (
+                  <AppInput
+                    label="Country of nationality *"
+                    name="nationality"
+                    formData={formData}
+                    onChange={handleChange}
+                    error={formErrors.nationality}
+                  />
+                )}
+                {show("birthCountry") && (
+                  <AppInput
+                    label="Country of birth"
+                    name="birthCountry"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("placeOfBirth") && (
+                  <AppInput
+                    label="Place of birth"
+                    name="placeOfBirth"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("dob") && (
+                  <AppInput
+                    label="Date of birth *"
+                    name="dob"
+                    type="date"
+                    formData={formData}
+                    onChange={handleChange}
+                    error={formErrors.dob}
+                  />
+                )}
+                {show("passportNumber") && (
+                  <AppInput
+                    label="Passport number"
+                    name="passportNumber"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("issuingAuthority") && (
+                  <AppInput
+                    label="Issuing authority"
+                    name="issuingAuthority"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("issueDate") && (
+                  <AppInput
+                    label="Issue date"
+                    name="issueDate"
+                    type="date"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("expiryDate") && (
+                  <AppInput
+                    label="Expiry date"
+                    name="expiryDate"
+                    type="date"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("passportAvailable") && (
                   <div className="md:col-span-2">
-                    <label htmlFor="caseworkerId" className={fieldLabelClass}>
-                      Assign Caseworker
-                    </label>
-                    <select
-                      id="caseworkerId"
-                      name="caseworkerId"
-                      value={formData.caseworkerId || ""}
+                    <YesNo
+                      label="Confirm passport available?"
+                      name="passportAvailable"
+                      formData={formData}
                       onChange={handleChange}
-                      className={inputClass}
-                      disabled={caseworkersLoading}
-                    >
-                      <option value="">-- Select Caseworker --</option>
-                      {caseworkers.map((cw) => (
-                        <option key={cw.id} value={cw.id}>
-                          {cw.first_name} {cw.last_name} ({cw.email})
-                        </option>
-                      ))}
-                    </select>
-                    <p className="mt-1 text-[10px] text-gray-400 font-bold">
-                      This caseworker will be notified and assigned to handle this candidate&apos;s case.
-                    </p>
+                    />
                   </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {step === 1 && (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-            <SectionTitle>Nationality details</SectionTitle>
-            {show("nationality") && (
-              <AppInput
-                label="Country of nationality *"
-                name="nationality"
-                formData={formData}
-                onChange={handleChange}
-                error={formErrors.nationality}
-              />
-            )}
-            {show("birthCountry") && (
-              <AppInput
-                label="Country of birth"
-                name="birthCountry"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("placeOfBirth") && (
-              <AppInput
-                label="Place of birth"
-                name="placeOfBirth"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("dob") && (
-              <AppInput
-                label="Date of birth *"
-                name="dob"
-                type="date"
-                formData={formData}
-                onChange={handleChange}
-                error={formErrors.dob}
-              />
-            )}
-            {show("passportNumber") && (
-              <AppInput
-                label="Passport number"
-                name="passportNumber"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("issuingAuthority") && (
-              <AppInput
-                label="Issuing authority"
-                name="issuingAuthority"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("issueDate") && (
-              <AppInput
-                label="Issue date"
-                name="issueDate"
-                type="date"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("expiryDate") && (
-              <AppInput
-                label="Expiry date"
-                name="expiryDate"
-                type="date"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("passportAvailable") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Confirm passport available?"
-                  name="passportAvailable"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-            <SectionTitle>Identity Details</SectionTitle>
-            {show("nationalIdNumber") && (
-              <AppInput
-                label="National ID number"
-                name="nationalIdNumber"
-                placeholder="Enter ID number"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("idIssuingAuthorityNational") && (
-              <AppInput
-                label="ID issuing authority"
-                name="idIssuingAuthorityNational"
-                placeholder="Enter authority"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-
-            {show("otherNationality") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Do you hold, or ever held any other nationality or citizenship?"
-                  name="otherNationality"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("ukLicense") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Do you have a UK driving licence?"
-                  name="ukLicense"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("medicalTreatment") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Have you ever been given medical treatment in the UK?"
-                  name="medicalTreatment"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("ukStayDuration") && (
-              <AppInput
-                label="How long have you lived in the UK?"
-                name="ukStayDuration"
-                placeholder="e.g. 3 years"
-                formData={formData}
-                onChange={handleChange}
-                className="md:col-span-2"
-              />
-            )}
-            {show("contactNumber2") && (
-              <AppInput
-                label="Alternate contact number"
-                name="contactNumber2"
-                type="tel"
-                formData={formData}
-                onChange={handleChange}
-                className="md:col-span-2"
-              />
-            )}
-
-            <SectionTitle>Address Details</SectionTitle>
-            {show("previousAddress") && (
-              <AppInput
-                label="Previous full address"
-                name="previousAddress"
-                placeholder="Enter your previous address"
-                formData={formData}
-                onChange={handleChange}
-                className="md:col-span-2"
-              />
-            )}
-            {show("startDate") && (
-              <AppInput
-                label="When did you start living at this address?"
-                name="startDate"
-                type="date"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("endDate") && (
-              <AppInput
-                label="When did you stop living at this address?"
-                name="endDate"
-                type="date"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-            <SectionTitle>Parent one&apos;s details</SectionTitle>
-            {show("parentName") && (
-              <AppInput
-                label="Full name"
-                name="parentName"
-                placeholder="Full name"
-                formData={formData}
-                onChange={handleChange}
-                className="md:col-span-2"
-              />
-            )}
-            {show("parentRelation") && (
-              <AppInput
-                label="What is this person's relationship status to you?"
-                name="parentRelation"
-                placeholder="Relationship"
-                formData={formData}
-                onChange={handleChange}
-                className="md:col-span-2"
-              />
-            )}
-            {show("parentDob") && (
-              <AppInput
-                label="Date of birth"
-                name="parentDob"
-                type="date"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("parentNationality") && (
-              <AppInput
-                label="Country of nationality"
-                name="parentNationality"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("sameNationality") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Have they always had the same nationality?"
-                  name="sameNationality"
-                  formData={formData}
-                  onChange={handleChange}
-                />
+                )}
               </div>
             )}
 
-            {!showSecondParent && !formData.parent2Name ? (
-              <div className="md:col-span-2">
-                <button
-                  type="button"
-                  onClick={() => setShowSecondParent(true)}
-                  className="w-full rounded-2xl border-2 border-dashed border-secondary/40 bg-secondary/5 py-4 text-sm font-black text-secondary transition-colors hover:border-secondary hover:bg-secondary/10 sm:w-auto sm:px-8"
-                >
-                  + Add parent details
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="border-t border-gray-100 pt-6 md:col-span-2">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h3 className={sectionHeadingClass}>
-                      Parent two&apos;s details
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          parent2Name: "",
-                          parent2Relation: "",
-                          parent2Dob: "",
-                          parent2Nationality: "",
-                          parent2SameNationality: "",
-                        }));
-                        setShowSecondParent(false);
-                      }}
-                      className="text-xs font-black uppercase tracking-wider text-gray-500 underline-offset-4 hover:text-primary hover:underline"
-                    >
-                      Remove second parent
-                    </button>
+            {step === 2 && (
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+                <SectionTitle>Identity Details</SectionTitle>
+                {show("nationalIdNumber") && (
+                  <AppInput
+                    label="National ID number"
+                    name="nationalIdNumber"
+                    placeholder="Enter ID number"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("idIssuingAuthorityNational") && (
+                  <AppInput
+                    label="ID issuing authority"
+                    name="idIssuingAuthorityNational"
+                    placeholder="Enter authority"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+
+                {show("otherNationality") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Do you hold, or ever held any other nationality or citizenship?"
+                      name="otherNationality"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
                   </div>
-                </div>
-                {show("parent2Name") && (
+                )}
+                {show("ukLicense") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Do you have a UK driving licence?"
+                      name="ukLicense"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("medicalTreatment") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Have you ever been given medical treatment in the UK?"
+                      name="medicalTreatment"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("ukStayDuration") && (
+                  <AppInput
+                    label="How long have you lived in the UK?"
+                    name="ukStayDuration"
+                    placeholder="e.g. 3 years"
+                    formData={formData}
+                    onChange={handleChange}
+                    className="md:col-span-2"
+                  />
+                )}
+                {show("contactNumber2") && (
+                  <AppInput
+                    label="Alternate contact number"
+                    name="contactNumber2"
+                    type="tel"
+                    formData={formData}
+                    onChange={handleChange}
+                    className="md:col-span-2"
+                  />
+                )}
+
+                <SectionTitle>Address Details</SectionTitle>
+                {show("previousAddress") && (
+                  <AppInput
+                    label="Previous full address"
+                    name="previousAddress"
+                    placeholder="Enter your previous address"
+                    formData={formData}
+                    onChange={handleChange}
+                    className="md:col-span-2"
+                  />
+                )}
+                {show("startDate") && (
+                  <AppInput
+                    label="When did you start living at this address?"
+                    name="startDate"
+                    type="date"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("endDate") && (
+                  <AppInput
+                    label="When did you stop living at this address?"
+                    name="endDate"
+                    type="date"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+                <SectionTitle>Parent one&apos;s details</SectionTitle>
+                {show("parentName") && (
                   <AppInput
                     label="Full name"
-                    name="parent2Name"
+                    name="parentName"
                     placeholder="Full name"
                     formData={formData}
                     onChange={handleChange}
                     className="md:col-span-2"
                   />
                 )}
-                {show("parent2Relation") && (
+                {show("parentRelation") && (
                   <AppInput
                     label="What is this person's relationship status to you?"
-                    name="parent2Relation"
+                    name="parentRelation"
                     placeholder="Relationship"
                     formData={formData}
                     onChange={handleChange}
                     className="md:col-span-2"
                   />
                 )}
-                {show("parent2Dob") && (
+                {show("parentDob") && (
                   <AppInput
                     label="Date of birth"
-                    name="parent2Dob"
+                    name="parentDob"
                     type="date"
                     formData={formData}
                     onChange={handleChange}
                   />
                 )}
-                {show("parent2Nationality") && (
+                {show("parentNationality") && (
                   <AppInput
                     label="Country of nationality"
-                    name="parent2Nationality"
+                    name="parentNationality"
                     formData={formData}
                     onChange={handleChange}
                   />
                 )}
-                {show("parent2SameNationality") && (
+                {show("sameNationality") && (
                   <div className="md:col-span-2">
                     <YesNo
                       label="Have they always had the same nationality?"
-                      name="parent2SameNationality"
+                      name="sameNationality"
                       formData={formData}
                       onChange={handleChange}
                     />
                   </div>
                 )}
-              </>
-            )}
-          </div>
-        )}
 
-        {step === 4 && (
-          <div className="grid grid-cols-1 gap-5 md:gap-6">
-            <SectionTitle>Travel History</SectionTitle>
-            {show("illegalEntry") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Entered the UK illegally?"
-                  name="illegalEntry"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("overstayed") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Remained in the UK beyond the validity of your visa or permission to stay?"
-                  name="overstayed"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("breach") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Breached the conditions of your leave (worked without permission or received funds without permission)?"
-                  name="breach"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("falseInfo") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Given false information when applying for a visa or leave to remain?"
-                  name="falseInfo"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("otherBreach") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Breached UK immigration law in any other way?"
-                  name="otherBreach"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-
-            <SectionTitle>Visa Issues (UK/Other Countries)</SectionTitle>
-            {show("refusedVisa") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Refused a visa"
-                  name="refusedVisa"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("refusedEntry") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Refused entry at the border"
-                  name="refusedEntry"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("refusedPermission") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Refused permission to stay or remain"
-                  name="refusedPermission"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("refusedAsylum") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Refused asylum"
-                  name="refusedAsylum"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("deported") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Deported"
-                  name="deported"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("removed") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Removed"
-                  name="removed"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("requiredToLeave") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Required to leave"
-                  name="requiredToLeave"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("banned") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Excluded or banned from entry"
-                  name="banned"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {step === 5 && (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-            <SectionTitle>Travel History (Other Countries)</SectionTitle>
-            {show("visitedOther") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Have you been to any other countries in the past 10 years?"
-                  name="visitedOther"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-            {show("countryVisited") && (
-              <AppInput
-                label="Which country did you visit?"
-                name="countryVisited"
-                placeholder="Country name"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("visitReason") && (
-              <AppInput
-                label="What was the reason for your visit?"
-                name="visitReason"
-                placeholder="Reason"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("entryDate") && (
-              <AppInput
-                label="When did you enter this country?"
-                name="entryDate"
-                type="date"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("leaveDate") && (
-              <AppInput
-                label="When did you leave this country?"
-                name="leaveDate"
-                type="date"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-
-            <SectionTitle>Current Status</SectionTitle>
-            {show("visaType") && (
-              <div className="md:col-span-2">
-                <AppSelect
-                  question="What UK visa, entry clearance or grant of leave do you have?"
-                  label="Type of Visa"
-                  name="visaType"
-                  formData={formData}
-                  onChange={handleChange}
-                  options={visaTypeOptions}
-                  placeholder="Select type"
-                />
-              </div>
-            )}
-            {show("brpNumber") && (
-              <AppInput
-                label="Enter your BRP Permit Number"
-                name="brpNumber"
-                placeholder="BRP permit number"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("visaEndDate") && (
-              <AppInput
-                label="What is the end date of your permission to be in the UK?"
-                name="visaEndDate"
-                type="date"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("niNumber") && (
-              <AppInput
-                label="Your National Insurance number"
-                name="niNumber"
-                placeholder="National Insurance number"
-                formData={formData}
-                onChange={handleChange}
-              />
-            )}
-            {show("sponsored") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Have you been sponsored by a Government or International Scholarship agency within the last 2 months?"
-                  name="sponsored"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-
-            <SectionTitle>English language</SectionTitle>
-            {show("englishProof") && (
-              <div className="md:col-span-2">
-                <YesNo
-                  label="Have you provided evidence of your English language ability in a previous application?"
-                  name="englishProof"
-                  formData={formData}
-                  onChange={handleChange}
-                />
-              </div>
-            )}
-
-            {customFieldDefinitions.length > 0 && (
-              <>
-                <SectionTitle>Additional information</SectionTitle>
-                <p className="mb-2 text-xs font-bold text-gray-500 md:col-span-2">
-                  Extra questions configured by your organisation.
-                </p>
-                {customFieldDefinitions.map((def) => {
-                  const label =
-                    (def.label && def.label.trim()) || "Additional field";
-                  const val =
-                    (formData.customResponses &&
-                      formData.customResponses[def.id]) ??
-                    "";
-                  const id = `cust_${def.id}`;
-                  const wrapClass =
-                    def.type === "textarea" ? "md:col-span-2" : "";
-                  if (def.type === "textarea") {
-                    return (
-                      <div key={def.id} className={wrapClass}>
-                        <AppTextarea
-                          label={label}
-                          id={id}
-                          value={val}
-                          onChange={(e) =>
-                            handleCustomResponseChange(def.id, e.target.value)
-                          }
+                {!showSecondParent && !formData.parent2Name ? (
+                  <div className="md:col-span-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowSecondParent(true)}
+                      className="w-full rounded-2xl border-2 border-dashed border-secondary/40 bg-secondary/5 py-4 text-sm font-black text-secondary transition-colors hover:border-secondary hover:bg-secondary/10 sm:w-auto sm:px-8"
+                    >
+                      + Add parent details
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="border-t border-gray-100 pt-6 md:col-span-2">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h3 className={sectionHeadingClass}>
+                          Parent two&apos;s details
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              parent2Name: "",
+                              parent2Relation: "",
+                              parent2Dob: "",
+                              parent2Nationality: "",
+                              parent2SameNationality: "",
+                            }));
+                            setShowSecondParent(false);
+                          }}
+                          className="text-xs font-black uppercase tracking-wider text-gray-500 underline-offset-4 hover:text-primary hover:underline"
+                        >
+                          Remove second parent
+                        </button>
+                      </div>
+                    </div>
+                    {show("parent2Name") && (
+                      <AppInput
+                        label="Full name"
+                        name="parent2Name"
+                        placeholder="Full name"
+                        formData={formData}
+                        onChange={handleChange}
+                        className="md:col-span-2"
+                      />
+                    )}
+                    {show("parent2Relation") && (
+                      <AppInput
+                        label="What is this person's relationship status to you?"
+                        name="parent2Relation"
+                        placeholder="Relationship"
+                        formData={formData}
+                        onChange={handleChange}
+                        className="md:col-span-2"
+                      />
+                    )}
+                    {show("parent2Dob") && (
+                      <AppInput
+                        label="Date of birth"
+                        name="parent2Dob"
+                        type="date"
+                        formData={formData}
+                        onChange={handleChange}
+                      />
+                    )}
+                    {show("parent2Nationality") && (
+                      <AppInput
+                        label="Country of nationality"
+                        name="parent2Nationality"
+                        formData={formData}
+                        onChange={handleChange}
+                      />
+                    )}
+                    {show("parent2SameNationality") && (
+                      <div className="md:col-span-2">
+                        <YesNo
+                          label="Have they always had the same nationality?"
+                          name="parent2SameNationality"
+                          formData={formData}
+                          onChange={handleChange}
                         />
                       </div>
-                    );
-                  }
-                  const inputType =
-                    def.type === "number"
-                      ? "number"
-                      : def.type === "date"
-                        ? "date"
-                        : "text";
-                  return (
-                    <div key={def.id} className={wrapClass}>
-                      <label htmlFor={id} className={fieldLabelClass}>
-                        {label}
-                      </label>
-                      <input
-                        id={id}
-                        type={inputType}
-                        value={val}
-                        onChange={(e) =>
-                          handleCustomResponseChange(def.id, e.target.value)
-                        }
-                        className={inputClass}
-                      />
-                    </div>
-                  );
-                })}
-              </>
+                    )}
+                  </>
+                )}
+              </div>
             )}
-          </div>
-        )}
 
-        <div className="flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            {variant === "candidate" && (
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                disabled={submitting || applicationLoading}
-                className="rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition-colors hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {applicationLoading ? "Saving…" : "Save draft"}
-              </button>
+            {step === 4 && (
+              <div className="grid grid-cols-1 gap-5 md:gap-6">
+                <SectionTitle>Travel History</SectionTitle>
+                {show("illegalEntry") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Entered the UK illegally?"
+                      name="illegalEntry"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("overstayed") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Remained in the UK beyond the validity of your visa or permission to stay?"
+                      name="overstayed"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("breach") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Breached the conditions of your leave (worked without permission or received funds without permission)?"
+                      name="breach"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("falseInfo") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Given false information when applying for a visa or leave to remain?"
+                      name="falseInfo"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("otherBreach") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Breached UK immigration law in any other way?"
+                      name="otherBreach"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+
+                <SectionTitle>Visa Issues (UK/Other Countries)</SectionTitle>
+                {show("refusedVisa") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Refused a visa"
+                      name="refusedVisa"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("refusedEntry") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Refused entry at the border"
+                      name="refusedEntry"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("refusedPermission") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Refused permission to stay or remain"
+                      name="refusedPermission"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("refusedAsylum") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Refused asylum"
+                      name="refusedAsylum"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("deported") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Deported"
+                      name="deported"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("removed") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Removed"
+                      name="removed"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("requiredToLeave") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Required to leave"
+                      name="requiredToLeave"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("banned") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Excluded or banned from entry"
+                      name="banned"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+              </div>
             )}
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="rounded-xl px-5 py-3 text-sm font-black text-gray-500 transition-colors hover:bg-gray-100"
-            >
-              Cancel
-            </button>
-          </div>
-          <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row">
-            <button
-              type="button"
-              onClick={goPrev}
-              disabled={step === 0}
-              className="rounded-xl bg-gray-200 px-6 py-3 text-sm font-black text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Previous
-            </button>
-            {step < lastStep && (
-              <button
-                key="next-btn"
-                type="button"
-                onClick={goNext}
-                className="rounded-xl bg-secondary px-6 py-3 text-sm font-black text-white shadow-md shadow-secondary/20 transition-colors hover:bg-secondary-dark"
-              >
-                Next
-              </button>
+
+            {step === 5 && (
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+                <SectionTitle>Travel History (Other Countries)</SectionTitle>
+                {show("visitedOther") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Have you been to any other countries in the past 10 years?"
+                      name="visitedOther"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {show("countryVisited") && (
+                  <AppInput
+                    label="Which country did you visit?"
+                    name="countryVisited"
+                    placeholder="Country name"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("visitReason") && (
+                  <AppInput
+                    label="What was the reason for your visit?"
+                    name="visitReason"
+                    placeholder="Reason"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("entryDate") && (
+                  <AppInput
+                    label="When did you enter this country?"
+                    name="entryDate"
+                    type="date"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("leaveDate") && (
+                  <AppInput
+                    label="When did you leave this country?"
+                    name="leaveDate"
+                    type="date"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+
+                <SectionTitle>Current Status</SectionTitle>
+                {show("visaType") && (
+                  <div className="md:col-span-2">
+                    <AppSelect
+                      question="What UK visa, entry clearance or grant of leave do you have?"
+                      label="Type of Visa"
+                      name="visaType"
+                      formData={formData}
+                      onChange={handleChange}
+                      options={visaTypeOptions}
+                      placeholder="Select type"
+                    />
+                  </div>
+                )}
+                {show("brpNumber") && (
+                  <AppInput
+                    label="Enter your BRP Permit Number"
+                    name="brpNumber"
+                    placeholder="BRP permit number"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("visaEndDate") && (
+                  <AppInput
+                    label="What is the end date of your permission to be in the UK?"
+                    name="visaEndDate"
+                    type="date"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("niNumber") && (
+                  <AppInput
+                    label="Your National Insurance number"
+                    name="niNumber"
+                    placeholder="National Insurance number"
+                    formData={formData}
+                    onChange={handleChange}
+                  />
+                )}
+                {show("sponsored") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Have you been sponsored by a Government or International Scholarship agency within the last 2 months?"
+                      name="sponsored"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+
+                <SectionTitle>English language</SectionTitle>
+                {show("englishProof") && (
+                  <div className="md:col-span-2">
+                    <YesNo
+                      label="Have you provided evidence of your English language ability in a previous application?"
+                      name="englishProof"
+                      formData={formData}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+
+                {customFieldDefinitions.length > 0 && (
+                  <>
+                    <SectionTitle>Additional information</SectionTitle>
+                    <p className="mb-2 text-xs font-bold text-gray-500 md:col-span-2">
+                      Extra questions configured by your organisation.
+                    </p>
+                    {customFieldDefinitions.map((def) => {
+                      const label =
+                        (def.label && def.label.trim()) || "Additional field";
+                      const val =
+                        (formData.customResponses &&
+                          formData.customResponses[def.id]) ??
+                        "";
+                      const id = `cust_${def.id}`;
+                      const wrapClass =
+                        def.type === "textarea" ? "md:col-span-2" : "";
+                      if (def.type === "textarea") {
+                        return (
+                          <div key={def.id} className={wrapClass}>
+                            <AppTextarea
+                              label={label}
+                              id={id}
+                              value={val}
+                              onChange={(e) =>
+                                handleCustomResponseChange(def.id, e.target.value)
+                              }
+                            />
+                          </div>
+                        );
+                      }
+                      const inputType =
+                        def.type === "number"
+                          ? "number"
+                          : def.type === "date"
+                            ? "date"
+                            : "text";
+                      return (
+                        <div key={def.id} className={wrapClass}>
+                          <label htmlFor={id} className={fieldLabelClass}>
+                            {label}
+                          </label>
+                          <input
+                            id={id}
+                            type={inputType}
+                            value={val}
+                            onChange={(e) =>
+                              handleCustomResponseChange(def.id, e.target.value)
+                            }
+                            className={inputClass}
+                          />
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
             )}
-            {step >= lastStep && (
-              <button
-                key="submit-btn"
-                type="button"
-                onClick={handleSubmit}
-                disabled={submitting || applicationLoading}
-                className="rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition-colors hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {submitting
-                  ? "Submitting…"
-                  : variant === "admin"
-                    ? "Save client"
-                    : "Submit application"}
-              </button>
-            )}
-          </div>
-        </div>
-      </form>
+
+            <div className="flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {variant === "candidate" && (
+                  <button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    disabled={submitting || applicationLoading}
+                    className="rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition-colors hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {applicationLoading ? "Saving…" : "Save draft"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="rounded-xl px-5 py-3 text-sm font-black text-gray-500 transition-colors hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+              </div>
+              <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row">
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  disabled={step === 0}
+                  className="rounded-xl bg-gray-200 px-6 py-3 text-sm font-black text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                {step < lastStep && (
+                  <button
+                    key="next-btn"
+                    type="button"
+                    onClick={goNext}
+                    className="rounded-xl bg-secondary px-6 py-3 text-sm font-black text-white shadow-md shadow-secondary/20 transition-colors hover:bg-secondary-dark"
+                  >
+                    Next
+                  </button>
+                )}
+                {step >= lastStep && (
+                  <button
+                    key="submit-btn"
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={submitting || applicationLoading}
+                    className="rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition-colors hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {submitting
+                      ? "Submitting…"
+                      : variant === "admin"
+                        ? "Save client"
+                        : "Submit application"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </form>
         </> // closes {!draftLoading && (
       )}
     </div>

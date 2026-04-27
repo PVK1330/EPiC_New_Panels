@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Calendar,
@@ -12,8 +12,14 @@ import {
   LayoutDashboard,
   CheckCircle2,
   AlertCircle,
+  Loader2,
+  Users,
+  ChevronDown,
 } from "lucide-react";
 import Modal from "../../components/Modal";
+import SearchableSelect from "../../components/SearchableSelect";
+import * as appointmentApi from "../../services/appointmentApi";
+import { useToast } from "../../context/ToastContext";
 
 const PLATFORMS = [
   {
@@ -178,63 +184,15 @@ const AppointmentCard = ({
   );
 };
 
-const initialUpcoming = [
-  {
-    id: "1",
-    title: "Consultation Meeting",
-    dateDisplay: "20 April 2026",
-    dateIso: "2026-04-20",
-    time: "10:30 AM",
-    location: "Online — Microsoft Teams",
-    status: "Live Now",
-    joinable: true,
-    platform: "teams",
-    meetingUrl: "https://teams.microsoft.com",
-  },
-  {
-    id: "2",
-    title: "Visa Interview Prep",
-    dateDisplay: "22 April 2026",
-    dateIso: "2026-04-22",
-    time: "01:30 PM",
-    location: "Online — Zoom",
-    status: "Scheduled",
-    joinable: true,
-    platform: "zoom",
-    meetingUrl: "https://zoom.us",
-  },
-];
-
-const initialPast = [
-  {
-    id: "p1",
-    title: "Document Review",
-    dateDisplay: "25 March 2026",
-    dateIso: "2026-03-25",
-    time: "02:00 PM",
-    location: "Main Office, Sector 5",
-    status: "Completed",
-    joinable: false,
-    platform: null,
-    meetingUrl: "",
-  },
-  {
-    id: "p2",
-    title: "Initial Consultation",
-    dateDisplay: "10 March 2026",
-    dateIso: "2026-03-10",
-    time: "11:00 AM",
-    location: "Main Office, Sector 5",
-    status: "Completed",
-    joinable: false,
-    platform: null,
-    meetingUrl: "",
-  },
-];
+// Static data removed, using dynamic data from API
 
 const Appointments = () => {
-  const [upcoming, setUpcoming] = useState(initialUpcoming);
-  const [past] = useState(initialPast);
+  const { showToast } = useToast();
+  const [upcoming, setUpcoming] = useState([]);
+  const [past, setPast] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -244,7 +202,65 @@ const Appointments = () => {
     time: "",
     platform: "teams",
     meetingUrl: "",
+    staffIds: [],
   });
+
+  useEffect(() => {
+    fetchAppointments();
+    fetchStaff();
+  }, []);
+
+  const fetchStaff = async () => {
+    try {
+      const res = await appointmentApi.getAvailableStaff();
+      if (res.data?.status === "success") {
+        setStaffList(res.data.data.staff);
+      }
+    } catch (error) {
+      console.error("Failed to fetch staff:", error);
+    }
+  };
+
+  const fetchAppointments = async () => {
+    setLoading(true);
+    try {
+      const res = await appointmentApi.getMyAppointments();
+      if (res.data?.status === "success") {
+        const all = res.data.data.appointments;
+        
+        // Categorize appointments
+        const upcomingApts = [];
+        const pastApts = [];
+        
+        const now = new Date();
+        
+        all.forEach(apt => {
+          // Normalize data for the component
+          const normalized = {
+            ...apt,
+            dateDisplay: formatDisplayDate(apt.date),
+            time: formatTimeFromInput(apt.time),
+            location: apt.platform === 'in-person' ? 'In-person Meeting' : `Online — ${platformMeta(apt.platform).label}`,
+            joinable: apt.platform !== 'in-person' && apt.status !== 'cancelled' && apt.status !== 'completed',
+          };
+
+          if (apt.status === 'completed' || apt.status === 'cancelled') {
+            pastApts.push(normalized);
+          } else {
+            upcomingApts.push(normalized);
+          }
+        });
+
+        setUpcoming(upcomingApts);
+        setPast(pastApts);
+      }
+    } catch (error) {
+      console.error("Failed to fetch appointments:", error);
+      showToast({ message: "Could not load appointments", variant: "danger" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const resetScheduleForm = () => {
     setForm({
@@ -253,6 +269,7 @@ const Appointments = () => {
       time: "",
       platform: "teams",
       meetingUrl: "",
+      staffIds: [],
     });
   };
 
@@ -271,32 +288,36 @@ const Appointments = () => {
     setViewOpen(false);
   };
 
-  const handleScheduleSubmit = (e) => {
+  const handleScheduleSubmit = async (e) => {
     e.preventDefault();
     const title = form.title.trim();
     if (!title || !form.date || !form.time) return;
 
-    const meta = platformMeta(form.platform);
-    const dateDisplay = formatDisplayDate(form.date);
-    const url = form.meetingUrl.trim();
-    const timeDisplay = formatTimeFromInput(form.time);
-
-    setUpcoming((prev) => [
-      {
-        id: crypto.randomUUID(),
+    setSubmitting(true);
+    try {
+      const res = await appointmentApi.createAppointment({
         title,
-        dateDisplay,
-        dateIso: form.date,
-        time: timeDisplay,
-        location: `Online — ${meta.label}`,
-        status: "Scheduled",
-        joinable: true,
+        date: form.date,
+        time: form.time,
         platform: form.platform,
-        meetingUrl: url,
-      },
-      ...prev,
-    ]);
-    closeSchedule();
+        meeting_url: form.meetingUrl.trim(),
+        staff_ids: form.staffIds,
+      });
+
+      if (res.data?.status === "success") {
+        showToast({ message: "Appointment scheduled!" });
+        fetchAppointments(); // Refresh list
+        closeSchedule();
+      }
+    } catch (error) {
+      console.error("Failed to create appointment:", error);
+      showToast({ 
+        message: error.response?.data?.message || "Failed to schedule appointment",
+        variant: "danger"
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const cardVariants = {
@@ -316,17 +337,28 @@ const Appointments = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <LayoutDashboard className="text-primary" size={36} />
-          Appointments
-        </h1>
-        <p className="text-primary font-bold text-sm mt-1">
-          Join video calls on{" "}
-          <span className="text-secondary">Microsoft Teams</span>,{" "}
-          <span className="text-secondary">Google Meet</span>, or{" "}
-          <span className="text-secondary">Zoom</span>. Schedule a new
-          meeting anytime.
-        </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
+              <LayoutDashboard className="text-primary" size={36} />
+              Appointments
+            </h1>
+            <p className="text-primary font-bold text-sm mt-1">
+              Join video calls on{" "}
+              <span className="text-secondary">Microsoft Teams</span>,{" "}
+              <span className="text-secondary">Google Meet</span>, or{" "}
+              <span className="text-secondary">Zoom</span>. Schedule a new
+              meeting anytime.
+            </p>
+          </div>
+          <button
+            onClick={() => setScheduleOpen(true)}
+            className="inline-flex items-center gap-2 bg-secondary text-white px-6 py-3 rounded-2xl text-sm font-black shadow-lg shadow-secondary/20 hover:bg-secondary-dark transition-all transform active:scale-95 whitespace-nowrap self-start md:self-center"
+          >
+            <Plus size={20} />
+            Schedule Meeting
+          </button>
+        </div>
       </motion.div>
 
       {/* Stats Cards */}
@@ -382,61 +414,78 @@ const Appointments = () => {
         </div>
       </motion.div>
 
-      {/* Upcoming & Live Section */}
-      <motion.div
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <h2 className="text-xl font-black text-secondary mb-6 tracking-tight flex items-center gap-2">
-          <Video className="text-primary" size={24} />
-          Upcoming & Live
-        </h2>
-        <div className="space-y-4">
-          {upcoming.map((apt) => (
-            <AppointmentCard
-              key={apt.id}
-              title={apt.title}
-              date={apt.dateDisplay}
-              time={apt.time}
-              location={apt.location}
-              status={apt.status}
-              joinable={apt.joinable}
-              meetingUrl={apt.meetingUrl}
-              platform={apt.platform}
-              onView={handleView}
-            />
-          ))}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <Loader2 className="text-primary animate-spin" size={48} />
+          <p className="text-gray-400 font-bold">Loading appointments...</p>
         </div>
-      </motion.div>
+      ) : (
+        <>
+          {/* Upcoming & Live Section */}
+          <motion.div
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <h2 className="text-xl font-black text-secondary mb-6 tracking-tight flex items-center gap-2">
+              <Video className="text-primary" size={24} />
+              Upcoming & Live
+            </h2>
+            <div className="space-y-4">
+              {upcoming.length > 0 ? (
+                upcoming.map((apt) => (
+                  <AppointmentCard
+                    key={apt.id}
+                    title={apt.title}
+                    date={apt.dateDisplay}
+                    time={apt.time}
+                    location={apt.location}
+                    status={apt.status}
+                    joinable={apt.joinable}
+                    meetingUrl={apt.meeting_url}
+                    platform={apt.platform}
+                    onView={handleView}
+                  />
+                ))
+              ) : (
+                <div className="p-10 text-center border-2 border-dashed border-gray-100 rounded-3xl">
+                  <p className="text-gray-400 font-bold text-sm">No upcoming appointments scheduled.</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
 
-      {/* Appointment History Section */}
-      <motion.div
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <h2 className="text-xl font-black text-secondary mb-6 tracking-tight flex items-center gap-2">
-          <History size={24} className="text-primary" />
-          Appointment History
-        </h2>
-        <div className="space-y-4">
-          {past.map((apt) => (
-            <AppointmentCard
-              key={apt.id}
-              title={apt.title}
-              date={apt.dateDisplay}
-              time={apt.time}
-              location={apt.location}
-              status={apt.status}
-              joinable={apt.joinable}
-              meetingUrl={apt.meetingUrl}
-              platform={apt.platform}
-              onView={handleView}
-            />
-          ))}
-        </div>
-      </motion.div>
+          {/* Appointment History Section */}
+          {past.length > 0 && (
+            <motion.div
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <h2 className="text-xl font-black text-secondary mb-6 tracking-tight flex items-center gap-2">
+                <History size={24} className="text-primary" />
+                Appointment History
+              </h2>
+              <div className="space-y-4">
+                {past.map((apt) => (
+                  <AppointmentCard
+                    key={apt.id}
+                    title={apt.title}
+                    date={apt.dateDisplay}
+                    time={apt.time}
+                    location={apt.location}
+                    status={apt.status}
+                    joinable={apt.joinable}
+                    meetingUrl={apt.meeting_url}
+                    platform={apt.platform}
+                    onView={handleView}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </>
+      )}
 
       <Modal
         open={scheduleOpen}
@@ -466,6 +515,21 @@ const Appointments = () => {
               required
             />
           </div>
+
+          <SearchableSelect
+            isMulti
+            label="Select Staff Member(s)"
+            placeholder="Choose one or more staff..."
+            searchPlaceholder="Search by name or email..."
+            options={staffList.map(s => ({
+              value: s.id,
+              label: `${s.first_name} ${s.last_name}`,
+              sublabel: s.email
+            }))}
+            value={form.staffIds}
+            onChange={(vals) => setForm(f => ({ ...f, staffIds: vals }))}
+            required
+          />
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
             <div>
@@ -577,9 +641,17 @@ const Appointments = () => {
             </button>
             <button
               type="submit"
-              className="w-full flex-1 rounded-xl bg-secondary py-3 text-sm font-black text-white transition-colors hover:bg-secondary-dark sm:w-auto"
+              disabled={submitting}
+              className="w-full flex-1 rounded-xl bg-secondary py-3 text-sm font-black text-white transition-colors hover:bg-secondary-dark sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Create appointment
+              {submitting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create appointment"
+              )}
             </button>
           </div>
         </form>
@@ -641,12 +713,12 @@ const Appointments = () => {
                 </div>
               </div>
 
-              {selectedAppointment.meetingUrl && (
+              {selectedAppointment.meeting_url && (
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <Video size={18} className="text-primary" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-bold text-gray-500 uppercase">Meeting Link</p>
-                    <p className="text-sm font-black text-secondary truncate">{selectedAppointment.meetingUrl}</p>
+                    <p className="text-sm font-black text-secondary truncate">{selectedAppointment.meeting_url}</p>
                   </div>
                 </div>
               )}
@@ -660,13 +732,13 @@ const Appointments = () => {
               >
                 Close
               </button>
-              {selectedAppointment.meetingUrl && selectedAppointment.status !== "Completed" && (
+              {selectedAppointment.meeting_url && selectedAppointment.status !== "Completed" && (
                 <button
                   type="button"
                   onClick={() => {
-                    const url = selectedAppointment.meetingUrl.match(/^https?:\/\//i)
-                      ? selectedAppointment.meetingUrl
-                      : `https://${selectedAppointment.meetingUrl}`;
+                    const url = selectedAppointment.meeting_url.match(/^https?:\/\//i)
+                      ? selectedAppointment.meeting_url
+                      : `https://${selectedAppointment.meeting_url}`;
                     window.open(url, "_blank", "noopener,noreferrer");
                   }}
                   className="flex-1 rounded-xl bg-primary py-3 text-sm font-black text-white transition-colors hover:bg-primary-dark"

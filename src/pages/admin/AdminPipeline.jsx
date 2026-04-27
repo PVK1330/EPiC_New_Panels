@@ -229,7 +229,7 @@ const DroppableColumn = ({ stage, children }) => {
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 p-2.5 space-y-2.5 min-h-[120px] max-h-[min(60vh,520px)] overflow-y-auto rounded-b-2xl transition-colors duration-150 ${isOver ? "bg-blue-50/60" : ""}`}
+      className={`flex-1 p-2.5 space-y-2.5 h-[600px] overflow-y-auto rounded-b-2xl transition-colors duration-150 ${isOver ? "bg-blue-50/60" : ""}`}
     >
       {children}
     </div>
@@ -278,8 +278,8 @@ const AdminPipeline = () => {
             accent: "border-t-gray-400",
             dot: "bg-gray-400",
             cards: (pipelineData.lead || []).map(c => ({
-              id: c.caseId,
-              caseId: c.caseId,
+              id: c.caseId || c.id.toString(),
+              caseId: c.caseId || c.id.toString(),
               name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
               meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
               badge: "New",
@@ -294,8 +294,8 @@ const AdminPipeline = () => {
             accent: "border-t-amber-400",
             dot: "bg-amber-400",
             cards: (pipelineData.docs || []).map(c => ({
-              id: c.caseId,
-              caseId: c.caseId,
+              id: c.caseId || c.id.toString(),
+              caseId: c.caseId || c.id.toString(),
               name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
               meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
               badge: "Pending",
@@ -310,8 +310,8 @@ const AdminPipeline = () => {
             accent: "border-t-blue-500",
             dot: "bg-blue-500",
             cards: (pipelineData.drafting || []).map(c => ({
-              id: c.caseId,
-              caseId: c.caseId,
+              id: c.caseId || c.id.toString(),
+              caseId: c.caseId || c.id.toString(),
               name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
               meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
               badge: "In Draft",
@@ -326,8 +326,8 @@ const AdminPipeline = () => {
             accent: "border-t-purple-500",
             dot: "bg-purple-500",
             cards: (pipelineData.submitted || []).map(c => ({
-              id: c.caseId,
-              caseId: c.caseId,
+              id: c.caseId || c.id.toString(),
+              caseId: c.caseId || c.id.toString(),
               name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
               meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
               badge: "Awaiting",
@@ -342,8 +342,8 @@ const AdminPipeline = () => {
             accent: "border-t-orange-500",
             dot: "bg-orange-500",
             cards: (pipelineData.decision || []).map(c => ({
-              id: c.caseId,
-              caseId: c.caseId,
+              id: c.caseId || c.id.toString(),
+              caseId: c.caseId || c.id.toString(),
               name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
               meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
               badge: "Pending HO",
@@ -358,8 +358,8 @@ const AdminPipeline = () => {
             accent: "border-t-green-500",
             dot: "bg-green-500",
             cards: (pipelineData.closed || []).map(c => ({
-              id: c.caseId,
-              caseId: c.caseId,
+              id: c.caseId || c.id.toString(),
+              caseId: c.caseId || c.id.toString(),
               name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
               meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
               badge: c.status === 'Approved' ? 'Approved ✓' : c.status === 'Rejected' ? 'Rejected' : 'Closed',

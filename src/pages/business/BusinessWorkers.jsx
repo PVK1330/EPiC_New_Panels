@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -12,129 +12,121 @@ import {
   LayoutDashboard,
   Briefcase,
   ShieldCheck,
+  Trash2,
+  AlertTriangle,
+  Loader2
 } from "lucide-react";
+import { getSponsoredWorkers, deleteSponsoredWorker } from "../../services/sponsoredWorkerApi";
+import { toast } from "react-hot-toast";
 
 const BusinessWorkers = () => {
+  const [workers, setWorkers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const navigate = useNavigate();
 
-  const workers = [
-    {
-      id: 1,
-      name: "John Doe",
-      visa: "Skilled Worker",
-      cos: "X1A2B3456",
-      job: "Software Engineer",
-      department: "Engineering",
-      salary: "£45,000",
-      phone: "+44 20 7123 4567",
-      startDate: "15 Jan 2023",
-      expiry: "12 Jan 2025",
-      status: "Expiring",
-      email: "john.doe@example.com",
-    },
-    {
-      id: 2,
-      name: "Priya Shah",
-      visa: "Skilled Worker",
-      cos: "X7C8D9012",
-      job: "Data Analyst",
-      department: "Analytics",
-      salary: "£38,000",
-      phone: "+44 20 7123 4568",
-      startDate: "20 Mar 2022",
-      expiry: "30 Jun 2026",
-      status: "Active",
-      email: "priya.shah@example.com",
-    },
-    {
-      id: 3,
-      name: "Ahmed Khan",
-      visa: "Intra-company",
-      cos: "X9G0H1234",
-      job: "Finance Manager",
-      department: "Finance",
-      salary: "£55,000",
-      phone: "+44 20 7123 4569",
-      startDate: "01 Sep 2021",
-      expiry: "22 Dec 2025",
-      status: "Active",
-      email: "ahmed.khan@example.com",
-    },
-    {
-      id: 4,
-      name: "Mike Torres",
-      visa: "ICT",
-      cos: "X4E5F6789",
-      job: "Project Manager",
-      department: "Operations",
-      salary: "£50,000",
-      phone: "+44 20 7123 4570",
-      startDate: "10 Jul 2023",
-      expiry: "15 Mar 2025",
-      status: "Warning",
-      email: "mike.torres@example.com",
-    },
-    {
-      id: 5,
-      name: "Sarah Johnson",
-      visa: "Skilled Worker",
-      cos: "X2J3K4567",
-      job: "HR Manager",
-      department: "Human Resources",
-      salary: "£42,000",
-      phone: "+44 20 7123 4571",
-      startDate: "05 Nov 2023",
-      expiry: "08 Jan 2027",
-      status: "Active",
-      email: "sarah.johnson@example.com",
-    },
-  ];
+  useEffect(() => {
+    fetchWorkers();
+  }, []);
+
+  const fetchWorkers = async () => {
+    try {
+      setLoading(true);
+      const response = await getSponsoredWorkers();
+      if (response.data.status === "success") {
+        setWorkers(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching workers:", error);
+      toast.error("Failed to load workers");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteWorker = async (candidateId) => {
+    if (!window.confirm("Are you sure you want to remove this worker? This will delete their case association.")) return;
+    
+    try {
+      const response = await deleteSponsoredWorker(candidateId);
+      if (response.data.status === "success") {
+        toast.success("Worker removed successfully");
+        fetchWorkers();
+      }
+    } catch (error) {
+      console.error("Error deleting worker:", error);
+      toast.error("Failed to remove worker");
+    }
+  };
 
   const filteredWorkers = workers.filter((worker) => {
+    const candidateName = `${worker.candidate?.first_name || ''} ${worker.candidate?.last_name || ''}`.toLowerCase();
+    const candidateEmail = (worker.candidate?.email || '').toLowerCase();
+    
     const matchesSearch =
-      worker.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      worker.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      worker.cos.toLowerCase().includes(searchTerm.toLowerCase());
+      candidateName.includes(searchTerm.toLowerCase()) ||
+      candidateEmail.includes(searchTerm.toLowerCase()) ||
+      (worker.caseId || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
     const matchesFilter =
       filterStatus === "all" || worker.status.toLowerCase() === filterStatus.toLowerCase();
+    
     return matchesSearch && matchesFilter;
   });
 
   const getStatusColor = (status) => {
     switch (status) {
+      case "Approved":
       case "Active":
+      case "Completed":
         return "bg-emerald-100 text-emerald-700";
-      case "Expiring":
+      case "Rejected":
+      case "Cancelled":
         return "bg-red-100 text-red-700";
-      case "Warning":
+      case "Pending":
+      case "Under Review":
+      case "Docs Pending":
         return "bg-amber-100 text-amber-700";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-blue-100 text-blue-700";
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
+      case "Approved":
       case "Active":
+      case "Completed":
         return <CheckCircle2 size={16} className="text-emerald-600" />;
-      case "Expiring":
+      case "Rejected":
+      case "Cancelled":
         return <AlertCircle size={16} className="text-red-600" />;
-      case "Warning":
+      case "Pending":
+      case "Under Review":
+      case "Docs Pending":
         return <AlertCircle size={16} className="text-amber-600" />;
       default:
         return null;
     }
   };
 
-  const activeCount = workers.filter((w) => w.status === "Active").length;
-  const warningCount = workers.filter((w) => w.status === "Warning" || w.status === "Expiring").length;
+  const activeCount = workers.filter((w) => ["Active", "Approved", "Completed"].includes(w.status)).length;
+  const pendingCount = workers.filter((w) => ["Pending", "Under Review", "Docs Pending"].includes(w.status)).length;
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-[400px] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-sm font-black text-secondary animate-pulse">Loading workers...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-10 pb-10">
@@ -171,7 +163,7 @@ const BusinessWorkers = () => {
         <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-4 text-gray-900">
             <ShieldCheck size={20} className="text-emerald-600" />
-            <span className="font-black">Active</span>
+            <span className="font-black">Active / Approved</span>
           </div>
           <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-sm font-black text-emerald-700">
             {activeCount}
@@ -181,9 +173,9 @@ const BusinessWorkers = () => {
         <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-4 text-gray-900">
             <AlertCircle size={20} className="text-amber-500" />
-            <span className="font-black">Expiring/Warning</span>
+            <span className="font-black">Pending Review</span>
           </div>
-          <p className="text-3xl font-black text-secondary">{warningCount}</p>
+          <p className="text-3xl font-black text-secondary">{pendingCount}</p>
         </motion.div>
       </motion.div>   
 
@@ -199,7 +191,7 @@ const BusinessWorkers = () => {
             <Search size={18} className="absolute left-3 top-3 text-gray-400" />
             <input
               type="text"
-              placeholder="Search workers..."
+              placeholder="Search by name, email or case ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
@@ -212,10 +204,11 @@ const BusinessWorkers = () => {
               onChange={(e) => setFilterStatus(e.target.value)}
               className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
             >
-              <option value="all">All Workers</option>
-              <option value="active">Active</option>
-              <option value="expiring">Expiring</option>
-              <option value="warning">Warning</option>
+              <option value="all">All Status</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Approved">Approved</option>
+              <option value="Pending">Pending</option>
+              <option value="Rejected">Rejected</option>
             </select>
           </div>
           <button
@@ -239,37 +232,33 @@ const BusinessWorkers = () => {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Name</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Candidate</th>
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Job Title</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Department</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Visa Type</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">COS</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Expiry Date</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Case ID</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Salary</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Stage</th>
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Actions</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredWorkers.map((worker) => (
                 <tr key={worker.id} className="hover:bg-gray-50 transition">
                   <td className="px-4 py-4">
-                    <p className="text-sm font-black text-secondary">{worker.name}</p>
-                    <p className="text-xs font-bold text-gray-600">{worker.email}</p>
-                  </td>
-                  <td className="px-4 py-4 text-sm font-bold text-gray-700">{worker.job}</td>
-                  <td className="px-4 py-4 text-sm font-bold text-gray-700">{worker.department}</td>
-                  <td className="px-4 py-4">
-                    <span className="inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full bg-primary/10 text-primary">
-                      {worker.visa}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600 font-mono">{worker.cos}</td>
-                  <td className="px-4 py-4">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-gray-700">{worker.expiry}</span>
-                      <span className="text-[10px] font-bold text-gray-500">Start: {worker.startDate}</span>
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black text-xs uppercase">
+                        {worker.candidate?.first_name?.charAt(0)}{worker.candidate?.last_name?.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-secondary">{worker.candidate?.first_name} {worker.candidate?.last_name}</p>
+                        <p className="text-xs font-bold text-gray-600">{worker.candidate?.email}</p>
+                      </div>
                     </div>
                   </td>
+                  <td className="px-4 py-4 text-sm font-bold text-gray-700">{worker.jobTitle || "Not specified"}</td>
+                  <td className="px-4 py-4 text-xs font-bold text-gray-600 font-mono">{worker.caseId || "N/A"}</td>
+                  <td className="px-4 py-4 text-sm font-bold text-gray-700">£{Number(worker.salaryOffered).toLocaleString()}</td>
+                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{worker.caseStage}</td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(worker.status)}
@@ -281,12 +270,20 @@ const BusinessWorkers = () => {
                   <td className="px-4 py-4">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => navigate("/business/Sponsorworkerdetails")}
+                        onClick={() => navigate(`/business/Sponsorworkerdetails?candidateId=${worker.candidateId}`)}
                         className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-white transition hover:bg-primary-dark"
                         title="View details"
                       >
                         <Eye size={14} />
                         View
+                      </button>
+                      <button
+                        onClick={() => handleDeleteWorker(worker.candidateId)}
+                        className="inline-flex items-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-xs font-black text-red-600 transition hover:bg-red-200"
+                        title="Remove Worker"
+                      >
+                        <Trash2 size={14} />
+                        Delete
                       </button>
                     </div>
                   </td>
@@ -298,7 +295,7 @@ const BusinessWorkers = () => {
       </motion.div>
 
       {/* Empty State */}
-      {filteredWorkers.length === 0 && (
+      {!loading && filteredWorkers.length === 0 && (
         <motion.div
           className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm"
           variants={cardVariants}
@@ -307,6 +304,13 @@ const BusinessWorkers = () => {
         >
           <Users size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-sm font-bold text-gray-600">No workers found matching your search</p>
+          <button
+            onClick={()=>navigate("/business/sponsored-workers")}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-primary px-6 py-2 text-sm font-black text-primary transition hover:bg-primary/5"
+          >
+            <Plus size={16} />
+            Add Your First Worker
+          </button>
         </motion.div>
       )}
     </div>

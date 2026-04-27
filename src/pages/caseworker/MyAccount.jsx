@@ -50,7 +50,7 @@ const InputField = ({
 );
 
 const MyAccount = () => {
-  const user = useSelector((state) => state.auth.user);
+  const { user, token } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState("profile"); // profile, password, security
   const [saved, setSaved] = useState(false);
@@ -95,14 +95,16 @@ const MyAccount = () => {
         setTwoFactorEnabled(two_factor_enabled || false);
         
         // Update Redux user state with profile pic and other fields
+        const roleString = response.data.data.user.role?.name?.toLowerCase() || user.role;
         dispatch(
           setCredentials({
             user: {
               ...user,
               profile_pic,
               gender,
+              role: roleString,
             },
-            token: user.token,
+            token: token,
           })
         );
       } catch (error) {
@@ -225,15 +227,17 @@ const MyAccount = () => {
       console.log("Profile update response:", response.status, response.data);
 
       // Merge the updated user data with existing user data to preserve token and other fields
+      const roleString = response.data.data.user.role?.name?.toLowerCase() || user.role;
       const updatedUser = {
         ...user,
         ...response.data.data.user,
+        role: roleString,
       };
 
       dispatch(
         setCredentials({
           user: updatedUser,
-          token: user.token,
+          token: token,
         })
       );
 
@@ -260,187 +264,146 @@ const MyAccount = () => {
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab("profile")}
-          className={`px-6 py-3 text-sm font-black transition-all ${
-            activeTab === "profile"
-              ? "text-primary border-b-2 border-primary"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Profile
-        </button>
-        <button
-          onClick={() => setActiveTab("password")}
-          className={`px-6 py-3 text-sm font-black transition-all ${
-            activeTab === "password"
-              ? "text-primary border-b-2 border-primary"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Change Password
-        </button>
-        <button
-          onClick={() => setActiveTab("security")}
-          className={`px-6 py-3 text-sm font-black transition-all ${
-            activeTab === "security"
-              ? "text-primary border-b-2 border-primary"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Security (2FA)
-        </button>
-      </div>
-
-      {/* Profile Card */}
-      {activeTab === "profile" && (
-        <div className="bg-white p-8 rounded-xl shadow-sm border-2 border-primary/20 max-w-7xl">
-        {/* Avatar */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-primary/20 flex items-center justify-center text-5xl mb-3 shadow-inner overflow-hidden">
-            {formData.profile_pic ? (
-              <img
-                src={URL.createObjectURL(formData.profile_pic)}
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
-            ) : user?.profile_pic ? (
-              <img
-                src={user.profile_pic}
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              "👨"
-            )}
-          </div>
-          <label className="text-xs font-black text-blue-600 uppercase tracking-widest hover:underline cursor-pointer">
-            Update Profile Image
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </label>
-        </div>
-
-        {/* Profile Fields */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
-          <InputField
-            label="First Name"
-            value={formData.first_name}
-            onChange={handleInputChange("first_name")}
-            icon={User}
-          />
-          <InputField
-            label="Last Name"
-            value={formData.last_name}
-            onChange={handleInputChange("last_name")}
-            icon={User}
-          />
-          <InputField
-            label="Email"
-            value={formData.email}
-            onChange={handleInputChange("email")}
-            type="email"
-            icon={Mail}
-          />
-          <div className="flex gap-2">
-            <div className="w-24">
-              <InputField
-                label="Country Code"
-                value={formData.country_code}
-                onChange={handleInputChange("country_code")}
-                icon={Phone}
-              />
+      {/* All Forms Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Profile Card */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border-2 border-primary/20">
+          <h2 className="text-xl font-black text-secondary mb-4 tracking-tight flex items-center gap-2">
+            <UserCircle className="text-primary" size={24} />
+            Profile Information
+          </h2>
+          
+          {/* Avatar */}
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-20 h-20 rounded-full bg-gray-100 border-2 border-primary/20 flex items-center justify-center text-4xl mb-2 shadow-inner overflow-hidden">
+              {formData.profile_pic ? (
+                <img
+                  src={URL.createObjectURL(formData.profile_pic)}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : user?.profile_pic ? (
+                <img
+                  src={user.profile_pic}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                "👨"
+              )}
             </div>
-            <div className="flex-1">
-              <InputField
-                label="Mobile"
-                value={formData.mobile}
-                onChange={handleInputChange("mobile")}
-                type="tel"
-                icon={Phone}
+            <label className="text-xs font-black text-blue-600 uppercase tracking-widest hover:underline cursor-pointer">
+              Update Profile Image
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
               />
-            </div>
-          </div>
-          {/* <InputField
-            label="Date of Birth"
-            defaultValue="01-01-2000"
-            icon={Calendar}
-          />
-          <InputField label="Location" defaultValue="Nashik" icon={MapPin} />
-          <InputField label="Postal Code" defaultValue="422001" icon={Hash} />
-          <InputField
-            label="Address"
-            defaultValue="Nashik, Maharashtra"
-            icon={Globe}
-          /> */}
-        </div>
-
-        {/* Gender */}
-        <div className="flex items-center gap-6 mb-8">
-          {["male", "female", "other"].map((g) => (
-            <label
-              key={g}
-              className="flex items-center gap-2 cursor-pointer group"
-            >
-              <div
-                onClick={() => setFormData((prev) => ({ ...prev, gender: g }))}
-                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${formData.gender === g
-                    ? "border-orange-500 bg-orange-500"
-                    : "border-gray-300"
-                  }`}
-              >
-                {formData.gender === g && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                )}
-              </div>
-              <span className="text-sm font-bold text-gray-600 capitalize">
-                {g}
-              </span>
             </label>
-          ))}
+          </div>
+
+          {/* Profile Fields */}
+          <div className="grid grid-cols-1 gap-4 mb-4">
+            <InputField
+              label="First Name"
+              value={formData.first_name}
+              onChange={handleInputChange("first_name")}
+              icon={User}
+            />
+            <InputField
+              label="Last Name"
+              value={formData.last_name}
+              onChange={handleInputChange("last_name")}
+              icon={User}
+            />
+            <InputField
+              label="Email"
+              value={formData.email}
+              onChange={handleInputChange("email")}
+              type="email"
+              icon={Mail}
+            />
+            <div className="flex gap-2">
+              <div className="w-20">
+                <InputField
+                  label="Code"
+                  value={formData.country_code}
+                  onChange={handleInputChange("country_code")}
+                  icon={Phone}
+                />
+              </div>
+              <div className="flex-1">
+                <InputField
+                  label="Mobile"
+                  value={formData.mobile}
+                  onChange={handleInputChange("mobile")}
+                  type="tel"
+                  icon={Phone}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Gender */}
+          <div className="flex items-center gap-4 mb-4">
+            {["male", "female", "other"].map((g) => (
+              <label
+                key={g}
+                className="flex items-center gap-2 cursor-pointer group"
+              >
+                <div
+                  onClick={() => setFormData((prev) => ({ ...prev, gender: g }))}
+                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${formData.gender === g
+                      ? "border-orange-500 bg-orange-500"
+                      : "border-gray-300"
+                    }`}
+                >
+                  {formData.gender === g && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                  )}
+                </div>
+                <span className="text-xs font-bold text-gray-600 capitalize">
+                  {g}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className={`flex-1 font-black text-xs px-4 py-2.5 rounded-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${saved
+                  ? "bg-green-500 text-white"
+                  : "bg-blue-700 hover:bg-blue-800 text-white"
+                }`}
+            >
+              {loading ? "Saving..." : saved ? "✓ Saved!" : "Save Profile"}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="bg-primary hover:opacity-90 text-white font-black text-xs px-4 py-2.5 rounded-lg transition-all active:scale-95"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className={`font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${saved
-                ? "bg-green-500 text-white"
-                : "bg-blue-700 hover:bg-blue-800 text-white"
-              }`}
-          >
-            {loading ? "Saving..." : saved ? "✓ Saved!" : "Save Changes"}
-          </button>
-          <button
-            onClick={handleLogout}
-            className="bg-primary hover:opacity-90 text-white font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-      )}
-
-      {/* Password Card */}
-      {activeTab === "password" && (
-        <div className="bg-white p-8 rounded-xl shadow-sm border-2 border-primary/20 max-w-7xl">
-          <h2 className="text-2xl font-black text-secondary mb-6 tracking-tight flex items-center gap-3">
-            <Lock className="text-primary" size={28} />
+        {/* Password Card */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border-2 border-primary/20">
+          <h2 className="text-xl font-black text-secondary mb-4 tracking-tight flex items-center gap-2">
+            <Lock className="text-primary" size={24} />
             Change Password
           </h2>
 
           {!otpVerified ? (
-            <div className="space-y-6">
-              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                <p className="text-sm font-bold text-blue-800">
-                  For security, you must verify your email before changing your password.
+            <div className="space-y-4">
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-xs font-bold text-blue-800">
+                  Verify your email before changing password.
                 </p>
               </div>
 
@@ -448,16 +411,16 @@ const MyAccount = () => {
                 <button
                   onClick={handleSendOtp}
                   disabled={loading}
-                  className="w-full font-black text-sm px-6 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white transition-all active:scale-95 disabled:opacity-50"
+                  className="w-full font-black text-xs px-4 py-2.5 rounded-lg bg-primary hover:bg-primary-dark text-white transition-all active:scale-95 disabled:opacity-50"
                 >
                   {loading ? "Sending..." : "Send Verification OTP"}
                 </button>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <InputField
                     label="Enter OTP"
                     type="text"
-                    placeholder="Enter 6-digit OTP"
+                    placeholder="6-digit OTP"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
                     icon={Key}
@@ -468,14 +431,14 @@ const MyAccount = () => {
                   <button
                     onClick={handleVerifyOtp}
                     disabled={loading || otp.length !== 6}
-                    className="w-full font-black text-sm px-6 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white transition-all active:scale-95 disabled:opacity-50"
+                    className="w-full font-black text-xs px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all active:scale-95 disabled:opacity-50"
                   >
                     {loading ? "Verifying..." : "Verify OTP"}
                   </button>
                   <button
                     onClick={handleSendOtp}
                     disabled={loading}
-                    className="w-full font-black text-sm px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-secondary transition-all active:scale-95 disabled:opacity-50"
+                    className="w-full font-black text-xs px-4 py-2.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-secondary transition-all active:scale-95 disabled:opacity-50"
                   >
                     {loading ? "Resending..." : "Resend OTP"}
                   </button>
@@ -483,14 +446,14 @@ const MyAccount = () => {
               )}
             </div>
           ) : (
-            <div className="space-y-6">
-              <div className="p-4 bg-green-50 rounded-xl border border-green-200">
-                <p className="text-sm font-bold text-green-800">
-                  ✓ Email verified successfully. You can now change your password.
+            <div className="space-y-4">
+              <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                <p className="text-xs font-bold text-green-800">
+                  ✓ Email verified. Change your password below.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 gap-4">
                 <InputField
                   label="New Password"
                   type="password"
@@ -514,24 +477,22 @@ const MyAccount = () => {
               <button
                 onClick={handlePasswordUpdate}
                 disabled={loading}
-                className="font-black text-sm px-6 py-3 rounded-xl bg-blue-700 hover:bg-blue-800 text-white transition-all active:scale-95 disabled:opacity-50"
+                className="w-full font-black text-xs px-4 py-2.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white transition-all active:scale-95 disabled:opacity-50"
               >
                 {loading ? "Updating..." : "Update Password"}
               </button>
             </div>
           )}
         </div>
-      )}
 
-      {/* Security/2FA Card */}
-      {activeTab === "security" && (
-        <div className="bg-white p-8 rounded-xl shadow-sm border-2 border-primary/20 max-w-7xl">
-          <h2 className="text-2xl font-black text-secondary mb-6 tracking-tight flex items-center gap-3">
-            <Shield className="text-primary" size={28} />
+        {/* Security/2FA Card */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border-2 border-primary/20 lg:col-span-2">
+          <h2 className="text-xl font-black text-secondary mb-4 tracking-tight flex items-center gap-2">
+            <Shield className="text-primary" size={24} />
             Two-Factor Authentication
           </h2>
 
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
               <p className="text-sm font-bold text-secondary">
                 {twoFactorEnabled ? "2FA is enabled" : "2FA is disabled"}
@@ -546,7 +507,7 @@ const MyAccount = () => {
                   setTwoFactorMode("disable");
                   setTwoFactorModalOpen(true);
                 }}
-                className="px-4 py-2 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition"
+                className="px-4 py-2 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50 transition"
               >
                 Disable 2FA
               </button>
@@ -556,14 +517,14 @@ const MyAccount = () => {
                   setTwoFactorMode("setup");
                   setTwoFactorModalOpen(true);
                 }}
-                className="px-4 py-2 rounded-xl text-sm font-black text-white bg-primary hover:bg-primary-dark transition"
+                className="px-4 py-2 rounded-lg text-xs font-black text-white bg-primary hover:bg-primary-dark transition"
               >
                 Enable 2FA
               </button>
             )}
           </div>
         </div>
-      )}
+      </div>
 
       <Modal
         open={twoFactorModalOpen}
@@ -575,7 +536,7 @@ const MyAccount = () => {
       >
         {twoFactorMode === "setup" ? (
           <TwoFactorSetup
-            token={user?.token}
+            token={token}
             onSetupComplete={() => {
               setTwoFactorEnabled(true);
               setTwoFactorModalOpen(false);
@@ -584,7 +545,7 @@ const MyAccount = () => {
           />
         ) : (
           <TwoFactorDisable
-            token={user?.token}
+            token={token}
             onDisableComplete={() => {
               setTwoFactorEnabled(false);
               setTwoFactorModalOpen(false);

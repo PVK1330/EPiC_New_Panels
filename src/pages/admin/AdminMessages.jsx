@@ -136,14 +136,17 @@ export default function AdminMessages() {
     }
   }, [activeId, activeCaseId, fetchThread]);
 
-  const handleSend = async () => {
+  const handleSend = async (file) => {
     const text = draft.trim();
-    if (!text || !activeId) return;
+    if (!text && !file) return false;
+    if (!activeId) return false;
 
-    const result = await apiSendMessage(activeId, text, activeCaseId);
+    const result = await apiSendMessage(activeId, text, activeCaseId, file);
     if (result.success) {
       setDraft("");
+      return true;
     }
+    return false;
   };
 
   return (

@@ -616,7 +616,7 @@ export default function AdminCases() {
         if (response?.data?.data?.cases) {
           // Map API data to existing structure
           const mappedCases = response.data.data.cases.map(c => ({
-            caseId: c.caseId,
+            caseId: c.caseId || c.id.toString(),
             candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : '—',
             candidateId: c.candidateId,
             business: c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—',
@@ -744,7 +744,7 @@ export default function AdminCases() {
       const response = await getCases();
       if (response?.data?.data?.cases) {
         const mappedCases = response.data.data.cases.map(c => ({
-          caseId: c.caseId,
+          caseId: c.caseId || c.id.toString(),
           candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : '—',
           candidateId: c.candidateId,
           business: c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—',
@@ -847,7 +847,7 @@ export default function AdminCases() {
       const response = await getCases();
       if (response?.data?.data?.cases) {
         const mappedCases = response.data.data.cases.map(c => ({
-          caseId: c.caseId,
+          caseId: c.caseId || c.id.toString(),
           candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : '—',
           candidateId: c.candidateId,
           business: c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—',
@@ -893,7 +893,7 @@ export default function AdminCases() {
       const response = await getCases();
       if (response?.data?.data?.cases) {
         const mappedCases = response.data.data.cases.map(c => ({
-          caseId: c.caseId,
+          caseId: c.caseId || c.id.toString(),
           candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : '—',
           candidateId: c.candidateId,
           business: c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—',
@@ -953,7 +953,7 @@ export default function AdminCases() {
       const response = await getCases();
       if (response?.data?.data?.cases) {
         const mappedCases = response.data.data.cases.map(c => ({
-          caseId: c.caseId,
+          caseId: c.caseId || c.id.toString(),
           candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : '—',
           candidateId: c.candidateId,
           business: c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—',
@@ -1019,14 +1019,19 @@ export default function AdminCases() {
 
   // Filter logic - simplified like MyCandidates
   const filteredCases = cases.filter((c) => {
+    const caseIdStr = String(c.caseId || "").toLowerCase();
+    const candidateStr = String(c.candidate || "").toLowerCase();
+    const businessStr = String(c.business || "").toLowerCase();
+    const query = searchQuery.toLowerCase();
+
     const matchesSearch =
-      c.caseId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.candidate.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.business.toLowerCase().includes(searchQuery.toLowerCase());
+      caseIdStr.includes(query) ||
+      candidateStr.includes(query) ||
+      businessStr.includes(query);
     
     const matchesFilter =
       filterType === "all" ||
-      (filterType.toLowerCase() === "lead" && c.status?.toLowerCase() === "lead") ||
+      (filterType?.toLowerCase() === "lead" && c.status?.toLowerCase() === "lead") ||
       (filterType === "approved" && c.status === "Approved") ||
       (filterType === "pending" && c.status === "Pending") ||
       (filterType === "rejected" && c.status === "Rejected") ||

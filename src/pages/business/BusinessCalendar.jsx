@@ -1,10 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Search, Settings, Grid3x3, List, Calendar as CalendarIcon, Clock, MapPin, Users, Video, Phone, X, Edit, Trash2, Eye, UserCheck, CheckCircle2, CheckSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Search, Settings, Grid3x3, List, Calendar as CalendarIcon, Clock, MapPin, Users, Video, Phone, X, Edit, Trash2, Eye, UserCheck, CheckCircle2 } from "lucide-react";
 import MicrosoftConnect from "../../components/MicrosoftConnect";
 import CreateMeetingModal from "../../components/CreateMeetingModal";
 import { getUpcomingMeetings } from "../../services/teamsApi";
 import { getMyAppointments } from "../../services/appointmentApi";
-import api from "../../services/api";
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -18,14 +17,12 @@ const Calendar = () => {
   const [teamsMeetings, setTeamsMeetings] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
-  const [tasks, setTasks] = useState([]);
 
   const today = new Date();
 
   useEffect(() => {
     fetchTeamsMeetings();
     fetchAppointments();
-    fetchTasks();
   }, []);
 
   const fetchTeamsMeetings = async () => {
@@ -85,43 +82,6 @@ const Calendar = () => {
     }
   };
 
-  const fetchTasks = async () => {
-    try {
-      const response = await api.get("/api/tasks/assign?filter=all");
-      
-      if (response.data.status === "success") {
-        const apiTasks = response.data.data.tasks || [];
-        
-        const taskEvents = apiTasks.map((task) => {
-          const dueDate = task.due_date ? new Date(task.due_date) : new Date();
-          // Default 1 hour duration for tasks
-          const endDate = new Date(dueDate.getTime() + 60 * 60000);
-          const isCompleted = task.status === "completed";
-          
-          return {
-            id: `task-${task.id}`,
-            title: task.title,
-            date: dueDate,
-            endDate: endDate,
-            type: "task",
-            location: "Task",
-            attendees: [task.assignee_name || "You"],
-            description: `Priority: ${task.priority}`,
-            color: isCompleted ? "bg-gray-400" : task.priority === "high" ? "bg-red-500" : task.priority === "medium" ? "bg-amber-500" : "bg-green-500",
-            completed: isCompleted,
-            caseId: task.case_number || (task.case_id ? `#C-${task.case_id}` : null),
-            isTask: true,
-            taskId: task.id
-          };
-        });
-        
-        setTasks(taskEvents);
-      }
-    } catch (error) {
-      console.error("Failed to fetch tasks:", error);
-    }
-  };
-
   // Mock events data — includes past months for completed meetings display
   const [events, setEvents] = useState([]);
 
@@ -151,8 +111,8 @@ const Calendar = () => {
   }));
 
   const allEvents = useMemo(
-    () => [...eventsWithCompletion, ...teamsEvents, ...tasks],
-    [eventsWithCompletion, teamsEvents, tasks]
+    () => [...eventsWithCompletion, ...teamsEvents],
+    [eventsWithCompletion, teamsEvents]
   );
 
   const [newEvent, setNewEvent] = useState({
@@ -282,7 +242,6 @@ const Calendar = () => {
       case "call":    return <Phone size={12} />;
       case "deadline":return <Clock size={12} />;
       case "teams":   return <Video size={12} />;
-      case "task":    return <CheckSquare size={12} />;
       default:        return <CalendarIcon size={12} />;
     }
   };
@@ -327,7 +286,7 @@ const Calendar = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-secondary">Calendar</h1>
+          <h1 className="text-3xl font-black text-secondary">Business Calendar</h1>
           <p className="text-gray-500 mt-1">
             Schedule events, meetings, and deadlines
           </p>

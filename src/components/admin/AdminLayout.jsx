@@ -14,7 +14,7 @@ import {
 } from "react-icons/ri";
 
 import NotificationDropdown from "../Notifications/NotificationDropdown";
-import MessageDropdown from "../Notifications/MessageDropdown";
+import MessageDropdown from "../notifications/MessageDropdown";
 
 
 
@@ -118,6 +118,7 @@ const AdminLayout = () => {
             ref={dropdownRef}
             className="flex items-center gap-1 md:gap-1.5 ml-4 shrink-0"
           >
+
             {/* Messages */}
             <MessageDropdown />
 

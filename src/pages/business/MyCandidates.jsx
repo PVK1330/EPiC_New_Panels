@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -14,80 +15,51 @@ import {
   User,
   Briefcase,
   X,
+  Loader2,
+  Trash2
 } from "lucide-react";
+import { getSponsoredWorkers, deleteSponsoredWorker } from "../../services/sponsoredWorkerApi";
+import { toast } from "react-hot-toast";
 
 const MyCandidates = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
-  const [showModal, setShowModal] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [candidates, setCandidates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  const [candidates, setCandidates] = useState([
-    {
-      id: 1,
-      name: "Ananya Patel",
-      caseStatus: "In Progress",
-      visaType: "Skilled Worker",
-      assignedCaseworker: "Sarah Johnson",
-      submissionDate: "2024-02-15",
-      expectedCompletion: "2024-04-15",
-      documents: {
-        passport: "complete",
-        visaCopy: "pending",
-        contract: "complete",
-        payslips: "pending",
-      },
-      progress: 65,
-    },
-    {
-      id: 2,
-      name: "Michael Chen",
-      caseStatus: "Pending Review",
-      visaType: "Skilled Worker",
-      assignedCaseworker: "John Smith",
-      submissionDate: "2024-01-20",
-      expectedCompletion: "2024-03-20",
-      documents: {
-        passport: "complete",
-        visaCopy: "complete",
-        contract: "complete",
-        payslips: "complete",
-      },
-      progress: 90,
-    },
-    {
-      id: 3,
-      name: "Emma Wilson",
-      caseStatus: "Approved",
-      visaType: "Skilled Worker",
-      assignedCaseworker: "Sarah Johnson",
-      submissionDate: "2023-11-10",
-      expectedCompletion: "2024-01-10",
-      documents: {
-        passport: "complete",
-        visaCopy: "complete",
-        contract: "complete",
-        payslips: "complete",
-      },
-      progress: 100,
-    },
-    {
-      id: 4,
-      name: "David Brown",
-      caseStatus: "In Progress",
-      visaType: "Skilled Worker",
-      assignedCaseworker: "John Smith",
-      submissionDate: "2024-03-01",
-      expectedCompletion: "2024-05-01",
-      documents: {
-        passport: "complete",
-        visaCopy: "pending",
-        contract: "pending",
-        payslips: "pending",
-      },
-      progress: 35,
-    },
-  ]);
+  useEffect(() => {
+    fetchCandidates();
+  }, []);
+
+  const fetchCandidates = async () => {
+    try {
+      setLoading(true);
+      const response = await getSponsoredWorkers();
+      if (response.data.status === "success") {
+        setCandidates(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching candidates:", error);
+      toast.error("Failed to load candidates");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCandidate = async (id) => {
+    if (!window.confirm("Are you sure you want to remove this candidate?")) return;
+    try {
+      const response = await deleteSponsoredWorker(id);
+      if (response.data.status === "success") {
+        toast.success("Candidate removed successfully");
+        fetchCandidates();
+      }
+    } catch (error) {
+      console.error("Error deleting candidate:", error);
+      toast.error("Failed to remove candidate");
+    }
+  };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -97,12 +69,18 @@ const MyCandidates = () => {
   const getStatusStyle = (status) => {
     switch (status) {
       case "Approved":
+      case "Active":
+      case "Completed":
         return "bg-emerald-100 text-emerald-700";
       case "In Progress":
+      case "Under Review":
         return "bg-blue-100 text-blue-700";
       case "Pending Review":
+      case "Docs Pending":
+      case "Pending":
         return "bg-amber-100 text-amber-700";
       case "Rejected":
+      case "Cancelled":
         return "bg-red-100 text-red-700";
       default:
         return "bg-gray-100 text-gray-700";
@@ -112,50 +90,54 @@ const MyCandidates = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case "Approved":
+      case "Active":
+      case "Completed":
         return <CheckCircle2 size={16} className="text-emerald-600" />;
       case "In Progress":
+      case "Under Review":
         return <Clock size={16} className="text-blue-600" />;
       case "Pending Review":
+      case "Docs Pending":
+      case "Pending":
         return <AlertCircle size={16} className="text-amber-600" />;
       case "Rejected":
+      case "Cancelled":
         return <AlertCircle size={16} className="text-red-600" />;
       default:
         return null;
     }
   };
 
-  const getDocStatusStyle = (status) => {
-    switch (status) {
-      case "complete":
-        return "bg-emerald-100 text-emerald-700";
-      case "pending":
-        return "bg-amber-100 text-amber-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
-
-  const filteredCandidates = candidates.filter((candidate) => {
-    const matchesSearch =
-      candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      candidate.assignedCaseworker.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredCandidates = candidates.filter((item) => {
+    const candidate = item.candidate;
+    const name = `${candidate?.first_name || ''} ${candidate?.last_name || ''}`.toLowerCase();
+    const matchesSearch = name.includes(searchQuery.toLowerCase()) || 
+                         (candidate?.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+    
     const matchesFilter =
       filterType === "all" ||
-      (filterType === "approved" && candidate.caseStatus === "Approved") ||
-      (filterType === "in-progress" && candidate.caseStatus === "In Progress") ||
-      (filterType === "pending" && candidate.caseStatus === "Pending Review");
+      (filterType === "approved" && item.status === "Approved") ||
+      (filterType === "in-progress" && item.status === "In Progress") ||
+      (filterType === "pending" && (item.status === "Pending" || item.status === "Pending Review"));
+    
     return matchesSearch && matchesFilter;
   });
 
-  const totalCandidates = candidates.length;
-  const inProgress = candidates.filter((c) => c.caseStatus === "In Progress").length;
-  const approved = candidates.filter((c) => c.caseStatus === "Approved").length;
-  const pending = candidates.filter((c) => c.caseStatus === "Pending Review").length;
-
-  const handleViewCandidate = (candidate) => {
-    setSelectedCandidate(candidate);
-    setShowModal(true);
+  const stats = {
+    total: candidates.length,
+    inProgress: candidates.filter(c => ["In Progress", "Under Review"].includes(c.status)).length,
+    approved: candidates.filter(c => ["Approved", "Active", "Completed"].includes(c.status)).length,
+    pending: candidates.filter(c => ["Pending", "Pending Review", "Docs Pending"].includes(c.status)).length
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-[400px] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-sm font-black text-secondary animate-pulse">Loading candidates...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-10 pb-10">
@@ -186,7 +168,7 @@ const MyCandidates = () => {
             <Users size={20} className="text-primary" />
             <span className="font-black">Total Candidates</span>
           </div>
-          <p className="text-3xl font-black text-secondary">{totalCandidates}</p>
+          <p className="text-3xl font-black text-secondary">{stats.total}</p>
         </motion.div>
 
         <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -194,7 +176,7 @@ const MyCandidates = () => {
             <Clock size={20} className="text-blue-600" />
             <span className="font-black">In Progress</span>
           </div>
-          <p className="text-3xl font-black text-secondary">{inProgress}</p>
+          <p className="text-3xl font-black text-secondary">{stats.inProgress}</p>
         </motion.div>
 
         <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -202,7 +184,7 @@ const MyCandidates = () => {
             <CheckCircle2 size={20} className="text-emerald-600" />
             <span className="font-black">Approved</span>
           </div>
-          <p className="text-3xl font-black text-secondary">{approved}</p>
+          <p className="text-3xl font-black text-secondary">{stats.approved}</p>
         </motion.div>
 
         <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -210,7 +192,7 @@ const MyCandidates = () => {
             <AlertCircle size={20} className="text-amber-500" />
             <span className="font-black">Pending Review</span>
           </div>
-          <p className="text-3xl font-black text-secondary">{pending}</p>
+          <p className="text-3xl font-black text-secondary">{stats.pending}</p>
         </motion.div>
       </motion.div>
 
@@ -226,7 +208,7 @@ const MyCandidates = () => {
             <Search className="absolute left-3 top-3 text-gray-400" size={18} />
             <input
               type="text"
-              placeholder="Search candidates..."
+              placeholder="Search candidates by name or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
@@ -239,13 +221,14 @@ const MyCandidates = () => {
               onChange={(e) => setFilterType(e.target.value)}
               className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
             >
-              <option value="all">All Candidates</option>
+              <option value="all">All Statuses</option>
               <option value="approved">Approved</option>
               <option value="in-progress">In Progress</option>
               <option value="pending">Pending Review</option>
             </select>
           </div>
           <button
+            onClick={() => navigate("/business/sponsored-workers")}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark"
           >
             <Plus size={16} />
@@ -264,72 +247,63 @@ const MyCandidates = () => {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Candidate</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Case Status</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Visa Type</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Caseworker</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Submission Date</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Expected Completion</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Progress</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Documents</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Actions</th>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-wider text-gray-500 text-left">Candidate</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-wider text-gray-500 text-left">Case Status</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-wider text-gray-500 text-left">Job Title</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-wider text-gray-500 text-left">Case ID</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-wider text-gray-500 text-left">Salary</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-wider text-gray-500 text-left">Stage</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-wider text-gray-500 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredCandidates.map((candidate) => (
-                <tr key={candidate.id} className="hover:bg-gray-50 transition">
+              {filteredCandidates.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <User size={16} className="text-primary" />
+                      <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary font-black text-xs uppercase">
+                        {item.candidate?.first_name?.charAt(0)}{item.candidate?.last_name?.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-sm font-black text-secondary">{candidate.name}</p>
+                        <p className="text-sm font-black text-secondary">{item.candidate?.first_name} {item.candidate?.last_name}</p>
+                        <p className="text-[10px] font-bold text-gray-500">{item.candidate?.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
-                      {getStatusIcon(candidate.caseStatus)}
-                      <span className={`inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full ${getStatusStyle(candidate.caseStatus)}`}>
-                        {candidate.caseStatus}
+                      {getStatusIcon(item.status)}
+                      <span className={`inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full ${getStatusStyle(item.status)}`}>
+                        {item.status}
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{candidate.visaType}</td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{candidate.assignedCaseworker}</td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{candidate.submissionDate}</td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{candidate.expectedCompletion}</td>
+                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{item.jobTitle || "N/A"}</td>
+                  <td className="px-4 py-4 text-xs font-bold text-gray-600 font-mono">{item.caseId || "N/A"}</td>
+                  <td className="px-4 py-4 text-sm font-bold text-gray-700">£{Number(item.salaryOffered).toLocaleString()}</td>
                   <td className="px-4 py-4">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-primary h-2 rounded-full transition-all"
-                        style={{ width: `${candidate.progress}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-[10px] font-bold text-gray-500 mt-1">{candidate.progress}%</p>
+                    <span className="px-2 py-1 bg-gray-100 rounded text-[10px] font-black text-gray-600 uppercase">
+                      {item.caseStage}
+                    </span>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="flex gap-1">
-                      {Object.entries(candidate.documents).map(([doc, status]) => (
-                        <span
-                          key={doc}
-                          className={`inline-flex items-center px-2 py-1 text-[9px] font-black rounded ${getDocStatusStyle(status)}`}
-                          title={doc}
-                        >
-                          {doc.charAt(0).toUpperCase()}
-                        </span>
-                      ))}
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => navigate(`/business/Sponsorworkerdetails?candidateId=${item.candidateId}`)}
+                        className="p-2 hover:bg-primary/10 rounded-lg transition-colors text-primary"
+                        title="View Details"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCandidate(item.candidateId)}
+                        className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-500"
+                        title="Remove"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <button
-                      onClick={() => handleViewCandidate(candidate)}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"
-                    >
-                      <Eye size={16} />
-                    </button>
                   </td>
                 </tr>
               ))}
@@ -338,116 +312,13 @@ const MyCandidates = () => {
         </div>
       </motion.div>
 
-      {/* Candidate Details Modal */}
-      {showModal && selectedCandidate && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-3xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-black text-secondary">Candidate Details</h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
-                <X size={20} className="text-gray-500" />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {/* Candidate Information */}
-              <div>
-                <h4 className="text-sm font-black text-gray-500 uppercase tracking-wider mb-3">Candidate Information</h4>
-                <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                    <User size={24} className="text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-black text-secondary">{selectedCandidate.name}</p>
-                    <p className="text-xs font-bold text-gray-500">{selectedCandidate.visaType}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Case Information */}
-              <div>
-                <h4 className="text-sm font-black text-gray-500 uppercase tracking-wider mb-3">Case Information</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase">Case Status</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {getStatusIcon(selectedCandidate.caseStatus)}
-                      <span className={`text-sm font-black rounded-full px-3 py-1 ${getStatusStyle(selectedCandidate.caseStatus)}`}>
-                        {selectedCandidate.caseStatus}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase">Progress</p>
-                    <p className="text-sm font-black text-secondary mt-1">{selectedCandidate.progress}%</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase">Submission Date</p>
-                    <p className="text-sm font-black text-secondary mt-1">{selectedCandidate.submissionDate}</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase">Expected Completion</p>
-                    <p className="text-sm font-black text-secondary mt-1">{selectedCandidate.expectedCompletion}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Assigned Caseworker */}
-              <div>
-                <h4 className="text-sm font-black text-gray-500 uppercase tracking-wider mb-3">Assigned Caseworker</h4>
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Briefcase size={16} className="text-primary" />
-                  </div>
-                  <p className="text-sm font-black text-secondary">{selectedCandidate.assignedCaseworker}</p>
-                </div>
-              </div>
-
-              {/* Document Status */}
-              <div>
-                <h4 className="text-sm font-black text-gray-500 uppercase tracking-wider mb-3">Document Status</h4>
-                <div className="space-y-3">
-                  {Object.entries(selectedCandidate.documents).map(([doc, status]) => (
-                    <div key={doc} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <FileText size={16} className="text-gray-500" />
-                        <span className="text-sm font-black text-secondary capitalize">{doc}</span>
-                      </div>
-                      <span className={`inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full ${getDocStatusStyle(status)}`}>
-                        {status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-6 py-3 transition"
-                >
-                  Close
-                </button>
-                <button className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition">
-                  Contact Caseworker
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
+      {/* Empty State */}
+      {!loading && filteredCandidates.length === 0 && (
+        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
+          <Users size={48} className="mx-auto text-gray-200 mb-4" />
+          <p className="text-lg font-black text-secondary">No candidates found</p>
+          <p className="text-sm font-bold text-gray-500 mt-1">Try adjusting your search or filter settings.</p>
+        </div>
       )}
     </div>
   );

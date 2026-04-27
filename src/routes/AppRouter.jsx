@@ -57,9 +57,11 @@ import AdminWorkload from '../pages/admin/AdminWorkload';
 import AdminDepartments from '../pages/admin/AdminDepartments';
 import AdminDocuments from '../pages/admin/AdminDocuments';
 import AdminMessages from '../pages/admin/AdminMessages';
+import AdminCalendar from '../pages/admin/AdminCalendar';
 
 import BusinessDashboard from '../pages/business/BusinessDashboard';
-import BussinessProfile from '../pages/business/BusinessProfile';
+import BussinessProfile from '../pages/business/BusinessProfile'; import CandidateCalendar from '../pages/candidate/CandidateCalendar';
+import BusinessCalendar from '../pages/business/BusinessCalendar';
 import BusinessRegistration from '../pages/business/BusinessRegistration';
 import KeyPersonnel from '../pages/business/BusinessPersonnel';
 import LicenceStatus from '../pages/business/LicenceStatus';
@@ -161,6 +163,7 @@ const AppRouter = () => {
           <Route path="permissions" element={<AdminPermissions />} />
           <Route path="case-detail/:caseId?" element={<AdminCaseDetail />} />
           <Route path="pipeline" element={<AdminPipeline />} />
+          <Route path="calendar" element={<AdminCalendar />} />
           <Route path="assign" element={<AdminAssign />} />
           <Route path="escalations" element={<AdminEscalations />} />
           <Route path="workload" element={<AdminWorkload />} />
@@ -192,6 +195,7 @@ const AppRouter = () => {
           <Route path="messages" element={<CandidateMessages />} />
           <Route path="notifications" element={<CandidateNotifications />} />
           <Route path="appointments" element={<Appointments />} />
+          <Route path="calendar" element={<CandidateCalendar />} />
           <Route path="activity-log" element={<ActivityLog />} />
           <Route path="application-status" element={<ApplicationStatus />} />
           <Route path="timeline" element={<Navigate to="/candidate/application-status?tab=timeline" replace />} />
@@ -256,6 +260,7 @@ const AppRouter = () => {
           <Route path="payment" element={<BusinessPayment />} />
           <Route path="workers" element={<BusinessWorkers />} />
           <Route path="settings" element={<BusinessSettings />} />
+          <Route path="calendar" element={<BusinessCalendar />} />
           <Route path="reporting-obligations" element={<ReportingObligations />} />
           <Route path="employee-records" element={<EmployeeRecords />} />
           <Route path="invoices" element={<Invoices />} />

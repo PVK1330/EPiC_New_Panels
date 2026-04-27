@@ -100,10 +100,9 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
                       onClick={onClose}
                       end={item.to === "/caseworker/dashboard"}
                       className={({ isActive }) =>
-                        `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 relative ${
-                          isActive
-                            ? "bg-primary text-white shadow-lg shadow-primary/20"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                        `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 relative ${isActive
+                          ? "bg-primary text-white shadow-lg shadow-primary/20"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-primary"
                         }`
                       }
                     >
@@ -111,20 +110,18 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
                         <>
                           <item.icon
                             size={17}
-                            className={`shrink-0 transition-colors ${
-                              isActive
+                            className={`shrink-0 transition-colors ${isActive
                                 ? "text-white"
                                 : "text-gray-400 group-hover:text-primary"
-                            }`}
+                              }`}
                           />
                           <span className="truncate">{item.label}</span>
                           {item.badge != null && (
                             <span
-                              className={`ml-auto shrink-0 min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-black ${
-                                isActive
+                              className={`ml-auto shrink-0 min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-black ${isActive
                                   ? "bg-white/25 text-white"
                                   : "bg-red-500 text-white"
-                              }`}
+                                }`}
                             >
                               {item.badge}
                             </span>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2,
   MapPin,
@@ -9,11 +9,13 @@ import {
   CreditCard,
   ArrowRight,
   ArrowLeft,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 
-const BusinessRegistration = () => {
+const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
   const [step, setStep] = useState(1);
+  const [errors, setErrors] = useState({});
   const [form, setForm] = useState({
     companyName: '',
     tradingName: '',
@@ -34,22 +36,27 @@ const BusinessRegistration = () => {
     authorisingName: '',
     authorisingPhone: '',
     authorisingEmail: '',
+    authorisingJobTitle: '',
 
     keyContactName: '',
     keyContactPhone: '',
     keyContactEmail: '',
+    keyContactDepartment: '',
 
-    level1Users: [
-      { name: 'Michael Brown', phone: '+44 20 7456 1234', email: 'michael.brown@company.com' },
-    ],
+    level1Users: [],
 
     hrName: '',
     hrEmail: '',
     hrPhone: '',
+    hrJobTitle: '',
     licenceIssueDate: '',
     licenceExpiryDate: '',
     cosAllocation: '',
     licenceStatus: '',
+
+    ownershipType: '',
+    shareholders: [],
+    directors: [],
 
     sponsorLetter: null,
     insuranceCertificate: null,
@@ -62,18 +69,63 @@ const BusinessRegistration = () => {
     billingPhone: '',
     outstandingBalance: '',
     paymentTerms: '',
+
+    ownershipType: '',
+    shareholders: [],
+    directors: [],
   });
+
+  useEffect(() => {
+    if (initialForm) {
+      setForm(prev => ({
+        ...prev,
+        ...initialForm,
+        level1Users: initialForm.level1Users || prev.level1Users || [],
+        shareholders: initialForm.shareholders || prev.shareholders || [],
+        directors: initialForm.directors || prev.directors || [],
+      }));
+    }
+  }, [initialForm]);
 
   const steps = [
     { id: 1, label: 'Company Info' },
     { id: 2, label: 'Business Address' },
     { id: 3, label: 'Key Personnel' },
     { id: 4, label: 'HR & Sponsor' },
-    { id: 5, label: 'Documents & Billing' },
+    { id: 5, label: 'Ownership Structure' },
+    { id: 6, label: 'Documents & Billing' },
   ];
+
+  const validateStep = (s) => {
+    const newErrors = {};
+    if (s === 1) {
+      if (!form.companyName) newErrors.companyName = "Company Name is required";
+      if (!form.registrationNumber) newErrors.registrationNumber = "Registration Number is required";
+      if (!form.sponsorLicenceNumber) newErrors.sponsorLicenceNumber = "Licence Number is required";
+      if (!form.licenceRating) newErrors.licenceRating = "Licence Rating is required";
+      if (!form.industrySector) newErrors.industrySector = "Industry Sector is required";
+    }
+    if (s === 2) {
+      if (!form.registeredAddress) newErrors.registeredAddress = "Registered Address is required";
+      if (!form.city) newErrors.city = "City is required";
+      if (!form.state) newErrors.state = "State is required";
+      if (!form.country) newErrors.country = "Country is required";
+      if (!form.postalCode) newErrors.postalCode = "Postal Code is required";
+    }
+    if (s === 3) {
+      if (!form.keyContactName) newErrors.keyContactName = "Key Contact Name is required";
+      if (!form.keyContactEmail) newErrors.keyContactEmail = "Key Contact Email is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: null }));
+    }
   };
 
   const handleFileChange = (field, file) => {
@@ -93,12 +145,68 @@ const BusinessRegistration = () => {
     setForm((prev) => ({ ...prev, level1Users: updated }));
   };
 
-  const nextStep = () => setStep((prev) => Math.min(prev + 1, steps.length));
+  const removeLevel1User = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      level1Users: prev.level1Users.filter((_, i) => i !== index),
+    }));
+  };
+
+  // Ownership Helpers
+  const addShareholder = () => {
+    setForm(prev => ({
+      ...prev,
+      shareholders: [...(prev.shareholders || []), { name: "", percentage: "" }]
+    }));
+  };
+
+  const updateShareholder = (idx, field, val) => {
+    const updated = [...(form.shareholders || [])];
+    updated[idx][field] = val;
+    setForm(prev => ({ ...prev, shareholders: updated }));
+  };
+
+  const removeShareholder = (idx) => {
+    setForm(prev => ({
+      ...prev,
+      shareholders: prev.shareholders.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const addDirector = () => {
+    setForm(prev => ({
+      ...prev,
+      directors: [...(prev.directors || []), { name: "", position: "" }]
+    }));
+  };
+
+  const updateDirector = (idx, field, val) => {
+    const updated = [...(form.directors || [])];
+    updated[idx][field] = val;
+    setForm(prev => ({ ...prev, directors: updated }));
+  };
+
+  const removeDirector = (idx) => {
+    setForm(prev => ({
+      ...prev,
+      directors: prev.directors.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const nextStep = () => {
+    if (validateStep(step)) {
+      setStep((prev) => Math.min(prev + 1, steps.length));
+    }
+  };
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    console.log('Registration submitted', form);
+    if (validateStep(step)) {
+      if (onSubmit) {
+        onSubmit({ ...form, isFullRegistration: true });
+      }
+    }
   };
 
   const renderStepContent = () => {
@@ -110,16 +218,17 @@ const BusinessRegistration = () => {
               <div>
                 <label className="text-xs font-bold text-gray-700">Company Name *</label>
                 <input
-                  value={form.companyName}
+                  value={form.companyName || ""}
                   onChange={(e) => handleChange('companyName', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  className={`mt-2 w-full border ${errors.companyName ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                   placeholder="Enter official registered name"
                 />
+                {errors.companyName && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.companyName}</p>}
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-700">Trading Name</label>
                 <input
-                  value={form.tradingName}
+                  value={form.tradingName || ""}
                   onChange={(e) => handleChange('tradingName', e.target.value)}
                   className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                   placeholder="Enter trading name if different"
@@ -130,42 +239,45 @@ const BusinessRegistration = () => {
               <div>
                 <label className="text-xs font-bold text-gray-700">Company Registration Number *</label>
                 <input
-                  value={form.registrationNumber}
+                  value={form.registrationNumber || ""}
                   onChange={(e) => handleChange('registrationNumber', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  className={`mt-2 w-full border ${errors.registrationNumber ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                   placeholder="Enter registration number"
                 />
+                {errors.registrationNumber && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.registrationNumber}</p>}
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-700">Sponsor Licence Number *</label>
                 <input
-                  value={form.sponsorLicenceNumber}
+                  value={form.sponsorLicenceNumber || ""}
                   onChange={(e) => handleChange('sponsorLicenceNumber', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  className={`mt-2 w-full border ${errors.sponsorLicenceNumber ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                   placeholder="Enter UKVI sponsor licence number"
                 />
+                {errors.sponsorLicenceNumber && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.sponsorLicenceNumber}</p>}
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <label className="text-xs font-bold text-gray-700">Licence Rating *</label>
                 <select
-                  value={form.licenceRating}
+                  value={form.licenceRating || ""}
                   onChange={(e) => handleChange('licenceRating', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  className={`mt-2 w-full border ${errors.licenceRating ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                 >
                   <option value="">Select rating</option>
                   <option>Gold</option>
                   <option>Silver</option>
                   <option>Bronze</option>
                 </select>
+                {errors.licenceRating && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.licenceRating}</p>}
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-700">Industry Sector *</label>
                 <select
-                  value={form.industrySector}
+                  value={form.industrySector || ""}
                   onChange={(e) => handleChange('industrySector', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  className={`mt-2 w-full border ${errors.industrySector ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                 >
                   <option value="">Select industry</option>
                   <option>Information Technology</option>
@@ -173,6 +285,7 @@ const BusinessRegistration = () => {
                   <option>Manufacturing</option>
                   <option>Logistics</option>
                 </select>
+                {errors.industrySector && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.industrySector}</p>}
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -203,17 +316,18 @@ const BusinessRegistration = () => {
             <div>
               <label className="text-xs font-bold text-gray-700">Registered Address *</label>
               <textarea
-                value={form.registeredAddress}
+                value={form.registeredAddress || ""}
                 onChange={(e) => handleChange('registeredAddress', e.target.value)}
-                className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 resize-none"
+                className={`mt-2 w-full border ${errors.registeredAddress ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 resize-none`}
                 placeholder="Enter official registered address"
                 rows={3}
               />
+              {errors.registeredAddress && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.registeredAddress}</p>}
             </div>
             <div>
               <label className="text-xs font-bold text-gray-700">Trading Address</label>
               <textarea
-                value={form.tradingAddress}
+                value={form.tradingAddress || ""}
                 onChange={(e) => handleChange('tradingAddress', e.target.value)}
                 className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 resize-none"
                 placeholder="Enter operational business address if different"
@@ -224,29 +338,31 @@ const BusinessRegistration = () => {
               <div>
                 <label className="text-xs font-bold text-gray-700">City *</label>
                 <input
-                  value={form.city}
+                  value={form.city || ""}
                   onChange={(e) => handleChange('city', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  className={`mt-2 w-full border ${errors.city ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                   placeholder="Enter city"
                 />
+                {errors.city && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.city}</p>}
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-700">State / Region *</label>
                 <input
-                  value={form.state}
+                  value={form.state || ""}
                   onChange={(e) => handleChange('state', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  className={`mt-2 w-full border ${errors.state ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                   placeholder="Enter state or region"
                 />
+                {errors.state && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.state}</p>}
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <label className="text-xs font-bold text-gray-700">Country *</label>
                 <select
-                  value={form.country}
+                  value={form.country || ""}
                   onChange={(e) => handleChange('country', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  className={`mt-2 w-full border ${errors.country ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                 >
                   <option value="">Select country</option>
                   <option>United Kingdom</option>
@@ -254,15 +370,17 @@ const BusinessRegistration = () => {
                   <option>India</option>
                   <option>Canada</option>
                 </select>
+                {errors.country && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.country}</p>}
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-700">Postal Code *</label>
                 <input
-                  value={form.postalCode}
+                  value={form.postalCode || ""}
                   onChange={(e) => handleChange('postalCode', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  className={`mt-2 w-full border ${errors.postalCode ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                   placeholder="Enter ZIP / postal code"
                 />
+                {errors.postalCode && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.postalCode}</p>}
               </div>
             </div>
           </div>
@@ -298,6 +416,15 @@ const BusinessRegistration = () => {
                   placeholder="Enter email address"
                 />
               </div>
+              <div className="lg:col-span-3">
+                <label className="text-xs font-bold text-gray-700">Job Title</label>
+                <input
+                  value={form.authorisingJobTitle || ""}
+                  onChange={(e) => handleChange('authorisingJobTitle', e.target.value)}
+                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  placeholder="Enter job title"
+                />
+              </div>
             </div>
             <div className="border-t border-gray-200 pt-6">
               <h3 className="text-lg font-black text-secondary mb-4">Key Contact</h3>
@@ -305,16 +432,17 @@ const BusinessRegistration = () => {
                 <div>
                   <label className="text-xs font-bold text-gray-700">Name *</label>
                   <input
-                    value={form.keyContactName}
+                    value={form.keyContactName || ""}
                     onChange={(e) => handleChange('keyContactName', e.target.value)}
-                    className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                    className={`mt-2 w-full border ${errors.keyContactName ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                     placeholder="Enter name"
                   />
+                  {errors.keyContactName && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.keyContactName}</p>}
                 </div>
                 <div>
                   <label className="text-xs font-bold text-gray-700">Phone *</label>
                   <input
-                    value={form.keyContactPhone}
+                    value={form.keyContactPhone || ""}
                     onChange={(e) => handleChange('keyContactPhone', e.target.value)}
                     className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                     placeholder="Enter phone number"
@@ -323,10 +451,20 @@ const BusinessRegistration = () => {
                 <div>
                   <label className="text-xs font-bold text-gray-700">Email *</label>
                   <input
-                    value={form.keyContactEmail}
+                    value={form.keyContactEmail || ""}
                     onChange={(e) => handleChange('keyContactEmail', e.target.value)}
-                    className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                    className={`mt-2 w-full border ${errors.keyContactEmail ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                     placeholder="Enter email address"
+                  />
+                  {errors.keyContactEmail && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.keyContactEmail}</p>}
+                </div>
+                <div className="lg:col-span-3">
+                  <label className="text-xs font-bold text-gray-700">Department</label>
+                  <input
+                    value={form.keyContactDepartment || ""}
+                    onChange={(e) => handleChange('keyContactDepartment', e.target.value)}
+                    className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                    placeholder="Enter department"
                   />
                 </div>
               </div>
@@ -334,14 +472,14 @@ const BusinessRegistration = () => {
             <div className="border-t border-gray-200 pt-6">
               <h3 className="text-lg font-black text-secondary mb-4">Level 1 Users</h3>
               <div className="space-y-4">
-                {form.level1Users.map((user, index) => (
+                {(form.level1Users || []).map((user, index) => (
                   <div key={index} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                     <p className="text-xs font-black text-gray-700 mb-3">User {index + 1}</p>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                       <div>
                         <label className="text-xs font-bold text-gray-700">Name</label>
                         <input
-                          value={user.name}
+                          value={user.name || ""}
                           onChange={(e) => updateLevel1User(index, 'name', e.target.value)}
                           className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                           placeholder="Enter name"
@@ -350,7 +488,7 @@ const BusinessRegistration = () => {
                       <div>
                         <label className="text-xs font-bold text-gray-700">Phone</label>
                         <input
-                          value={user.phone}
+                          value={user.phone || ""}
                           onChange={(e) => updateLevel1User(index, 'phone', e.target.value)}
                           className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                           placeholder="Enter phone number"
@@ -359,13 +497,21 @@ const BusinessRegistration = () => {
                       <div>
                         <label className="text-xs font-bold text-gray-700">Email</label>
                         <input
-                          value={user.email}
+                          value={user.email || ""}
                           onChange={(e) => updateLevel1User(index, 'email', e.target.value)}
                           className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                           placeholder="Enter email address"
                         />
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => removeLevel1User(index)}
+                      className="mt-4 text-red-400 hover:text-red-600 self-end transition-colors"
+                      title="Remove User"
+                    >
+                      <Trash2 size={20} />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -387,7 +533,7 @@ const BusinessRegistration = () => {
               <div>
                 <label className="text-xs font-bold text-gray-700">HR Manager Name</label>
                 <input
-                  value={form.hrName}
+                  value={form.hrName || ""}
                   onChange={(e) => handleChange('hrName', e.target.value)}
                   className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                   placeholder="Enter HR manager name"
@@ -396,7 +542,7 @@ const BusinessRegistration = () => {
               <div>
                 <label className="text-xs font-bold text-gray-700">HR Manager Email</label>
                 <input
-                  value={form.hrEmail}
+                  value={form.hrEmail || ""}
                   onChange={(e) => handleChange('hrEmail', e.target.value)}
                   className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                   placeholder="Enter HR email address"
@@ -405,10 +551,19 @@ const BusinessRegistration = () => {
               <div>
                 <label className="text-xs font-bold text-gray-700">HR Manager Phone</label>
                 <input
-                  value={form.hrPhone}
+                  value={form.hrPhone || ""}
                   onChange={(e) => handleChange('hrPhone', e.target.value)}
                   className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                   placeholder="Enter HR phone number"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-700">HR Manager Job Title</label>
+                <input
+                  value={form.hrJobTitle || ""}
+                  onChange={(e) => handleChange('hrJobTitle', e.target.value)}
+                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  placeholder="Enter job title"
                 />
               </div>
             </div>
@@ -417,7 +572,7 @@ const BusinessRegistration = () => {
                 <label className="text-xs font-bold text-gray-700">Licence Issue Date</label>
                 <input
                   type="date"
-                  value={form.licenceIssueDate}
+                  value={form.licenceIssueDate || ""}
                   onChange={(e) => handleChange('licenceIssueDate', e.target.value)}
                   className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 />
@@ -426,7 +581,7 @@ const BusinessRegistration = () => {
                 <label className="text-xs font-bold text-gray-700">Licence Expiry Date</label>
                 <input
                   type="date"
-                  value={form.licenceExpiryDate}
+                  value={form.licenceExpiryDate || ""}
                   onChange={(e) => handleChange('licenceExpiryDate', e.target.value)}
                   className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 />
@@ -434,7 +589,7 @@ const BusinessRegistration = () => {
               <div>
                 <label className="text-xs font-bold text-gray-700">CoS Allocation</label>
                 <input
-                  value={form.cosAllocation}
+                  value={form.cosAllocation || ""}
                   onChange={(e) => handleChange('cosAllocation', e.target.value)}
                   className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                   placeholder="Enter number of CoS"
@@ -443,7 +598,7 @@ const BusinessRegistration = () => {
               <div>
                 <label className="text-xs font-bold text-gray-700">Licence Status</label>
                 <select
-                  value={form.licenceStatus}
+                  value={form.licenceStatus || ""}
                   onChange={(e) => handleChange('licenceStatus', e.target.value)}
                   className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 >
@@ -457,6 +612,90 @@ const BusinessRegistration = () => {
           </div>
         );
       case 5:
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="text-xs font-bold text-gray-700 mb-2 block">Ownership Type</label>
+              <input
+                value={form.ownershipType || ""}
+                onChange={(e) => handleChange('ownershipType', e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                placeholder="Enter ownership type (e.g. Private Limited)"
+              />
+            </div>
+            <div className="border-t border-gray-200 pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-black text-secondary">Shareholders</h3>
+                <button
+                  type="button"
+                  onClick={addShareholder}
+                  className="text-xs font-bold text-primary hover:underline"
+                >
+                  + Add Shareholder
+                </button>
+              </div>
+              <div className="space-y-4">
+                {(form.shareholders || []).map((s, idx) => (
+                  <div key={idx} className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                    <div className="flex-1 grid grid-cols-2 gap-4">
+                      <input
+                        placeholder="Name"
+                        value={s.name || ""}
+                        onChange={(e) => updateShareholder(idx, "name", e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-white"
+                      />
+                      <input
+                        placeholder="Percentage (e.g. 50%)"
+                        value={s.percentage || ""}
+                        onChange={(e) => updateShareholder(idx, "percentage", e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-white"
+                      />
+                    </div>
+                    <button type="button" onClick={() => removeShareholder(idx)} className="text-red-400 hover:text-red-600">
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="border-t border-gray-200 pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-black text-secondary">Directors</h3>
+                <button
+                  type="button"
+                  onClick={addDirector}
+                  className="text-xs font-bold text-primary hover:underline"
+                >
+                  + Add Director
+                </button>
+              </div>
+              <div className="space-y-4">
+                {(form.directors || []).map((d, idx) => (
+                  <div key={idx} className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                    <div className="flex-1 grid grid-cols-2 gap-4">
+                      <input
+                        placeholder="Name"
+                        value={d.name || ""}
+                        onChange={(e) => updateDirector(idx, "name", e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-white"
+                      />
+                      <input
+                        placeholder="Position"
+                        value={d.position || ""}
+                        onChange={(e) => updateDirector(idx, "position", e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-white"
+                      />
+                    </div>
+                    <button type="button" onClick={() => removeDirector(idx)} className="text-red-400 hover:text-red-600">
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      case 6:
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -493,7 +732,7 @@ const BusinessRegistration = () => {
                   <div>
                     <label className="text-xs font-bold text-gray-700">Billing Contact Name</label>
                     <input
-                      value={form.billingName}
+                      value={form.billingName || ""}
                       onChange={(e) => handleChange('billingName', e.target.value)}
                       className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                       placeholder="Enter name"
@@ -502,7 +741,7 @@ const BusinessRegistration = () => {
                   <div>
                     <label className="text-xs font-bold text-gray-700">Billing Email</label>
                     <input
-                      value={form.billingEmail}
+                      value={form.billingEmail || ""}
                       onChange={(e) => handleChange('billingEmail', e.target.value)}
                       className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                       placeholder="Enter email"
@@ -511,7 +750,7 @@ const BusinessRegistration = () => {
                   <div>
                     <label className="text-xs font-bold text-gray-700">Billing Phone</label>
                     <input
-                      value={form.billingPhone}
+                      value={form.billingPhone || ""}
                       onChange={(e) => handleChange('billingPhone', e.target.value)}
                       className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                       placeholder="Enter phone number"
@@ -520,7 +759,7 @@ const BusinessRegistration = () => {
                   <div>
                     <label className="text-xs font-bold text-gray-700">Outstanding Balance</label>
                     <input
-                      value={form.outstandingBalance}
+                      value={form.outstandingBalance || ""}
                       onChange={(e) => handleChange('outstandingBalance', e.target.value)}
                       className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                       placeholder="Enter amount"
@@ -529,7 +768,7 @@ const BusinessRegistration = () => {
                   <div className="lg:col-span-2">
                     <label className="text-xs font-bold text-gray-700">Payment Terms</label>
                     <select
-                      value={form.paymentTerms}
+                      value={form.paymentTerms || ""}
                       onChange={(e) => handleChange('paymentTerms', e.target.value)}
                       className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                     >

@@ -24,6 +24,7 @@ import {
   RiLogoutBoxRLine,
   RiQuestionLine,
   RiCloseLine,
+  RiCalendarLine,
 } from "react-icons/ri";
 import eliteLogo from "../../assets/elitepic_logo.png";
 
@@ -36,10 +37,10 @@ const navSections = [
   {
     label: "User Management",
     items: [
-      { to: "/admin/admin-users",  label: "Admin Users",          icon: RiShieldUserLine   },
-      { to: "/admin/caseworkers",  label: "Case Workers",         icon: RiUserSettingsLine },
-      { to: "/admin/candidates",   label: "Clients / Candidates", icon: RiTeamLine         },
-      { to: "/admin/businesses",   label: "Sponsors / Businesses",icon: RiBuildingLine     },
+      { to: "/admin/admin-users", label: "Admin Users", icon: RiShieldUserLine },
+      { to: "/admin/caseworkers", label: "Case Workers", icon: RiUserSettingsLine },
+      { to: "/admin/candidates", label: "Clients / Candidates", icon: RiTeamLine },
+      { to: "/admin/businesses", label: "Sponsors / Businesses", icon: RiBuildingLine },
     ],
   },
   {
@@ -51,10 +52,11 @@ const navSections = [
   {
     label: "Case Management",
     items: [
-      { to: "/admin/cases",       label: "All Cases",        icon: RiFolderOpenLine  },
-      { to: "/admin/pipeline",    label: "Pipeline",         icon: RiGitBranchLine   },
-      { to: "/admin/assign",      label: "Assign / Reassign",icon: RiUserAddLine     },
-      { to: "/admin/escalations", label: "Escalations",      icon: RiAlarmWarningLine},
+      { to: "/admin/cases", label: "All Cases", icon: RiFolderOpenLine },
+      { to: "/admin/pipeline", label: "Pipeline", icon: RiGitBranchLine },
+      { to: "/admin/calendar", label: "Calendar", icon: RiCalendarLine },
+      { to: "/admin/assign", label: "Assign / Reassign", icon: RiUserAddLine },
+      { to: "/admin/escalations", label: "Escalations", icon: RiAlarmWarningLine },
     ],
   },
   {
@@ -79,10 +81,10 @@ const navSections = [
     label: "Tools",
     items: [
       // { to: "/admin/documents",   label: "Document Management", icon: RiFileList3Line    },
-      { to: "/admin/notifications",label: "Notifications",      icon: RiNotification2Line},
-      { to: "/admin/messages",    label: "Messages",            icon: RiMessage2Line     },
-      { to: "/admin/audit-logs",  label: "Compliance & Audits", icon: RiShieldCheckLine  },
-      { to: "/admin/settings",    label: "Settings",            icon: RiSettings3Line    },
+      { to: "/admin/notifications", label: "Notifications", icon: RiNotification2Line },
+      { to: "/admin/messages", label: "Messages", icon: RiMessage2Line },
+      { to: "/admin/audit-logs", label: "Compliance & Audits", icon: RiShieldCheckLine },
+      { to: "/admin/settings", label: "Settings", icon: RiSettings3Line },
     ],
   },
 ];
@@ -175,41 +177,39 @@ const AdminSidebar = ({ isOpen, onClose }) => {
 
               <div className="space-y-0.5">
                 {section.items.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      onClick={() => {
-                        // Let React Router commit navigation first; closing the drawer in the same tick
-                        // can race with Outlet remount and cause a blank main area (esp. on mobile).
-                        queueMicrotask(() => onClose());
-                      }}
-                      end={item.to === "/admin/dashboard"}
-                      className={({ isActive }) =>
-                        `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 relative ${
-                          isActive
-                            ? "bg-primary text-white shadow-lg shadow-primary/20"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-primary"
-                        }`
-                      }
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <item.icon
-                            size={17}
-                            className={`shrink-0 transition-colors ${
-                              isActive
-                                ? "text-white"
-                                : "text-gray-400 group-hover:text-primary"
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => {
+                      // Let React Router commit navigation first; closing the drawer in the same tick
+                      // can race with Outlet remount and cause a blank main area (esp. on mobile).
+                      queueMicrotask(() => onClose());
+                    }}
+                    end={item.to === "/admin/dashboard"}
+                    className={({ isActive }) =>
+                      `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 relative ${isActive
+                        ? "bg-primary text-white shadow-lg shadow-primary/20"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <item.icon
+                          size={17}
+                          className={`shrink-0 transition-colors ${isActive
+                            ? "text-white"
+                            : "text-gray-400 group-hover:text-primary"
                             }`}
-                          />
-                          <span className="truncate">{item.label}</span>
-                          {isActive && (
-                            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-white/25 rounded-l-full" />
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-                  ),
+                        />
+                        <span className="truncate">{item.label}</span>
+                        {isActive && (
+                          <div className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-white/25 rounded-l-full" />
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                ),
                 )}
               </div>
             </motion.div>

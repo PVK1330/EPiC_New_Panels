@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   User,
   Calendar,
@@ -18,20 +19,73 @@ import {
   LayoutDashboard,
   Hash,
   ShieldCheck,
+  Loader2
 } from "lucide-react";
+import { addSponsoredWorker } from "../../services/sponsoredWorkerApi";
+import { useToast } from "../../context/ToastContext";
 
 const SponsoredWorkerForm = () => {
-  const [previousVisa, setPreviousVisa] = useState("");
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [previousVisa, setPreviousVisa] = useState("no");
+
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    dob: "",
+    gender: "Male",
+    nationality: "",
+    maritalStatus: "Single",
+    passportNumber: "",
+    passportIssueDate: "",
+    passportExpiryDate: "",
+    passportCountry: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    jobTitle: "",
+    department: "",
+    startDate: "",
+    salary: "",
+    visaType: "",
+    visaNumber: "",
+    visaExpiryDate: "",
+    cosNumber: "",
+    previousVisa: "no",
+    notes: ""
+  });
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await addSponsoredWorker(formData);
+      if (response.data.status === "success") {
+        showToast("Worker added successfully! Credentials sent to their email.", "success");
+        navigate("/business/workers");
+      } else {
+        showToast(response.data.message || "Failed to add worker", "error");
+      }
+    } catch (error) {
+      console.error("Error adding worker:", error);
+      showToast(error.response?.data?.message || "An error occurred while adding the worker", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const inputStyle =
     "w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40";
 
   const labelStyle = "text-xs font-bold text-gray-700 mb-2";
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-  };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -60,7 +114,7 @@ const SponsoredWorkerForm = () => {
         initial="hidden"
         animate="visible"
       >
-        <form className="space-y-10">
+        <form onSubmit={handleSubmit} className="space-y-10">
 
           {/* PERSONAL DETAILS */}
           <section>
@@ -73,41 +127,80 @@ const SponsoredWorkerForm = () => {
 
               <div className="relative">
                 <label className={labelStyle}>First Name *</label>
-                <input type="text" className={inputStyle} />
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
                 <User className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div className="relative">
                 <label className={labelStyle}>Last Name *</label>
-                <input type="text" className={inputStyle} />
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
                 <User className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div>
                 <label className={labelStyle}>Date of Birth *</label>
-                <input type="date" className={inputStyle} />
+                <input
+                  type="date"
+                  name="dob"
+                  value={formData.dob}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
               </div>
 
               <div>
                 <label className={labelStyle}>Gender *</label>
-                <select className={inputStyle}>
-                  <option>Male</option>
-                  <option>Female</option>
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
 
               <div className="relative">
                 <label className={labelStyle}>Nationality *</label>
-                <input type="text" className={inputStyle} />
+                <input
+                  type="text"
+                  name="nationality"
+                  value={formData.nationality}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
                 <Globe className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div className="relative">
                 <label className={labelStyle}>Marital Status</label>
-                <select className={inputStyle}>
-                  <option>Single</option>
-                  <option>Married</option>
-                  <option>Divorced</option>
+                <select
+                  name="maritalStatus"
+                  value={formData.maritalStatus}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                >
+                  <option value="Single">Single</option>
+                  <option value="Married">Married</option>
+                  <option value="Divorced">Divorced</option>
                 </select>
                 <Heart className="absolute right-3 top-10 text-gray-400" />
               </div>
@@ -126,28 +219,52 @@ const SponsoredWorkerForm = () => {
 
               <div className="relative">
                 <label className={labelStyle}>Passport Number *</label>
-                <input type="text" className={inputStyle} />
+                <input
+                  type="text"
+                  name="passportNumber"
+                  value={formData.passportNumber}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
                 <CreditCard className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div>
                 <label className={labelStyle}>Issue Date *</label>
-                <input type="date" className={inputStyle} />
+                <input
+                  type="date"
+                  name="passportIssueDate"
+                  value={formData.passportIssueDate}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
               </div>
 
               <div>
                 <label className={labelStyle}>Expiry Date *</label>
-                <input type="date" className={inputStyle} />
+                <input
+                  type="date"
+                  name="passportExpiryDate"
+                  value={formData.passportExpiryDate}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
               </div>
 
               <div>
                 <label className={labelStyle}>Country of Issue *</label>
-                <select className={inputStyle}>
-                  <option>Select Country</option>
-                  <option>India</option>
-                  <option>UK</option>
-                  <option>USA</option>
-                </select>
+                <input
+                  type="text"
+                  name="passportCountry"
+                  value={formData.passportCountry}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                  placeholder="Enter country"
+                />
               </div>
 
             </div>
@@ -164,25 +281,53 @@ const SponsoredWorkerForm = () => {
 
               <div className="relative">
                 <label className={labelStyle}>Email *</label>
-                <input type="email" className={inputStyle} />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
                 <Mail className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div className="relative">
                 <label className={labelStyle}>Phone *</label>
-                <input type="text" className={inputStyle} />
+                <input
+                  type="text"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
                 <Phone className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div className="relative">
                 <label className={labelStyle}>Address *</label>
-                <input type="text" className={inputStyle} />
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
                 <MapPin className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div className="relative">
                 <label className={labelStyle}>City *</label>
-                <input type="text" className={inputStyle} />
+                <input
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
                 <Building className="absolute right-3 top-10 text-gray-400" />
               </div>
 
@@ -200,24 +345,51 @@ const SponsoredWorkerForm = () => {
 
               <div className="relative">
                 <label className={labelStyle}>Job Title *</label>
-                <input type="text" className={inputStyle} />
+                <input
+                  type="text"
+                  name="jobTitle"
+                  value={formData.jobTitle}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
                 <Briefcase className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div className="relative">
                 <label className={labelStyle}>Department</label>
-                <input type="text" className={inputStyle} />
+                <input
+                  type="text"
+                  name="department"
+                  value={formData.department}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                />
                 <Building2 className="absolute right-3 top-10 text-gray-400" />
               </div>
 
               <div>
                 <label className={labelStyle}>Start Date *</label>
-                <input type="date" className={inputStyle} />
+                <input
+                  type="date"
+                  name="startDate"
+                  value={formData.startDate}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
               </div>
 
               <div className="relative">
                 <label className={labelStyle}>Salary *</label>
-                <input type="number" className={inputStyle} />
+                <input
+                  type="number"
+                  name="salary"
+                  value={formData.salary}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
                 <DollarSign className="absolute right-3 top-10 text-gray-400" />
               </div>
 
@@ -234,27 +406,54 @@ const SponsoredWorkerForm = () => {
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className={labelStyle}>Visa Type *</label>
-                <select className={inputStyle}>
-                  <option>Select Visa Type</option>
-                  <option>Skilled Worker Visa</option>
-                  <option>Student Visa</option>
-                  <option>Health Care Visa</option>
+                <select
+                  name="visaType"
+                  value={formData.visaType}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                >
+                  <option value="">Select Visa Type</option>
+                  <option value="Skilled Worker Visa">Skilled Worker Visa</option>
+                  <option value="Student Visa">Student Visa</option>
+                  <option value="Health Care Visa">Health Care Visa</option>
                 </select>
               </div>
 
               <div>
                 <label className={labelStyle}>Visa Number</label>
-                <input type="text" className={inputStyle} placeholder="Enter visa number" />
+                <input
+                  type="text"
+                  name="visaNumber"
+                  value={formData.visaNumber}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  placeholder="Enter visa number"
+                />
               </div>
 
               <div>
                 <label className={labelStyle}>Visa Expiry Date *</label>
-                <input type="date" className={inputStyle} />
+                <input
+                  type="date"
+                  name="visaExpiryDate"
+                  value={formData.visaExpiryDate}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  required
+                />
               </div>
 
               <div>
                 <label className={labelStyle}>CoS Number</label>
-                <input type="text" className={inputStyle} placeholder="Enter CoS number" />
+                <input
+                  type="text"
+                  name="cosNumber"
+                  value={formData.cosNumber}
+                  onChange={handleInputChange}
+                  className={inputStyle}
+                  placeholder="Enter CoS number"
+                />
               </div>
             </div>
           </section>
@@ -274,7 +473,8 @@ const SponsoredWorkerForm = () => {
                     type="radio"
                     name="previousVisa"
                     value="yes"
-                    onChange={(e) => setPreviousVisa(e.target.value)}
+                    checked={formData.previousVisa === "yes"}
+                    onChange={handleInputChange}
                   />
                   Yes
                 </label>
@@ -284,36 +484,19 @@ const SponsoredWorkerForm = () => {
                     type="radio"
                     name="previousVisa"
                     value="no"
-                    onChange={(e) => setPreviousVisa(e.target.value)}
+                    checked={formData.previousVisa === "no"}
+                    onChange={handleInputChange}
                   />
                   No
                 </label>
               </div>
 
-              {previousVisa === "yes" && (
-                <div className="grid md:grid-cols-3 gap-6">
-
-                  <div className="relative">
-                    <input placeholder="Visa Type" className={inputStyle} />
-                    <IdCard className="absolute right-3 top-3 text-gray-400" />
-                  </div>
-
-                  <div className="relative">
-                    <input placeholder="Year" className={inputStyle} />
-                    <Calendar className="absolute right-3 top-3 text-gray-400" />
-                  </div>
-
-                  <select className={inputStyle}>
-                    <option>Approved</option>
-                    <option>Rejected</option>
-                  </select>
-
-                </div>
-              )}
-
               <div className="relative">
                 <label className={labelStyle}>Notes</label>
                 <textarea
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleInputChange}
                   className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 resize-none"
                   rows="3"
                 />
@@ -327,12 +510,21 @@ const SponsoredWorkerForm = () => {
           <div className="flex gap-4 pt-4">
             <button
               type="submit"
-              className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition"
+              disabled={loading}
+              className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              Submit Form
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} />
+                  Processing...
+                </>
+              ) : (
+                "Submit Form"
+              )}
             </button>
             <button
               type="button"
+              onClick={() => navigate("/business/workers")}
               className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-6 py-3 transition"
             >
               Cancel
@@ -345,4 +537,4 @@ const SponsoredWorkerForm = () => {
   );
 };
 
-export default SponsoredWorkerForm;
+export default SponsoredWorkerForm;

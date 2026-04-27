@@ -13,7 +13,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { logout } from "../store/slices/authSlice";
 import NotificationDropdown from "./Notifications/NotificationDropdown";
-import MessageDropdown from "./Notifications/MessageDropdown";
+import MessageDropdown from "./notifications/MessageDropdown";
+
 const Header = ({ onMenuClick }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -121,10 +122,9 @@ const Header = ({ onMenuClick }) => {
           </span>
         </button>
 
-        {/* Messages with real-time count */}
-        <MessageDropdown />
 
         {/* Notifications with real-time count */}
+        <MessageDropdown />
         <NotificationDropdown />
 
         {/* Profile */}

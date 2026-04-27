@@ -86,9 +86,14 @@ export const candidateNavSections = [
     title: "Appointments",
     items: [
       {
-        to: "/candidate/appointments",
-        label: "Appointments",
+        to: "/candidate/calendar",
+        label: "Calendar",
         icon: Calendar,
+      },
+      {
+        to: "/candidate/appointments",
+        label: "My Appointments",
+        icon: ClipboardList,
       },
     ],
   },

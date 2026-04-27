@@ -1,25 +1,59 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import { Bell, BellRing, X, ChevronDown } from 'lucide-react';
-import { fetchUnreadCount } from '../../store/slices/notificationSlice';
+import { fetchUnreadCount, fetchNotifications } from '../../store/slices/notificationSlice';
 import NotificationList from './NotificationList';
+import { getMessagingSocketUrl } from '../../utils/socketOrigin';
 
 const NotificationDropdown = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { unreadCount, unreadCountLoading } = useSelector((state) => state.notifications);
+  const { user, token } = useSelector((state) => state.auth);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
     dispatch(fetchUnreadCount());
     
-    // Set up polling for unread count every 30 seconds
+    // Set up polling for unread count every 30 seconds (fallback)
     const interval = setInterval(() => {
       dispatch(fetchUnreadCount());
     }, 30000);
 
     return () => clearInterval(interval);
   }, [dispatch]);
+
+  // Real-time socket listener for instant message notifications
+  useEffect(() => {
+    if (!user?.id || !token) return;
+
+    const url = getMessagingSocketUrl();
+    const socket = io(url, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+    });
+
+    socket.on('message:new', (payload) => {
+      const m = payload?.message;
+      if (!m) return;
+      const myId = Number(user.id);
+      const receiverId = Number(m.receiverId);
+      
+      // If we received a new message, fetch notifications instantly!
+      if (myId === receiverId) {
+        dispatch(fetchUnreadCount());
+        // Also refresh the first page of notifications if the dropdown is open
+        dispatch(fetchNotifications({ limit: 20, unread_only: false, page: 1 }));
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user?.id, token, dispatch]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -86,7 +120,7 @@ const NotificationDropdown = () => {
             <button
               onClick={() => {
                 setIsOpen(false);
-                window.location.href = '/notifications';
+                navigate('/notifications');
               }}
               className="w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
             >
