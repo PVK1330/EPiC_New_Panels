@@ -1389,7 +1389,7 @@ const Cases = () => {
                           className="py-3 px-4"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="flex gap-1.5">
                             <button
                               type="button"
                               onClick={() => openDetail(c)}
