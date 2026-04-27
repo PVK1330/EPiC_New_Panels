@@ -21,16 +21,9 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
-import {
-  getCaseworkerCases,
-  getVisaTypes,
-  getPetitionTypes,
-  getAllUsers,
-  createCaseworkerCase,
-  updateCaseworkerCase,
-  getDepartments,
-} from "../../services/caseApi";
+import CaseTimeline from "../../components/CaseTimeline";
 import useCaseDetail from "../../hooks/useCaseDetail";
+import { getCaseworkerCases, getVisaTypes, getPetitionTypes, getAllUsers, createCaseworkerCase, updateCaseworkerCase, getDepartments, getCaseworkerCaseDetails, getCaseDocuments, uploadDocument, updateDocument, deleteDocument, updateDocumentStatus, downloadDocument, getCaseNotes, createCaseNote, updateCaseNote, deleteCaseNote, getTasks, getTaskByCaseId, createTask, updateTask, deleteTask, exportCases } from "../../services/caseApi";
 
 const PAGE_SIZE = 7;
 
@@ -1435,85 +1428,262 @@ const Cases = () => {
                         </td>
                       </tr>
 
-                      {/* ── Reassignment info banner row ── */}
-                      {reassigned && (
-                        <tr
-                          key={`${c.caseId}-reassigned`}
-                          className="bg-violet-50/60 border-b border-violet-100"
-                        >
-                          <td colSpan={9} className="px-4 py-2">
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                              <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-violet-700">
-                                <ArrowRightLeft size={12} />
-                                Reassigned to{" "}
-                                <span className="font-black text-violet-900">
-                                  {reassigned.caseworker}
+                        {/* ── Reassignment info banner row ── */}
+                        {reassigned && (
+                          <tr
+                            key={`${c.caseId}-reassigned`}
+                            className="bg-violet-50/60 border-b border-violet-100"
+                          >
+                            <td colSpan={9} className="px-4 py-2">
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-violet-700">
+                                  <ArrowRightLeft size={12} />
+                                  Reassigned to{" "}
+                                  <span className="font-black text-violet-900">
+                                    {reassigned.caseworker}
+                                  </span>
+                                  <span className="font-bold text-violet-500">
+                                    ({reassigned.caseworkerRole})
+                                  </span>
                                 </span>
-                                <span className="font-bold text-violet-500">
-                                  ({reassigned.caseworkerRole})
+                                <span className="text-[11px] font-bold text-violet-600">
+                                  Reason:{" "}
+                                  <span className="italic">{reassigned.reason}</span>
                                 </span>
-                              </span>
-                              <span className="text-[11px] font-bold text-violet-600">
-                                Reason:{" "}
-                                <span className="italic">
-                                  {reassigned.reason}
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-violet-500 ml-auto">
+                                  <CalendarClock size={12} />
+                                  {formatDateTime(reassigned.at)}
                                 </span>
-                              </span>
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-violet-500 ml-auto">
-                                <CalendarClock size={12} />
-                                {formatDateTime(reassigned.at)}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/80">
-          <p className="text-xs font-bold text-gray-500 tabular-nums">
-            Showing {(pageClamped - 1) * PAGE_SIZE + 1}–
-            {Math.min(pageClamped * PAGE_SIZE, pagination.total)} of{" "}
-            {pagination.total} cases
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={pageClamped <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
-            >
-              ←
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/80">
+            <p className="text-xs font-bold text-gray-500 tabular-nums">
+              Showing {(pageClamped - 1) * PAGE_SIZE + 1}–
+              {Math.min(pageClamped * PAGE_SIZE, pagination.total)} of {pagination.total}{" "}
+              cases
+            </p>
+            <div className="flex items-center gap-1">
               <button
-                key={num}
                 type="button"
-                onClick={() => setPage(num)}
-                className={`min-w-[2rem] rounded-lg border px-2 py-1 text-xs font-black ${
-                  pageClamped === num
-                    ? "border-secondary bg-secondary/10 text-secondary"
-                    : "border-gray-200 text-gray-600 hover:bg-white"
-                }`}
+                disabled={pageClamped <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
               >
-                {num}
+                ←
               </button>
-            ))}
-            <button
-              type="button"
-              disabled={pageClamped >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
-            >
-              →
-            </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => setPage(num)}
+                  className={`min-w-[2rem] rounded-lg border px-2 py-1 text-xs font-black ${pageClamped === num
+                      ? "border-secondary bg-secondary/10 text-secondary"
+                      : "border-gray-200 text-gray-600 hover:bg-white"
+                    }`}
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                type="button"
+                disabled={pageClamped >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
+              >
+                →
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Kanban View */}
+      {viewMode === "kanban" && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <motion.div
+            className="pb-10 min-h-[calc(100vh-8rem)]"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            {isPipelineLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="text-gray-500">Loading pipeline...</div>
+              </div>
+            ) : (
+              <motion.div
+                className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1 [scrollbar-width:thin]"
+                variants={container}
+                initial="hidden"
+                animate="visible"
+              >
+                {stages.map((stage) => (
+                  <motion.section
+                    key={stage.id}
+                    variants={colVariant}
+                    className={`shrink-0 w-[min(100%,280px)] sm:w-72 flex flex-col rounded-2xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/90 shadow-sm overflow-hidden ${stage.header}`}
+                  >
+                    <header className="px-3.5 pt-3.5 pb-2 flex items-center justify-between gap-2 border-b border-gray-100/80 bg-white/60 backdrop-blur-sm">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <h2 className={`text-sm font-black ${stage.titleClass} truncate`}>
+                          {stage.title}
+                        </h2>
+                      </div>
+                      <span className={`text-xs font-black tabular-nums text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg`}>
+                        {stage.cards.length}
+                      </span>
+                    </header>
+                    <SortableContext
+                      items={stage.cards.map((c) => c.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <DroppableColumn stage={stage}>
+                        {stage.cards.map((card) => (
+                          <SortableCard key={card.id} card={card} onClick={handleCardClick} />
+                        ))}
+                        {stage.cards.length === 0 && (
+                          <div className="flex items-center justify-center h-16 rounded-xl border-2 border-dashed border-gray-200 text-xs text-gray-400">
+                            Drop here
+                          </div>
+                        )}
+                      </DroppableColumn>
+                    </SortableContext>
+                  </motion.section>
+                ))}
+              </motion.div>
+            )}
+          </motion.div>
+
+          <DragOverlay dropAnimation={{ duration: 180, easing: "ease" }}>
+            {activeCard && (
+              <article className="rounded-xl bg-white border border-gray-200 p-3.5 shadow-2xl rotate-2 w-72 opacity-95">
+                <CardContent card={activeCard} />
+              </article>
+            )}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {/* Case Details Modal for Kanban View */}
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Case Details"
+        titleId="case-details-modal-title"
+        maxWidthClass="max-w-4xl"
+        bodyClassName="p-4 sm:p-6"
+      >
+        {isCaseLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-gray-500">Loading case details...</div>
+          </div>
+        ) : selectedCase ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Case ID
+                </label>
+                <p className="text-sm font-bold text-secondary">{selectedCase.caseId}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Status
+                </label>
+                <p className="text-sm font-bold text-gray-900">{selectedCase.status}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Priority
+                </label>
+                <p className="text-sm font-bold text-gray-900">{selectedCase.priority || 'Normal'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Target Date
+                </label>
+                <p className="text-sm font-bold text-gray-900">{selectedCase.targetSubmissionDate || 'Not set'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Candidate
+                </label>
+                <p className="text-sm font-bold text-gray-900">
+                  {selectedCase.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : 'Unknown'}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Sponsor
+                </label>
+                <p className="text-sm font-bold text-gray-900">
+                  {selectedCase.sponsor ? `${selectedCase.sponsor.first_name} ${selectedCase.sponsor.last_name}` : 'Unknown'}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Visa Type
+                </label>
+                <p className="text-sm font-bold text-gray-900">{selectedCase.visaType?.name || 'Unknown'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Created
+                </label>
+                <p className="text-sm font-bold text-gray-900">{selectedCase.created_at ? new Date(selectedCase.created_at).toLocaleDateString() : 'Unknown'}</p>
+              </div>
+            </div>
+            {selectedCase.notes && (
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Notes
+                </label>
+                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">{selectedCase.notes}</p>
+              </div>
+            )}
+            
+            {/* Timeline Section */}
+            <CaseTimeline caseId={selectedCase.caseId} currentUser={user} />
+            
+            <div className="flex gap-2 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  const caseData = cases.find(c => c.caseId === selectedCase.caseId);
+                  if (caseData) openCaseEdit(caseData);
+                }}
+                className="inline-flex items-center gap-2 rounded-lg bg-secondary px-4 py-2 text-sm font-black text-white hover:bg-secondary/90"
+              >
+                <Pencil size={16} />
+                Edit Case
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       {/* ─────────────────────── NEW CASE MODAL ─────────────────────── */}
       <Modal
