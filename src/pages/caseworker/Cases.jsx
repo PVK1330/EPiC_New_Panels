@@ -1158,6 +1158,14 @@ const Cases = () => {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
+            onClick={() => navigate("/caseworker/pipeline")}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 shadow-sm hover:bg-gray-50"
+          >
+            <LayoutGrid size={18} />
+            Pipeline View
+          </button>
+          <button
+            type="button"
             onClick={() =>
               window.alert("Demo: export would download a CSV/spreadsheet.")
             }
@@ -3240,6 +3248,13 @@ function DocumentsTab({ caseId, candidateId }) {
   const [uploadErrors, setUploadErrors] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [viewDocumentOpen, setViewDocumentOpen] = useState(false);
+  const [viewDocumentUrl, setViewDocumentUrl] = useState("");
+
+  const closeViewDocument = useCallback(() => {
+    setViewDocumentOpen(false);
+    setViewDocumentUrl("");
+  }, []);
 
   useEffect(() => {
     if (!caseId) return;
@@ -3498,29 +3513,6 @@ function DocumentsTab({ caseId, candidateId }) {
         </div>
       </Modal>
 
-      {/* View Document Modal */}
-      <Modal
-        open={viewDocumentOpen}
-        onClose={closeViewDocument}
-        title="View Document"
-        titleId="view-document-modal-title"
-        maxWidthClass="max-w-4xl"
-        bodyClassName="p-0"
-      >
-        <div className="w-full h-[600px] bg-gray-50">
-          {viewDocumentUrl ? (
-            <iframe
-              src={viewDocumentUrl}
-              className="w-full h-full border-0"
-              title="Document Viewer"
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              No document to display
-            </div>
-          )}
-        </div>
-      </Modal>
     </div>
   );
 }
