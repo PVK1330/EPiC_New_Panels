@@ -16,50 +16,319 @@ import {
   CalendarClock,
   ArrowRightLeft,
   Clock,
+  Table,
+  LayoutGrid,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
-import { getCaseworkerCases, getVisaTypes, getPetitionTypes, getAllUsers, createCaseworkerCase, updateCaseworkerCase, getDepartments, getCaseworkerCaseDetails, getCaseDocuments, uploadDocument, updateDocument, deleteDocument, updateDocumentStatus, downloadDocument, getCaseNotes, createCaseNote, updateCaseNote, deleteCaseNote, getTasks, getTaskByCaseId, createTask, updateTask, deleteTask } from "../../services/caseApi";
+import {
+  getCaseworkerCases,
+  getVisaTypes,
+  getPetitionTypes,
+  getAllUsers,
+  createCaseworkerCase,
+  updateCaseworkerCase,
+  getDepartments,
+} from "../../services/caseApi";
+import useCaseDetail from "../../hooks/useCaseDetail";
 
 const PAGE_SIZE = 7;
 
 /** Demo dataset — 24 cases */
 const CASES_DATA = [
-  { caseId: "#C-2401", candidate: "Ahmed Al-Rashid", business: "TechCorp Ltd", visa: "Tier 2", status: "on_track", target: "2026-04-18", priority: "high", payment: "paid" },
-  { caseId: "#C-2398", candidate: "Priya Sharma", business: "Nexus Group", visa: "Skilled Worker", status: "due_soon", target: "2026-04-12", priority: "medium", payment: "partial" },
-  { caseId: "#C-2391", candidate: "Carlos Mendes", business: "BuildRight Inc", visa: "Intra-Co", status: "overdue", target: "2026-04-03", priority: "urgent", payment: "outstanding" },
-  { caseId: "#C-2389", candidate: "Mei Lin Chen", business: "Global Finance", visa: "Graduate", status: "on_track", target: "2026-05-02", priority: "low", payment: "paid" },
-  { caseId: "#C-2385", candidate: "Ivan Petrov", business: "EnviroTech", visa: "Tier 2", status: "on_track", target: "2026-05-15", priority: "low", payment: "paid" },
-  { caseId: "#C-2380", candidate: "Fatima Al-Zahra", business: "MediCare Group", visa: "Health & Care", status: "due_soon", target: "2026-04-20", priority: "medium", payment: "partial" },
-  { caseId: "#C-2376", candidate: "Rajesh Patel", business: "Innovate Corp", visa: "Skilled Worker", status: "on_track", target: "2026-06-01", priority: "low", payment: "paid" },
-  { caseId: "#C-2370", candidate: "Sofia Nielsen", business: "Nordic AI Ltd", visa: "Skilled Worker", status: "on_track", target: "2026-06-12", priority: "medium", payment: "paid" },
-  { caseId: "#C-2365", candidate: "James O'Connor", business: "Celtic Foods", visa: "Tier 2", status: "due_soon", target: "2026-04-25", priority: "high", payment: "partial" },
-  { caseId: "#C-2360", candidate: "Yuki Tanaka", business: "Tokyo Trade UK", visa: "Intra-Co", status: "on_track", target: "2026-07-01", priority: "low", payment: "paid" },
-  { caseId: "#C-2355", candidate: "Elena Popov", business: "EuroBuild", visa: "Skilled Worker", status: "overdue", target: "2026-03-28", priority: "urgent", payment: "outstanding" },
-  { caseId: "#C-2350", candidate: "Marcus Webb", business: "Webb Legal", visa: "Graduate", status: "completed", target: "2026-03-01", priority: "low", payment: "paid" },
-  { caseId: "#C-2344", candidate: "Nomsa Dlamini", business: "HealthFirst", visa: "Health & Care", status: "on_track", target: "2026-05-30", priority: "medium", payment: "paid" },
-  { caseId: "#C-2339", candidate: "Lukas Meyer", business: "AutoParts DE UK", visa: "Tier 2", status: "on_track", target: "2026-06-20", priority: "low", payment: "partial" },
-  { caseId: "#C-2332", candidate: "Anna Kowalski", business: "PolskaBake", visa: "Skilled Worker", status: "due_soon", target: "2026-04-22", priority: "high", payment: "paid" },
-  { caseId: "#C-2328", candidate: "David Mensah", business: "AfriCommerce", visa: "Skilled Worker", status: "on_track", target: "2026-07-05", priority: "medium", payment: "paid" },
-  { caseId: "#C-2321", candidate: "Hannah Scott", business: "Scott Retail", visa: "Graduate", status: "overdue", target: "2026-04-01", priority: "high", payment: "outstanding" },
-  { caseId: "#C-2315", candidate: "Omar Farouk", business: "Desert Tech", visa: "Tier 2", status: "on_track", target: "2026-08-01", priority: "medium", payment: "paid" },
-  { caseId: "#C-2310", candidate: "Chloe Martin", business: "Martin Design", visa: "Skilled Worker", status: "completed", target: "2026-02-15", priority: "low", payment: "paid" },
-  { caseId: "#C-2304", candidate: "Diego Silva", business: "Silva Logistics", visa: "Intra-Co", status: "on_track", target: "2026-09-10", priority: "low", payment: "paid" },
-  { caseId: "#C-2299", candidate: "Grace Okonkwo", business: "Lagos Express UK", visa: "Skilled Worker", status: "due_soon", target: "2026-04-28", priority: "medium", payment: "partial" },
-  { caseId: "#C-2293", candidate: "Tom Bradley", business: "Bradley Farms", visa: "Tier 2", status: "on_track", target: "2026-10-01", priority: "low", payment: "paid" },
-  { caseId: "#C-2288", candidate: "Wang Lei", business: "Pacific Imports", visa: "Skilled Worker", status: "on_track", target: "2026-06-18", priority: "high", payment: "paid" },
-  { caseId: "#C-2281", candidate: "Isabelle Fortin", business: "Fortin Avocats UK", visa: "Graduate", status: "completed", target: "2026-01-20", priority: "low", payment: "paid" },
+  {
+    caseId: "#C-2401",
+    candidate: "Ahmed Al-Rashid",
+    business: "TechCorp Ltd",
+    visa: "Tier 2",
+    status: "on_track",
+    target: "2026-04-18",
+    priority: "high",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2398",
+    candidate: "Priya Sharma",
+    business: "Nexus Group",
+    visa: "Skilled Worker",
+    status: "due_soon",
+    target: "2026-04-12",
+    priority: "medium",
+    payment: "partial",
+  },
+  {
+    caseId: "#C-2391",
+    candidate: "Carlos Mendes",
+    business: "BuildRight Inc",
+    visa: "Intra-Co",
+    status: "overdue",
+    target: "2026-04-03",
+    priority: "urgent",
+    payment: "outstanding",
+  },
+  {
+    caseId: "#C-2389",
+    candidate: "Mei Lin Chen",
+    business: "Global Finance",
+    visa: "Graduate",
+    status: "on_track",
+    target: "2026-05-02",
+    priority: "low",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2385",
+    candidate: "Ivan Petrov",
+    business: "EnviroTech",
+    visa: "Tier 2",
+    status: "on_track",
+    target: "2026-05-15",
+    priority: "low",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2380",
+    candidate: "Fatima Al-Zahra",
+    business: "MediCare Group",
+    visa: "Health & Care",
+    status: "due_soon",
+    target: "2026-04-20",
+    priority: "medium",
+    payment: "partial",
+  },
+  {
+    caseId: "#C-2376",
+    candidate: "Rajesh Patel",
+    business: "Innovate Corp",
+    visa: "Skilled Worker",
+    status: "on_track",
+    target: "2026-06-01",
+    priority: "low",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2370",
+    candidate: "Sofia Nielsen",
+    business: "Nordic AI Ltd",
+    visa: "Skilled Worker",
+    status: "on_track",
+    target: "2026-06-12",
+    priority: "medium",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2365",
+    candidate: "James O'Connor",
+    business: "Celtic Foods",
+    visa: "Tier 2",
+    status: "due_soon",
+    target: "2026-04-25",
+    priority: "high",
+    payment: "partial",
+  },
+  {
+    caseId: "#C-2360",
+    candidate: "Yuki Tanaka",
+    business: "Tokyo Trade UK",
+    visa: "Intra-Co",
+    status: "on_track",
+    target: "2026-07-01",
+    priority: "low",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2355",
+    candidate: "Elena Popov",
+    business: "EuroBuild",
+    visa: "Skilled Worker",
+    status: "overdue",
+    target: "2026-03-28",
+    priority: "urgent",
+    payment: "outstanding",
+  },
+  {
+    caseId: "#C-2350",
+    candidate: "Marcus Webb",
+    business: "Webb Legal",
+    visa: "Graduate",
+    status: "completed",
+    target: "2026-03-01",
+    priority: "low",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2344",
+    candidate: "Nomsa Dlamini",
+    business: "HealthFirst",
+    visa: "Health & Care",
+    status: "on_track",
+    target: "2026-05-30",
+    priority: "medium",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2339",
+    candidate: "Lukas Meyer",
+    business: "AutoParts DE UK",
+    visa: "Tier 2",
+    status: "on_track",
+    target: "2026-06-20",
+    priority: "low",
+    payment: "partial",
+  },
+  {
+    caseId: "#C-2332",
+    candidate: "Anna Kowalski",
+    business: "PolskaBake",
+    visa: "Skilled Worker",
+    status: "due_soon",
+    target: "2026-04-22",
+    priority: "high",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2328",
+    candidate: "David Mensah",
+    business: "AfriCommerce",
+    visa: "Skilled Worker",
+    status: "on_track",
+    target: "2026-07-05",
+    priority: "medium",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2321",
+    candidate: "Hannah Scott",
+    business: "Scott Retail",
+    visa: "Graduate",
+    status: "overdue",
+    target: "2026-04-01",
+    priority: "high",
+    payment: "outstanding",
+  },
+  {
+    caseId: "#C-2315",
+    candidate: "Omar Farouk",
+    business: "Desert Tech",
+    visa: "Tier 2",
+    status: "on_track",
+    target: "2026-08-01",
+    priority: "medium",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2310",
+    candidate: "Chloe Martin",
+    business: "Martin Design",
+    visa: "Skilled Worker",
+    status: "completed",
+    target: "2026-02-15",
+    priority: "low",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2304",
+    candidate: "Diego Silva",
+    business: "Silva Logistics",
+    visa: "Intra-Co",
+    status: "on_track",
+    target: "2026-09-10",
+    priority: "low",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2299",
+    candidate: "Grace Okonkwo",
+    business: "Lagos Express UK",
+    visa: "Skilled Worker",
+    status: "due_soon",
+    target: "2026-04-28",
+    priority: "medium",
+    payment: "partial",
+  },
+  {
+    caseId: "#C-2293",
+    candidate: "Tom Bradley",
+    business: "Bradley Farms",
+    visa: "Tier 2",
+    status: "on_track",
+    target: "2026-10-01",
+    priority: "low",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2288",
+    candidate: "Wang Lei",
+    business: "Pacific Imports",
+    visa: "Skilled Worker",
+    status: "on_track",
+    target: "2026-06-18",
+    priority: "high",
+    payment: "paid",
+  },
+  {
+    caseId: "#C-2281",
+    candidate: "Isabelle Fortin",
+    business: "Fortin Avocats UK",
+    visa: "Graduate",
+    status: "completed",
+    target: "2026-01-20",
+    priority: "low",
+    payment: "paid",
+  },
 ];
 
 /** Caseworkers pool for reassignment */
 const CASEWORKERS = [
-  { id: "cw-01", name: "Sarah Mitchell", role: "Senior Caseworker", avatar: "SM", load: 8 },
-  { id: "cw-02", name: "James Holloway", role: "Caseworker", avatar: "JH", load: 12 },
-  { id: "cw-03", name: "Yvonne Clarke", role: "Senior Caseworker", avatar: "YC", load: 5 },
-  { id: "cw-04", name: "Tariq Hussain", role: "Caseworker", avatar: "TH", load: 14 },
-  { id: "cw-05", name: "Beatrice Osei", role: "Lead Caseworker", avatar: "BO", load: 3 },
-  { id: "cw-06", name: "Nikolai Volkov", role: "Caseworker", avatar: "NV", load: 10 },
-  { id: "cw-07", name: "Preethi Anand", role: "Senior Caseworker", avatar: "PA", load: 7 },
+  {
+    id: "cw-01",
+    name: "Sarah Mitchell",
+    role: "Senior Caseworker",
+    avatar: "SM",
+    load: 8,
+  },
+  {
+    id: "cw-02",
+    name: "James Holloway",
+    role: "Caseworker",
+    avatar: "JH",
+    load: 12,
+  },
+  {
+    id: "cw-03",
+    name: "Yvonne Clarke",
+    role: "Senior Caseworker",
+    avatar: "YC",
+    load: 5,
+  },
+  {
+    id: "cw-04",
+    name: "Tariq Hussain",
+    role: "Caseworker",
+    avatar: "TH",
+    load: 14,
+  },
+  {
+    id: "cw-05",
+    name: "Beatrice Osei",
+    role: "Lead Caseworker",
+    avatar: "BO",
+    load: 3,
+  },
+  {
+    id: "cw-06",
+    name: "Nikolai Volkov",
+    role: "Caseworker",
+    avatar: "NV",
+    load: 10,
+  },
+  {
+    id: "cw-07",
+    name: "Preethi Anand",
+    role: "Senior Caseworker",
+    avatar: "PA",
+    load: 7,
+  },
 ];
 
 const REASSIGN_REASONS = [
@@ -88,13 +357,7 @@ const VISA_OPTIONS = [
   "Health & Care",
 ];
 
-const PRIORITY_OPTIONS = [
-  "All priorities",
-  "Urgent",
-  "High",
-  "Medium",
-  "Low",
-];
+const PRIORITY_OPTIONS = ["All priorities", "Urgent", "High", "Medium", "Low"];
 
 const NEW_CASE_VISA = VISA_OPTIONS.filter((v) => v !== "All visa types");
 
@@ -134,28 +397,39 @@ const emptyNewCaseForm = () => ({
 });
 
 const caseToEditForm = (c) => ({
-  candidate: c.candidate?.first_name && c.candidate?.last_name ? `${c.candidate.first_name} ${c.candidate.last_name}` : c.candidate || '',
-  business: c.business?.sponsor?.first_name && c.business?.sponsor?.last_name ? `${c.business.sponsor.first_name} ${c.business.sponsor.last_name}` : c.business || '',
-  visa: c.visaType?.name || c.visa || '',
-  status: c.status || c.overview?.status || '',
-  target: c.target || c.targetSubmissionDate || c.overview?.targetSubmissionDate || '',
-  priority: c.priority || c.overview?.priority || '',
-  payment: c.payment || '',
-  candidateId: c.candidateId || c.candidate?.id || '',
-  sponsorId: c.sponsorId || c.business?.sponsor?.id || '',
-  businessId: c.businessId || c.business?.businessId || '',
-  visaTypeId: c.visaTypeId || c.visaType?.id || '',
-  petitionTypeId: c.petitionTypeId || c.petitionType?.id || '',
-  lcaNumber: c.lcaNumber || c.additional?.lcaNumber || '',
-  receiptNumber: c.receiptNumber || c.additional?.receiptNumber || '',
-  assignedcaseworkerId: c.assignedcaseworkerId || '',
-  salaryOffered: c.salaryOffered || c.financial?.salaryOffered || '',
-  totalAmount: c.totalAmount || c.financial?.totalFee || '',
-  paidAmount: c.paidAmount || c.financial?.totalPaid || '',
-  notes: c.notes || c.additional?.notes || '',
-  nationality: c.nationality || c.candidate?.nationality || '',
-  jobTitle: c.jobTitle || c.additional?.jobTitle || '',
-  department: c.departmentId || c.department?.id || c.additional?.departmentId || '',
+  candidate:
+    c.candidate?.first_name && c.candidate?.last_name
+      ? `${c.candidate.first_name} ${c.candidate.last_name}`
+      : c.candidate || "",
+  business:
+    c.business?.sponsor?.first_name && c.business?.sponsor?.last_name
+      ? `${c.business.sponsor.first_name} ${c.business.sponsor.last_name}`
+      : c.business || "",
+  visa: c.visaType?.name || c.visa || "",
+  status: c.status || c.overview?.status || "",
+  target:
+    c.target ||
+    c.targetSubmissionDate ||
+    c.overview?.targetSubmissionDate ||
+    "",
+  priority: c.priority || c.overview?.priority || "",
+  payment: c.payment || "",
+  candidateId: c.candidateId || c.candidate?.id || "",
+  sponsorId: c.sponsorId || c.business?.sponsor?.id || "",
+  businessId: c.businessId || c.business?.businessId || "",
+  visaTypeId: c.visaTypeId || c.visaType?.id || "",
+  petitionTypeId: c.petitionTypeId || c.petitionType?.id || "",
+  lcaNumber: c.lcaNumber || c.additional?.lcaNumber || "",
+  receiptNumber: c.receiptNumber || c.additional?.receiptNumber || "",
+  assignedcaseworkerId: c.assignedcaseworkerId || "",
+  salaryOffered: c.salaryOffered || c.financial?.salaryOffered || "",
+  totalAmount: c.totalAmount || c.financial?.totalFee || "",
+  paidAmount: c.paidAmount || c.financial?.totalPaid || "",
+  notes: c.notes || c.additional?.notes || "",
+  nationality: c.nationality || c.candidate?.nationality || "",
+  jobTitle: c.jobTitle || c.additional?.jobTitle || "",
+  department:
+    c.departmentId || c.department?.id || c.additional?.departmentId || "",
 });
 
 const emptyReassignForm = () => ({
@@ -197,7 +471,10 @@ function badgeStatus(status) {
     overdue: "Overdue",
     completed: "Completed",
   };
-  return { className: m[status] || m.on_track, label: labels[status] || status };
+  return {
+    className: m[status] || m.on_track,
+    label: labels[status] || status,
+  };
 }
 
 function badgePriority(p) {
@@ -216,7 +493,11 @@ function badgePayment(p) {
     partial: "bg-amber-50 text-amber-800 border-amber-200",
     outstanding: "bg-red-50 text-red-800 border-red-200",
   };
-  const labels = { paid: "Paid", partial: "Partial", outstanding: "Outstanding" };
+  const labels = {
+    paid: "Paid",
+    partial: "Partial",
+    outstanding: "Outstanding",
+  };
   return { className: m[p], label: labels[p] };
 }
 
@@ -346,10 +627,15 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
 const Cases = () => {
   const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState("table"); // 'table' or 'kanban'
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10 });
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+  });
   const [search, setSearch] = useState("");
   const [chip, setChip] = useState("all");
   const [visaFilter, setVisaFilter] = useState("");
@@ -361,7 +647,9 @@ const Cases = () => {
   const [newCaseForm, setNewCaseForm] = useState(emptyNewCaseForm);
   const [newCaseErrors, setNewCaseErrors] = useState({});
   const [editCaseId, setEditCaseId] = useState(null);
-  const [editCaseForm, setEditCaseForm] = useState(() => caseToEditForm(CASES_DATA[0]));
+  const [editCaseForm, setEditCaseForm] = useState(() =>
+    caseToEditForm(CASES_DATA[0]),
+  );
   const [editCaseErrors, setEditCaseErrors] = useState({});
   const [visaTypes, setVisaTypes] = useState([]);
   const [petitionTypes, setPetitionTypes] = useState([]);
@@ -381,18 +669,27 @@ const Cases = () => {
           limit: PAGE_SIZE,
           search,
           status: chip === "all" ? "" : chip,
-          priority: priorityFilter === "All priorities" ? "" : priorityFilter.toLowerCase(),
+          priority:
+            priorityFilter === "All priorities"
+              ? ""
+              : priorityFilter.toLowerCase(),
           visaTypeId: visaFilter === "All visa types" ? "" : visaFilter,
           sortBy: "created_at",
-          sortOrder: "DESC"
+          sortOrder: "DESC",
         };
         const response = await getCaseworkerCases(params);
-        
+
         // Map API response to component structure
-        const mappedCases = response.data.data.cases.map(c => ({
+        const mappedCases = response.data.data.cases.map((c) => ({
           caseId: c.caseId || `#C-${c.id}`,
-          candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : "Unknown",
-          business: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || c.sponsor?.first_name || "Unknown",
+          candidate: c.candidate
+            ? `${c.candidate.first_name} ${c.candidate.last_name}`
+            : "Unknown",
+          business:
+            c.sponsor?.sponsorProfile?.companyName ||
+            c.sponsor?.sponsorProfile?.tradingName ||
+            c.sponsor?.first_name ||
+            "Unknown",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           target: c.targetSubmissionDate || c.created_at,
@@ -404,11 +701,14 @@ const Cases = () => {
           businessId: c.businessId,
           department: c.department,
           sponsor: c.sponsor,
-          caseworker: c.caseworkers && c.caseworkers.length > 0
-            ? c.caseworkers.map(cw => `${cw.first_name} ${cw.last_name}`).join(', ')
-            : "Unassigned"
+          caseworker:
+            c.caseworkers && c.caseworkers.length > 0
+              ? c.caseworkers
+                  .map((cw) => `${cw.first_name} ${cw.last_name}`)
+                  .join(", ")
+              : "Unassigned",
         }));
-        
+
         setCases(mappedCases);
         setPagination(response.data.data.pagination);
         setError(null);
@@ -464,12 +764,12 @@ const Cases = () => {
   // Helper functions to map API data to UI format
   const mapApiStatus = (status) => {
     const statusMap = {
-      "Pending": "on_track",
+      Pending: "on_track",
       "In Progress": "on_track",
-      "Completed": "completed",
-      "Approved": "completed",
-      "Rejected": "overdue",
-      "Cancelled": "overdue"
+      Completed: "completed",
+      Approved: "completed",
+      Rejected: "overdue",
+      Cancelled: "overdue",
     };
     return statusMap[status] || "on_track";
   };
@@ -549,6 +849,9 @@ const Cases = () => {
         nationality: editCaseForm.nationality,
         jobTitle: editCaseForm.jobTitle,
         departmentId: editCaseForm.department,
+        biometricsDate: editCaseForm.biometricsDate,
+        submissionDate: editCaseForm.submissionDate,
+        decisionDate: editCaseForm.decisionDate,
       };
 
       await updateCaseworkerCase(editCaseId, caseData);
@@ -559,32 +862,49 @@ const Cases = () => {
         limit: PAGE_SIZE,
         search,
         status: chip === "all" ? "" : chip,
-        priority: priorityFilter === "All priorities" ? "" : priorityFilter.toLowerCase(),
+        priority:
+          priorityFilter === "All priorities"
+            ? ""
+            : priorityFilter.toLowerCase(),
         visaTypeId: visaFilter === "All visa types" ? "" : visaFilter,
         sortBy: "created_at",
-        sortOrder: "DESC"
+        sortOrder: "DESC",
       };
       const response = await getCaseworkerCases(params);
 
       if (response?.data?.data?.cases) {
-        const mappedCases = response.data.data.cases.map(c => ({
+        const mappedCases = response.data.data.cases.map((c) => ({
           caseId: c.caseId || `#C-${c.id}`,
-          candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : "Unknown",
-          business: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || c.sponsor?.first_name || "Unknown",
+          candidate: c.candidate
+            ? `${c.candidate.first_name} ${c.candidate.last_name}`
+            : "Unknown",
+          business:
+            c.sponsor?.sponsorProfile?.companyName ||
+            c.sponsor?.sponsorProfile?.tradingName ||
+            c.sponsor?.first_name ||
+            "Unknown",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           target: c.targetSubmissionDate || c.created_at,
           priority: c.priority?.toLowerCase() || "medium",
-          payment: c.paidAmount >= c.totalAmount ? "paid" : (c.paidAmount > 0 ? "partial" : "outstanding"),
+          payment:
+            c.paidAmount >= c.totalAmount
+              ? "paid"
+              : c.paidAmount > 0
+                ? "partial"
+                : "outstanding",
           id: c.id,
           candidateId: c.candidateId,
           sponsorId: c.sponsorId,
           businessId: c.businessId,
           department: c.department,
           sponsor: c.sponsor,
-          caseworker: c.caseworkers && c.caseworkers.length > 0
-            ? c.caseworkers.map(cw => `${cw.first_name} ${cw.last_name}`).join(', ')
-            : "Unassigned"
+          caseworker:
+            c.caseworkers && c.caseworkers.length > 0
+              ? c.caseworkers
+                  .map((cw) => `${cw.first_name} ${cw.last_name}`)
+                  .join(", ")
+              : "Unassigned",
         }));
         setCases(mappedCases);
       }
@@ -594,7 +914,15 @@ const Cases = () => {
       console.error("Error updating case:", error);
       alert("Failed to update case. Please try again.");
     }
-  }, [editCaseId, editCaseForm, closeCaseEdit, search, chip, priorityFilter, visaFilter]);
+  }, [
+    editCaseId,
+    editCaseForm,
+    closeCaseEdit,
+    search,
+    chip,
+    priorityFilter,
+    visaFilter,
+  ]);
 
   const closeNewCaseModal = useCallback(() => {
     setNewCaseOpen(false);
@@ -608,7 +936,8 @@ const Cases = () => {
       ...prev,
       [name]: type === "number" ? parseFloat(value) || 0 : value,
     }));
-    if (newCaseErrors[name]) setNewCaseErrors((prev) => ({ ...prev, [name]: "" }));
+    if (newCaseErrors[name])
+      setNewCaseErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handleCaseworkerIdsChange = (ids) => {
@@ -655,25 +984,34 @@ const Cases = () => {
         departmentId: parseInt(newCaseForm.department) || null,
       };
       await createCaseworkerCase(caseData);
-      
+
       // Refresh cases from API
       const params = {
         page: 1,
         limit: PAGE_SIZE,
         search,
         status: chip === "all" ? "" : chip,
-        priority: priorityFilter === "All priorities" ? "" : priorityFilter.toLowerCase(),
+        priority:
+          priorityFilter === "All priorities"
+            ? ""
+            : priorityFilter.toLowerCase(),
         visaTypeId: visaFilter === "All visa types" ? "" : visaFilter,
         sortBy: "created_at",
-        sortOrder: "DESC"
+        sortOrder: "DESC",
       };
       const response = await getCaseworkerCases(params);
-      
+
       if (response?.data?.data?.cases) {
-        const mappedCases = response.data.data.cases.map(c => ({
+        const mappedCases = response.data.data.cases.map((c) => ({
           caseId: c.caseId || `#C-${c.id}`,
-          candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : "Unknown",
-          business: c.sponsor?.sponsorProfile?.companyName || c.sponsor?.sponsorProfile?.tradingName || c.sponsor?.first_name || "Unknown",
+          candidate: c.candidate
+            ? `${c.candidate.first_name} ${c.candidate.last_name}`
+            : "Unknown",
+          business:
+            c.sponsor?.sponsorProfile?.companyName ||
+            c.sponsor?.sponsorProfile?.tradingName ||
+            c.sponsor?.first_name ||
+            "Unknown",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           target: c.targetSubmissionDate || c.created_at,
@@ -685,14 +1023,17 @@ const Cases = () => {
           businessId: c.businessId,
           department: c.department,
           sponsor: c.sponsor,
-          caseworker: c.caseworkers && c.caseworkers.length > 0
-            ? c.caseworkers.map(cw => `${cw.first_name} ${cw.last_name}`).join(', ')
-            : "Unassigned"
+          caseworker:
+            c.caseworkers && c.caseworkers.length > 0
+              ? c.caseworkers
+                  .map((cw) => `${cw.first_name} ${cw.last_name}`)
+                  .join(", ")
+              : "Unassigned",
         }));
         setCases(mappedCases);
         setPagination(response.data.data.pagination);
       }
-      
+
       setIsLoading(false);
       closeNewCaseModal();
       setNewCaseForm(emptyNewCaseForm());
@@ -701,9 +1042,19 @@ const Cases = () => {
     } catch (error) {
       setIsLoading(false);
       console.error("Error creating case:", error);
-      alert("Error creating case. Please ensure Candidate ID, Business ID, Visa Type, and Petition Type are provided.");
+      alert(
+        "Error creating case. Please ensure Candidate ID, Business ID, Visa Type, and Petition Type are provided.",
+      );
     }
-  }, [newCaseForm, newCaseErrors, closeNewCaseModal, search, chip, priorityFilter, visaFilter]);
+  }, [
+    newCaseForm,
+    newCaseErrors,
+    closeNewCaseModal,
+    search,
+    chip,
+    priorityFilter,
+    visaFilter,
+  ]);
 
   // ── Reassign handlers ───────────────────────────────────────────────────────
   const openReassign = useCallback((c) => {
@@ -723,7 +1074,8 @@ const Cases = () => {
 
   const submitReassign = useCallback(() => {
     const err = {};
-    if (!reassignForm.caseworkerId) err.caseworkerId = "Please select a caseworker";
+    if (!reassignForm.caseworkerId)
+      err.caseworkerId = "Please select a caseworker";
     if (!reassignForm.reasonPreset) err.reasonPreset = "Please select a reason";
     if (
       reassignForm.reasonPreset === "Other" &&
@@ -754,7 +1106,7 @@ const Cases = () => {
 
   // Filtering is now handled by the API, so we use cases directly
   const filtered = cases;
-  
+
   // Use API pagination instead of client-side
   const totalPages = Math.max(1, Math.ceil(pagination.total / PAGE_SIZE));
   const pageClamped = Math.min(page, totalPages);
@@ -776,21 +1128,23 @@ const Cases = () => {
     },
     {
       label: "Pending",
-      value: cases.filter(c => c.status === 'on_track' || c.status === 'due_soon').length,
+      value: cases.filter(
+        (c) => c.status === "on_track" || c.status === "due_soon",
+      ).length,
       bg: "bg-yellow-50",
       color: "text-yellow-600",
       Icon: Clock,
     },
     {
       label: "Approved",
-      value: cases.filter(c => c.status === 'completed').length,
+      value: cases.filter((c) => c.status === "completed").length,
       bg: "bg-green-50",
       color: "text-green-600",
       Icon: Check,
     },
     {
       label: "Rejected",
-      value: cases.filter(c => c.status === 'overdue').length,
+      value: cases.filter((c) => c.status === "overdue").length,
       bg: "bg-red-50",
       color: "text-red-600",
       Icon: X,
@@ -811,7 +1165,9 @@ const Cases = () => {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => window.alert("Demo: export would download a CSV/spreadsheet.")}
+            onClick={() =>
+              window.alert("Demo: export would download a CSV/spreadsheet.")
+            }
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 shadow-sm hover:bg-gray-50"
           >
             <Download size={18} />
@@ -833,11 +1189,15 @@ const Cases = () => {
         {stats.map((stat) => (
           <div key={stat.label} className="rounded-xl bg-white p-5 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${stat.bg} ${stat.color}`}>
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${stat.bg} ${stat.color}`}
+              >
                 <stat.Icon size={20} />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+                <p className="text-sm font-medium text-gray-500">
+                  {stat.label}
+                </p>
                 <p className="text-xl font-bold text-gray-900">{stat.value}</p>
               </div>
             </div>
@@ -848,7 +1208,7 @@ const Cases = () => {
       {/* Recent Cases Section */}
       <div>
         <h2 className="text-lg font-black text-secondary mb-4">Recent Cases</h2>
-        
+
         <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center mb-4">
           {loading && (
             <div className="w-full py-8 text-center text-sm font-bold text-gray-500">
@@ -903,11 +1263,13 @@ const Cases = () => {
                   className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
                 >
                   <option value="">All Priorities</option>
-                  {PRIORITY_OPTIONS.filter((p) => p !== "All priorities").map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
+                  {PRIORITY_OPTIONS.filter((p) => p !== "All priorities").map(
+                    (p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ),
+                  )}
                 </select>
                 <select
                   value={visaFilter}
@@ -918,11 +1280,13 @@ const Cases = () => {
                   className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
                 >
                   <option value="">All Visa Types</option>
-                  {VISA_OPTIONS.filter((v) => v !== "All visa types").map((v) => (
-                    <option key={v} value={v}>
-                      {v}
-                    </option>
-                  ))}
+                  {VISA_OPTIONS.filter((v) => v !== "All visa types").map(
+                    (v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ),
+                  )}
                 </select>
               </div>
             </>
@@ -959,7 +1323,10 @@ const Cases = () => {
             <tbody className="divide-y divide-gray-100">
               {pageSlice.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-sm font-bold text-gray-500">
+                  <td
+                    colSpan={10}
+                    className="py-12 text-center text-sm font-bold text-gray-500"
+                  >
                     No cases match your filters.
                   </td>
                 </tr>
@@ -979,10 +1346,14 @@ const Cases = () => {
                           {c.caseId}
                         </td>
                         <td className="py-3 px-4 text-sm font-bold text-gray-900">
-                          {c.candidate?.first_name && c.candidate?.last_name ? `${c.candidate.first_name} ${c.candidate.last_name}` : c.candidate || "-"}
+                          {c.candidate?.first_name && c.candidate?.last_name
+                            ? `${c.candidate.first_name} ${c.candidate.last_name}`
+                            : c.candidate || "-"}
                         </td>
                         <td className="py-3 px-4 text-sm font-bold text-gray-900">
-                          {c.sponsor?.first_name && c.sponsor?.last_name ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : c.business || "-"}
+                          {c.sponsor?.first_name && c.sponsor?.last_name
+                            ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
+                            : c.business || "-"}
                         </td>
                         <td className="py-3 px-4 text-sm font-bold text-gray-600">
                           {c.department?.name || c.department || "-"}
@@ -1014,7 +1385,10 @@ const Cases = () => {
                         <td className="py-3 px-4 text-sm font-bold text-gray-600 tabular-nums whitespace-nowrap">
                           {formatTarget(c.target)}
                         </td>
-                        <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                        <td
+                          className="py-3 px-4"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <div className="flex flex-wrap gap-1.5">
                             <button
                               type="button"
@@ -1081,7 +1455,9 @@ const Cases = () => {
                               </span>
                               <span className="text-[11px] font-bold text-violet-600">
                                 Reason:{" "}
-                                <span className="italic">{reassigned.reason}</span>
+                                <span className="italic">
+                                  {reassigned.reason}
+                                </span>
                               </span>
                               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-violet-500 ml-auto">
                                 <CalendarClock size={12} />
@@ -1101,8 +1477,8 @@ const Cases = () => {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/80">
           <p className="text-xs font-bold text-gray-500 tabular-nums">
             Showing {(pageClamped - 1) * PAGE_SIZE + 1}–
-            {Math.min(pageClamped * PAGE_SIZE, pagination.total)} of {pagination.total}{" "}
-            cases
+            {Math.min(pageClamped * PAGE_SIZE, pagination.total)} of{" "}
+            {pagination.total} cases
           </p>
           <div className="flex items-center gap-1">
             <button
@@ -1118,10 +1494,11 @@ const Cases = () => {
                 key={num}
                 type="button"
                 onClick={() => setPage(num)}
-                className={`min-w-[2rem] rounded-lg border px-2 py-1 text-xs font-black ${pageClamped === num
+                className={`min-w-[2rem] rounded-lg border px-2 py-1 text-xs font-black ${
+                  pageClamped === num
                     ? "border-secondary bg-secondary/10 text-secondary"
                     : "border-gray-200 text-gray-600 hover:bg-white"
-                  }`}
+                }`}
               >
                 {num}
               </button>
@@ -1163,13 +1540,21 @@ const Cases = () => {
                       name="candidateId"
                       value={newCaseForm.candidateId}
                       onChange={(e) => {
-                        const selectedCandidate = candidates.find(c => c.id === parseInt(e.target.value));
-                        setNewCaseForm(prev => ({
+                        const selectedCandidate = candidates.find(
+                          (c) => c.id === parseInt(e.target.value),
+                        );
+                        setNewCaseForm((prev) => ({
                           ...prev,
                           candidateId: e.target.value,
-                          candidateName: selectedCandidate ? `${selectedCandidate.first_name} ${selectedCandidate.last_name}` : ''
+                          candidateName: selectedCandidate
+                            ? `${selectedCandidate.first_name} ${selectedCandidate.last_name}`
+                            : "",
                         }));
-                        if (newCaseErrors.candidateId) setNewCaseErrors(prev => ({ ...prev, candidateId: '' }));
+                        if (newCaseErrors.candidateId)
+                          setNewCaseErrors((prev) => ({
+                            ...prev,
+                            candidateId: "",
+                          }));
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.candidateId ? "border-red-400" : "border-gray-300"}`}
                     >
@@ -1261,14 +1646,25 @@ const Cases = () => {
                       name="businessId"
                       value={newCaseForm.businessId}
                       onChange={(e) => {
-                        const selectedSponsor = sponsors.find(s => s.id === parseInt(e.target.value));
-                        setNewCaseForm(prev => ({
+                        const selectedSponsor = sponsors.find(
+                          (s) => s.id === parseInt(e.target.value),
+                        );
+                        setNewCaseForm((prev) => ({
                           ...prev,
                           sponsorId: e.target.value,
-                          businessId: selectedSponsor?.sponsorProfile?.id || e.target.value,
-                          businessName: selectedSponsor?.sponsorProfile?.companyName || selectedSponsor?.sponsorProfile?.tradingName || `${selectedSponsor.first_name} ${selectedSponsor.last_name}`
+                          businessId:
+                            selectedSponsor?.sponsorProfile?.id ||
+                            e.target.value,
+                          businessName:
+                            selectedSponsor?.sponsorProfile?.companyName ||
+                            selectedSponsor?.sponsorProfile?.tradingName ||
+                            `${selectedSponsor.first_name} ${selectedSponsor.last_name}`,
                         }));
-                        if (newCaseErrors.businessId) setNewCaseErrors(prev => ({ ...prev, businessId: '' }));
+                        if (newCaseErrors.businessId)
+                          setNewCaseErrors((prev) => ({
+                            ...prev,
+                            businessId: "",
+                          }));
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.businessId ? "border-red-400" : "border-gray-300"}`}
                     >
@@ -1379,7 +1775,9 @@ const Cases = () => {
                   className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.targetSubmissionDate ? "border-red-300" : "border-gray-200"}`}
                 />
                 {newCaseErrors.targetSubmissionDate && (
-                  <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.targetSubmissionDate}</p>
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {newCaseErrors.targetSubmissionDate}
+                  </p>
                 )}
               </div>
               <div>
@@ -1417,7 +1815,14 @@ const Cases = () => {
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <CaseworkerMultiSelect
-                options={caseworkers.length > 0 ? caseworkers.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}` })) : []}
+                options={
+                  caseworkers.length > 0
+                    ? caseworkers.map((c) => ({
+                        id: c.id,
+                        name: `${c.first_name} ${c.last_name}`,
+                      }))
+                    : []
+                }
                 value={newCaseForm.assignedCaseworkerIds || []}
                 onChange={handleCaseworkerIdsChange}
                 error={newCaseErrors.assignedCaseworkers}
@@ -1456,7 +1861,9 @@ const Cases = () => {
                   className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.totalAmount ? "border-red-300" : "border-gray-200"}`}
                 />
                 {newCaseErrors.totalAmount && (
-                  <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.totalAmount}</p>
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {newCaseErrors.totalAmount}
+                  </p>
                 )}
               </div>
               <div>
@@ -1516,10 +1923,10 @@ const Cases = () => {
         onClose={closeCaseEdit}
         title={editCaseId ? `Edit case ${editCaseId}` : ""}
         titleId="case-edit-modal-title"
-        maxWidthClass="max-w-lg"
+        maxWidthClass="max-w-4xl"
         bodyClassName="p-4 sm:p-6"
       >
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* <p className="text-sm font-bold text-gray-600">
             Update case details. Changes apply locally in this demo until the API is connected.
           </p> */}
@@ -1533,11 +1940,14 @@ const Cases = () => {
               onChange={(e) =>
                 setEditCaseForm((f) => ({ ...f, candidate: e.target.value }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.candidate ? "border-red-300" : "border-gray-200"
-                }`}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
+                editCaseErrors.candidate ? "border-red-300" : "border-gray-200"
+              }`}
             />
             {editCaseErrors.candidate && (
-              <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.candidate}</p>
+              <p className="text-xs font-bold text-red-600 mt-1">
+                {editCaseErrors.candidate}
+              </p>
             )}
           </div>
           <div>
@@ -1550,11 +1960,14 @@ const Cases = () => {
               onChange={(e) =>
                 setEditCaseForm((f) => ({ ...f, business: e.target.value }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.business ? "border-red-300" : "border-gray-200"
-                }`}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
+                editCaseErrors.business ? "border-red-300" : "border-gray-200"
+              }`}
             />
             {editCaseErrors.business && (
-              <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.business}</p>
+              <p className="text-xs font-bold text-red-600 mt-1">
+                {editCaseErrors.business}
+              </p>
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1606,11 +2019,14 @@ const Cases = () => {
                 onChange={(e) =>
                   setEditCaseForm((f) => ({ ...f, target: e.target.value }))
                 }
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.target ? "border-red-300" : "border-gray-200"
-                  }`}
+                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
+                  editCaseErrors.target ? "border-red-300" : "border-gray-200"
+                }`}
               />
               {editCaseErrors.target && (
-                <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.target}</p>
+                <p className="text-xs font-bold text-red-600 mt-1">
+                  {editCaseErrors.target}
+                </p>
               )}
             </div>
             <div>
@@ -1673,7 +2089,11 @@ const Cases = () => {
       <Modal
         open={!!reassignCaseId}
         onClose={closeReassign}
-        title={reassignCase ? `Reassign case ${reassignCase.caseId}` : "Reassign case"}
+        title={
+          reassignCase
+            ? `Reassign case ${reassignCase.caseId}`
+            : "Reassign case"
+        }
         titleId="reassign-modal-title"
         maxWidthClass="max-w-xl"
         bodyClassName="p-4 sm:p-6"
@@ -1683,12 +2103,16 @@ const Cases = () => {
             {/* Case summary chip */}
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-violet-100 bg-violet-50/60 px-4 py-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-gray-900">{reassignCase.candidate}</p>
+                <p className="text-sm font-black text-gray-900">
+                  {reassignCase.candidate}
+                </p>
                 <p className="text-[11px] font-bold text-gray-500 mt-0.5">
                   {reassignCase.business} · {reassignCase.visa}
                 </p>
               </div>
-              <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeStatus(reassignCase.status).className}`}>
+              <span
+                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeStatus(reassignCase.status).className}`}
+              >
                 {badgeStatus(reassignCase.status).label}
               </span>
             </div>
@@ -1725,17 +2149,27 @@ const Cases = () => {
                         {cw.avatar}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-black ${selected ? "text-violet-900" : "text-gray-900"}`}>
+                        <p
+                          className={`text-sm font-black ${selected ? "text-violet-900" : "text-gray-900"}`}
+                        >
                           {cw.name}
                         </p>
-                        <p className="text-[11px] font-bold text-gray-500">{cw.role}</p>
+                        <p className="text-[11px] font-bold text-gray-500">
+                          {cw.role}
+                        </p>
                       </div>
                       {/* Current load badge */}
-                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black ${loadColor(cw.load)}`}>
+                      <span
+                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black ${loadColor(cw.load)}`}
+                      >
                         {cw.load} active
                       </span>
                       {selected && (
-                        <Check size={16} className="shrink-0 text-violet-600" strokeWidth={3} />
+                        <Check
+                          size={16}
+                          className="shrink-0 text-violet-600"
+                          strokeWidth={3}
+                        />
                       )}
                     </button>
                   );
@@ -1763,7 +2197,9 @@ const Cases = () => {
                   }))
                 }
                 className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${
-                  reassignErrors.reasonPreset ? "border-red-300" : "border-gray-200"
+                  reassignErrors.reasonPreset
+                    ? "border-red-300"
+                    : "border-gray-200"
                 }`}
               >
                 <option value="">Select a reason…</option>
@@ -1789,12 +2225,17 @@ const Cases = () => {
                 <textarea
                   value={reassignForm.reasonCustom}
                   onChange={(e) =>
-                    setReassignForm((f) => ({ ...f, reasonCustom: e.target.value }))
+                    setReassignForm((f) => ({
+                      ...f,
+                      reasonCustom: e.target.value,
+                    }))
                   }
                   rows={3}
                   placeholder="Explain why this case is being reassigned…"
                   className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y ${
-                    reassignErrors.reasonCustom ? "border-red-300" : "border-gray-200"
+                    reassignErrors.reasonCustom
+                      ? "border-red-300"
+                      : "border-gray-200"
                   }`}
                 />
                 {reassignErrors.reasonCustom && (
@@ -1806,7 +2247,7 @@ const Cases = () => {
             )}
 
             {/* Footer */}
-            <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+            <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
               <button
                 type="button"
                 onClick={closeReassign}
@@ -1898,10 +2339,11 @@ const Cases = () => {
                   key={t.id}
                   type="button"
                   onClick={() => setDetailTab(t.id)}
-                  className={`shrink-0 border-b-2 px-3 sm:px-4 py-3 text-xs font-black transition-colors whitespace-nowrap ${detailTab === t.id
+                  className={`shrink-0 border-b-2 px-3 sm:px-4 py-3 text-xs font-black transition-colors whitespace-nowrap ${
+                    detailTab === t.id
                       ? "border-secondary text-secondary"
                       : "border-transparent text-gray-500 hover:text-gray-800"
-                    }`}
+                  }`}
                 >
                   {t.label}
                 </button>
@@ -1912,12 +2354,26 @@ const Cases = () => {
               {detailTab === "overview" && (
                 <OverviewTab c={detailCase} userName={user?.name || "You"} />
               )}
-              {detailTab === "documents" && <DocumentsTab caseId={detailCase?.id} candidateId={detailCase?.candidateId} />}
+              {detailTab === "documents" && (
+                <DocumentsTab
+                  caseId={detailCase?.id}
+                  candidateId={detailCase?.candidateId}
+                />
+              )}
               {detailTab === "tasks" && <TasksTab caseId={detailCase?.id} />}
               {detailTab === "payments" && <PaymentsTab />}
-              {detailTab === "comms" && <CommsTab candidate={detailCase.candidate} />}
-              {detailTab === "notes" && <NotesTab caseId={detailCase?.id} userName={user?.name || "Caseworker"} />}
-              {detailTab === "timeline" && <TimelineTab candidate={detailCase.candidate} />}
+              {detailTab === "comms" && (
+                <CommsTab candidate={detailCase.candidate} />
+              )}
+              {detailTab === "notes" && (
+                <NotesTab
+                  caseId={detailCase?.id}
+                  userName={user?.name || "Caseworker"}
+                />
+              )}
+              {detailTab === "timeline" && (
+                <TimelineTab candidate={detailCase.candidate} />
+              )}
             </div>
           </>
         )}
@@ -1948,13 +2404,21 @@ const Cases = () => {
                       name="candidateId"
                       value={newCaseForm.candidateId}
                       onChange={(e) => {
-                        const selectedCandidate = candidates.find(c => c.id === parseInt(e.target.value));
-                        setNewCaseForm(prev => ({
+                        const selectedCandidate = candidates.find(
+                          (c) => c.id === parseInt(e.target.value),
+                        );
+                        setNewCaseForm((prev) => ({
                           ...prev,
                           candidateId: e.target.value,
-                          candidateName: selectedCandidate ? `${selectedCandidate.first_name} ${selectedCandidate.last_name}` : ''
+                          candidateName: selectedCandidate
+                            ? `${selectedCandidate.first_name} ${selectedCandidate.last_name}`
+                            : "",
                         }));
-                        if (newCaseErrors.candidateId) setNewCaseErrors(prev => ({ ...prev, candidateId: '' }));
+                        if (newCaseErrors.candidateId)
+                          setNewCaseErrors((prev) => ({
+                            ...prev,
+                            candidateId: "",
+                          }));
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.candidateId ? "border-red-400" : "border-gray-300"}`}
                     >
@@ -2046,14 +2510,25 @@ const Cases = () => {
                       name="businessId"
                       value={newCaseForm.businessId}
                       onChange={(e) => {
-                        const selectedSponsor = sponsors.find(s => s.id === parseInt(e.target.value));
-                        setNewCaseForm(prev => ({
+                        const selectedSponsor = sponsors.find(
+                          (s) => s.id === parseInt(e.target.value),
+                        );
+                        setNewCaseForm((prev) => ({
                           ...prev,
                           sponsorId: e.target.value,
-                          businessId: selectedSponsor?.sponsorProfile?.id || e.target.value,
-                          businessName: selectedSponsor?.sponsorProfile?.companyName || selectedSponsor?.sponsorProfile?.tradingName || `${selectedSponsor.first_name} ${selectedSponsor.last_name}`
+                          businessId:
+                            selectedSponsor?.sponsorProfile?.id ||
+                            e.target.value,
+                          businessName:
+                            selectedSponsor?.sponsorProfile?.companyName ||
+                            selectedSponsor?.sponsorProfile?.tradingName ||
+                            `${selectedSponsor.first_name} ${selectedSponsor.last_name}`,
                         }));
-                        if (newCaseErrors.businessId) setNewCaseErrors(prev => ({ ...prev, businessId: '' }));
+                        if (newCaseErrors.businessId)
+                          setNewCaseErrors((prev) => ({
+                            ...prev,
+                            businessId: "",
+                          }));
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.businessId ? "border-red-400" : "border-gray-300"}`}
                     >
@@ -2164,7 +2639,9 @@ const Cases = () => {
                   className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.targetSubmissionDate ? "border-red-300" : "border-gray-200"}`}
                 />
                 {newCaseErrors.targetSubmissionDate && (
-                  <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.targetSubmissionDate}</p>
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {newCaseErrors.targetSubmissionDate}
+                  </p>
                 )}
               </div>
               <div>
@@ -2202,7 +2679,14 @@ const Cases = () => {
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <CaseworkerMultiSelect
-                options={caseworkers.length > 0 ? caseworkers.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}` })) : []}
+                options={
+                  caseworkers.length > 0
+                    ? caseworkers.map((c) => ({
+                        id: c.id,
+                        name: `${c.first_name} ${c.last_name}`,
+                      }))
+                    : []
+                }
                 value={newCaseForm.assignedCaseworkerIds || []}
                 onChange={handleCaseworkerIdsChange}
                 error={newCaseErrors.assignedCaseworkers}
@@ -2241,7 +2725,9 @@ const Cases = () => {
                   className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.totalAmount ? "border-red-300" : "border-gray-200"}`}
                 />
                 {newCaseErrors.totalAmount && (
-                  <p className="text-xs font-bold text-red-600 mt-1">{newCaseErrors.totalAmount}</p>
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {newCaseErrors.totalAmount}
+                  </p>
                 )}
               </div>
               <div>
@@ -2315,11 +2801,14 @@ const Cases = () => {
               onChange={(e) =>
                 setEditCaseForm((f) => ({ ...f, candidate: e.target.value }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.candidate ? "border-red-300" : "border-gray-200"
-                }`}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
+                editCaseErrors.candidate ? "border-red-300" : "border-gray-200"
+              }`}
             />
             {editCaseErrors.candidate && (
-              <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.candidate}</p>
+              <p className="text-xs font-bold text-red-600 mt-1">
+                {editCaseErrors.candidate}
+              </p>
             )}
           </div>
           <div>
@@ -2332,11 +2821,14 @@ const Cases = () => {
               onChange={(e) =>
                 setEditCaseForm((f) => ({ ...f, business: e.target.value }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.business ? "border-red-300" : "border-gray-200"
-                }`}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
+                editCaseErrors.business ? "border-red-300" : "border-gray-200"
+              }`}
             />
             {editCaseErrors.business && (
-              <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.business}</p>
+              <p className="text-xs font-bold text-red-600 mt-1">
+                {editCaseErrors.business}
+              </p>
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2345,15 +2837,16 @@ const Cases = () => {
                 Visa type
               </label>
               <select
-                value={editCaseForm.visa}
+                value={editCaseForm.visaTypeId}
                 onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, visa: e.target.value }))
+                  setEditCaseForm((f) => ({ ...f, visaTypeId: e.target.value }))
                 }
                 className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
               >
-                {NEW_CASE_VISA.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
+                <option value="">Select visa type</option>
+                {visaTypes.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
                   </option>
                 ))}
               </select>
@@ -2387,16 +2880,22 @@ const Cases = () => {
               onChange={(e) =>
                 setEditCaseForm((f) => ({ ...f, target: e.target.value }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.target ? "border-red-300" : "border-gray-200"
-                }`}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
+                editCaseErrors.target ? "border-red-300" : "border-gray-200"
+              }`}
             />
             {editCaseErrors.target && (
-              <p className="text-xs font-bold text-red-600 mt-1">{editCaseErrors.target}</p>
+              <p className="text-xs font-bold text-red-600 mt-1">
+                {editCaseErrors.target}
+              </p>
             )}
           </div>
           <div>
             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Internal notes <span className="font-bold normal-case text-gray-400">(optional)</span>
+              Internal notes{" "}
+              <span className="font-bold normal-case text-gray-400">
+                (optional)
+              </span>
             </label>
             <textarea
               value={editCaseForm.notes}
@@ -2408,7 +2907,7 @@ const Cases = () => {
               placeholder="Anything the team should know…"
             />
           </div>
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={closeCaseEdit}
@@ -2438,7 +2937,8 @@ const Cases = () => {
       >
         <div className="space-y-4">
           <p className="text-sm font-bold text-gray-600">
-            Reassign {reassignCase?.caseId} to another caseworker. This action will be logged.
+            Reassign {reassignCase?.caseId} to another caseworker. This action
+            will be logged.
           </p>
           <div>
             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -2450,13 +2950,15 @@ const Cases = () => {
                 setReassignForm((f) => ({ ...f, caseworkerId: e.target.value }))
               }
               className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${
-                reassignErrors.caseworkerId ? "border-red-300" : "border-gray-200"
+                reassignErrors.caseworkerId
+                  ? "border-red-300"
+                  : "border-gray-200"
               }`}
             >
               <option value="">Select caseworker</option>
-              {CASEWORKERS.map((cw) => (
+              {caseworkers.map((cw) => (
                 <option key={cw.id} value={cw.id}>
-                  {cw.name} ({cw.role}) — Load: {cw.load}
+                  {cw.first_name} {cw.last_name} — Caseworker
                 </option>
               ))}
             </select>
@@ -2480,7 +2982,9 @@ const Cases = () => {
                 }))
               }
               className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${
-                reassignErrors.reasonPreset ? "border-red-300" : "border-gray-200"
+                reassignErrors.reasonPreset
+                  ? "border-red-300"
+                  : "border-gray-200"
               }`}
             >
               <option value="">Select a reason…</option>
@@ -2504,11 +3008,16 @@ const Cases = () => {
               <textarea
                 value={reassignForm.reasonCustom}
                 onChange={(e) =>
-                  setReassignForm((f) => ({ ...f, reasonCustom: e.target.value }))
+                  setReassignForm((f) => ({
+                    ...f,
+                    reasonCustom: e.target.value,
+                  }))
                 }
                 rows={2}
                 className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y ${
-                  reassignErrors.reasonCustom ? "border-red-300" : "border-gray-200"
+                  reassignErrors.reasonCustom
+                    ? "border-red-300"
+                    : "border-gray-200"
                 }`}
                 placeholder="Explain the reason…"
               />
@@ -2519,7 +3028,7 @@ const Cases = () => {
               )}
             </div>
           )}
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={() => setReassignCaseId(null)}
@@ -2584,7 +3093,9 @@ function OverviewTab({ c, userName }) {
         <Field label="Sponsor name">{c.business}</Field>
         <Field label="Visa type">{c.visa} (General)</Field>
         <Field label="Case status">
-          <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${st.className}`}>
+          <span
+            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${st.className}`}
+          >
             {st.label}
           </span>
         </Field>
@@ -2595,7 +3106,9 @@ function OverviewTab({ c, userName }) {
           <span className="text-gray-500">Pending</span>
         </Field>
         <Field label="Priority">
-          <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgePriority(c.priority)}`}>
+          <span
+            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgePriority(c.priority)}`}
+          >
             {priorityLabel(c.priority)}
           </span>
         </Field>
@@ -2613,24 +3126,27 @@ function OverviewTab({ c, userName }) {
                 <div key={label} className="flex-1 relative">
                   {i > 0 && (
                     <div
-                      className={`absolute left-0 right-1/2 top-[14px] h-0.5 -translate-x-1/2 ${i <= 2 ? "bg-emerald-500" : "bg-gray-200"
-                        }`}
+                      className={`absolute left-0 right-1/2 top-[14px] h-0.5 -translate-x-1/2 ${
+                        i <= 2 ? "bg-emerald-500" : "bg-gray-200"
+                      }`}
                       style={{ width: "50%" }}
                     />
                   )}
                   <div
-                    className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black ${done
+                    className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black ${
+                      done
                         ? "bg-emerald-500 text-white"
                         : current
                           ? "border-2 border-secondary bg-secondary/15 text-secondary"
                           : "border-2 border-gray-200 bg-white text-gray-400"
-                      }`}
+                    }`}
                   >
                     {done ? <Check size={14} /> : current ? "●" : ""}
                   </div>
                   <p
-                    className={`mt-1 text-[10px] font-bold ${current ? "text-secondary" : "text-gray-500"
-                      }`}
+                    className={`mt-1 text-[10px] font-bold ${
+                      current ? "text-secondary" : "text-gray-500"
+                    }`}
                   >
                     {label}
                   </p>
@@ -2645,13 +3161,17 @@ function OverviewTab({ c, userName }) {
 }
 
 function DocumentsTab({ caseId, candidateId }) {
-  const [documents, setDocuments] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const {
+    documents,
+    docsLoading: loading,
+    fetchDocuments,
+    uploadDocument,
+  } = useCaseDetail();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadForm, setUploadForm] = useState({
-    documentType: 'General',
-    documentCategory: 'candidate',
-    userFileName: '',
+    documentType: "General",
+    documentCategory: "candidate",
+    userFileName: "",
   });
   const [uploadErrors, setUploadErrors] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
@@ -2659,39 +3179,31 @@ function DocumentsTab({ caseId, candidateId }) {
 
   useEffect(() => {
     if (!caseId) return;
-
-    const fetchDocuments = async () => {
-      setLoading(true);
-      try {
-        const response = await getCaseDocuments(caseId);
-        setDocuments(response.data.data.documents || []);
-      } catch (error) {
-        console.error("Error fetching documents:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDocuments();
-  }, [caseId]);
+    fetchDocuments(caseId);
+  }, [caseId, fetchDocuments]);
 
   const getBadgeColor = (status) => {
     switch (status?.toLowerCase()) {
-      case 'approved': return 'bg-emerald-50 text-emerald-800 border-emerald-200';
-      case 'rejected': return 'bg-red-50 text-red-800 border-red-200';
-      case 'under review':
-      case 'under_review': return 'bg-sky-50 text-sky-800 border-sky-200';
-      case 'uploaded': return 'bg-gray-50 text-gray-800 border-gray-200';
-      default: return 'bg-gray-50 text-gray-800 border-gray-200';
+      case "approved":
+        return "bg-emerald-50 text-emerald-800 border-emerald-200";
+      case "rejected":
+        return "bg-red-50 text-red-800 border-red-200";
+      case "under review":
+      case "under_review":
+        return "bg-sky-50 text-sky-800 border-sky-200";
+      case "uploaded":
+        return "bg-gray-50 text-gray-800 border-gray-200";
+      default:
+        return "bg-gray-50 text-gray-800 border-gray-200";
     }
   };
 
   const openUploadModal = useCallback(() => {
     setUploadErrors({});
     setUploadForm({
-      documentType: 'General',
-      documentCategory: 'candidate',
-      userFileName: '',
+      documentType: "General",
+      documentCategory: "candidate",
+      userFileName: "",
     });
     setSelectedFile(null);
     setUploadOpen(true);
@@ -2701,9 +3213,9 @@ function DocumentsTab({ caseId, candidateId }) {
     setUploadOpen(false);
     setUploadErrors({});
     setUploadForm({
-      documentType: 'General',
-      documentCategory: 'candidate',
-      userFileName: '',
+      documentType: "General",
+      documentCategory: "candidate",
+      userFileName: "",
     });
     setSelectedFile(null);
   }, []);
@@ -2713,7 +3225,7 @@ function DocumentsTab({ caseId, candidateId }) {
     if (file) {
       setSelectedFile(file);
       if (!uploadForm.userFileName) {
-        setUploadForm(f => ({ ...f, userFileName: file.name }));
+        setUploadForm((f) => ({ ...f, userFileName: file.name }));
       }
     }
   };
@@ -2728,18 +3240,20 @@ function DocumentsTab({ caseId, candidateId }) {
     try {
       setUploading(true);
       const formData = new FormData();
-      formData.append('documents', selectedFile);
-      formData.append('caseId', caseId);
-      formData.append('userId', candidateId);
-      formData.append('documentType', uploadForm.documentType);
-      formData.append('documentCategory', uploadForm.documentCategory);
-      formData.append('userFileName', uploadForm.userFileName || selectedFile.name);
+      formData.append("documents", selectedFile);
+      formData.append("caseId", caseId);
+      formData.append("userId", candidateId);
+      formData.append("documentType", uploadForm.documentType);
+      formData.append("documentCategory", uploadForm.documentCategory);
+      formData.append(
+        "userFileName",
+        uploadForm.userFileName || selectedFile.name,
+      );
 
       const response = await uploadDocument(formData);
-      
+
       if (response.data.status === "success") {
-        const documentsResponse = await getCaseDocuments(caseId);
-        setDocuments(documentsResponse.data.data.documents || []);
+        await fetchDocuments(caseId);
         closeUploadModal();
       }
     } catch (error) {
@@ -2757,7 +3271,11 @@ function DocumentsTab({ caseId, candidateId }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={openUploadModal} className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
+        <button
+          type="button"
+          onClick={openUploadModal}
+          className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white"
+        >
           Upload document
         </button>
       </div>
@@ -2778,19 +3296,22 @@ function DocumentsTab({ caseId, candidateId }) {
               <FileText size={18} className="text-secondary" />
             </div>
             <div className="flex-1 min-w-[140px]">
-              <p className="text-sm font-bold text-gray-900">{doc.userFileName || doc.documentName}</p>
+              <p className="text-sm font-bold text-gray-900">
+                {doc.userFileName || doc.documentName}
+              </p>
               <p className="text-[11px] font-bold text-gray-500">
-                Uploaded {new Date(doc.uploadedAt).toLocaleDateString()} · {doc.documentType}
+                Uploaded {new Date(doc.uploadedAt).toLocaleDateString()} ·{" "}
+                {doc.documentType}
               </p>
             </div>
             <span
               className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${getBadgeColor(doc.status)}`}
             >
-              {doc.status || 'Uploaded'}
+              {doc.status || "Uploaded"}
             </span>
             <button
               type="button"
-              onClick={() => window.open(doc.documentUrl, '_blank')}
+              onClick={() => window.open(doc.documentUrl, "_blank")}
               className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black text-gray-600"
             >
               View
@@ -2820,7 +3341,9 @@ function DocumentsTab({ caseId, candidateId }) {
               }`}
             />
             {uploadErrors.file && (
-              <p className="text-xs font-bold text-red-600 mt-1">{uploadErrors.file}</p>
+              <p className="text-xs font-bold text-red-600 mt-1">
+                {uploadErrors.file}
+              </p>
             )}
           </div>
           <div>
@@ -2830,7 +3353,9 @@ function DocumentsTab({ caseId, candidateId }) {
             <input
               type="text"
               value={uploadForm.userFileName}
-              onChange={(e) => setUploadForm((f) => ({ ...f, userFileName: e.target.value }))}
+              onChange={(e) =>
+                setUploadForm((f) => ({ ...f, userFileName: e.target.value }))
+              }
               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
               placeholder="e.g. Passport copy"
             />
@@ -2842,7 +3367,9 @@ function DocumentsTab({ caseId, candidateId }) {
               </label>
               <select
                 value={uploadForm.documentType}
-                onChange={(e) => setUploadForm((f) => ({ ...f, documentType: e.target.value }))}
+                onChange={(e) =>
+                  setUploadForm((f) => ({ ...f, documentType: e.target.value }))
+                }
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
               >
                 <option value="General">General</option>
@@ -2850,7 +3377,9 @@ function DocumentsTab({ caseId, candidateId }) {
                 <option value="Visa">Visa</option>
                 <option value="English Certificate">English Certificate</option>
                 <option value="Right to Work">Right to Work</option>
-                <option value="Education Certificate">Education Certificate</option>
+                <option value="Education Certificate">
+                  Education Certificate
+                </option>
                 <option value="Employment Contract">Employment Contract</option>
                 <option value="Sponsor Documents">Sponsor Documents</option>
                 <option value="Other">Other</option>
@@ -2862,7 +3391,12 @@ function DocumentsTab({ caseId, candidateId }) {
               </label>
               <select
                 value={uploadForm.documentCategory}
-                onChange={(e) => setUploadForm((f) => ({ ...f, documentCategory: e.target.value }))}
+                onChange={(e) =>
+                  setUploadForm((f) => ({
+                    ...f,
+                    documentCategory: e.target.value,
+                  }))
+                }
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
               >
                 <option value="candidate">Candidate</option>
@@ -2875,9 +3409,11 @@ function DocumentsTab({ caseId, candidateId }) {
             </div>
           </div>
           {uploadErrors.api && (
-            <p className="text-xs font-bold text-red-600 mt-1">{uploadErrors.api}</p>
+            <p className="text-xs font-bold text-red-600 mt-1">
+              {uploadErrors.api}
+            </p>
           )}
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={closeUploadModal}
@@ -2892,9 +3428,33 @@ function DocumentsTab({ caseId, candidateId }) {
               disabled={uploading}
               className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90 disabled:opacity-50"
             >
-              {uploading ? 'Uploading...' : 'Upload document'}
+              {uploading ? "Uploading..." : "Upload document"}
             </button>
           </div>
+        </div>
+      </Modal>
+
+      {/* View Document Modal */}
+      <Modal
+        open={viewDocumentOpen}
+        onClose={closeViewDocument}
+        title="View Document"
+        titleId="view-document-modal-title"
+        maxWidthClass="max-w-4xl"
+        bodyClassName="p-0"
+      >
+        <div className="w-full h-[600px] bg-gray-50">
+          {viewDocumentUrl ? (
+            <iframe
+              src={viewDocumentUrl}
+              className="w-full h-full border-0"
+              title="Document Viewer"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-500">
+              No document to display
+            </div>
+          )}
         </div>
       </Modal>
     </div>
@@ -2902,40 +3462,30 @@ function DocumentsTab({ caseId, candidateId }) {
 }
 
 function TasksTab({ caseId }) {
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const { tasks, tasksLoading: loading, fetchTasks, addTask } = useCaseDetail();
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: "",
-    due: new Date().toISOString().split('T')[0],
+    due: new Date().toISOString().split("T")[0],
     priority: "medium",
   });
   const [createErrors, setCreateErrors] = useState({});
 
   useEffect(() => {
     if (!caseId) return;
-
-    const fetchTasks = async () => {
-      setLoading(true);
-      try {
-        const response = await getTaskByCaseId(caseId);
-        setTasks(response.data.data.tasks || []);
-      } catch (error) {
-        console.error("Error fetching tasks:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTasks();
-  }, [caseId]);
+    fetchTasks(caseId);
+  }, [caseId, fetchTasks]);
 
   const getPriorityColor = (priority) => {
     switch (priority?.toLowerCase()) {
-      case 'high': return 'bg-red-50 text-red-700';
-      case 'medium': return 'bg-amber-50 text-amber-700';
-      case 'low': return 'bg-gray-50 text-gray-700';
-      default: return 'bg-gray-50 text-gray-700';
+      case "high":
+        return "bg-red-50 text-red-700";
+      case "medium":
+        return "bg-amber-50 text-amber-700";
+      case "low":
+        return "bg-gray-50 text-gray-700";
+      default:
+        return "bg-gray-50 text-gray-700";
     }
   };
 
@@ -2943,7 +3493,7 @@ function TasksTab({ caseId }) {
     setCreateErrors({});
     setCreateForm({
       name: "",
-      due: new Date().toISOString().split('T')[0],
+      due: new Date().toISOString().split("T")[0],
       priority: "medium",
     });
     setCreateOpen(true);
@@ -2954,7 +3504,7 @@ function TasksTab({ caseId }) {
     setCreateErrors({});
     setCreateForm({
       name: "",
-      due: new Date().toISOString().split('T')[0],
+      due: new Date().toISOString().split("T")[0],
       priority: "medium",
     });
   }, []);
@@ -2971,14 +3521,13 @@ function TasksTab({ caseId }) {
         title: createForm.name.trim(),
         due_date: createForm.due,
         priority: createForm.priority,
-        case_id: caseId,
+        case_id: Number(caseId),
       };
 
-      const response = await createTask(data);
-      
+      const response = await addTask(data);
+
       if (response.data.status === "success") {
-        const tasksResponse = await getTaskByCaseId(caseId);
-        setTasks(tasksResponse.data.data.tasks || []);
+        await fetchTasks(caseId);
         closeCreateModal();
       }
     } catch (error) {
@@ -2993,7 +3542,11 @@ function TasksTab({ caseId }) {
 
   return (
     <div className="space-y-3">
-      <button type="button" onClick={openCreateModal} className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
+      <button
+        type="button"
+        onClick={openCreateModal}
+        className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white"
+      >
         Create task
       </button>
       {loading ? (
@@ -3007,15 +3560,22 @@ function TasksTab({ caseId }) {
             className="flex items-center gap-3 rounded-xl p-3 hover:bg-gray-50 border border-transparent hover:border-gray-100"
           >
             <div
-              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 ${task.status === 'completed' ? "border-emerald-500 bg-emerald-500 text-white" : "border-gray-300"
-                }`}
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 ${
+                task.status === "completed"
+                  ? "border-emerald-500 bg-emerald-500 text-white"
+                  : "border-gray-300"
+              }`}
             >
-              {task.status === 'completed' ? <Check size={10} strokeWidth={3} /> : null}
+              {task.status === "completed" ? (
+                <Check size={10} strokeWidth={3} />
+              ) : null}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-gray-900">{task.title}</p>
               <p className="text-[11px] text-gray-500">
-                {task.status === 'completed' ? 'Completed' : `Due ${new Date(task.due_date).toLocaleDateString()}`}
+                {task.status === "completed"
+                  ? "Completed"
+                  : `Due ${new Date(task.due_date).toLocaleDateString()}`}
               </p>
             </div>
             <span
@@ -3043,14 +3603,18 @@ function TasksTab({ caseId }) {
             <input
               type="text"
               value={createForm.name}
-              onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+              onChange={(e) =>
+                setCreateForm((f) => ({ ...f, name: e.target.value }))
+              }
               className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
                 createErrors.name ? "border-red-300" : "border-gray-200"
               }`}
               placeholder="e.g. Request English certificate"
             />
             {createErrors.name && (
-              <p className="text-xs font-bold text-red-600 mt-1">{createErrors.name}</p>
+              <p className="text-xs font-bold text-red-600 mt-1">
+                {createErrors.name}
+              </p>
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3061,13 +3625,17 @@ function TasksTab({ caseId }) {
               <input
                 type="date"
                 value={createForm.due}
-                onChange={(e) => setCreateForm((f) => ({ ...f, due: e.target.value }))}
+                onChange={(e) =>
+                  setCreateForm((f) => ({ ...f, due: e.target.value }))
+                }
                 className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
                   createErrors.due ? "border-red-300" : "border-gray-200"
                 }`}
               />
               {createErrors.due && (
-                <p className="text-xs font-bold text-red-600 mt-1">{createErrors.due}</p>
+                <p className="text-xs font-bold text-red-600 mt-1">
+                  {createErrors.due}
+                </p>
               )}
             </div>
             <div>
@@ -3076,7 +3644,9 @@ function TasksTab({ caseId }) {
               </label>
               <select
                 value={createForm.priority}
-                onChange={(e) => setCreateForm((f) => ({ ...f, priority: e.target.value }))}
+                onChange={(e) =>
+                  setCreateForm((f) => ({ ...f, priority: e.target.value }))
+                }
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
               >
                 <option value="low">Low</option>
@@ -3086,9 +3656,11 @@ function TasksTab({ caseId }) {
             </div>
           </div>
           {createErrors.api && (
-            <p className="text-xs font-bold text-red-600 mt-1">{createErrors.api}</p>
+            <p className="text-xs font-bold text-red-600 mt-1">
+              {createErrors.api}
+            </p>
           )}
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={closeCreateModal}
@@ -3127,12 +3699,16 @@ function PaymentsTab() {
             key={b.label}
             className="rounded-xl border border-gray-100 bg-gray-50/80 p-4 text-center"
           >
-            <p className="text-[10px] font-black uppercase text-gray-500">{b.label}</p>
+            <p className="text-[10px] font-black uppercase text-gray-500">
+              {b.label}
+            </p>
             <p className={`text-xl font-black mt-1 ${b.color}`}>{b.value}</p>
           </div>
         ))}
       </div>
-      <p className="text-[10px] font-black uppercase text-gray-500">Payment history</p>
+      <p className="text-[10px] font-black uppercase text-gray-500">
+        Payment history
+      </p>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-200 text-left text-[10px] font-black uppercase text-gray-500">
@@ -3179,10 +3755,16 @@ function CommsTab({ candidate }) {
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
-        <button type="button" className="rounded-lg border border-secondary bg-secondary/10 px-3 py-1.5 text-xs font-black text-secondary">
+        <button
+          type="button"
+          className="rounded-lg border border-secondary bg-secondary/10 px-3 py-1.5 text-xs font-black text-secondary"
+        >
           Candidate chat
         </button>
-        <button type="button" className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-black text-gray-600">
+        <button
+          type="button"
+          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-black text-gray-600"
+        >
           Sponsor chat
         </button>
       </div>
@@ -3192,10 +3774,13 @@ function CommsTab({ candidate }) {
             {initial}
           </div>
           <div className="max-w-[85%]">
-            <p className="text-[10px] font-bold text-gray-500 mb-1">{candidate}</p>
+            <p className="text-[10px] font-bold text-gray-500 mb-1">
+              {candidate}
+            </p>
             <div className="rounded-2xl rounded-bl-sm border border-gray-100 bg-gray-50 px-3 py-2">
               <p className="text-sm font-bold text-gray-800">
-                Hi — I&apos;ve uploaded my passport copy. Please let me know if you need anything else.
+                Hi — I&apos;ve uploaded my passport copy. Please let me know if
+                you need anything else.
               </p>
               <p className="text-[10px] text-gray-400 mt-1">1 Apr · 10:32am</p>
             </div>
@@ -3209,7 +3794,8 @@ function CommsTab({ candidate }) {
             <p className="text-[10px] font-bold text-gray-500 mb-1">You</p>
             <div className="rounded-2xl rounded-br-sm border border-secondary/20 bg-secondary/10 px-3 py-2 text-left inline-block">
               <p className="text-sm font-bold text-gray-800">
-                Thanks! I still need your English language certificate — please upload by 10 Apr.
+                Thanks! I still need your English language certificate — please
+                upload by 10 Apr.
               </p>
               <p className="text-[10px] text-gray-500 mt-1">1 Apr · 11:05am</p>
             </div>
@@ -3235,36 +3821,20 @@ function CommsTab({ candidate }) {
 }
 
 function NotesTab({ caseId, userName }) {
-  const [notes, setNotes] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const { notes, notesLoading: loading, fetchNotes, addNote } = useCaseDetail();
   const [newNote, setNewNote] = useState("");
 
   useEffect(() => {
     if (!caseId) return;
-
-    const fetchNotes = async () => {
-      setLoading(true);
-      try {
-        const response = await getCaseNotes({ caseId });
-        setNotes(response.data.data.notes || []);
-      } catch (error) {
-        console.error("Error fetching notes:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNotes();
-  }, [caseId]);
+    fetchNotes(caseId);
+  }, [caseId, fetchNotes]);
 
   const handleSaveNote = async () => {
     if (!newNote.trim() || !caseId) return;
-
     try {
-      await createCaseNote({ caseId, content: newNote });
+      await addNote({ caseId: Number(caseId), content: newNote });
       setNewNote("");
-      const response = await getCaseNotes({ caseId });
-      setNotes(response.data.data.notes || []);
+      await fetchNotes(caseId);
     } catch (error) {
       console.error("Error saving note:", error);
       alert("Failed to save note. Please try again.");
@@ -3294,11 +3864,15 @@ function NotesTab({ caseId, userName }) {
         <p className="text-sm text-gray-500">No notes added yet.</p>
       ) : (
         notes.map((note) => (
-          <div key={note.id} className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+          <div
+            key={note.id}
+            className="rounded-xl border border-gray-100 bg-gray-50/80 p-4"
+          >
             <p className="text-[11px] font-bold text-gray-500 mb-1">
               {note.author?.first_name && note.author?.last_name
                 ? `${note.author.first_name} ${note.author.last_name}`
-                : userName} · {new Date(note.created_at).toLocaleDateString()}
+                : userName}{" "}
+              · {new Date(note.created_at).toLocaleDateString()}
             </p>
             <p className="text-sm font-bold text-gray-800">{note.content}</p>
           </div>
@@ -3310,11 +3884,36 @@ function NotesTab({ caseId, userName }) {
 
 function TimelineTab({ candidate }) {
   const items = [
-    { dot: "blue", title: "Document uploaded — Passport copy", time: `1 Apr 2026 · by ${candidate}`, body: null },
-    { dot: "green", title: "Status changed → Documents received", time: "1 Apr 2026", body: null },
-    { dot: "blue", title: "Document uploaded — Certificate of sponsorship", time: "28 Mar 2026 · by sponsor HR", body: null },
-    { dot: "yellow", title: "Task created — Request English language cert", time: "20 Mar 2026", body: "Due 10 Apr 2026" },
-    { dot: "green", title: "Case created and onboarded", time: "1 Mar 2026", body: null },
+    {
+      dot: "blue",
+      title: "Document uploaded — Passport copy",
+      time: `1 Apr 2026 · by ${candidate}`,
+      body: null,
+    },
+    {
+      dot: "green",
+      title: "Status changed → Documents received",
+      time: "1 Apr 2026",
+      body: null,
+    },
+    {
+      dot: "blue",
+      title: "Document uploaded — Certificate of sponsorship",
+      time: "28 Mar 2026 · by sponsor HR",
+      body: null,
+    },
+    {
+      dot: "yellow",
+      title: "Task created — Request English language cert",
+      time: "20 Mar 2026",
+      body: "Due 10 Apr 2026",
+    },
+    {
+      dot: "green",
+      title: "Case created and onboarded",
+      time: "1 Mar 2026",
+      body: null,
+    },
   ];
   return (
     <div className="space-y-0">
@@ -3324,18 +3923,21 @@ function TimelineTab({ candidate }) {
             <div className="absolute left-[11px] top-6 bottom-0 w-px bg-gray-200" />
           )}
           <div
-            className={`relative z-[1] flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-black ${item.dot === "green"
+            className={`relative z-[1] flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-black ${
+              item.dot === "green"
                 ? "border-emerald-500 bg-emerald-50 text-emerald-600"
                 : item.dot === "yellow"
                   ? "border-amber-500 bg-amber-50 text-amber-600"
                   : "border-secondary bg-secondary/10 text-secondary"
-              }`}
+            }`}
           >
             {item.dot === "green" ? <Check size={12} /> : "●"}
           </div>
           <div>
             <p className="text-sm font-bold text-gray-900">{item.title}</p>
-            <p className="text-[11px] font-bold text-gray-500 mt-0.5">{item.time}</p>
+            <p className="text-[11px] font-bold text-gray-500 mt-0.5">
+              {item.time}
+            </p>
             {item.body && (
               <p className="text-xs font-bold text-gray-600 mt-2 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
                 {item.body}

@@ -7,7 +7,7 @@ import useMessaging from '../../hooks/useMessaging';
 const MessageDropdown = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
-  const { threads, loading, fetchConversations } = useMessaging();
+  const { threads, loading, fetchConversations, markThreadAsRead } = useMessaging();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -45,6 +45,9 @@ const MessageDropdown = () => {
 
   const handleThreadClick = (thread) => {
     setIsOpen(false);
+    if (thread.unread > 0) {
+      markThreadAsRead(thread.id);
+    }
     navigate(`/${user?.role || 'admin'}/messages`);
   };
 
