@@ -16,6 +16,7 @@
     "@reduxjs/toolkit": "^2.11.2",
     "@tailwindcss/vite": "^4.2.2",
     "axios": "^1.15.2",
+    "boneyard-js": "^1.8.1",
     "date-fns": "^4.1.0",
     "dom-to-image-more": "^3.7.2",
     "framer-motion": "^12.38.0",
