@@ -7,6 +7,8 @@ import useMessaging from "../../hooks/useMessaging";
 function formatRoleTab(roleKey) {
   if (roleKey === "All") return "All";
   if (!roleKey) return roleKey;
+  const lower = roleKey.toLowerCase();
+  if (lower === "business" || lower === "sponsor") return "Business/Sponsor";
   return roleKey.charAt(0).toUpperCase() + roleKey.slice(1).toLowerCase();
 }
 
@@ -89,21 +91,25 @@ export default function AdminMessages() {
   }, [availableUsers, threads, user?.id]);
 
   const roleTabs = useMemo(() => {
-    const roles = new Set(
-      mergedThreads
-        .map((t) => (t.role || "").toLowerCase())
-        .filter(Boolean),
-    );
+    const roles = new Set(["admin", "business", "candidate", "caseworker"]);
+    mergedThreads.forEach((t) => {
+      if (t.role) {
+        const r = t.role.toLowerCase();
+        if (r === "sponsor") roles.add("business");
+        else roles.add(r);
+      }
+    });
     return ["All", ...Array.from(roles).sort()];
   }, [mergedThreads]);
 
   const filteredThreads = useMemo(() => {
     let list = mergedThreads;
     if (roleFilter !== "All") {
-      list = list.filter(
-        (t) =>
-          (t.role || "").toLowerCase() === roleFilter.toLowerCase(),
-      );
+      list = list.filter((t) => {
+        const r = (t.role || "").toLowerCase();
+        if (roleFilter === "business") return r === "business" || r === "sponsor";
+        return r === roleFilter.toLowerCase();
+      });
     }
     const q = query.trim().toLowerCase();
     if (q) {
@@ -155,7 +161,7 @@ export default function AdminMessages() {
 
   return (
     <motion.div
-      className="flex flex-col min-h-0 h-[calc(100dvh-7rem)] sm:h-[calc(100vh-140px)] max-h-[calc(100dvh-4rem)] gap-3 sm:gap-4 pb-4 sm:pb-6"
+      className="flex flex-col min-h-0 h-[calc(100dvh-96px)] md:h-[calc(100vh-128px)] gap-3 sm:gap-4 w-full"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -171,7 +177,7 @@ export default function AdminMessages() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <MessagePanel
           embedded={true}
           threads={filteredThreads}

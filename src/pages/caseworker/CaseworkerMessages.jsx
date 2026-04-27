@@ -4,6 +4,14 @@ import SearchBar from "../../components/SearchBar";
 import MessagePanel from "../../components/messaging/MessagePanel";
 import useMessaging from "../../hooks/useMessaging";
 
+function formatRoleTab(roleKey) {
+  if (roleKey === "All") return "All";
+  if (!roleKey) return roleKey;
+  const lower = roleKey.toLowerCase();
+  if (lower === "business" || lower === "sponsor") return "Business/Sponsor";
+  return roleKey.charAt(0).toUpperCase() + roleKey.slice(1).toLowerCase();
+}
+
 const CaseworkerMessages = () => {
   const { user } = useSelector((s) => s.auth);
   const [activeId, setActiveId] = useState(null);
@@ -82,20 +90,26 @@ const CaseworkerMessages = () => {
   }, [availableUsers, threads, user?.id]);
 
   const roleTabs = useMemo(() => {
-    const roles = new Set(
-      mergedThreads
-        .map((t) => (t.role || "").toLowerCase())
-        .filter(Boolean),
-    );
-    return ["All", ...Array.from(roles).sort()];
+    const roles = new Set(["admin", "business", "candidate"]);
+    mergedThreads.forEach((t) => {
+      if (t.role) {
+        const r = t.role.toLowerCase();
+        if (r === "sponsor") roles.add("business");
+        else roles.add(r);
+      }
+    });
+    return ["All", ...Array.from(roles).filter(r => r !== "caseworker").sort()];
   }, [mergedThreads]);
 
   const filteredThreads = useMemo(() => {
     let list = mergedThreads;
     if (roleFilter !== "All") {
-      list = list.filter(
-        (t) => (t.role || "").toLowerCase() === roleFilter.toLowerCase(),
-      );
+      list = list.filter((t) => {
+        const tRole = (t.role || "").toLowerCase();
+        const fRole = roleFilter.toLowerCase();
+        if (fRole === "business") return tRole === "business" || tRole === "sponsor";
+        return tRole === fRole;
+      });
     }
     const q = query.trim().toLowerCase();
     if (q) {
@@ -146,7 +160,7 @@ const CaseworkerMessages = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-0 h-[calc(100dvh-7rem)] sm:h-[calc(100vh-140px)] max-h-[calc(100dvh-4rem)] gap-3 sm:gap-4 pb-4 sm:pb-6">
+    <div className="flex flex-col min-h-0 h-[calc(100dvh-96px)] md:h-[calc(100vh-128px)] gap-3 sm:gap-4 w-full">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-2 shrink-0 min-w-0">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-black text-secondary tracking-tight">
@@ -158,7 +172,7 @@ const CaseworkerMessages = () => {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <MessagePanel
           embedded={true}
           threads={filteredThreads}
@@ -178,13 +192,13 @@ const CaseworkerMessages = () => {
                   key={tab}
                   type="button"
                   onClick={() => setRoleFilter(tab)}
-                  className={`flex-1 text-[11px] font-semibold py-1.5 px-2 rounded-lg transition-all duration-150 whitespace-nowrap capitalize ${
+                  className={`flex-1 text-[11px] font-semibold py-1.5 px-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
                     roleFilter === tab
                       ? "bg-white text-indigo-700 shadow-sm"
                       : "text-slate-500 hover:text-slate-700"
                   }`}
                 >
-                  {tab === "All" ? "All" : tab}
+                  {formatRoleTab(tab)}
                 </button>
               ))}
             </div>
