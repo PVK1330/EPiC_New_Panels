@@ -204,11 +204,10 @@ const UploadDocuments = () => {
             onDragLeave={() => setDragOver(false)}
             onDrop={onDrop}
             onClick={() => inputRef.current?.click()}
-            className={`rounded-2xl border-2 border-dashed px-6 py-10 text-center cursor-pointer transition-all ${
-              dragOver
-                ? "border-secondary bg-secondary/5"
-                : "border-gray-200 bg-gray-50/80 hover:border-primary/40"
-            }`}
+            className={`rounded-2xl border-2 border-dashed px-6 py-10 text-center cursor-pointer transition-all ${dragOver
+              ? "border-secondary bg-secondary/5"
+              : "border-gray-200 bg-gray-50/80 hover:border-primary/40"
+              }`}
           >
             <FolderOpen className="mx-auto text-gray-400 mb-3" size={40} />
             <p className="text-sm font-black text-gray-800">

@@ -186,8 +186,8 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
                         <item.icon
                           size={17}
                           className={`shrink-0 transition-colors ${isActive
-                              ? "text-white"
-                              : "text-gray-400 group-hover:text-primary"
+                            ? "text-white"
+                            : "text-gray-400 group-hover:text-primary"
                             }`}
                         />
                         <span className="truncate">{item.label}</span>
