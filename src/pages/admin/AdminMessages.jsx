@@ -68,6 +68,7 @@ export default function AdminMessages() {
           primary?.preview ||
           (convs.length ? "Open thread" : "No messages yet — click to start"),
         time: primary?.time || "",
+        rawTime: primary?.rawTime || null,
         unread: unreadTotal,
         conversationId: primary?.conversationId,
         caseId: primary?.caseId ?? null,
@@ -77,11 +78,14 @@ export default function AdminMessages() {
       };
     });
 
-    return rows.sort((a, b) =>
-      (a.name || "").localeCompare(b.name || "", undefined, {
+    return rows.sort((a, b) => {
+      const timeA = a.rawTime ? new Date(a.rawTime).getTime() : 0;
+      const timeB = b.rawTime ? new Date(b.rawTime).getTime() : 0;
+      if (timeA !== timeB) return timeB - timeA;
+      return (a.name || "").localeCompare(b.name || "", undefined, {
         sensitivity: "base",
-      }),
-    );
+      });
+    });
   }, [availableUsers, threads, user?.id]);
 
   const roleTabs = useMemo(() => {
@@ -151,47 +155,54 @@ export default function AdminMessages() {
 
   return (
     <motion.div
-      className="flex flex-col gap-3 sm:gap-4 pb-4 sm:pb-6 min-h-0 w-full min-w-0 h-[calc(100dvh-8.5rem)] sm:h-[calc(100vh-140px)] max-h-[calc(100dvh-4rem)]"
+      className="flex flex-col min-h-0 h-[calc(100dvh-7rem)] sm:h-[calc(100vh-140px)] max-h-[calc(100dvh-4rem)] gap-3 sm:gap-4 pb-4 sm:pb-6"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex flex-col gap-2 shrink-0">
-        <p className="text-xs font-bold text-gray-500">
-          Directory from chat users API — filter by role, search by name or email.
-        </p>
-        <div className="flex flex-wrap gap-1.5 p-1 bg-slate-100 rounded-xl w-full max-w-3xl">
-          {roleTabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setRoleFilter(tab)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-black transition-colors ${
-                roleFilter === tab
-                  ? "bg-white text-secondary shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              {formatRoleTab(tab)}
-            </button>
-          ))}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-2 shrink-0 min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-black text-secondary tracking-tight">
+            Admin Messages
+          </h1>
+          <p className="text-xs sm:text-sm font-bold text-gray-500 line-clamp-2">
+            All chat-eligible users (by role). Inbox previews merge when a conversation exists.
+          </p>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 flex flex-col overflow-hidden">
-      <MessagePanel
-        title="Admin Messages"
-        subtitle="All chat-eligible users (by role). Inbox previews merge when a conversation exists."
-        threads={filteredThreads}
-        activeThreadId={activeId}
-        onSelectThread={setActiveId}
-        query={query}
-        onQueryChange={setQuery}
-        messagesByThread={messagesByThread}
-        draft={draft}
-        onDraftChange={setDraft}
-        onSend={handleSend}
-      />
+      <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <MessagePanel
+          embedded={true}
+          threads={filteredThreads}
+          activeThreadId={activeId}
+          onSelectThread={setActiveId}
+          query={query}
+          onQueryChange={setQuery}
+          messagesByThread={messagesByThread}
+          draft={draft}
+          onDraftChange={setDraft}
+          onSend={handleSend}
+          showOnline
+          filterNode={
+            <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-full">
+              {roleTabs.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setRoleFilter(tab)}
+                  className={`flex-1 text-[11px] font-semibold py-1.5 px-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
+                    roleFilter === tab
+                      ? "bg-white text-indigo-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {formatRoleTab(tab)}
+                </button>
+              ))}
+            </div>
+          }
+        />
       </div>
     </motion.div>
   );
