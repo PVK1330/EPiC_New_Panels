@@ -60,7 +60,7 @@ import AdminMessages from '../pages/admin/AdminMessages';
 import AdminCalendar from '../pages/admin/AdminCalendar';
 
 import BusinessDashboard from '../pages/business/BusinessDashboard';
-import BussinessProfile from '../pages/business/BusinessProfile';import CandidateCalendar from '../pages/candidate/CandidateCalendar';
+import BussinessProfile from '../pages/business/BusinessProfile'; import CandidateCalendar from '../pages/candidate/CandidateCalendar';
 import BusinessCalendar from '../pages/business/BusinessCalendar';
 import BusinessRegistration from '../pages/business/BusinessRegistration';
 import KeyPersonnel from '../pages/business/BusinessPersonnel';

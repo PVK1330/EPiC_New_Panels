@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -532,11 +532,11 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
 
   const summaryText = value.length
     ? value
-        .map((id) => {
-          const o = options.find((x) => x.id === id);
-          return o ? `${o.name} (${o.id})` : id;
-        })
-        .join(" · ")
+      .map((id) => {
+        const o = options.find((x) => x.id === id);
+        return o ? `${o.name} (${o.id})` : id;
+      })
+      .join(" · ")
     : "";
 
   return (
@@ -548,9 +548,8 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-left text-sm bg-white border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary ${
-          error ? "border-red-400" : ""
-        }`}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-left text-sm bg-white border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary ${error ? "border-red-400" : ""
+          }`}
       >
         <span
           className={
@@ -578,11 +577,10 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
               return (
                 <label
                   key={o.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${
-                    disabled
+                  className={`flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${disabled
                       ? "opacity-40 cursor-not-allowed"
                       : "cursor-pointer hover:bg-secondary/5"
-                  }`}
+                    }`}
                 >
                   <input
                     type="checkbox"
@@ -652,6 +650,13 @@ const Cases = () => {
   const [departments, setDepartments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Kanban specific states
+  const [activeCard, setActiveCard] = useState(null);
+
+  const handleCardClick = useCallback((card) => {
+    setDetailCase(card);
+  }, []);
+
   // Fetch cases from API
   useEffect(() => {
     const fetchCases = async () => {
@@ -697,8 +702,8 @@ const Cases = () => {
           caseworker:
             c.caseworkers && c.caseworkers.length > 0
               ? c.caseworkers
-                  .map((cw) => `${cw.first_name} ${cw.last_name}`)
-                  .join(", ")
+                .map((cw) => `${cw.first_name} ${cw.last_name}`)
+                .join(", ")
               : "Unassigned",
         }));
 
@@ -895,8 +900,8 @@ const Cases = () => {
           caseworker:
             c.caseworkers && c.caseworkers.length > 0
               ? c.caseworkers
-                  .map((cw) => `${cw.first_name} ${cw.last_name}`)
-                  .join(", ")
+                .map((cw) => `${cw.first_name} ${cw.last_name}`)
+                .join(", ")
               : "Unassigned",
         }));
         setCases(mappedCases);
@@ -1019,8 +1024,8 @@ const Cases = () => {
           caseworker:
             c.caseworkers && c.caseworkers.length > 0
               ? c.caseworkers
-                  .map((cw) => `${cw.first_name} ${cw.last_name}`)
-                  .join(", ")
+                .map((cw) => `${cw.first_name} ${cw.last_name}`)
+                .join(", ")
               : "Unassigned",
         }));
         setCases(mappedCases);
@@ -1199,10 +1204,12 @@ const Cases = () => {
       </div>
 
       {/* Recent Cases Section */}
-      <div>
-        <h2 className="text-lg font-black text-secondary mb-4">Recent Cases</h2>
+      {viewMode === "table" && (
+        <>
+          <div>
+            <h2 className="text-lg font-black text-secondary mb-4">Recent Cases</h2>
 
-        <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center mb-4">
+            <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center mb-4">
           {loading && (
             <div className="w-full py-8 text-center text-sm font-bold text-gray-500">
               Loading cases...
@@ -1324,14 +1331,13 @@ const Cases = () => {
                   </td>
                 </tr>
               ) : (
-                pageSlice.map((c) => {
+                pageSlice.map((c, idx) => {
                   const st = badgeStatus(c.status);
                   const reassigned = reassignments[c.caseId];
                   return (
-                    <>
+                    <Fragment key={c.id || c.caseId || idx}>
                       {/* ── Main data row ── */}
                       <tr
-                        key={c.caseId}
                         className={`hover:bg-gray-50/80 cursor-pointer transition-colors ${reassigned ? "border-b-0" : ""}`}
                         onClick={() => openDetail(c)}
                       >
@@ -1415,11 +1421,10 @@ const Cases = () => {
                             <button
                               type="button"
                               onClick={() => openReassign(c)}
-                              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-black transition-colors ${
-                                reassigned
+                              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-black transition-colors ${reassigned
                                   ? "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100"
                                   : "border-gray-200 bg-white text-gray-600 hover:border-violet-300 hover:text-violet-700 hover:bg-violet-50"
-                              }`}
+                                }`}
                               title="Reassign case"
                             >
                               <ArrowRightLeft size={14} />
@@ -1428,83 +1433,84 @@ const Cases = () => {
                         </td>
                       </tr>
 
-                        {/* ── Reassignment info banner row ── */}
-                        {reassigned && (
-                          <tr
-                            key={`${c.caseId}-reassigned`}
-                            className="bg-violet-50/60 border-b border-violet-100"
-                          >
-                            <td colSpan={9} className="px-4 py-2">
-                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                                <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-violet-700">
-                                  <ArrowRightLeft size={12} />
-                                  Reassigned to{" "}
-                                  <span className="font-black text-violet-900">
-                                    {reassigned.caseworker}
-                                  </span>
-                                  <span className="font-bold text-violet-500">
-                                    ({reassigned.caseworkerRole})
-                                  </span>
+                      {/* ── Reassignment info banner row ── */}
+                      {reassigned && (
+                        <tr
+                          key={`${c.caseId}-reassigned`}
+                          className="bg-violet-50/60 border-b border-violet-100"
+                        >
+                          <td colSpan={9} className="px-4 py-2">
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                              <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-violet-700">
+                                <ArrowRightLeft size={12} />
+                                Reassigned to{" "}
+                                <span className="font-black text-violet-900">
+                                  {reassigned.caseworker}
                                 </span>
-                                <span className="text-[11px] font-bold text-violet-600">
-                                  Reason:{" "}
-                                  <span className="italic">{reassigned.reason}</span>
+                                <span className="font-bold text-violet-500">
+                                  ({reassigned.caseworkerRole})
                                 </span>
-                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-violet-500 ml-auto">
-                                  <CalendarClock size={12} />
-                                  {formatDateTime(reassigned.at)}
-                                </span>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/80">
-            <p className="text-xs font-bold text-gray-500 tabular-nums">
-              Showing {(pageClamped - 1) * PAGE_SIZE + 1}–
-              {Math.min(pageClamped * PAGE_SIZE, pagination.total)} of {pagination.total}{" "}
-              cases
-            </p>
-            <div className="flex items-center gap-1">
+                              </span>
+                              <span className="text-[11px] font-bold text-violet-600">
+                                Reason:{" "}
+                                <span className="italic">{reassigned.reason}</span>
+                              </span>
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-violet-500 ml-auto">
+                                <CalendarClock size={12} />
+                                {formatDateTime(reassigned.at)}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/80">
+          <p className="text-xs font-bold text-gray-500 tabular-nums">
+            Showing {(pageClamped - 1) * PAGE_SIZE + 1}–
+            {Math.min(pageClamped * PAGE_SIZE, pagination.total)} of {pagination.total}{" "}
+            cases
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={pageClamped <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
+            >
+              ←
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
               <button
+                key={num}
                 type="button"
-                disabled={pageClamped <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
+                onClick={() => setPage(num)}
+                className={`min-w-[2rem] rounded-lg border px-2 py-1 text-xs font-black ${pageClamped === num
+                  ? "border-secondary bg-secondary/10 text-secondary"
+                  : "border-gray-200 text-gray-600 hover:bg-white"
+                  }`}
               >
-                ←
+                {num}
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-                <button
-                  key={num}
-                  type="button"
-                  onClick={() => setPage(num)}
-                  className={`min-w-[2rem] rounded-lg border px-2 py-1 text-xs font-black ${pageClamped === num
-                      ? "border-secondary bg-secondary/10 text-secondary"
-                      : "border-gray-200 text-gray-600 hover:bg-white"
-                    }`}
-                >
-                  {num}
-                </button>
-              ))}
-              <button
-                type="button"
-                disabled={pageClamped >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
-              >
-                →
-              </button>
-            </div>
+            ))}
+            <button
+              type="button"
+              disabled={pageClamped >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
+            >
+              →
+            </button>
           </div>
         </div>
-      )}
+      </div>
+      </>
+    )}
 
       {/* Kanban View */}
       {viewMode === "kanban" && (
@@ -1579,111 +1585,7 @@ const Cases = () => {
         </DndContext>
       )}
 
-      {/* Case Details Modal for Kanban View */}
-      <Modal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Case Details"
-        titleId="case-details-modal-title"
-        maxWidthClass="max-w-4xl"
-        bodyClassName="p-4 sm:p-6"
-      >
-        {isCaseLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-gray-500">Loading case details...</div>
-          </div>
-        ) : selectedCase ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Case ID
-                </label>
-                <p className="text-sm font-bold text-secondary">{selectedCase.caseId}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Status
-                </label>
-                <p className="text-sm font-bold text-gray-900">{selectedCase.status}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Priority
-                </label>
-                <p className="text-sm font-bold text-gray-900">{selectedCase.priority || 'Normal'}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Target Date
-                </label>
-                <p className="text-sm font-bold text-gray-900">{selectedCase.targetSubmissionDate || 'Not set'}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Candidate
-                </label>
-                <p className="text-sm font-bold text-gray-900">
-                  {selectedCase.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : 'Unknown'}
-                </p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Sponsor
-                </label>
-                <p className="text-sm font-bold text-gray-900">
-                  {selectedCase.sponsor ? `${selectedCase.sponsor.first_name} ${selectedCase.sponsor.last_name}` : 'Unknown'}
-                </p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Visa Type
-                </label>
-                <p className="text-sm font-bold text-gray-900">{selectedCase.visaType?.name || 'Unknown'}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Created
-                </label>
-                <p className="text-sm font-bold text-gray-900">{selectedCase.created_at ? new Date(selectedCase.created_at).toLocaleDateString() : 'Unknown'}</p>
-              </div>
-            </div>
-            {selectedCase.notes && (
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Notes
-                </label>
-                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">{selectedCase.notes}</p>
-              </div>
-            )}
-            
-            {/* Timeline Section */}
-            <CaseTimeline caseId={selectedCase.caseId} currentUser={user} />
-            
-            <div className="flex gap-2 pt-4 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsModalOpen(false);
-                  const caseData = cases.find(c => c.caseId === selectedCase.caseId);
-                  if (caseData) openCaseEdit(caseData);
-                }}
-                className="inline-flex items-center gap-2 rounded-lg bg-secondary px-4 py-2 text-sm font-black text-white hover:bg-secondary/90"
-              >
-                <Pencil size={16} />
-                Edit Case
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 hover:bg-gray-50"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
+      {/* Case Detail Modal is handled at the bottom of the file (shared with Table view) */}
 
       {/* ─────────────────────── NEW CASE MODAL ─────────────────────── */}
       <Modal
@@ -1988,9 +1890,9 @@ const Cases = () => {
                 options={
                   caseworkers.length > 0
                     ? caseworkers.map((c) => ({
-                        id: c.id,
-                        name: `${c.first_name} ${c.last_name}`,
-                      }))
+                      id: c.id,
+                      name: `${c.first_name} ${c.last_name}`,
+                    }))
                     : []
                 }
                 value={newCaseForm.assignedCaseworkerIds || []}
@@ -2110,9 +2012,8 @@ const Cases = () => {
               onChange={(e) =>
                 setEditCaseForm((f) => ({ ...f, candidate: e.target.value }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                editCaseErrors.candidate ? "border-red-300" : "border-gray-200"
-              }`}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.candidate ? "border-red-300" : "border-gray-200"
+                }`}
             />
             {editCaseErrors.candidate && (
               <p className="text-xs font-bold text-red-600 mt-1">
@@ -2130,9 +2031,8 @@ const Cases = () => {
               onChange={(e) =>
                 setEditCaseForm((f) => ({ ...f, business: e.target.value }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                editCaseErrors.business ? "border-red-300" : "border-gray-200"
-              }`}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.business ? "border-red-300" : "border-gray-200"
+                }`}
             />
             {editCaseErrors.business && (
               <p className="text-xs font-bold text-red-600 mt-1">
@@ -2189,9 +2089,8 @@ const Cases = () => {
                 onChange={(e) =>
                   setEditCaseForm((f) => ({ ...f, target: e.target.value }))
                 }
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                  editCaseErrors.target ? "border-red-300" : "border-gray-200"
-                }`}
+                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.target ? "border-red-300" : "border-gray-200"
+                  }`}
               />
               {editCaseErrors.target && (
                 <p className="text-xs font-bold text-red-600 mt-1">
@@ -2302,19 +2201,17 @@ const Cases = () => {
                       onClick={() =>
                         setReassignForm((f) => ({ ...f, caseworkerId: cw.id }))
                       }
-                      className={`w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${
-                        selected
+                      className={`w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${selected
                           ? "border-violet-400 bg-violet-50 ring-2 ring-violet-200"
                           : "border-gray-200 bg-white hover:border-violet-200 hover:bg-violet-50/40"
-                      }`}
+                        }`}
                     >
                       {/* Avatar */}
                       <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
-                          selected
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${selected
                             ? "bg-violet-600 text-white"
                             : "bg-gray-100 text-gray-600"
-                        }`}
+                          }`}
                       >
                         {cw.avatar}
                       </div>
@@ -2366,11 +2263,10 @@ const Cases = () => {
                     reasonCustom: "",
                   }))
                 }
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${
-                  reassignErrors.reasonPreset
+                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${reassignErrors.reasonPreset
                     ? "border-red-300"
                     : "border-gray-200"
-                }`}
+                  }`}
               >
                 <option value="">Select a reason…</option>
                 {REASSIGN_REASONS.map((r) => (
@@ -2402,11 +2298,10 @@ const Cases = () => {
                   }
                   rows={3}
                   placeholder="Explain why this case is being reassigned…"
-                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y ${
-                    reassignErrors.reasonCustom
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y ${reassignErrors.reasonCustom
                       ? "border-red-300"
                       : "border-gray-200"
-                  }`}
+                    }`}
                 />
                 {reassignErrors.reasonCustom && (
                   <p className="text-xs font-bold text-red-600 mt-1">
@@ -2509,11 +2404,10 @@ const Cases = () => {
                   key={t.id}
                   type="button"
                   onClick={() => setDetailTab(t.id)}
-                  className={`shrink-0 border-b-2 px-3 sm:px-4 py-3 text-xs font-black transition-colors whitespace-nowrap ${
-                    detailTab === t.id
+                  className={`shrink-0 border-b-2 px-3 sm:px-4 py-3 text-xs font-black transition-colors whitespace-nowrap ${detailTab === t.id
                       ? "border-secondary text-secondary"
                       : "border-transparent text-gray-500 hover:text-gray-800"
-                  }`}
+                    }`}
                 >
                   {t.label}
                 </button>
@@ -2852,9 +2746,9 @@ const Cases = () => {
                 options={
                   caseworkers.length > 0
                     ? caseworkers.map((c) => ({
-                        id: c.id,
-                        name: `${c.first_name} ${c.last_name}`,
-                      }))
+                      id: c.id,
+                      name: `${c.first_name} ${c.last_name}`,
+                    }))
                     : []
                 }
                 value={newCaseForm.assignedCaseworkerIds || []}
@@ -2971,9 +2865,8 @@ const Cases = () => {
               onChange={(e) =>
                 setEditCaseForm((f) => ({ ...f, candidate: e.target.value }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                editCaseErrors.candidate ? "border-red-300" : "border-gray-200"
-              }`}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.candidate ? "border-red-300" : "border-gray-200"
+                }`}
             />
             {editCaseErrors.candidate && (
               <p className="text-xs font-bold text-red-600 mt-1">
@@ -2991,9 +2884,8 @@ const Cases = () => {
               onChange={(e) =>
                 setEditCaseForm((f) => ({ ...f, business: e.target.value }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                editCaseErrors.business ? "border-red-300" : "border-gray-200"
-              }`}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.business ? "border-red-300" : "border-gray-200"
+                }`}
             />
             {editCaseErrors.business && (
               <p className="text-xs font-bold text-red-600 mt-1">
@@ -3050,9 +2942,8 @@ const Cases = () => {
               onChange={(e) =>
                 setEditCaseForm((f) => ({ ...f, target: e.target.value }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                editCaseErrors.target ? "border-red-300" : "border-gray-200"
-              }`}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.target ? "border-red-300" : "border-gray-200"
+                }`}
             />
             {editCaseErrors.target && (
               <p className="text-xs font-bold text-red-600 mt-1">
@@ -3119,11 +3010,10 @@ const Cases = () => {
               onChange={(e) =>
                 setReassignForm((f) => ({ ...f, caseworkerId: e.target.value }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${
-                reassignErrors.caseworkerId
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${reassignErrors.caseworkerId
                   ? "border-red-300"
                   : "border-gray-200"
-              }`}
+                }`}
             >
               <option value="">Select caseworker</option>
               {caseworkers.map((cw) => (
@@ -3151,11 +3041,10 @@ const Cases = () => {
                   reasonCustom: "",
                 }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${
-                reassignErrors.reasonPreset
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${reassignErrors.reasonPreset
                   ? "border-red-300"
                   : "border-gray-200"
-              }`}
+                }`}
             >
               <option value="">Select a reason…</option>
               {REASSIGN_REASONS.map((r) => (
@@ -3184,11 +3073,10 @@ const Cases = () => {
                   }))
                 }
                 rows={2}
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y ${
-                  reassignErrors.reasonCustom
+                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y ${reassignErrors.reasonCustom
                     ? "border-red-300"
                     : "border-gray-200"
-                }`}
+                  }`}
                 placeholder="Explain the reason…"
               />
               {reassignErrors.reasonCustom && (
@@ -3296,27 +3184,24 @@ function OverviewTab({ c, userName }) {
                 <div key={label} className="flex-1 relative">
                   {i > 0 && (
                     <div
-                      className={`absolute left-0 right-1/2 top-[14px] h-0.5 -translate-x-1/2 ${
-                        i <= 2 ? "bg-emerald-500" : "bg-gray-200"
-                      }`}
+                      className={`absolute left-0 right-1/2 top-[14px] h-0.5 -translate-x-1/2 ${i <= 2 ? "bg-emerald-500" : "bg-gray-200"
+                        }`}
                       style={{ width: "50%" }}
                     />
                   )}
                   <div
-                    className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black ${
-                      done
+                    className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black ${done
                         ? "bg-emerald-500 text-white"
                         : current
                           ? "border-2 border-secondary bg-secondary/15 text-secondary"
                           : "border-2 border-gray-200 bg-white text-gray-400"
-                    }`}
+                      }`}
                   >
                     {done ? <Check size={14} /> : current ? "●" : ""}
                   </div>
                   <p
-                    className={`mt-1 text-[10px] font-bold ${
-                      current ? "text-secondary" : "text-gray-500"
-                    }`}
+                    className={`mt-1 text-[10px] font-bold ${current ? "text-secondary" : "text-gray-500"
+                      }`}
                   >
                     {label}
                   </p>
@@ -3346,6 +3231,18 @@ function DocumentsTab({ caseId, candidateId }) {
   const [uploadErrors, setUploadErrors] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [viewDocumentOpen, setViewDocumentOpen] = useState(false);
+  const [viewDocumentUrl, setViewDocumentUrl] = useState(null);
+
+  const openViewDocument = (url) => {
+    setViewDocumentUrl(url);
+    setViewDocumentOpen(true);
+  };
+
+  const closeViewDocument = () => {
+    setViewDocumentOpen(false);
+    setViewDocumentUrl(null);
+  };
 
   useEffect(() => {
     if (!caseId) return;
@@ -3481,7 +3378,7 @@ function DocumentsTab({ caseId, candidateId }) {
             </span>
             <button
               type="button"
-              onClick={() => window.open(doc.documentUrl, "_blank")}
+              onClick={() => openViewDocument(doc.documentUrl)}
               className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black text-gray-600"
             >
               View
@@ -3506,9 +3403,8 @@ function DocumentsTab({ caseId, candidateId }) {
             <input
               type="file"
               onChange={handleFileChange}
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                uploadErrors.file ? "border-red-300" : "border-gray-200"
-              }`}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${uploadErrors.file ? "border-red-300" : "border-gray-200"
+                }`}
             />
             {uploadErrors.file && (
               <p className="text-xs font-bold text-red-600 mt-1">
@@ -3730,11 +3626,10 @@ function TasksTab({ caseId }) {
             className="flex items-center gap-3 rounded-xl p-3 hover:bg-gray-50 border border-transparent hover:border-gray-100"
           >
             <div
-              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 ${
-                task.status === "completed"
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 ${task.status === "completed"
                   ? "border-emerald-500 bg-emerald-500 text-white"
                   : "border-gray-300"
-              }`}
+                }`}
             >
               {task.status === "completed" ? (
                 <Check size={10} strokeWidth={3} />
@@ -3776,9 +3671,8 @@ function TasksTab({ caseId }) {
               onChange={(e) =>
                 setCreateForm((f) => ({ ...f, name: e.target.value }))
               }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                createErrors.name ? "border-red-300" : "border-gray-200"
-              }`}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${createErrors.name ? "border-red-300" : "border-gray-200"
+                }`}
               placeholder="e.g. Request English certificate"
             />
             {createErrors.name && (
@@ -3798,9 +3692,8 @@ function TasksTab({ caseId }) {
                 onChange={(e) =>
                   setCreateForm((f) => ({ ...f, due: e.target.value }))
                 }
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                  createErrors.due ? "border-red-300" : "border-gray-200"
-                }`}
+                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${createErrors.due ? "border-red-300" : "border-gray-200"
+                  }`}
               />
               {createErrors.due && (
                 <p className="text-xs font-bold text-red-600 mt-1">
@@ -4093,13 +3986,12 @@ function TimelineTab({ candidate }) {
             <div className="absolute left-[11px] top-6 bottom-0 w-px bg-gray-200" />
           )}
           <div
-            className={`relative z-[1] flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-black ${
-              item.dot === "green"
+            className={`relative z-[1] flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-black ${item.dot === "green"
                 ? "border-emerald-500 bg-emerald-50 text-emerald-600"
                 : item.dot === "yellow"
                   ? "border-amber-500 bg-amber-50 text-amber-600"
                   : "border-secondary bg-secondary/10 text-secondary"
-            }`}
+              }`}
           >
             {item.dot === "green" ? <Check size={12} /> : "●"}
           </div>

@@ -105,7 +105,7 @@ const DroppableColumn = ({ stage, children }) => {
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 p-2.5 space-y-2.5 min-h-[120px] max-h-[min(60vh,520px)] overflow-y-auto rounded-b-2xl transition-colors duration-150 ${isOver ? "bg-blue-50/60" : ""}`}
+      className={`flex-1 p-2.5 space-y-2.5 h-[600px] overflow-y-auto rounded-b-2xl transition-colors duration-150 ${isOver ? "bg-blue-50/60" : ""}`}
     >
       {children}
     </div>
@@ -154,8 +154,8 @@ export default function Pipeline() {
             ...stage,
             count: stageCases.length,
             cards: stageCases.map(c => ({
-              id: c.caseId,
-              caseId: c.caseId,
+              id: c.caseId || c.id.toString(),
+              caseId: c.caseId || c.id.toString(),
               name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
               meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
               badge: c.priority || 'Normal',

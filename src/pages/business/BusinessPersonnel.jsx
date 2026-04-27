@@ -1,46 +1,83 @@
-import React, { useMemo, useState } from 'react';
-import { User, Plus, Users, Briefcase, Trash2, Save, X, Eye, Pencil } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { User, Plus, Users, Briefcase, Trash2, Save, X, Eye, Pencil, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Modal from "../../components/Modal";
+import { getBusinessProfile, updateKeyPersonnel } from "../../services/businessProfileApi";
+import { useToast } from "../../context/ToastContext";
 
 const BusinessPersonnel = () => {
+  const { showToast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   const [authorisingOfficer, setAuthorisingOfficer] = useState({
-    name: 'John Smith',
-    phone: '+44 20 7123 4567',
-    email: 'john.smith@company.com',
+    name: '',
+    phone: '',
+    email: '',
     jobTitle: ''
   });
 
   const [keyContact, setKeyContact] = useState({
-    name: 'Sarah Johnson',
-    phone: '+44 20 7987 6543',
-    email: 'sarah.johnson@company.com',
+    name: '',
+    phone: '',
+    email: '',
     department: ''
   });
 
-  const [level1Users, setLevel1Users] = useState([
-    {
-      name: 'Michael Brown',
-      phone: '+44 20 7456 1234',
-      email: 'michael.brown@company.com',
-      jobTitle: 'HR Manager',
-      department: 'Human Resources'
-    },
-    {
-      name: 'Emma Davis',
-      phone: '+44 20 7234 5678',
-      email: 'emma.davis@company.com',
-      jobTitle: 'Compliance Officer',
-      department: 'Compliance'
-    }
-  ]);
+  const [level1Users, setLevel1Users] = useState([]);
 
   const [hrManager, setHrManager] = useState({
-    name: 'David Wilson',
-    phone: '+44 20 7890 1234',
-    email: 'david.wilson@company.com',
-    jobTitle: 'HR Director'
+    name: '',
+    phone: '',
+    email: '',
+    jobTitle: ''
   });
+
+  const fetchPersonnel = async () => {
+    try {
+      setLoading(true);
+      const res = await getBusinessProfile();
+      if (res.data.status === "success") {
+        const p = res.data.data.profile || {};
+        
+        setAuthorisingOfficer({
+          name: p.authorisingName || "",
+          phone: p.authorisingPhone || "",
+          email: p.authorisingEmail || "",
+          jobTitle: p.authorisingJobTitle || ""
+        });
+
+        setKeyContact({
+          name: p.keyContactName || "",
+          phone: p.keyContactPhone || "",
+          email: p.keyContactEmail || "",
+          department: p.keyContactDepartment || ""
+        });
+
+        setHrManager({
+          name: p.hrName || "",
+          phone: p.hrPhone || "",
+          email: p.hrEmail || "",
+          jobTitle: p.hrJobTitle || ""
+        });
+
+        // Parse Level 1 Users
+        let l1 = p.level1Users || [];
+        if (typeof l1 === 'string') {
+          try { l1 = JSON.parse(l1); } catch (e) { l1 = []; }
+        }
+        setLevel1Users(Array.isArray(l1) ? l1 : []);
+      }
+    } catch (err) {
+      showToast({ message: "Failed to load personnel data", variant: "danger" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchPersonnel();
+  }, []);
 
   const [personModal, setPersonModal] = useState({ open: false, mode: "view", target: null });
   const [personDraft, setPersonDraft] = useState({ name: "", phone: "", email: "", jobTitle: "", department: "" });
@@ -69,34 +106,45 @@ const BusinessPersonnel = () => {
 
   const closePersonModal = () => setPersonModal({ open: false, mode: "view", target: null });
 
-  const savePersonDraft = () => {
+  const savePersonDraft = async () => {
     if (!personDraft.name?.trim() || !personDraft.email?.trim() || !personDraft.phone?.trim()) return;
+    
+    let updatedAuthorising = { ...authorisingOfficer };
+    let updatedKeyContact = { ...keyContact };
+    let updatedHrManager = { ...hrManager };
+
     if (personModal.target === "authorisingOfficer") {
-      setAuthorisingOfficer((prev) => ({ ...prev, ...personDraft }));
-      closePersonModal();
-      return;
-    }
-    if (personModal.target === "keyContact") {
-      setKeyContact((prev) => ({
-        ...prev,
+      updatedAuthorising = { ...updatedAuthorising, ...personDraft };
+      setAuthorisingOfficer(updatedAuthorising);
+    } else if (personModal.target === "keyContact") {
+      updatedKeyContact = {
+        ...updatedKeyContact,
         name: personDraft.name,
         phone: personDraft.phone,
         email: personDraft.email,
         department: personDraft.department,
-      }));
-      closePersonModal();
-      return;
-    }
-    if (personModal.target === "hrManager") {
-      setHrManager((prev) => ({
-        ...prev,
+      };
+      setKeyContact(updatedKeyContact);
+    } else if (personModal.target === "hrManager") {
+      updatedHrManager = {
+        ...updatedHrManager,
         name: personDraft.name,
         phone: personDraft.phone,
         email: personDraft.email,
         jobTitle: personDraft.jobTitle,
-      }));
-      closePersonModal();
+      };
+      setHrManager(updatedHrManager);
     }
+
+    closePersonModal();
+    
+    // Auto-save to backend
+    await persistChanges({
+      authorisingOfficer: updatedAuthorising,
+      keyContact: updatedKeyContact,
+      hrManager: updatedHrManager,
+      level1Users
+    });
   };
 
   const clearPerson = (target) => {
@@ -116,6 +164,7 @@ const BusinessPersonnel = () => {
   };
 
   const openEdit = (index) => {
+    console.log("Opening edit for index:", index, level1Users[index]);
     setUserDraft({ ...level1Users[index] });
     setUserModal({ open: true, mode: "edit", index });
   };
@@ -124,25 +173,76 @@ const BusinessPersonnel = () => {
     setUserModal({ open: false, mode: "add", index: null });
   };
 
-  const removeLevel1User = (index) => {
-    setLevel1Users((prev) => prev.filter((_, i) => i !== index));
+  const removeLevel1User = async (index) => {
+    console.log("Removing user at index:", index);
+    const updated = level1Users.filter((_, i) => i !== index);
+    setLevel1Users(updated);
+    
+    await persistChanges({
+      authorisingOfficer,
+      keyContact,
+      hrManager,
+      level1Users: updated
+    });
   };
 
-  const saveUserDraft = () => {
-    if (!userDraft.name?.trim() || !userDraft.email?.trim() || !userDraft.phone?.trim()) return;
-    if (userModal.mode === "add") {
-      setLevel1Users((prev) => [...prev, { ...userDraft }]);
-      closeUserModal();
+  const saveUserDraft = async () => {
+    console.log("Saving user draft:", userDraft, "Mode:", userModal.mode);
+    if (!userDraft.name?.trim() || !userDraft.email?.trim() || !userDraft.phone?.trim()) {
+      showToast({ message: "Please fill in all required fields", variant: "warning" });
       return;
     }
-    if (userModal.mode === "edit" && typeof userModal.index === "number") {
-      setLevel1Users((prev) => prev.map((u, i) => (i === userModal.index ? { ...userDraft } : u)));
-      closeUserModal();
+
+    let updatedUsers = [...level1Users];
+    if (userModal.mode === "add") {
+      updatedUsers = [...updatedUsers, { ...userDraft }];
+    } else if (userModal.mode === "edit" && typeof userModal.index === "number") {
+      updatedUsers = updatedUsers.map((u, i) => (i === userModal.index ? { ...userDraft } : u));
+    }
+
+    setLevel1Users(updatedUsers);
+    closeUserModal();
+
+    await persistChanges({
+      authorisingOfficer,
+      keyContact,
+      hrManager,
+      level1Users: updatedUsers
+    });
+  };
+
+  const persistChanges = async (data) => {
+    try {
+      setSaving(true);
+      const payload = {
+        authorisingName: data.authorisingOfficer.name,
+        authorisingPhone: data.authorisingOfficer.phone,
+        authorisingEmail: data.authorisingOfficer.email,
+        authorisingJobTitle: data.authorisingOfficer.jobTitle,
+        keyContactName: data.keyContact.name,
+        keyContactPhone: data.keyContact.phone,
+        keyContactEmail: data.keyContact.email,
+        keyContactDepartment: data.keyContact.department,
+        hrName: data.hrManager.name,
+        hrPhone: data.hrManager.phone,
+        hrEmail: data.hrManager.email,
+        hrJobTitle: data.hrManager.jobTitle,
+        level1Users: data.level1Users
+      };
+
+      const res = await updateKeyPersonnel(payload);
+      if (res.data.status === "success") {
+        showToast({ message: "Changes saved successfully!", variant: "success" });
+      }
+    } catch (err) {
+      showToast({ message: "Failed to save changes", variant: "danger" });
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleSave = () => {
-    console.log('Saving personnel data:', { authorisingOfficer, keyContact, level1Users, hrManager });
+    persistChanges({ authorisingOfficer, keyContact, hrManager, level1Users });
   };
 
   const handleCancel = () => {
@@ -160,6 +260,15 @@ const BusinessPersonnel = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <p className="text-sm font-bold text-gray-500">Loading personnel data...</p>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -459,10 +568,11 @@ const BusinessPersonnel = () => {
         <div className="flex gap-4 pt-6 border-t border-gray-200 mt-6">
           <button
             onClick={handleSave}
-            className="px-6 py-3 bg-primary hover:bg-primary-dark text-white font-black rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/15 flex items-center gap-2"
+            disabled={saving}
+            className="px-6 py-3 bg-primary hover:bg-primary-dark text-white font-black rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/15 flex items-center gap-2 disabled:opacity-70"
           >
-            <Save size={18} />
-            Save Changes
+            {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+            {saving ? "Saving..." : "Save Changes"}
           </button>
           <button
             onClick={handleCancel}
