@@ -36,7 +36,10 @@ const AdminAssign = () => {
         if (casesRes?.data?.data?.cases) {
           setCases(casesRes.data.data.cases);
         }
-        if (cwRes?.data?.data?.caseworkers) {
+        // getAllUsers returns { candidate:[], sponsor:[], caseworker:[] } (singular key)
+        if (cwRes?.data?.data?.caseworker) {
+          setCaseworkers(cwRes.data.data.caseworker);
+        } else if (cwRes?.data?.data?.caseworkers) {
           setCaseworkers(cwRes.data.data.caseworkers);
         } else if (Array.isArray(cwRes?.data?.data)) {
           setCaseworkers(cwRes.data.data);
@@ -79,14 +82,37 @@ const AdminAssign = () => {
 
   const current = useMemo(() => {
     const selectedCase = cases.find((c) => c.caseId === caseId);
-    const cwIds = selectedCase?.assignedcaseworkerId || [];
-    const cwNames = caseworkers
-      .filter(cw => cwIds.includes(cw.id))
-      .map(cw => `${cw.first_name} ${cw.last_name}`)
-      .join(', ');
+    let cwNames = "";
+
+    if (selectedCase) {
+      // Prefer the embedded caseworkers array (full objects) the API returns
+      if (Array.isArray(selectedCase.caseworkers) && selectedCase.caseworkers.length > 0) {
+        cwNames = selectedCase.caseworkers
+          .map(cw => `${cw.first_name} ${cw.last_name}`)
+          .join(", ");
+      } else {
+        // Fall back to ID lookup against the separately fetched caseworkers list
+        const cwIds = Array.isArray(selectedCase.assignedcaseworkerId)
+          ? selectedCase.assignedcaseworkerId
+          : selectedCase.assignedcaseworkerId
+          ? [selectedCase.assignedcaseworkerId]
+          : [];
+        cwNames = caseworkers
+          .filter(cw => cwIds.map(Number).includes(Number(cw.id)))
+          .map(cw => `${cw.first_name} ${cw.last_name}`)
+          .join(", ");
+      }
+    }
+
     return {
       caseworker: cwNames || "Unassigned",
-      caseLabel: selectedCase ? `${selectedCase.caseId} — ${selectedCase.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : 'Unknown'}` : ""
+      caseLabel: selectedCase
+        ? `${selectedCase.caseId} — ${
+            selectedCase.candidate
+              ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}`
+              : "Unknown"
+          }`
+        : "",
     };
   }, [caseId, cases, caseworkers]);
 
