@@ -1,24 +1,16 @@
-import { useState, useRef, useEffect } from "react";
-import { FileText, Upload, Plus, ImageIcon } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+import { FileText, Upload, Download, Eye, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import Modal from "../../components/Modal";
+import { getUserDocuments, downloadDocument, triggerDownload } from "../../services/documentApi";
 
-const formatNow = () => {
-  const d = new Date();
-  return {
-    date: d.toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }),
-    time: d.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-  };
-};
-
-const DocumentItem = ({ title, date, time, status }) => {
-  const isUploaded = status === "Uploaded";
+const DocumentItem = ({ doc, onView, onDownload }) => {
+  const isUploaded = doc.status === "uploaded" || doc.status === "approved" || doc.status === "under_review";
+  
+  const dDate = new Date(doc.uploadedAt || doc.created_at);
+  const dateStr = dDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const timeStr = dDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:shadow-md mb-4">
@@ -27,283 +19,206 @@ const DocumentItem = ({ title, date, time, status }) => {
           <FileText className="text-blue-600" size={20} />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+          <h3 className="text-sm font-bold text-gray-900">{doc.userFileName || doc.documentName}</h3>
           <p className="text-[11px] font-bold text-gray-400 mt-0.5">
-            {date} • {time}
+            {doc.documentType} • {dateStr} • {timeStr}
           </p>
           <p
             className={`text-[11px] font-black mt-1 uppercase tracking-wider ${
-              isUploaded ? "text-green-500" : "text-red-500"
+              doc.status === "approved" ? "text-emerald-500" :
+              doc.status === "rejected" ? "text-red-500" :
+              doc.status === "under_review" || doc.status === "uploaded" ? "text-amber-500" :
+              "text-gray-500"
             }`}
           >
-            {status}
+            {doc.status?.replace("_", " ") || "Unknown"}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {isUploaded ? (
           <>
             <button
               type="button"
-              className="bg-primary text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-primary-dark transition-all flex items-center gap-2"
+              onClick={() => onView(doc)}
+              className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 transition-all flex items-center gap-2"
             >
-              View
+              <Eye size={14} /> View
             </button>
             <button
               type="button"
-              className="bg-primary text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-primary-dark transition-all flex items-center gap-2"
+              onClick={() => onDownload(doc)}
+              className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 transition-all flex items-center gap-2"
             >
-              Replace Document
+              <Download size={14} /> Download
             </button>
           </>
-        ) : (
-          <button
-            type="button"
-            className="bg-primary text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-primary-dark transition-all flex items-center gap-2"
-          >
-            Upload Document
-          </button>
-        )}
+        ) : null}
       </div>
     </div>
   );
 };
 
-const initialDocuments = [
-  {
-    id: "1",
-    title: "Passport Copy",
-    date: "2 Mar 2026",
-    time: "10:30 AM",
-    status: "Uploaded",
-  },
-  {
-    id: "2",
-    title: "Curriculam VISA Copy",
-    date: "2 Mar 2026",
-    time: "11:30 AM",
-    status: "Uploaded",
-  },
-  {
-    id: "3",
-    title: "PanCard Copy",
-    date: "2 Mar 2026",
-    time: "11:30 AM",
-    status: "Uploaded",
-  },
-  {
-    id: "4",
-    title: "Bank Statement",
-    date: "2 Mar 2026",
-    time: "11:30 AM",
-    status: "Missing",
-  },
-  {
-    id: "5",
-    title: "Degree Certificate",
-    date: "2 Mar 2026",
-    time: "11:30 AM",
-    status: "Missing",
-  },
-  {
-    id: "6",
-    title: "Address Proof",
-    date: "2 Mar 2026",
-    time: "11:30 AM",
-    status: "Missing",
-  },
-];
-
 const Documents = () => {
-  const [documents, setDocuments] = useState(initialDocuments);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [docName, setDocName] = useState("");
-  const [imageFile, setImageFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const fileInputRef = useRef(null);
+  const user = useSelector((state) => state.auth.user);
+  const userId = user?.id || user?.userId;
+
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const [viewDoc, setViewDoc] = useState(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const loadDocs = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getUserDocuments(userId);
+      setDocuments(res.data?.data?.documents || []);
+    } catch (err) {
+      setError("Failed to load documents. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
 
   useEffect(() => {
-    if (!imageFile) {
-      setPreviewUrl(null);
-      return;
+    loadDocs();
+  }, [loadDocs]);
+
+  const handleDownload = async (doc) => {
+    setDownloading(true);
+    try {
+      const res = await downloadDocument(doc.id);
+      triggerDownload(res.data, doc.userFileName || doc.documentName);
+    } catch {
+      alert("Failed to download document.");
+    } finally {
+      setDownloading(false);
     }
-    const url = URL.createObjectURL(imageFile);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [imageFile]);
-
-  const resetModal = () => {
-    setDocName("");
-    setImageFile(null);
-    setPreviewUrl(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const closeModal = () => {
-    setModalOpen(false);
-    resetModal();
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      setImageFile(null);
-      return;
-    }
-    if (!file.type.startsWith("image/")) {
-      e.target.value = "";
-      return;
-    }
-    setImageFile(file);
-  };
-
-  const handleAddDocument = (e) => {
-    e.preventDefault();
-    const name = docName.trim();
-    if (!name) return;
-
-    const { date, time } = formatNow();
-    const hasImage = Boolean(imageFile);
-
-    setDocuments((prev) => [
-      {
-        id: crypto.randomUUID(),
-        title: name,
-        date,
-        time,
-        status: hasImage ? "Uploaded" : "Missing",
-      },
-      ...prev,
-    ]);
-    closeModal();
   };
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-10 pb-10 animate-in fade-in slide-in-from-top-4 duration-500">
       <section>
         <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black text-secondary tracking-tight">
-              Documents
+              My Documents
             </h1>
             <p className="text-gray-500 font-bold text-sm mt-1">
-              Manage and upload your application documents.
+              View and manage all your uploaded documents.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 bg-secondary text-white px-5 py-3 rounded-xl text-sm font-black hover:bg-secondary-dark transition-all shadow-sm shrink-0"
-          >
-            <Plus size={20} strokeWidth={2.5} />
-            Add new document
-          </button>
-        </div>
-
-        <h2 className="text-xl font-black text-secondary mb-6 tracking-tight">
-          Your Documents
-        </h2>
-        <div className="space-y-2">
-          {documents.map((doc) => (
-            <DocumentItem
-              key={doc.id}
-              title={doc.title}
-              date={doc.date}
-              time={doc.time}
-              status={doc.status}
-            />
-          ))}
-        </div>
-      </section>
-
-      <Modal
-        open={modalOpen}
-        onClose={closeModal}
-        title="Add new document"
-        titleId="add-doc-title"
-        maxWidthClass="max-w-md"
-        bodyClassName="p-4 sm:p-6"
-      >
-        <form onSubmit={handleAddDocument} className="space-y-5">
-          <div>
-            <label
-              htmlFor="document-name"
-              className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2"
-            >
-              Document name
-            </label>
-            <input
-              id="document-name"
-              type="text"
-              value={docName}
-              onChange={(e) => setDocName(e.target.value)}
-              placeholder="e.g. Employment letter"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow"
-              required
-            />
-          </div>
-
-          <div>
-            <span className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">
-              Image upload
-            </span>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-              id="document-image"
-            />
-            <label
-              htmlFor="document-image"
-              className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 px-4 py-8 cursor-pointer hover:border-secondary/40 hover:bg-secondary/5 transition-colors"
-            >
-              {previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="max-h-40 rounded-lg object-contain border border-gray-100"
-                />
-              ) : (
-                <>
-                  <div className="w-12 h-12 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-secondary">
-                    <ImageIcon size={24} />
-                  </div>
-                  <span className="text-sm font-bold text-gray-600 text-center">
-                    Click to choose an image
-                  </span>
-                  <span className="text-[11px] font-bold text-gray-400">
-                    PNG, JPG, WEBP up to your browser limit
-                  </span>
-                </>
-              )}
-            </label>
-            {imageFile && (
-              <p className="mt-2 text-xs font-bold text-gray-500 truncate">
-                {imageFile.name}
-              </p>
-            )}
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button
+          <div className="flex gap-2 shrink-0">
+             <button
               type="button"
-              onClick={closeModal}
-              className="flex-1 py-3 rounded-xl text-sm font-black text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+              onClick={loadDocs}
+              className="inline-flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-600 px-4 py-3 rounded-xl text-sm font-black hover:bg-gray-50 transition-all shadow-sm shrink-0"
             >
-              Cancel
+              <RefreshCw size={18} />
+              Refresh
             </button>
-            <button
-              type="submit"
-              className="flex-1 py-3 rounded-xl text-sm font-black text-white bg-primary hover:bg-primary-dark transition-colors inline-flex items-center justify-center gap-2"
+            <Link
+              to="/candidate/upload-documents"
+              className="inline-flex items-center justify-center gap-2 bg-secondary text-white px-5 py-3 rounded-xl text-sm font-black hover:bg-secondary-dark transition-all shadow-sm shrink-0"
             >
               <Upload size={18} />
-              Save document
+              Upload new
+            </Link>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <Loader2 className="animate-spin text-secondary" size={32} />
+            <p className="text-sm font-bold text-gray-400">Loading your documents...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
+            <AlertCircle className="mx-auto text-red-400 mb-3" size={32} />
+            <p className="text-sm font-bold text-red-600 mb-4">{error}</p>
+            <button onClick={loadDocs} className="bg-white border border-red-200 text-red-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-50">
+              Try Again
             </button>
           </div>
-        </form>
+        ) : documents.length === 0 ? (
+          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-12 text-center">
+            <FileText className="mx-auto text-gray-300 mb-4" size={48} />
+            <h3 className="text-lg font-black text-gray-700 mb-1">No documents found</h3>
+            <p className="text-sm font-bold text-gray-400 mb-6">You haven't uploaded any documents yet.</p>
+            <Link to="/candidate/upload-documents" className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl text-sm font-black hover:bg-primary-dark">
+              <Upload size={18} /> Go to Uploads
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {documents.map((doc) => (
+              <DocumentItem
+                key={doc.id}
+                doc={doc}
+                onView={setViewDoc}
+                onDownload={handleDownload}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Document View Modal */}
+      <Modal
+        open={Boolean(viewDoc)}
+        onClose={() => setViewDoc(null)}
+        title={viewDoc?.userFileName || viewDoc?.documentName || "Document Detail"}
+        titleId="view-doc-title"
+        maxWidthClass="max-w-md"
+        bodyClassName="p-5"
+      >
+        {viewDoc && (
+          <div className="space-y-4">
+             <div className="grid grid-cols-2 gap-3 text-xs mb-4">
+                <div className="rounded-lg bg-gray-50 px-3 py-2">
+                  <p className="text-gray-400 font-bold uppercase tracking-wider text-[9px] mb-1">Type</p>
+                  <p className="font-black text-gray-800">{viewDoc.documentType}</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 px-3 py-2">
+                  <p className="text-gray-400 font-bold uppercase tracking-wider text-[9px] mb-1">Size</p>
+                  <p className="font-black text-gray-800">
+                    {viewDoc.fileSize ? `${(viewDoc.fileSize / 1024 / 1024).toFixed(2)} MB` : "—"}
+                  </p>
+                </div>
+              </div>
+              
+              {viewDoc.reviewNotes && (
+                <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 mb-4">
+                  <p className="text-[10px] font-black uppercase text-amber-600 mb-1">Review notes</p>
+                  <p className="text-xs font-bold text-amber-800">{viewDoc.reviewNotes}</p>
+                </div>
+              )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setViewDoc(null)}
+                className="flex-1 py-3 rounded-xl text-sm font-black text-gray-600 border-2 border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => { handleDownload(viewDoc); setViewDoc(null); }}
+                disabled={downloading}
+                className="flex-1 py-3 rounded-xl text-sm font-black text-white bg-primary hover:bg-primary-dark transition-colors inline-flex items-center justify-center gap-2"
+              >
+                <Download size={18} />
+                Download
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

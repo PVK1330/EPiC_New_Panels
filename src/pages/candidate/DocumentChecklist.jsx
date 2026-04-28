@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   IdCard,
   Home,
@@ -8,9 +9,13 @@ import {
   CheckCircle2,
   Upload,
   Eye,
+  Loader2,
+  AlertCircle,
+  Download
 } from "lucide-react";
-import { Link } from "react-router-dom";
 import Modal from "../../components/Modal";
+import useCandidate from "../../hooks/useCandidate";
+import { downloadDocument, triggerDownload } from "../../services/documentApi";
 
 const FILTERS = [
   { id: "all", label: "All documents" },
@@ -20,124 +25,13 @@ const FILTERS = [
   { id: "rejected", label: "Rejected" },
 ];
 
-const initialDocs = [
-  {
-    id: "1",
-    sectionKey: "identity",
-    sectionLabel: "Identity documents",
-    SectionIcon: IdCard,
-    name: "Valid Passport",
-    mandatory: true,
-    note: "All pages — must be valid for 6+ months beyond visa end date",
-    status: "required",
-    icon: FileText,
-  },
-  {
-    id: "2",
-    sectionKey: "identity",
-    sectionLabel: "Identity documents",
-    SectionIcon: IdCard,
-    name: "Biometric Residence Permit (BRP)",
-    mandatory: false,
-    note: "If previously held a UK visa",
-    status: "approved",
-    icon: FileText,
-  },
-  {
-    id: "3",
-    sectionKey: "identity",
-    sectionLabel: "Identity documents",
-    SectionIcon: IdCard,
-    name: "Passport-size photographs",
-    mandatory: true,
-    note: "2 recent photos, white background, within 6 months",
-    status: "uploaded",
-    icon: FileText,
-  },
-  {
-    id: "4",
-    sectionKey: "address",
-    sectionLabel: "Address proof",
-    SectionIcon: Home,
-    name: "Utility bill",
-    mandatory: true,
-    note: "Not older than 3 months — gas, electric or water",
-    status: "required",
-    icon: Home,
-  },
-  {
-    id: "5",
-    sectionKey: "address",
-    sectionLabel: "Address proof",
-    SectionIcon: Home,
-    name: "Bank statement",
-    mandatory: true,
-    note: "Last 3 months showing address",
-    status: "approved",
-    icon: Wallet,
-  },
-  {
-    id: "6",
-    sectionKey: "financial",
-    sectionLabel: "Financial documents",
-    SectionIcon: Wallet,
-    name: "Bank statements (3 months)",
-    mandatory: true,
-    note: "Balance must exceed £1,270 for 28 days",
-    status: "rejected",
-    icon: Wallet,
-  },
-  {
-    id: "7",
-    sectionKey: "financial",
-    sectionLabel: "Financial documents",
-    SectionIcon: Wallet,
-    name: "Payslips (last 3 months)",
-    mandatory: true,
-    note: "Must show employer name and NI number",
-    status: "uploaded",
-    icon: Wallet,
-  },
-  {
-    id: "8",
-    sectionKey: "employment",
-    sectionLabel: "Employment documents",
-    SectionIcon: Briefcase,
-    name: "Certificate of sponsorship (CoS)",
-    mandatory: true,
-    note: "Must be provided by licensed UK employer",
-    status: "required",
-    icon: Briefcase,
-  },
-  {
-    id: "9",
-    sectionKey: "employment",
-    sectionLabel: "Employment documents",
-    SectionIcon: Briefcase,
-    name: "Employment contract",
-    mandatory: true,
-    note: "Signed copy showing role, salary, and start date",
-    status: "approved",
-    icon: Briefcase,
-  },
-  {
-    id: "10",
-    sectionKey: "employment",
-    sectionLabel: "Employment documents",
-    SectionIcon: Briefcase,
-    name: "Academic qualifications",
-    mandatory: false,
-    note: "Degree or professional certificates relevant to the role",
-    status: "required",
-    icon: Briefcase,
-  },
-];
-
 function statusBadgeClass(status) {
   switch (status) {
+    case "missing":
     case "required":
       return "border-red-200 bg-red-50 text-red-700";
     case "uploaded":
+    case "under_review":
       return "border-amber-200 bg-amber-50 text-amber-800";
     case "approved":
       return "border-emerald-200 bg-emerald-50 text-emerald-700";
@@ -150,10 +44,13 @@ function statusBadgeClass(status) {
 
 function statusLabel(status) {
   switch (status) {
+    case "missing":
     case "required":
       return "Required";
     case "uploaded":
       return "Uploaded";
+    case "under_review":
+      return "Under Review";
     case "approved":
       return "Approved";
     case "rejected":
@@ -165,24 +62,80 @@ function statusLabel(status) {
 
 const DocumentChecklist = () => {
   const [filter, setFilter] = useState("all");
-  const [docs] = useState(initialDocs);
   const [viewDoc, setViewDoc] = useState(null);
+  const [downloading, setDownloading] = useState(false);
+  const { myApplication, applicationLoading, getMyApplication } = useCandidate();
+
+  useEffect(() => {
+    getMyApplication();
+  }, [getMyApplication]);
+
+  // Combine documentSettings (requirements) and actual uploaded documents
+  const docs = useMemo(() => {
+    if (!myApplication) return [];
+    
+    const settings = myApplication._relatedData?.documentSettings || [];
+    const uploads = myApplication._relatedData?.documents || [];
+
+    const combinedList = [];
+
+    // 1. First map all the configured required document fields
+    settings.forEach((setting) => {
+      // Find if user uploaded a file matching this setting
+      const uploadedFile = uploads.find(u => u.documentType === setting.field_key || u.documentType === setting.field_label);
+      
+      combinedList.push({
+        id: uploadedFile ? uploadedFile.id : `req-${setting.id}`,
+        sectionKey: setting.field_key.includes("passport") || setting.field_key.includes("id") ? "identity" : "general",
+        sectionLabel: setting.field_key.includes("passport") || setting.field_key.includes("id") ? "Identity documents" : "Required documents",
+        SectionIcon: FileText,
+        name: setting.field_label,
+        mandatory: setting.is_required,
+        note: `Required for your application.`,
+        status: uploadedFile ? uploadedFile.status : "missing",
+        icon: FileText,
+        fileData: uploadedFile || null
+      });
+    });
+
+    // 2. Add any other documents the user uploaded that aren't specifically mapped to a setting
+    uploads.forEach((upload) => {
+      const alreadyAdded = combinedList.some(item => item.fileData?.id === upload.id);
+      if (!alreadyAdded) {
+        combinedList.push({
+          id: upload.id,
+          sectionKey: "other",
+          sectionLabel: "Other uploaded documents",
+          SectionIcon: FileText,
+          name: upload.userFileName || upload.documentName,
+          mandatory: false,
+          note: upload.documentType,
+          status: upload.status,
+          icon: FileText,
+          fileData: upload
+        });
+      }
+    });
+
+    return combinedList;
+  }, [myApplication]);
 
   const stats = useMemo(() => {
     const approved = docs.filter((d) => d.status === "approved").length;
-    const uploaded = docs.filter((d) => d.status === "uploaded").length;
-    const required = docs.filter(
-      (d) => d.status === "required" || d.status === "rejected",
-    ).length;
-    const done = approved + uploaded;
-    const pct = docs.length
-      ? Math.round((done / docs.length) * 100)
-      : 0;
+    const uploaded = docs.filter((d) => d.status === "uploaded" || d.status === "under_review").length;
+    const required = docs.filter((d) => d.mandatory && (d.status === "missing" || d.status === "rejected")).length;
+    const totalMandatory = docs.filter((d) => d.mandatory).length;
+    const doneMandatory = docs.filter((d) => d.mandatory && (d.status === "approved" || d.status === "uploaded" || d.status === "under_review")).length;
+    
+    const pct = totalMandatory > 0 ? Math.round((doneMandatory / totalMandatory) * 100) : 100;
+    
     return { approved, uploaded, required, pct };
   }, [docs]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return docs;
+    if (filter === "required") return docs.filter((d) => d.status === "missing" || d.status === "rejected");
+    if (filter === "uploaded") return docs.filter((d) => d.status === "uploaded" || d.status === "under_review");
     return docs.filter((d) => d.status === filter);
   }, [docs, filter]);
 
@@ -203,7 +156,29 @@ const DocumentChecklist = () => {
   }, [filtered]);
 
   const canView = (status) =>
-    status === "uploaded" || status === "approved" || status === "rejected";
+    status === "uploaded" || status === "approved" || status === "rejected" || status === "under_review";
+
+  const handleDownload = async (item) => {
+    if (!item.fileData) return;
+    setDownloading(true);
+    try {
+      const res = await downloadDocument(item.fileData.id);
+      triggerDownload(res.data, item.fileData.userFileName || item.fileData.documentName);
+    } catch {
+      alert("Download failed. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  if (applicationLoading && !myApplication) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-secondary" />
+        <p className="text-sm font-bold text-gray-400">Loading checklist...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-10 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -239,7 +214,7 @@ const DocumentChecklist = () => {
               {stats.required}
             </p>
             <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-              Required
+              Missing
             </p>
           </div>
         </div>
@@ -334,6 +309,8 @@ const DocumentChecklist = () => {
                           size={22}
                         />
                       )}
+                      
+                      {/* Actions */}
                       {canView(doc.status) && (
                         <button
                           type="button"
@@ -341,26 +318,17 @@ const DocumentChecklist = () => {
                           className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600 hover:border-secondary hover:bg-secondary/5 hover:text-secondary"
                         >
                           <Eye size={14} />
-                          View document
+                          View
                         </button>
                       )}
-                      {doc.status === "required" && (
-                        <button
-                          type="button"
-                          onClick={() => setViewDoc(doc)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600 hover:border-secondary hover:bg-secondary/5 hover:text-secondary"
-                        >
-                          <Eye size={14} />
-                          View document
-                        </button>
-                      )}
-                      {doc.status === "rejected" && (
+                      
+                      {(doc.status === "missing" || doc.status === "rejected") && (
                         <Link
                           to="/candidate/upload-documents"
                           className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-black text-primary hover:bg-primary hover:text-white transition-colors"
                         >
                           <Upload size={14} />
-                          Re-upload
+                          Upload
                         </Link>
                       )}
                     </div>
@@ -372,10 +340,11 @@ const DocumentChecklist = () => {
         ))
       )}
 
+      {/* Document View Modal */}
       <Modal
         open={Boolean(viewDoc)}
         onClose={() => setViewDoc(null)}
-        title={viewDoc ? viewDoc.name : "Document"}
+        title={viewDoc?.fileData?.userFileName || viewDoc?.name || "Document"}
         titleId="checklist-view-doc"
         maxWidthClass="max-w-md"
         bodyClassName="p-5"
@@ -383,12 +352,40 @@ const DocumentChecklist = () => {
         {viewDoc && (
           <div className="space-y-4">
             <p className="text-sm font-bold text-gray-600">{viewDoc.note}</p>
-            <div className="rounded-xl border border-gray-100 bg-gray-50 p-8 text-center">
-              <FileText className="mx-auto text-gray-300 mb-2" size={40} />
-              <p className="text-xs font-bold text-gray-500">
-                Preview not available in demo — connect storage to show the file.
-              </p>
-            </div>
+            
+            {viewDoc.fileData ? (
+              <>
+                <div className="grid grid-cols-2 gap-3 text-xs mb-4">
+                  <div className="rounded-lg bg-gray-50 px-3 py-2">
+                    <p className="text-gray-400 font-bold uppercase tracking-wider text-[9px] mb-1">Status</p>
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${statusBadgeClass(viewDoc.status)}`}>
+                      {statusLabel(viewDoc.status)}
+                    </span>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 px-3 py-2">
+                    <p className="text-gray-400 font-bold uppercase tracking-wider text-[9px] mb-1">Size</p>
+                    <p className="font-black text-gray-800">
+                      {viewDoc.fileData.fileSize ? `${(viewDoc.fileData.fileSize / 1024 / 1024).toFixed(2)} MB` : "—"}
+                    </p>
+                  </div>
+                </div>
+                
+                {viewDoc.fileData.reviewNotes && (
+                  <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 mb-4">
+                    <p className="text-[10px] font-black uppercase text-amber-600 mb-1">Review notes</p>
+                    <p className="text-xs font-bold text-amber-800">{viewDoc.fileData.reviewNotes}</p>
+                  </div>
+                )}
+              </>
+            ) : (
+               <div className="rounded-xl border border-gray-100 bg-gray-50 p-8 text-center">
+                <FileText className="mx-auto text-gray-300 mb-2" size={40} />
+                <p className="text-xs font-bold text-gray-500">
+                  Document has not been uploaded yet.
+                </p>
+              </div>
+            )}
+           
             <div className="flex gap-2">
               <button
                 type="button"
@@ -397,12 +394,25 @@ const DocumentChecklist = () => {
               >
                 Close
               </button>
+              
+              {viewDoc.fileData && (
+                <button
+                  type="button"
+                  onClick={() => handleDownload(viewDoc)}
+                  disabled={downloading}
+                  className="flex-1 rounded-xl bg-secondary py-3 text-sm font-black text-white hover:bg-secondary-dark disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Download size={16} />
+                  Download
+                </button>
+              )}
+              
               <Link
                 to="/candidate/upload-documents"
                 onClick={() => setViewDoc(null)}
                 className="flex-1 rounded-xl bg-primary py-3 text-center text-sm font-black text-white hover:bg-primary-dark"
               >
-                Replace / upload
+                {viewDoc.fileData ? "Replace" : "Upload"}
               </Link>
             </div>
           </div>
