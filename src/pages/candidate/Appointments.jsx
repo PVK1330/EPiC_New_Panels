@@ -19,6 +19,7 @@ import {
 import Modal from "../../components/Modal";
 import SearchableSelect from "../../components/SearchableSelect";
 import * as appointmentApi from "../../services/appointmentApi";
+import { getTeamsMeetings } from "../../services/teamsApi";
 import { useToast } from "../../context/ToastContext";
 
 const PLATFORMS = [
@@ -43,10 +44,34 @@ const PLATFORMS = [
     joinLabel: "Join in Zoom",
     hint: "zoom.us / meeting link",
   },
+  {
+    value: "in-person",
+    label: "In person",
+    shortLabel: "In person",
+    joinLabel: "Details",
+    hint: "On-site meeting",
+  },
+  {
+    value: "calendar",
+    label: "My calendar",
+    shortLabel: "Calendar",
+    joinLabel: "Open link",
+    hint: "Personal calendar event (saved to your account)",
+  },
 ];
 
 const platformMeta = (value) =>
   PLATFORMS.find((p) => p.value === value) ?? PLATFORMS[2];
+
+const formatStatusLabel = (status) => {
+  if (!status) return "";
+  const s = String(status).toLowerCase();
+  if (s === "scheduled") return "Scheduled";
+  if (s === "completed") return "Completed";
+  if (s === "cancelled") return "Cancelled";
+  if (s === "live") return "Live now";
+  return status;
+};
 
 const formatDisplayDate = (isoDate) => {
   if (!isoDate) return "";
@@ -81,7 +106,10 @@ const AppointmentCard = ({
   platform,
   onView,
 }) => {
-  const isCompleted = status === "Completed";
+  const statusKey = String(status || "").toLowerCase();
+  const isCompleted =
+    statusKey === "completed" || statusKey === "cancelled";
+  const isLive = statusKey === "live";
   const meta = platform ? platformMeta(platform) : null;
 
   const handleJoin = () => {
@@ -98,8 +126,8 @@ const AppointmentCard = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className={`p-6 rounded-3xl mb-6 transition-all hover:shadow-lg border ${
-        joinable
+            className={`p-6 rounded-3xl mb-6 transition-all hover:shadow-lg border ${
+        joinable || isLive
           ? "bg-white border-primary/10 shadow-md"
           : "bg-white border-gray-100 shadow-sm"
       }`}
@@ -108,12 +136,12 @@ const AppointmentCard = ({
         <div className="flex gap-5 items-start">
           <div
             className={`w-14 h-14 rounded-3xl flex items-center justify-center flex-shrink-0 ${
-              joinable
+              joinable || isLive
                 ? "bg-primary text-white shadow-lg shadow-primary/20"
                 : "bg-gray-50 text-gray-400"
             }`}
           >
-            {joinable ? <Video size={28} /> : <Calendar size={28} />}
+            {joinable || isLive ? <Video size={28} /> : <Calendar size={28} />}
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-3 mb-1">
@@ -127,12 +155,14 @@ const AppointmentCard = ({
                 className={`px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
                   isCompleted
                     ? "bg-green-50 text-green-600 border-green-100"
-                    : joinable
+                    : isLive
                       ? "bg-orange-50 text-orange-600 border-orange-100 animate-pulse"
-                      : "bg-blue-50 text-blue-600 border-blue-100"
+                      : joinable
+                        ? "bg-sky-50 text-sky-700 border-sky-100"
+                        : "bg-blue-50 text-blue-600 border-blue-100"
                 }`}
               >
-                {status}
+                {formatStatusLabel(status)}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-y-2 gap-x-4 mt-2">
@@ -198,6 +228,7 @@ const Appointments = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [form, setForm] = useState({
     title: "",
+    description: "",
     date: "",
     time: "",
     platform: "teams",
@@ -221,39 +252,99 @@ const Appointments = () => {
     }
   };
 
+  const mapCalendarMeetingToCard = (m) => {
+    const start = new Date(m.start_time);
+    const end = new Date(m.end_time);
+    const dateOnly = start.toISOString().slice(0, 10);
+    const hh = String(start.getHours()).padStart(2, "0");
+    const mm = String(start.getMinutes()).padStart(2, "0");
+    const now = new Date();
+    const ended = end < now;
+    const statusRaw =
+      m.status === "cancelled"
+        ? "cancelled"
+        : ended
+          ? "completed"
+          : "scheduled";
+    return {
+      id: `cal-${m.id}`,
+      source: "calendar",
+      title: m.subject,
+      date: dateOnly,
+      dateDisplay: formatDisplayDate(dateOnly),
+      time: formatTimeFromInput(`${hh}:${mm}`),
+      location:
+        m.location?.trim() ||
+        (m.event_type === "teams" ? "Microsoft Teams" : "My calendar"),
+      status: statusRaw,
+      joinable:
+        statusRaw === "scheduled" &&
+        Boolean(m.join_url) &&
+        m.status !== "cancelled",
+      meeting_url: m.join_url || "",
+      platform: "calendar",
+      description: m.description || "",
+      _sortKey: start.getTime(),
+    };
+  };
+
   const fetchAppointments = async () => {
     setLoading(true);
     try {
-      const res = await appointmentApi.getMyAppointments();
+      const [res, calBody] = await Promise.all([
+        appointmentApi.getMyAppointments(),
+        getTeamsMeetings().catch(() => ({ data: { meetings: [] } })),
+      ]);
+
+      const upcomingApts = [];
+      const pastApts = [];
+      const now = new Date();
+
       if (res.data?.status === "success") {
-        const all = res.data.data.appointments;
-        
-        // Categorize appointments
-        const upcomingApts = [];
-        const pastApts = [];
-        
-        const now = new Date();
-        
-        all.forEach(apt => {
-          // Normalize data for the component
+        const all = res.data.data.appointments || [];
+
+        all.forEach((apt) => {
+          const startDt = new Date(`${apt.date}T${apt.time}`);
           const normalized = {
             ...apt,
+            source: "appointment",
             dateDisplay: formatDisplayDate(apt.date),
             time: formatTimeFromInput(apt.time),
-            location: apt.platform === 'in-person' ? 'In-person Meeting' : `Online — ${platformMeta(apt.platform).label}`,
-            joinable: apt.platform !== 'in-person' && apt.status !== 'cancelled' && apt.status !== 'completed',
+            location:
+              apt.platform === "in-person"
+                ? "In-person meeting"
+                : `Online — ${platformMeta(apt.platform).label}`,
+            joinable:
+              apt.status !== "cancelled" &&
+              apt.status !== "completed" &&
+              apt.platform !== "in-person" &&
+              Boolean(apt.meeting_url?.trim()),
+            _sortKey: startDt.getTime(),
           };
 
-          if (apt.status === 'completed' || apt.status === 'cancelled') {
+          if (apt.status === "completed" || apt.status === "cancelled") {
             pastApts.push(normalized);
           } else {
             upcomingApts.push(normalized);
           }
         });
-
-        setUpcoming(upcomingApts);
-        setPast(pastApts);
       }
+
+      const calMeetings = calBody?.data?.meetings || [];
+      calMeetings.forEach((m) => {
+        const card = mapCalendarMeetingToCard(m);
+        if (card.status === "completed" || card.status === "cancelled") {
+          pastApts.push(card);
+        } else {
+          upcomingApts.push(card);
+        }
+      });
+
+      upcomingApts.sort((a, b) => (a._sortKey || 0) - (b._sortKey || 0));
+      pastApts.sort((a, b) => (b._sortKey || 0) - (a._sortKey || 0));
+
+      setUpcoming(upcomingApts);
+      setPast(pastApts);
     } catch (error) {
       console.error("Failed to fetch appointments:", error);
       showToast({ message: "Could not load appointments", variant: "danger" });
@@ -265,6 +356,7 @@ const Appointments = () => {
   const resetScheduleForm = () => {
     setForm({
       title: "",
+      description: "",
       date: "",
       time: "",
       platform: "teams",
@@ -297,10 +389,11 @@ const Appointments = () => {
     try {
       const res = await appointmentApi.createAppointment({
         title,
+        description: form.description.trim() || undefined,
         date: form.date,
         time: form.time,
         platform: form.platform,
-        meeting_url: form.meetingUrl.trim(),
+        meeting_url: form.meetingUrl.trim() || undefined,
         staff_ids: form.staffIds,
       });
 
@@ -402,7 +495,7 @@ const Appointments = () => {
           Meeting platforms
         </p>
         <div className="flex flex-wrap gap-3">
-          {PLATFORMS.map((p) => (
+          {PLATFORMS.filter((p) => p.value !== "calendar").map((p) => (
             <div
               key={p.value}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm font-bold text-gray-700"
@@ -513,6 +606,25 @@ const Appointments = () => {
               placeholder="e.g. Case review"
               className="w-full min-w-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow sm:px-4 sm:py-3"
               required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="apt-description"
+              className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2"
+            >
+              Notes (optional)
+            </label>
+            <textarea
+              id="apt-description"
+              value={form.description}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, description: e.target.value }))
+              }
+              placeholder="Anything the team should know before the meeting"
+              rows={3}
+              className="w-full min-w-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow sm:px-4 sm:py-3 resize-y"
             />
           </div>
 
@@ -677,13 +789,14 @@ const Appointments = () => {
                   </span>
                 )}
                 <span className={`px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                  selectedAppointment.status === "Completed"
+                  String(selectedAppointment.status || "").toLowerCase() === "completed" ||
+                  String(selectedAppointment.status || "").toLowerCase() === "cancelled"
                     ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                    : selectedAppointment.status === "Live Now"
+                    : String(selectedAppointment.status || "").toLowerCase() === "live"
                       ? "bg-orange-50 text-orange-600 border-orange-100 animate-pulse"
                       : "bg-blue-50 text-blue-600 border-blue-100"
                 }`}>
-                  {selectedAppointment.status}
+                  {formatStatusLabel(selectedAppointment.status)}
                 </span>
               </div>
             </div>
@@ -691,9 +804,11 @@ const Appointments = () => {
             <div className="space-y-3">
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <Calendar size={18} className="text-primary" />
-                <div>/
+                <div>
                   <p className="text-[10px] font-bold text-gray-500 uppercase">Date</p>
-                  <p className="text-sm font-black text-secondary">{selectedAppointment.date}</p>
+                  <p className="text-sm font-black text-secondary">
+                    {selectedAppointment.dateDisplay || selectedAppointment.date}
+                  </p>
                 </div>
               </div>
 
@@ -722,6 +837,15 @@ const Appointments = () => {
                   </div>
                 </div>
               )}
+
+              {selectedAppointment.description && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Notes</p>
+                  <p className="text-sm font-bold text-gray-800 whitespace-pre-wrap">
+                    {selectedAppointment.description}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -732,7 +856,10 @@ const Appointments = () => {
               >
                 Close
               </button>
-              {selectedAppointment.meeting_url && selectedAppointment.status !== "Completed" && (
+              {selectedAppointment.meeting_url &&
+                !["completed", "cancelled"].includes(
+                  String(selectedAppointment.status || "").toLowerCase()
+                ) && (
                 <button
                   type="button"
                   onClick={() => {

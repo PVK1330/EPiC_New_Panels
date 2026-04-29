@@ -1,4 +1,4 @@
-import { LayoutDashboard, Inbox, CheckCircle, Clock, Users,Bell,AlertTriangle, Briefcase,MessageSquare,Send } from "lucide-react";
+import { LayoutDashboard, Inbox, CheckCircle, Clock, Users, Bell, AlertTriangle, Briefcase, MessageSquare, Send, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 
 const stats = [
@@ -30,8 +30,15 @@ const stats = [
     bg: "bg-yellow-100",
     color: "text-yellow-600",
   },
+  {
+    label: "Licence Status",
+    value: "Active",
+    icon: ShieldCheck,
+    bg: "bg-purple-100",
+    color: "text-purple-600",
+  },
 ];
-  const remindersData = [
+const remindersData = [
   {
     id: 1,
     title: "Visa Renewal - John Doe",
@@ -279,142 +286,142 @@ export default function BusinessDashboard() {
 
       {/* Recent Activity */}
       <div className="grid md:grid-cols-2 gap-6 mb-8 cursor-default  ">
-      <motion.div 
-        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-         
-        <div className="flex items-center justify-between mb-4">
-        <h3 className="font-black text-secondary flex items-center gap-2">
-          <Bell size={25} className="text-primary" /> Compliance Reminders
-        </h3>
-        <button className="text-xs font-bold text-primary hover:underline">
-          View All
-        </button>
-      </div>
-        <div className="space-y-4">
+        <motion.div
+          className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
 
-        {remindersData.map((item) => (
-          <div
-            key={item.id}
-            className=" p-4 hover:bg-gray-50 transition"
-          >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-black text-secondary flex items-center gap-2">
+              <Bell size={25} className="text-primary" /> Compliance Reminders
+            </h3>
+            <button className="text-xs font-bold text-primary hover:underline">
+              View All
+            </button>
+          </div>
+          <div className="space-y-4">
 
-            <div className="flex justify-between items-start">
+            {remindersData.map((item) => (
+              <div
+                key={item.id}
+                className=" p-4 hover:bg-gray-50 transition"
+              >
 
-              {/* Left */}
-              <div>
-                <h4 className="text-sm font-black text-secondary">
-                  {item.title}
-                </h4>
-                <p className="text-xs font-bold text-gray-500">
-                  {item.description}
-                </p>
+                <div className="flex justify-between items-start">
 
-                <p className="text-[10px] font-bold text-gray-400 mt-1">
-                  Due: {item.dueDate}
-                </p>
-              </div>
+                  {/* Left */}
+                  <div>
+                    <h4 className="text-sm font-black text-secondary">
+                      {item.title}
+                    </h4>
+                    <p className="text-xs font-bold text-gray-500">
+                      {item.description}
+                    </p>
 
-              {/* Right */}
-              <div className="flex flex-col items-end gap-2">
+                    <p className="text-[10px] font-bold text-gray-400 mt-1">
+                      Due: {item.dueDate}
+                    </p>
+                  </div>
 
-                {/* Priority */}
-                <span
-                  className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(
-                    item.priority
-                  )}`}
-                >
-                  {item.priority}
-                </span>
+                  {/* Right */}
+                  <div className="flex flex-col items-end gap-2">
 
-                {/* Status */}
-                <div className="flex items-center gap-1 text-[10px] font-bold">
-                  {getStatusIcon(item.status)}
-                  {item.status}
+                    {/* Priority */}
+                    <span
+                      className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(
+                        item.priority
+                      )}`}
+                    >
+                      {item.priority}
+                    </span>
+
+                    {/* Status */}
+                    <div className="flex items-center gap-1 text-[10px] font-bold">
+                      {getStatusIcon(item.status)}
+                      {item.status}
+                    </div>
+
+                  </div>
+
                 </div>
-
               </div>
+            ))}
+
+          </div>
+
+        </motion.div>
+        {/* Active Cases */}
+        <motion.div
+          className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+        >
+          <div className="bg-white p-5 rounded-2xl shadow">
+
+            {/* Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-black text-secondary flex items-center gap-2">
+                <Briefcase size={25} className="text-primary" /> Active Cases
+              </h3>
+              <button className="text-xs font-bold text-primary hover:underline">
+                View All
+              </button>
+            </div>
+
+            {/* List */}
+            <div className="space-y-4">
+
+              {casesData.map((item) => (
+                <div
+                  key={item.id}
+                  className=" p-4 hover:bg-gray-50 transition cursor-pointer"
+                >
+
+                  <div className="flex justify-between items-start">
+
+                    {/* Left */}
+                    <div>
+                      <h4 className="text-sm font-black text-secondary">
+                        {item.name}
+                      </h4>
+                      <p className="text-xs font-bold text-gray-500">
+                        {item.caseType}
+                      </p>
+
+                      <p className="text-[10px] font-bold text-gray-400 mt-1">
+                        Deadline: {item.deadline}
+                      </p>
+                    </div>
+
+                    {/* Right */}
+                    <div className="flex flex-col items-end gap-2">
+
+                      {/* Priority */}
+                      <span
+                        className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(
+                          item.priority
+                        )}`}
+                      >
+                        {item.priority}
+                      </span>
+
+                      <div className="flex items-center gap-1 text-[10px] font-bold">
+                        {getStatusIcon(item.status)}
+                        {item.status}
+                      </div>
+
+                    </div>
+
+                  </div>
+                </div>
+              ))}
 
             </div>
-          </div>
-        ))}
 
-      </div>
-       
-      </motion.div>
-      {/* Active Cases */}
-      <motion.div
-        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-        >
-           <div className="bg-white p-5 rounded-2xl shadow">
-          
-                {/* Header */}
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-black text-secondary flex items-center gap-2">
-                    <Briefcase size={25} className="text-primary" /> Active Cases
-                  </h3>
-                  <button className="text-xs font-bold text-primary hover:underline">
-                    View All
-                  </button>
-                </div>
-          
-                {/* List */}
-                <div className="space-y-4">
-          
-                  {casesData.map((item) => (
-                    <div
-                      key={item.id}
-                      className=" p-4 hover:bg-gray-50 transition cursor-pointer"
-                    >
-          
-                      <div className="flex justify-between items-start">
-          
-                        {/* Left */}
-                        <div>
-                          <h4 className="text-sm font-black text-secondary">
-                            {item.name}
-                          </h4>
-                          <p className="text-xs font-bold text-gray-500">
-                            {item.caseType}
-                          </p>
-          
-                          <p className="text-[10px] font-bold text-gray-400 mt-1">
-                            Deadline: {item.deadline}
-                          </p>
-                        </div>
-          
-                        {/* Right */}
-                        <div className="flex flex-col items-end gap-2">
-          
-                          {/* Priority */}
-                          <span
-                            className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(
-                              item.priority
-                            )}`}
-                          >
-                            {item.priority}
-                          </span>
-          
-                          <div className="flex items-center gap-1 text-[10px] font-bold">
-                            {getStatusIcon(item.status)}
-                            {item.status}
-                          </div>
-          
-                        </div>
-          
-                      </div>
-                    </div>
-                  ))}
-          
-                </div>
-          
-              </div>
+          </div>
 
 
         </motion.div>
@@ -457,13 +464,12 @@ export default function BusinessDashboard() {
                   <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.jobTitle}</td>
                   <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.visaExpiry}</td>
                   <td className="px-4 py-4">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black ${
-                      worker.status === "Active"
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black ${worker.status === "Active"
                         ? "bg-green-100 text-green-700"
                         : worker.status === "Pending"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-red-100 text-red-700"
-                    }`}>
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-red-100 text-red-700"
+                      }`}>
                       {worker.status}
                     </span>
                   </td>
@@ -474,66 +480,66 @@ export default function BusinessDashboard() {
         </div>
       </motion.div>
       <div className="grid md:grid-cols-1">
-          
-      <motion.div
-        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-         
-        <div className="flex items-center justify-between mb-4">
-        <h3 className="font-black text-secondary flex items-center gap-2">
-          <Bell size={25} className="text-primary" /> New Updates and Notifications
-        </h3>
-        <button className="text-xs font-bold text-primary hover:underline">
-          View All
-        </button>
-      </div>
-        <div className="space-y-4">
 
-        {notification.map((item) => (
-          <div
-            key={item.id}
-            className=" p-4 hover:bg-gray-50 transition"
-          >
+        <motion.div
+          className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
 
-            <div className="flex justify-between items-start">
-
-              {/* Left */}
-              <div>
-                <h4 className="text-sm font-black text-secondary">
-                  {item.title}
-                </h4>
-                <p className="text-xs font-bold text-gray-500">
-                  {item.message}
-                </p>
-
-                <p className="text-[10px] font-bold text-gray-400 mt-1">
-                  Due: {item.date}
-                </p>
-                <p className="text-[10px] font-bold text-gray-400 mt-1">
-                  Due: {item.time}
-                </p>
-              </div>
-
-              <span
-                  className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(
-                    item.priority
-                  )}`}
-                >
-                  {item.priority}
-                </span>
-
-      
-
-            </div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-black text-secondary flex items-center gap-2">
+              <Bell size={25} className="text-primary" /> New Updates and Notifications
+            </h3>
+            <button className="text-xs font-bold text-primary hover:underline">
+              View All
+            </button>
           </div>
-        ))}
+          <div className="space-y-4">
 
-      </div>
-       
-      </motion.div>
+            {notification.map((item) => (
+              <div
+                key={item.id}
+                className=" p-4 hover:bg-gray-50 transition"
+              >
+
+                <div className="flex justify-between items-start">
+
+                  {/* Left */}
+                  <div>
+                    <h4 className="text-sm font-black text-secondary">
+                      {item.title}
+                    </h4>
+                    <p className="text-xs font-bold text-gray-500">
+                      {item.message}
+                    </p>
+
+                    <p className="text-[10px] font-bold text-gray-400 mt-1">
+                      Due: {item.date}
+                    </p>
+                    <p className="text-[10px] font-bold text-gray-400 mt-1">
+                      Due: {item.time}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(
+                      item.priority
+                    )}`}
+                  >
+                    {item.priority}
+                  </span>
+
+
+
+                </div>
+              </div>
+            ))}
+
+          </div>
+
+        </motion.div>
       </div>
     </div>
   );

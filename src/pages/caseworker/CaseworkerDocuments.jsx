@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { FileText, Upload, X, CheckCircle, AlertCircle } from "lucide-react";
 import api from "../../services/api";
+import { getCaseChecklist } from "../../services/documentChecklistApi";
 
 const DOC_TYPES = [
   "Passport",
@@ -45,11 +46,22 @@ export default function CaseworkerDocuments() {
   const [rejectModal, setRejectModal] = useState({ isOpen: false, doc: null, note: "" });
   const [allDocuments, setAllDocuments] = useState([]);
   const [reviewDocuments, setReviewDocuments] = useState([]);
+  const [missingDocuments, setMissingDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [viewDocumentOpen, setViewDocumentOpen] = useState(false);
   const [viewDocumentUrl, setViewDocumentUrl] = useState('');
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    documentType: "General",
+    documentCategory: "candidate",
+    userFileName: "",
+    expiryDate: "",
+    notes: "",
+  });
+  const [uploadErrors, setUploadErrors] = useState({});
+  const [uploadingForItem, setUploadingForItem] = useState(null);
 
   const isMissingRoute = location.pathname.includes("/documents/missing");
 
@@ -57,6 +69,7 @@ export default function CaseworkerDocuments() {
     fetchCases();
     fetchAllDocuments();
     fetchReviewDocuments();
+    fetchMissingDocuments();
   }, []);
 
   useEffect(() => {
@@ -68,6 +81,8 @@ export default function CaseworkerDocuments() {
   useEffect(() => {
     if (caseId) {
       fetchAllDocuments();
+      fetchReviewDocuments();
+      fetchMissingDocuments();
     }
   }, [caseId]);
 
@@ -91,7 +106,12 @@ export default function CaseworkerDocuments() {
         setAllDocuments([]);
         return;
       }
-      const response = await api.get(`/api/caseworker/documents/case/${caseId}`);
+      const response = await api.get(`/api/caseworker/documents/case/${caseId}`, {
+        params: {
+          limit: 100,
+          page: 1
+        }
+      });
       const documents = response.data.data.documents || [];
       setAllDocuments(documents);
     } catch (error) {
@@ -104,23 +124,18 @@ export default function CaseworkerDocuments() {
 
   const fetchReviewDocuments = async () => {
     try {
-      // Fetch documents from all cases
-      if (cases.length === 0) return;
-      
-      const allDocs = [];
-      for (const c of cases) {
-        try {
-          const response = await api.get(`/api/caseworker/documents/case/${c.id}`);
-          const documents = response.data.data.documents || [];
-          allDocs.push(...documents);
-        } catch (err) {
-          console.error(`Error fetching documents for case ${c.id}:`, err);
-        }
+      // Fetch documents only for selected case
+      if (!caseId) {
+        setReviewDocuments([]);
+        return;
       }
       
-      // Filter for pending review (uploaded or under review status)
-      const pendingDocs = allDocs.filter(d => 
-        d.status === 'uploaded' || d.status === 'Under review' || d.status === 'under review'
+      const response = await api.get(`/api/caseworker/documents/case/${caseId}`);
+      const documents = response.data.data.documents || [];
+      
+      // Filter for pending review (uploaded status)
+      const pendingDocs = documents.filter(d => 
+        d.status === 'uploaded'
       );
       setReviewDocuments(pendingDocs);
     } catch (error) {
@@ -128,6 +143,131 @@ export default function CaseworkerDocuments() {
       setReviewDocuments([]);
     }
   };
+
+  const fetchMissingDocuments = async () => {
+    try {
+      if (!caseId) {
+        setMissingDocuments([]);
+        return;
+      }
+      
+      const selectedCase = cases.find(c => c.id.toString() === caseId.toString());
+      if (!selectedCase) {
+        setMissingDocuments([]);
+        return;
+      }
+      
+      try {
+        const response = await getCaseChecklist(selectedCase.id);
+        if (response.data?.status === 'success' && response.data.data) {
+          const checklist = response.data.data;
+          const checklistItems = checklist.checklist ? Object.values(checklist.checklist).flat() : [];
+          
+          const missingItems = checklistItems.filter(item => item.status === 'missing').map(item => ({
+            ...item,
+            caseId: selectedCase.id,
+            caseIdDisplay: selectedCase.caseId,
+            candidateName: selectedCase.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : 'Unknown',
+          }));
+          
+          setMissingDocuments(missingItems);
+        } else {
+          setMissingDocuments([]);
+        }
+      } catch (err) {
+        console.error(`Error fetching checklist for case ${selectedCase.id}:`, err);
+        setMissingDocuments([]);
+      }
+    } catch (error) {
+      console.error("Error fetching missing documents:", error);
+      setMissingDocuments([]);
+    }
+  };
+
+  const openUploadModal = useCallback((item = null) => {
+    setUploadErrors({});
+    setUploadForm({
+      documentType: item ? item.documentType : "General",
+      documentCategory: "candidate",
+      userFileName: item ? item.documentName : "",
+      expiryDate: "",
+      notes: "",
+    });
+    setSelectedFile(null);
+    setUploadingForItem(item);
+    setUploadOpen(true);
+  }, []);
+
+  const closeUploadModal = useCallback(() => {
+    setUploadOpen(false);
+    setUploadErrors({});
+    setUploadForm({
+      documentType: "",
+      documentCategory: "candidate",
+      userFileName: "",
+      expiryDate: "",
+      notes: "",
+    });
+    setSelectedFile(null);
+    setUploadingForItem(null);
+  }, []);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      if (!uploadForm.userFileName) {
+        setUploadForm((f) => ({ ...f, userFileName: file.name }));
+      }
+    }
+  };
+
+  const submitUploadDocument = useCallback(async () => {
+    const err = {};
+    if (!selectedFile) err.file = "Required";
+    if (!uploadForm.documentType) err.documentType = "Required";
+    setUploadErrors(err);
+    if (Object.keys(err).length) return;
+
+    try {
+      setUploading(true);
+      const selectedCase = cases.find(c => c.id.toString() === caseId.toString());
+      const userId = selectedCase?.candidateId;
+
+      if (!userId) {
+        setUploadErrors({ api: "Unable to determine user ID from selected case" });
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("documents", selectedFile);
+      formData.append("caseId", caseId);
+      formData.append("documentType", uploadForm.documentType);
+      formData.append("documentCategory", uploadForm.documentCategory);
+      formData.append("userId", userId);
+      formData.append("userFileName", uploadForm.userFileName);
+      if (uploadForm.expiryDate) formData.append("expiryDate", uploadForm.expiryDate);
+      if (uploadForm.notes) formData.append("notes", uploadForm.notes);
+
+      const response = await api.post("/api/caseworker/documents/upload", formData);
+
+      if (response.data.status === "success") {
+        await fetchAllDocuments();
+        await fetchReviewDocuments();
+        await fetchMissingDocuments();
+        closeUploadModal();
+      }
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      if (error.response?.data?.message) {
+        setUploadErrors({ api: error.response.data.message });
+      } else {
+        setUploadErrors({ api: "Failed to upload document" });
+      }
+    } finally {
+      setUploading(false);
+    }
+  }, [uploadForm, selectedFile, caseId, cases, closeUploadModal, fetchAllDocuments, fetchReviewDocuments, fetchMissingDocuments]);
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -162,6 +302,9 @@ export default function CaseworkerDocuments() {
       if (expiryDate) {
         formData.append("expiryDate", expiryDate);
       }
+      if (notes) {
+        formData.append("notes", notes);
+      }
 
       const response = await api.post("/api/caseworker/documents/upload", formData, {
         headers: {
@@ -178,6 +321,7 @@ export default function CaseworkerDocuments() {
       }
       fetchAllDocuments();
       fetchReviewDocuments();
+      fetchMissingDocuments();
     } catch (error) {
       console.error("Error uploading document:", error);
       alert("Failed to upload document");
@@ -194,6 +338,7 @@ export default function CaseworkerDocuments() {
       });
       fetchReviewDocuments();
       fetchAllDocuments();
+      fetchMissingDocuments();
       alert("Document approved successfully!");
     } catch (error) {
       console.error("Error approving document:", error);
@@ -212,6 +357,7 @@ export default function CaseworkerDocuments() {
       setRejectModal({ isOpen: false, doc: null, note: "" });
       fetchReviewDocuments();
       fetchAllDocuments();
+      fetchMissingDocuments();
       alert("Document rejected successfully!");
     } catch (error) {
       console.error("Error rejecting document:", error);
@@ -397,12 +543,42 @@ export default function CaseworkerDocuments() {
         <section className="space-y-6">
           <div ref={missingRef}>
             <p className="text-[11px] font-black uppercase tracking-wider text-red-600 mb-3">
-              Missing documents (0 cases)
+              Missing documents ({missingDocuments.length})
             </p>
             <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-              <div className="p-8 text-center text-sm font-bold text-gray-500">
-                No missing documents
-              </div>
+              <ul className="divide-y divide-gray-100">
+                {missingDocuments.length === 0 ? (
+                  <li className="p-4 text-center text-sm font-bold text-gray-500">
+                    No missing documents
+                  </li>
+                ) : (
+                  missingDocuments.map((m, idx) => (
+                    <li key={`${m.caseId}-${m.documentName}-${idx}`} className="flex flex-wrap items-center gap-3 p-4">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50">
+                        <AlertCircle size={18} className="text-red-600" />
+                      </div>
+                      <div className="flex-1 min-w-[160px]">
+                        <p className="text-sm font-bold text-gray-900">{m.documentName}</p>
+                        <p className="text-[11px] font-bold text-gray-500">
+                          {m.caseIdDisplay} · {m.candidateName}
+                        </p>
+                      </div>
+                      {m.isRequired && (
+                        <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">
+                          Required
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => openUploadModal(m)}
+                        className="shrink-0 rounded-lg border border-secondary/30 bg-secondary/10 px-3 py-1.5 text-[11px] font-black text-secondary hover:bg-secondary/20 transition-colors"
+                      >
+                        Upload
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
             </div>
           </div>
 
@@ -437,6 +613,13 @@ export default function CaseworkerDocuments() {
                       <div className="flex gap-2">
                         <button
                           type="button"
+                          onClick={() => openViewDocument(r.documentUrl)}
+                          className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-black text-gray-600 hover:border-secondary/40"
+                        >
+                          View
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleApprove(r.id)}
                           className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-black text-emerald-800"
                         >
@@ -460,9 +643,18 @@ export default function CaseworkerDocuments() {
       </div>
 
       <section>
-        <p className="text-[11px] font-black uppercase tracking-wider text-gray-500 mb-3">
-          All documents
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <p className="text-[11px] font-black uppercase tracking-wider text-gray-500">
+            All documents
+          </p>
+          <button
+            type="button"
+            onClick={() => openUploadModal()}
+            className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white"
+          >
+            + Upload Document
+          </button>
+        </div>
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[960px]">
@@ -539,6 +731,154 @@ export default function CaseworkerDocuments() {
           </div>
         </div>
       </section>
+
+      {/* Upload Modal */}
+      {uploadOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h3 className="text-sm font-black text-gray-900">Upload document</h3>
+              <button
+                type="button"
+                onClick={closeUploadModal}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Document file
+                </label>
+                <input
+                  type="file"
+                  onChange={handleFileChange}
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
+                    uploadErrors.file ? "border-red-300" : "border-gray-200"
+                  }`}
+                />
+                {uploadErrors.file && (
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {uploadErrors.file}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Document name
+                </label>
+                <input
+                  type="text"
+                  value={uploadForm.userFileName}
+                  onChange={(e) =>
+                    setUploadForm((f) => ({ ...f, userFileName: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  placeholder="e.g. Passport copy"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Document type
+                  </label>
+                  <select
+                    value={uploadForm.documentType}
+                    onChange={(e) =>
+                      setUploadForm((f) => ({ ...f, documentType: e.target.value }))
+                    }
+                    disabled={!!uploadingForItem}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary disabled:bg-gray-50 disabled:text-gray-500"
+                  >
+                    <option value="General">General</option>
+                    <option value="Passport">Passport</option>
+                    <option value="Visa">Visa</option>
+                    <option value="English Certificate">English Certificate</option>
+                    <option value="Right to Work">Right to Work</option>
+                    <option value="Education Certificate">Education Certificate</option>
+                    <option value="Employment Contract">Employment Contract</option>
+                    <option value="Sponsor Documents">Sponsor Documents</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={uploadForm.documentCategory}
+                    onChange={(e) =>
+                      setUploadForm((f) => ({
+                        ...f,
+                        documentCategory: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  >
+                    <option value="candidate">Candidate</option>
+                    <option value="business">Business</option>
+                    <option value="personal">Personal</option>
+                    <option value="legal">Legal</option>
+                    <option value="financial">Financial</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Expiry date (optional)
+                </label>
+                <input
+                  type="date"
+                  value={uploadForm.expiryDate}
+                  onChange={(e) =>
+                    setUploadForm((f) => ({ ...f, expiryDate: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Notes (optional)
+                </label>
+                <textarea
+                  value={uploadForm.notes}
+                  onChange={(e) =>
+                    setUploadForm((f) => ({ ...f, notes: e.target.value }))
+                  }
+                  rows={3}
+                  placeholder="Add any notes about this document…"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary resize-y min-h-[72px]"
+                />
+              </div>
+              {uploadErrors.api && (
+                <p className="text-xs font-bold text-red-600 mt-1">
+                  {uploadErrors.api}
+                </p>
+              )}
+              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={closeUploadModal}
+                  disabled={uploading}
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={submitUploadDocument}
+                  disabled={uploading}
+                  className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90 disabled:opacity-50"
+                >
+                  {uploading ? "Uploading..." : "Upload document"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reject Modal */}
       {rejectModal.isOpen && (

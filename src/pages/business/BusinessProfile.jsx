@@ -30,14 +30,14 @@ const BusinessProfile = () => {
   const [userData, setUserData] = useState(null);
   const [registrationData, setRegistrationData] = useState(null);
   const [registrationOpen, setRegistrationOpen] = useState(false);
-  
+
   // Modal states for individual sections
   const [addressModalOpen, setAddressModalOpen] = useState(false);
   const [keyPersonModalOpen, setKeyPersonModalOpen] = useState(false);
   const [ownershipModalOpen, setOwnershipModalOpen] = useState(false);
   const [hrModalOpen, setHrModalOpen] = useState(false);
   const [billingModalOpen, setBillingModalOpen] = useState(false);
-  
+
   // Draft states for editing
   const [addressDraft, setAddressDraft] = useState({});
   const [keyPersonDraft, setKeyPersonDraft] = useState({});
@@ -51,7 +51,7 @@ const BusinessProfile = () => {
       const res = await getBusinessProfile();
       if (res.data.status === "success") {
         const profile = res.data.data.profile;
-        
+
         // Safety parse JSON fields if they come back as strings
         const jsonFields = ['level1Users', 'shareholders', 'directors'];
         jsonFields.forEach(field => {
@@ -86,7 +86,7 @@ const BusinessProfile = () => {
   const saveRegistration = async (data) => {
     try {
       setLoading(true);
-      
+
       // Check if data has any files
       const hasFiles = Object.values(data).some(val => val instanceof File);
       let payload = data;
@@ -95,7 +95,7 @@ const BusinessProfile = () => {
         const formData = new FormData();
         Object.keys(data).forEach(key => {
           if (data[key] === null || data[key] === undefined) return;
-          
+
           if (Array.isArray(data[key]) || (typeof data[key] === 'object' && !(data[key] instanceof File))) {
             formData.append(key, JSON.stringify(data[key]));
           } else {
@@ -171,7 +171,7 @@ const BusinessProfile = () => {
         ...keyPersonDraft,
         level1Users: keyPersonDraft.level1Users || []
       };
-      
+
       const res = await updateKeyPersonnel(payload);
       if (res.data.status === "success") {
         showToast({ message: "Key Personnel updated successfully!", variant: "success" });
@@ -351,9 +351,9 @@ const BusinessProfile = () => {
           <div className="relative group">
             <div className="w-24 h-24 rounded-2xl bg-gray-100 flex items-center justify-center border-4 border-white shadow-md overflow-hidden">
               {userData?.profile_pic ? (
-                <img 
-                  src={userData.profile_pic} 
-                  alt="Profile" 
+                <img
+                  src={userData.profile_pic}
+                  alt="Profile"
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -466,7 +466,7 @@ const BusinessProfile = () => {
                 <Field label="Key Contact Email" value={registrationData?.keyContactEmail} />
                 <Field label="Key Contact Department" value={registrationData?.keyContactDepartment} />
               </div>
-              
+
               {(registrationData?.level1Users || []).length > 0 && (
                 <div className="mt-4 p-4 rounded-2xl border border-gray-200 bg-gray-50/40">
                   <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Level 1 Users</p>
