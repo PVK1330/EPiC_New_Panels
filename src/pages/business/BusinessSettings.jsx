@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useSelector } from "react-redux";
 import {
   LayoutDashboard,
   User,
@@ -11,10 +12,32 @@ import {
   ChevronRight,
   Save,
 } from "lucide-react";
+import Modal from "../../components/Modal";
+import TwoFactorSetup from "../../components/TwoFactorSetup";
+import TwoFactorDisable from "../../components/TwoFactorDisable";
+import { getBusinessProfile, updateBusinessProfile, changeBusinessPassword } from "../../services/businessProfileApi";
+import { useToast } from "../../context/ToastContext";
 
 const BusinessSettings = () => {
+  const token = useSelector((state) => state.auth.token);
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("account");
   const [darkMode, setDarkMode] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+  const [twoFactorMode, setTwoFactorMode] = useState("setup"); // setup or disable
+  
+  const [loading, setLoading] = useState(false);
+  const [profileData, setProfileData] = useState({
+    user: {},
+    profile: {}
+  });
+
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: ""
+  });
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -29,8 +52,78 @@ const BusinessSettings = () => {
     { id: "appearance", label: "Appearance", icon: Moon },
   ];
 
-  const handleSave = () => {
-    alert("Settings saved successfully!");
+  // Fetch profile data on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const res = await getBusinessProfile();
+        if (res.data.status === "success") {
+          setProfileData(res.data.data);
+        }
+      } catch (err) {
+        showToast({ message: "Failed to load profile data", variant: "danger" });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleInputChange = (e, section) => {
+    const { name, value } = e.target;
+    setProfileData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [name]: value
+      }
+    }));
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      const res = await updateBusinessProfile({
+        ...profileData.user,
+        ...profileData.profile
+      });
+      if (res.data.status === "success") {
+        showToast({ message: "Settings saved successfully!", variant: "success" });
+        setProfileData(res.data.data);
+      }
+    } catch (err) {
+      showToast({ 
+        message: err.response?.data?.message || "Failed to save settings", 
+        variant: "danger" 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      return showToast({ message: "Passwords do not match", variant: "warning" });
+    }
+    try {
+      setLoading(true);
+      const res = await changeBusinessPassword({
+        current_password: passwordForm.current_password,
+        new_password: passwordForm.new_password
+      });
+      if (res.data.status === "success") {
+        showToast({ message: "Password updated successfully!", variant: "success" });
+        setPasswordForm({ current_password: "", new_password: "", confirm_password: "" });
+      }
+    } catch (err) {
+      showToast({ 
+        message: err.response?.data?.message || "Failed to update password", 
+        variant: "danger" 
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -97,11 +190,26 @@ const BusinessSettings = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-2">
-                      Full Name
+                      First Name
                     </label>
                     <input
                       type="text"
-                      defaultValue="John Doe"
+                      name="first_name"
+                      value={profileData.user?.first_name || ""}
+                      onChange={(e) => handleInputChange(e, "user")}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-2">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      name="last_name"
+                      value={profileData.user?.last_name || ""}
+                      onChange={(e) => handleInputChange(e, "user")}
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                     />
                   </div>
@@ -112,7 +220,9 @@ const BusinessSettings = () => {
                     </label>
                     <input
                       type="email"
-                      defaultValue="john.doe@company.com"
+                      name="email"
+                      value={profileData.user?.email || ""}
+                      onChange={(e) => handleInputChange(e, "user")}
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                     />
                   </div>
@@ -123,7 +233,9 @@ const BusinessSettings = () => {
                     </label>
                     <input
                       type="tel"
-                      defaultValue="+44 20 7123 4567"
+                      name="phoneNumber"
+                      value={profileData.profile?.phoneNumber || ""}
+                      onChange={(e) => handleInputChange(e, "profile")}
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                     />
                   </div>
@@ -192,6 +304,8 @@ const BusinessSettings = () => {
                     </label>
                     <input
                       type="password"
+                      value={passwordForm.current_password}
+                      onChange={(e) => setPasswordForm({...passwordForm, current_password: e.target.value})}
                       placeholder="Enter current password"
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                     />
@@ -203,6 +317,8 @@ const BusinessSettings = () => {
                     </label>
                     <input
                       type="password"
+                      value={passwordForm.new_password}
+                      onChange={(e) => setPasswordForm({...passwordForm, new_password: e.target.value})}
                       placeholder="Enter new password"
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                     />
@@ -214,6 +330,8 @@ const BusinessSettings = () => {
                     </label>
                     <input
                       type="password"
+                      value={passwordForm.confirm_password}
+                      onChange={(e) => setPasswordForm({...passwordForm, confirm_password: e.target.value})}
                       placeholder="Confirm new password"
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                     />
@@ -225,9 +343,48 @@ const BusinessSettings = () => {
                     </p>
                   </div>
 
-                  <button className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark">
-                    Change Password
+                  <button 
+                    onClick={handlePasswordChange}
+                    disabled={loading}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark disabled:opacity-50"
+                  >
+                    {loading ? "Changing..." : "Change Password"}
                   </button>
+
+                  <div className="pt-4 border-t border-gray-200">
+                    <h3 className="text-sm font-black text-secondary mb-3">Two-Factor Authentication</h3>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div>
+                        <p className="text-sm font-bold text-secondary">
+                          {twoFactorEnabled ? "2FA is enabled" : "2FA is disabled"}
+                        </p>
+                        <p className="text-xs font-bold text-gray-500 mt-0.5">
+                          {twoFactorEnabled ? "Your account is protected with 2FA" : "Enable 2FA for enhanced security"}
+                        </p>
+                      </div>
+                      {twoFactorEnabled ? (
+                        <button
+                          onClick={() => {
+                            setTwoFactorMode("disable");
+                            setTwoFactorModalOpen(true);
+                          }}
+                          className="px-4 py-2 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition"
+                        >
+                          Disable 2FA
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setTwoFactorMode("setup");
+                            setTwoFactorModalOpen(true);
+                          }}
+                          className="px-4 py-2 rounded-xl text-sm font-black text-white bg-primary hover:bg-primary-dark transition"
+                        >
+                          Enable 2FA
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -247,7 +404,9 @@ const BusinessSettings = () => {
                     </label>
                     <input
                       type="text"
-                      defaultValue="TechCorp Ltd"
+                      name="companyName"
+                      value={profileData.profile?.companyName || ""}
+                      onChange={(e) => handleInputChange(e, "profile")}
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                     />
                   </div>
@@ -258,7 +417,9 @@ const BusinessSettings = () => {
                     </label>
                     <input
                       type="text"
-                      defaultValue="REG123456789"
+                      name="registrationNumber"
+                      value={profileData.profile?.registrationNumber || ""}
+                      onChange={(e) => handleInputChange(e, "profile")}
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                     />
                   </div>
@@ -269,7 +430,9 @@ const BusinessSettings = () => {
                     </label>
                     <input
                       type="text"
-                      defaultValue="123 Business Street, London, UK"
+                      name="address"
+                      value={profileData.profile?.address || ""}
+                      onChange={(e) => handleInputChange(e, "profile")}
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                     />
                   </div>
@@ -352,15 +515,49 @@ const BusinessSettings = () => {
             <div className="flex justify-end pt-6 border-t border-gray-200 mt-6">
               <button
                 onClick={handleSave}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-black text-white transition hover:bg-primary-dark"
+                disabled={loading}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-black text-white transition hover:bg-primary-dark disabled:opacity-50 shadow-md shadow-primary/20"
               >
-                <Save size={16} />
-                Save Changes
+                {loading ? (
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <Save size={16} />
+                )}
+                {loading ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </motion.div>
         </div>
       </motion.div>
+
+      <Modal
+        open={twoFactorModalOpen}
+        onClose={() => setTwoFactorModalOpen(false)}
+        title=""
+        maxWidthClass="max-w-md"
+        bodyClassName="p-0"
+        footer={null}
+      >
+        {twoFactorMode === "setup" ? (
+          <TwoFactorSetup
+            token={token}
+            onSetupComplete={() => {
+              setTwoFactorEnabled(true);
+              setTwoFactorModalOpen(false);
+            }}
+            onCancel={() => setTwoFactorModalOpen(false)}
+          />
+        ) : (
+          <TwoFactorDisable
+            token={token}
+            onDisableComplete={() => {
+              setTwoFactorEnabled(false);
+              setTwoFactorModalOpen(false);
+            }}
+            onCancel={() => setTwoFactorModalOpen(false)}
+          />
+        )}
+      </Modal>
     </div>
   );
 };

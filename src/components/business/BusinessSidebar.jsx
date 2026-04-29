@@ -14,6 +14,7 @@ import {
   DollarSign,
   Briefcase,
   TrendingUp,
+  Calendar,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../store/slices/authSlice";
@@ -49,8 +50,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
     {
       label: "Sponsorship",
       items: [
-        { to: "/business/licence", label: "Licence Status", icon: FileText },
-        { to: "/business/apply-licence", label: "Apply / Renew Licence", icon: FileText },
+        { to: "/business/licence", label: "Licence Management", icon: FileText },
         { to: "/business/licence-documents", label: "Licence Documents", icon: FileText },
         { to: "/business/cosallocation", label: "CoS Allocation", icon: Package },
         { to: "/business/workers", label: "Sponsored Workers", icon: Users },
@@ -91,6 +91,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
       label: "Communication",
       items: [
         { to: "/business/messages", label: "Messages", icon: MessageSquare },
+        { to: "/business/calendar", label: "Calendar", icon: Calendar },
         {
           to: "/business/notifications",
           label: "Notifications",
@@ -186,8 +187,8 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
                         <item.icon
                           size={17}
                           className={`shrink-0 transition-colors ${isActive
-                              ? "text-white"
-                              : "text-gray-400 group-hover:text-primary"
+                            ? "text-white"
+                            : "text-gray-400 group-hover:text-primary"
                             }`}
                         />
                         <span className="truncate">{item.label}</span>

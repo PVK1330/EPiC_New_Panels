@@ -1,211 +1,148 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiPlus } from "react-icons/fi";
-import { RiLockLine } from "react-icons/ri";
-import Modal from "../../components/Modal";
-import Input from "../../components/Input";
-import Button from "../../components/Button";
-import PermissionsTabBar from "../../components/permissions/PermissionsTabBar";
+import {
+  RiShieldKeyholeLine,
+  RiBarChartBoxLine,
+  RiGridLine,
+  RiShieldLine,
+  RiLockLine,
+  RiTeamLine,
+} from "react-icons/ri";
+
+import { TAB_IDS, TABS } from "../../components/permissions/permissionsData";
+
+import RbacOverviewPanel from "../../components/permissions/SegregationPanel";
 import ModuleMatrixPanel from "../../components/permissions/ModuleMatrixPanel";
 import RoleAssignmentPanel from "../../components/permissions/RoleAssignmentPanel";
-import VisibilityControlsPanel from "../../components/permissions/VisibilityControlsPanel";
-import SegregationPanel from "../../components/permissions/SegregationPanel";
-import {
-  TABS,
-  TAB_IDS,
-  ASSIGNMENT_ROLES,
-  CREATE_ROLE_INHERIT_OPTIONS,
-} from "../../components/permissions/permissionsData";
+import PermissionManagementPanel from "../../components/permissions/PermissionManagementPanel";
+import UserRolePanel from "../../components/permissions/VisibilityControlsPanel";
 
-const LANDING_OPTIONS = [
-  { value: "dashboard", label: "Dashboard" },
-  { value: "cases", label: "Cases" },
-  { value: "documents", label: "Documents" },
-  { value: "finance", label: "Finance" },
-  { value: "reports", label: "Reports" },
-];
-
-const EMPTY_ROLE_FORM = {
-  displayName: "",
-  roleCode: "",
-  description: "",
-  inheritFrom: "",
-  defaultLanding: "dashboard",
-  notes: "",
+const ICON_MAP = {
+  chart: RiBarChartBoxLine,
+  grid: RiGridLine,
+  shield: RiShieldLine,
+  lock: RiLockLine,
+  users: RiTeamLine,
 };
 
 const AdminPermissions = () => {
-  const [activeTab, setActiveTab] = useState(TAB_IDS.matrix);
-  const [roleModalOpen, setRoleModalOpen] = useState(false);
-  const [extraRoles, setExtraRoles] = useState([]);
-  const [form, setForm] = useState(EMPTY_ROLE_FORM);
-  const [errors, setErrors] = useState({});
+  const [activeTab, setActiveTab] = useState(TAB_IDS.overview);
 
-  const roleOptions = useMemo(
-    () => [...ASSIGNMENT_ROLES, ...extraRoles],
-    [extraRoles]
-  );
-
-  const openCreateRole = () => {
-    setForm(EMPTY_ROLE_FORM);
-    setErrors({});
-    setRoleModalOpen(true);
-  };
-
-  const closeCreateRole = () => {
-    setRoleModalOpen(false);
-    setErrors({});
-  };
-
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
-    if (errors[name]) setErrors((er) => ({ ...er, [name]: "" }));
-  };
-
-  const validateRole = () => {
-    const e = {};
-    if (!form.displayName.trim()) e.displayName = "Required";
-    if (!form.roleCode.trim()) e.roleCode = "Required";
-    else if (!/^[a-z0-9_]+$/i.test(form.roleCode.trim())) e.roleCode = "Use letters, numbers, underscores only";
-    return e;
-  };
-
-  const submitCreateRole = () => {
-    const e = validateRole();
-    if (Object.keys(e).length) {
-      setErrors(e);
-      return;
-    }
-    const code = form.roleCode.trim().toLowerCase();
-    setExtraRoles((prev) => [
-      ...prev,
-      {
-        value: code,
-        label: `${form.displayName.trim()} (${code})`,
-      },
-    ]);
-    closeCreateRole();
-  };
-
-  const tabContent = {
-    [TAB_IDS.matrix]: <ModuleMatrixPanel />,
-    [TAB_IDS.roles]: <RoleAssignmentPanel roleOptions={roleOptions} />,
-    [TAB_IDS.visibility]: <VisibilityControlsPanel />,
-    [TAB_IDS.segregation]: <SegregationPanel />,
-  };
+  useEffect(() => {
+    document.title = "Permissions & RBAC | EPiC Admin";
+  }, []);
 
   return (
     <motion.div
-      className="space-y-6 pb-10"
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.35 }}
+      className="min-h-screen"
     >
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <RiLockLine size={32} className="text-primary shrink-0 mt-1" />
-          <div>
-            <h1 className="text-3xl font-black text-secondary tracking-tight">
-              Permissions &amp; Access Control
-            </h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Role-Based Access Control (RBAC) configuration
-            </p>
+      {/* ── Hero Header ───────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl mb-6 bg-secondary">
+        {/* Decorative blobs using primary/secondary */}
+        <div
+          className="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-10 blur-3xl pointer-events-none bg-primary"
+        />
+        <div
+          className="absolute -bottom-10 -left-10 w-64 h-64 rounded-full opacity-10 blur-2xl pointer-events-none bg-primary"
+        />
+        {/* Subtle grid pattern */}
+        <div
+          className="absolute inset-0 opacity-5 pointer-events-none"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(0deg,transparent,transparent 30px,rgba(255,255,255,0.4) 30px,rgba(255,255,255,0.4) 31px),repeating-linear-gradient(90deg,transparent,transparent 30px,rgba(255,255,255,0.4) 30px,rgba(255,255,255,0.4) 31px)",
+          }}
+        />
+
+        <div className="relative px-6 py-8 sm:px-10 sm:py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shrink-0 shadow-lg">
+              <RiShieldKeyholeLine size={26} className="text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-1">
+                Access Control
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                Permissions & RBAC
+              </h1>
+              <p className="text-sm text-white/60 mt-1 max-w-md">
+                Configure roles, module permissions, and control who can access what across the system.
+              </p>
+            </div>
+          </div>
+
+          {/* Quick stats chips using project colors */}
+          <div className="flex flex-wrap gap-2.5 shrink-0">
+            {[
+              { label: "Roles", value: "5" },
+              { label: "Modules", value: "11" },
+              { label: "Users", value: "—" },
+            ].map((chip) => (
+              <div
+                key={chip.label}
+                className="px-4 py-2 rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">{chip.label}</p>
+                <p className="text-base font-black text-white">{chip.value}</p>
+              </div>
+            ))}
           </div>
         </div>
-        <Button
-          type="button"
-          onClick={openCreateRole}
-          className="rounded-xl shadow-sm shrink-0 self-start sm:self-center"
-        >
-          <FiPlus size={14} />
-          Create Role
-        </Button>
       </div>
 
-      <PermissionsTabBar tabs={TABS} activeId={activeTab} onChange={setActiveTab} />
+      {/* ── Navigation Tabs — NOT sticky (avoids overlap issue) ──────────── */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm mb-6 p-1.5">
+        <div className="flex flex-wrap gap-1.5">
+          {TABS.map((tab) => {
+            const active = tab.id === activeTab;
+            const Icon = ICON_MAP[tab.icon] || RiLockLine;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${active
+                    ? "bg-secondary text-white shadow-md"
+                    : "text-gray-500 hover:text-secondary hover:bg-secondary/5"
+                  }`}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="perm-tab-pill"
+                    className="absolute inset-0 rounded-xl bg-secondary"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <Icon size={15} className="relative z-10 shrink-0" />
+                <span className="relative z-10 hidden sm:inline">{tab.label}</span>
+                <span className="relative z-10 sm:hidden">{tab.label.split(" ")[0]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-      <AnimatePresence initial={false}>
+      {/* ── Active Panel ─────────────────────────────────────────────────── */}
+      <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}
-          initial={{ opacity: 0, y: 6 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -4 }}
-          transition={{ duration: 0.15 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.22 }}
         >
-          {tabContent[activeTab]}
+          {activeTab === TAB_IDS.overview && <RbacOverviewPanel />}
+          {activeTab === TAB_IDS.matrix && <ModuleMatrixPanel />}
+          {activeTab === TAB_IDS.roles && <RoleAssignmentPanel />}
+          {activeTab === TAB_IDS.permissions && <PermissionManagementPanel />}
+          {activeTab === TAB_IDS.userRoles && <UserRolePanel />}
         </motion.div>
       </AnimatePresence>
-
-      <Modal
-        open={roleModalOpen}
-        onClose={closeCreateRole}
-        title="Create Role"
-        maxWidthClass="max-w-lg"
-        bodyClassName="px-5 py-5 sm:px-6"
-        footer={
-          <>
-            <Button variant="ghost" type="button" onClick={closeCreateRole} className="rounded-xl">
-              Cancel
-            </Button>
-            <Button type="button" variant="primary" onClick={submitCreateRole} className="rounded-xl">
-              Create Role
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-4">
-          <Input
-            label="Role display name"
-            name="displayName"
-            value={form.displayName}
-            onChange={handleFormChange}
-            placeholder="e.g. Compliance Manager"
-            required
-            error={errors.displayName}
-          />
-          <Input
-            label="Role code (system key)"
-            name="roleCode"
-            value={form.roleCode}
-            onChange={handleFormChange}
-            placeholder="e.g. compliance_manager"
-            required
-            error={errors.roleCode}
-          />
-          <Input
-            label="Description"
-            name="description"
-            value={form.description}
-            onChange={handleFormChange}
-            rows={3}
-            placeholder="What this role is allowed to do"
-          />
-          <Input
-            label="Inherit permissions from"
-            name="inheritFrom"
-            value={form.inheritFrom}
-            onChange={handleFormChange}
-            options={CREATE_ROLE_INHERIT_OPTIONS}
-          />
-          <Input
-            label="Default landing after login"
-            name="defaultLanding"
-            value={form.defaultLanding}
-            onChange={handleFormChange}
-            options={LANDING_OPTIONS}
-          />
-          <Input
-            label="Internal notes"
-            name="notes"
-            value={form.notes}
-            onChange={handleFormChange}
-            rows={2}
-            placeholder="Optional notes for administrators"
-          />
-        </div>
-      </Modal>
     </motion.div>
   );
 };

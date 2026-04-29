@@ -1,16 +1,29 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import {
   FiCalendar, FiDownload, FiSearch, FiChevronLeft, FiChevronRight,
   FiX, FiEye, FiUser, FiCheckCircle, FiAlertCircle, FiClock,
   FiTrendingUp, FiTrendingDown, FiStar, FiFileText, FiArrowLeft,
+<<<<<<< HEAD
   FiFilter, FiLoader,
+=======
+  FiFilter, FiRefreshCw,
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 } from "react-icons/fi";
 import { RiBarChartLine } from "react-icons/ri";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
+import {
+  getReportingSummary,
+  getCaseAnalytics,
+  getWorkloadReport,
+  getFinancialReport,
+  getPerformanceReport,
+} from "../../services/reportingApi";
+import { getVisaTypes } from "../../services/settingsService";
+import { getDepartments } from "../../services/caseWorker";
 
 // ─── API Configuration ───────────────────────────────────────────────────────
 const API_BASE_URL = "http://localhost:5000/api/workload";
@@ -32,6 +45,13 @@ const TABS = [
   { id: "performance", label: "Performance Reports" },
 ];
 
+<<<<<<< HEAD
+=======
+
+
+// ─── Performance Data ─────────────────────────────────────────────────────────
+
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -443,6 +463,35 @@ function DateRangeBadge({ startDate, endDate }) {
   );
 }
 
+// ─── Export Utility ────────────────────────────────────────────────────────────
+
+const exportToCsv = (filename, rows) => {
+  if (!rows || !rows.length) return;
+  const separator = ',';
+  const keys = Object.keys(rows[0]);
+  const csvContent =
+    keys.join(separator) +
+    '\n' +
+    rows.map(row => {
+      return keys.map(k => {
+        let cell = row[k] === null || row[k] === undefined ? '' : row[k];
+        cell = cell instanceof Date ? cell.toLocaleString() : cell.toString().replace(/"/g, '""');
+        if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+        return cell;
+      }).join(separator);
+    }).join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 // ─── Performance Detail Modal ─────────────────────────────────────────────────
 
 function PerformanceDetailModal({ caseworker, onClose }) {
@@ -590,6 +639,34 @@ function PerformanceDetailModal({ caseworker, onClose }) {
             >
               Close
             </Button>
+<<<<<<< HEAD
+=======
+            <Button
+              type="button"
+              variant="primary"
+              className="rounded-xl inline-flex items-center gap-2"
+              onClick={() => {
+                const reportRows = caseworker.recentCases.map(c => ({
+                  CaseworkerID: caseworker.id,
+                  CaseworkerName: caseworker.name,
+                  CaseID: c.id,
+                  Client: c.client,
+                  VisaType: c.type,
+                  Status: c.status,
+                  Date: c.date,
+                  SLA: c.sla
+                }));
+                if (reportRows.length === 0) {
+                  alert("No recent cases available to export for this caseworker.");
+                } else {
+                  exportToCsv(`${caseworker.id}_performance_report.csv`, reportRows);
+                }
+              }}
+            >
+              <FiDownload size={14} />
+              Download Report
+            </Button>
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           </div>
         </motion.div>
       </motion.div>
@@ -599,7 +676,7 @@ function PerformanceDetailModal({ caseworker, onClose }) {
 
 // ─── Performance Tab ──────────────────────────────────────────────────────────
 
-function PerformanceTab({ dateRange }) {
+function PerformanceTab({ dateRange, performanceData, deptOptions }) {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [slaFilter, setSlaFilter] = useState("all");
@@ -611,6 +688,8 @@ function PerformanceTab({ dateRange }) {
   const DEPT_OPTIONS = [
     { value: "all", label: "All departments" },
   ];
+
+  const dataSource = performanceData || [];
 
   const SLA_OPTIONS = [
     { value: "all", label: "All SLA levels" },
@@ -644,7 +723,11 @@ function PerformanceTab({ dateRange }) {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+<<<<<<< HEAD
     return (caseworkers ?? []).filter((cw) => {
+=======
+    return dataSource.filter((cw) => {
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
       const matchSearch =
         !q ||
         (cw.name && cw.name.toLowerCase().includes(q)) ||
@@ -666,6 +749,7 @@ function PerformanceTab({ dateRange }) {
 
 
   // Summary KPIs
+<<<<<<< HEAD
 
   const data = caseworkers || []
   const avgSla = data.length > 0
@@ -722,6 +806,13 @@ function PerformanceTab({ dateRange }) {
       alert("Failed to load performance details");
     }
   };
+=======
+  const avgSla = dataSource.length > 0 ? (
+    dataSource.reduce((s, c) => s + c.slaMetPct, 0) / dataSource.length
+  ).toFixed(1) : "0.0";
+  const totalCases = dataSource.reduce((s, c) => s + c.totalCases, 0);
+  const topPerformer = dataSource.length > 0 ? [...dataSource].sort((a, b) => b.slaMetPct - a.slaMetPct)[0] : null;
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
   return (
     <>
@@ -744,7 +835,11 @@ function PerformanceTab({ dateRange }) {
           <div className="rounded-xl border border-blue-100 p-4 bg-blue-50">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Cases (All Staff)</p>
             <p className="text-3xl font-black text-blue-600">{totalCases.toLocaleString()}</p>
+<<<<<<< HEAD
             <p className="text-xs text-gray-500 mt-1">across {caseworkers?.length} caseworkers</p>
+=======
+            <p className="text-xs text-gray-500 mt-1">across {dataSource.length} caseworkers</p>
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           </div>
           <div className="rounded-xl border border-green-100 p-4 bg-green-50">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Avg Performance</p>
@@ -754,12 +849,26 @@ function PerformanceTab({ dateRange }) {
           <div className="rounded-xl border border-amber-100 p-4 bg-amber-50">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Top Performer</p>
             {topPerformer ? (
+<<<<<<< HEAD
               <div>
                 <p className="text-lg font-black text-amber-700">{topPerformer.name || "N/A"}</p>
                 <p className="text-xs text-gray-500 mt-1">{(topPerformer.workload_percentage || 0).toFixed(1)}% · {topPerformer.active_cases || 0} active</p>
               </div>
             ) : (
               <p className="text-sm text-gray-500">No data available</p>
+=======
+              <>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0 ${topPerformer.avatarBg}`}>
+                    {topPerformer.initials}
+                  </div>
+                  <p className="text-lg font-black text-amber-700">{topPerformer.name}</p>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{topPerformer.slaMetPct}% SLA · {topPerformer.totalCases} cases</p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500 mt-2">No data available</p>
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
             )}
           </div>
         </div>
@@ -788,6 +897,20 @@ function PerformanceTab({ dateRange }) {
               </div>
             </div>
 
+<<<<<<< HEAD
+=======
+            {/* Department filter */}
+            <div className="w-full sm:w-auto sm:min-w-[200px]">
+              <Input
+                label="Department"
+                name="deptFilter"
+                value={deptFilter}
+                onChange={(e) => setDeptFilter(e.target.value)}
+                options={deptOptions}
+              />
+            </div>
+
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
             {/* SLA filter */}
             <div className="w-full sm:w-auto sm:min-w-[200px]">
               <Input
@@ -818,9 +941,42 @@ function PerformanceTab({ dateRange }) {
             <div>
               <h2 className="text-sm font-black text-secondary">Caseworker Performance Report</h2>
               <p className="text-xs text-gray-500 mt-0.5">
+<<<<<<< HEAD
                 Showing {filtered.length} of {caseworkers?.length} caseworkers
               </p>
             </div>
+=======
+                Showing {filtered.length} of {dataSource.length} caseworkers
+                {dateRange.start && dateRange.end
+                  ? ` · ${formatDate(dateRange.start)} – ${formatDate(dateRange.end)}`
+                  : ""}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="primary"
+              className="rounded-xl inline-flex items-center gap-2 self-start sm:self-auto"
+              onClick={() => {
+                const rows = filtered.map(cw => ({
+                  ID: cw.id,
+                  Name: cw.name,
+                  Email: cw.email,
+                  Department: cw.department,
+                  ActiveCases: cw.activeCases,
+                  CompletedCases: cw.completedCases,
+                  TotalCases: cw.totalCases,
+                  SLAMetPct: `${cw.slaMetPct}%`,
+                  AvgCompletionDays: cw.avgCompletionDays,
+                  ClientSatisfaction: cw.clientSatisfaction,
+                  Escalations: cw.escalations
+                }));
+                exportToCsv('team_performance_report.csv', rows);
+              }}
+            >
+              <FiDownload size={14} />
+              Export All
+            </Button>
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           </div>
 
           {loading ? (
@@ -852,6 +1008,7 @@ function PerformanceTab({ dateRange }) {
                           <span>No caseworkers match your filters.</span>
                         </div>
                       </td>
+<<<<<<< HEAD
                     </tr>
                   ) : (
                     filtered.map((cw) => (
@@ -917,6 +1074,90 @@ function PerformanceTab({ dateRange }) {
               </table>
             </div>
           )}
+=======
+                      {/* ID */}
+                      <td className="px-4 py-3.5">
+                        <span className="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">{cw.id}</span>
+                      </td>
+                      {/* Dept */}
+                      <td className="px-4 py-3.5">
+                        <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">{cw.department}</span>
+                      </td>
+                      {/* Active */}
+                      <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.activeCases}</td>
+                      {/* Completed */}
+                      <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.completedCases}</td>
+                      {/* SLA */}
+                      <td className="px-4 py-3.5">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getSlaColor(cw.slaMetPct)}`}>
+                          {cw.slaMetPct}%
+                        </span>
+                      </td>
+                      {/* Avg Days */}
+                      <td className="px-4 py-3.5 text-sm font-mono text-gray-700 tabular-nums">{cw.avgCompletionDays}d</td>
+                      {/* Satisfaction */}
+                      <td className="px-4 py-3.5">
+                        <StarRating value={cw.clientSatisfaction} />
+                      </td>
+                      {/* Escalations */}
+                      <td className="px-4 py-3.5">
+                        <span className={`text-sm font-bold tabular-nums ${cw.escalations <= 3 ? "text-green-600" : cw.escalations <= 8 ? "text-amber-600" : "text-red-600"}`}>
+                          {cw.escalations}
+                        </span>
+                      </td>
+                      {/* Trend sparkline */}
+                      <td className="px-4 py-3.5">
+                        <Sparkline
+                          data={cw.monthlyTrend}
+                          color={
+                            cw.monthlyTrend[11] > cw.monthlyTrend[0] ? "#22c55e" : "#ef4444"
+                          }
+                        />
+                      </td>
+                      {/* Actions */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCW(cw)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-secondary/30 text-secondary bg-secondary/5 hover:bg-secondary/10 transition-colors whitespace-nowrap"
+                          >
+                            <FiEye size={12} />
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const reportRows = cw.recentCases.map(c => ({
+                                CaseworkerID: cw.id,
+                                CaseworkerName: cw.name,
+                                CaseID: c.id,
+                                Client: c.client,
+                                VisaType: c.type,
+                                Status: c.status,
+                                Date: c.date,
+                                SLA: c.sla
+                              }));
+                              if (reportRows.length === 0) {
+                                alert("No recent cases available to export for this caseworker.");
+                              } else {
+                                exportToCsv(`${cw.id}_performance_report.csv`, reportRows);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors whitespace-nowrap"
+                          >
+                            <FiDownload size={12} />
+                            Report
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
           {/* Table footer */}
           {filtered.length > 0 && (
@@ -939,6 +1180,7 @@ export default function AdminReports() {
   const [activeTab, setActiveTab] = useState("cases");
   const [dateRange, setDateRange] = useState({ start: null, end: null });
 
+<<<<<<< HEAD
   // Case Type Data
   const [caseTypes, setCaseTypes] = useState([]);
   const [caseTypesLoading, setCaseTypesLoading] = useState(false);
@@ -1056,10 +1298,77 @@ export default function AdminReports() {
     fetchCaseTypeReport();
   }, []);
 
+=======
+  // ── API Data State ────────────────────────────────────────────────────────
+  const [apiData, setApiData] = useState({
+    summary:     null,
+    cases:       null,
+    workload:    null,
+    financial:   null,
+    performance: null,
+  });
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError,   setApiError]   = useState(null);
+  const [deptOptions, setDeptOptions] = useState([{ value: "all", label: "All departments" }]);
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const dRes = await getDepartments();
+        if (dRes.data?.departments) {
+          setDeptOptions([
+            { value: "all", label: "All departments" },
+            ...dRes.data.departments.map(d => ({ value: d, label: d }))
+          ]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch departments", err);
+      }
+    };
+    fetchOptions();
+  }, []);
+
+  const buildParams = useCallback(() => {
+    const params = {};
+    if (dateRange.start) params.startDate = dateRange.start.toISOString().split('T')[0];
+    if (dateRange.end)   params.endDate   = dateRange.end.toISOString().split('T')[0];
+    return params;
+  }, [dateRange]);
+
+  const fetchReportData = useCallback(async () => {
+    setApiLoading(true);
+    setApiError(null);
+    const params = buildParams();
+    try {
+      const [summaryRes, casesRes, workloadRes, financialRes, performanceRes] = await Promise.allSettled([
+        getReportingSummary(),
+        getCaseAnalytics(params),
+        getWorkloadReport(params),
+        getFinancialReport(params),
+        getPerformanceReport(params),
+      ]);
+      setApiData({
+        summary:     summaryRes.status     === 'fulfilled' ? summaryRes.value.data?.data     : null,
+        cases:       casesRes.status       === 'fulfilled' ? casesRes.value.data?.data       : null,
+        workload:    workloadRes.status     === 'fulfilled' ? workloadRes.value.data?.data     : null,
+        financial:   financialRes.status    === 'fulfilled' ? financialRes.value.data?.data    : null,
+        performance: performanceRes.status  === 'fulfilled' ? performanceRes.value.data?.data  : null,
+      });
+    } catch {
+      setApiError('Failed to load report data. Showing available data.');
+    } finally {
+      setApiLoading(false);
+    }
+  }, [buildParams]);
+
+  useEffect(() => { fetchReportData(); }, [fetchReportData]);
+
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
   function handleDateRangeChange({ start, end }) {
     setDateRange({ start, end });
   }
 
+<<<<<<< HEAD
   // Handle export combined PDF
   const handleExportPDF = async () => {
     try {
@@ -1068,6 +1377,82 @@ export default function AdminReports() {
         alert("Please select a date range before exporting");
         return;
       }
+=======
+  // ── Derived values from API (with fallback to mock) ───────────────────────
+  const liveKpis = apiData.cases?.summary;
+  const liveCaseKpis = [
+    {
+      id: 'opened',
+      label: 'Cases This Month',
+      value: liveKpis?.thisMonth ?? 0,
+      sub: liveKpis?.momChangePct != null
+        ? `${liveKpis.momChangePct >= 0 ? '↑' : '↓'} ${Math.abs(liveKpis.momChangePct)}% vs last month`
+        : '0% change',
+      bg: 'bg-blue-50', border: 'border-blue-100', valueClass: 'text-blue-600',
+    },
+    {
+      id: 'total',
+      label: 'Total Cases',
+      value: liveKpis?.totalCases ?? 0,
+      sub: `Last month: ${liveKpis?.lastMonth ?? '0'}`,
+      bg: 'bg-green-50', border: 'border-green-100', valueClass: 'text-green-600',
+    },
+    {
+      id: 'sla',
+      label: 'SLA Met Rate',
+      value: liveKpis?.slaMetPct != null ? `${liveKpis.slaMetPct}%` : "0%",
+      sub: 'Based on SLA-tracked cases',
+      bg: 'bg-amber-50', border: 'border-amber-100', valueClass: 'text-amber-700',
+    },
+  ];
+
+
+  // Live visa type breakdown (replaces CASES_BY_VISA when available)
+  const liveCasesByVisa = apiData.cases?.byVisaType?.length
+    ? apiData.cases.byVisaType.map((v, i) => ({
+        id: String(i),
+        name: v.name,
+        cases: v.count,
+        pct: apiData.cases.summary?.totalCases > 0
+          ? Math.round((v.count / apiData.cases.summary.totalCases) * 100)
+          : 0,
+        bar: ['bg-blue-500','bg-purple-500','bg-green-500','bg-amber-400','bg-red-500'][i % 5],
+      }))
+    : [];
+
+
+  const filteredVisaBars = useMemo(() => {
+    if (visaFilter === "all") return liveCasesByVisa;
+    return liveCasesByVisa.filter((v) => v.id === visaFilter || v.name === visaFilter);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visaFilter, apiData.cases]);
+
+  const visaFilterOptions = useMemo(() => [
+    { value: 'all', label: 'All types' },
+    ...liveCasesByVisa.map(v => ({ value: v.id, label: v.name })),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [apiData.cases]);
+
+  // Live workload (replaces WORKLOAD_ROWS when available)
+  const liveWorkload = apiData.workload?.caseworkers?.length
+    ? apiData.workload.caseworkers.map((cw, i) => ({
+        id: String(cw.id),
+        name: cw.name,
+        initials: cw.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
+        avatarBg: ['bg-blue-500','bg-green-500','bg-red-500','bg-purple-500','bg-amber-500'][i % 5],
+        active: cw.activeCases,
+        completed: cw.completedCases,
+        sla: cw.slaMetCount != null ? `${cw.slaMetCount}/${cw.slaTotalCount}` : '—',
+        slaPct: cw.slaMetPct != null ? `${cw.slaMetPct}%` : '—',
+        slaChip: cw.slaMetPct >= 90
+          ? 'bg-green-100 text-green-700'
+          : cw.slaMetPct >= 75
+          ? 'bg-amber-100 text-amber-800'
+          : 'bg-red-100 text-red-700',
+      }))
+    : [];
+
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
       // Format dates as YYYY-MM-DD
       const startDate = dateRange.start.toISOString().split('T')[0];
@@ -1100,13 +1485,27 @@ export default function AdminReports() {
   // Filter workload data
   const filteredWorkload = useMemo(() => {
     const q = workloadSearch.trim().toLowerCase();
+<<<<<<< HEAD
     if (!q) return workload;
     return workload.filter((r) => (r.caseworker_name || "").toLowerCase().includes(q));
   }, [workloadSearch, workload]);
+=======
+    if (!q) return liveWorkload;
+    return liveWorkload.filter((r) => r.name.toLowerCase().includes(q));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workloadSearch, apiData.workload]);
+
+  // Live financial (replaces FINANCE_BY_VISA when available)
+  const liveFinanceSummary = apiData.financial?.summary;
+  const liveFinanceByStatus = apiData.financial?.statusBreakdown || [];
+  const liveFinanceByVisa = apiData.financial?.byVisaType || [];
+  const liveFinanceBySponsor = apiData.financial?.bySponsor || [];
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
   // Filter finance data
   const filteredFinanceVisa = useMemo(() => {
     const q = financeSearch.trim().toLowerCase();
+<<<<<<< HEAD
     if (!q) return revenueByVisa;
     return revenueByVisa.filter((r) => (r.visa_type || "").toLowerCase().includes(q));
   }, [financeSearch, revenueByVisa]);
@@ -1116,14 +1515,44 @@ export default function AdminReports() {
     if (!q) return revenueBySponsor;
     return revenueBySponsor.filter((r) => (r.sponsor_name || "").toLowerCase().includes(q));
   }, [financeSearch, revenueBySponsor]);
+=======
+    if (!q) return liveFinanceByVisa;
+    return liveFinanceByVisa.filter((r) => r.name.toLowerCase().includes(q));
+  }, [financeSearch, liveFinanceByVisa]);
+
+  const filteredFinanceSponsor = useMemo(() => {
+    const q = financeSearch.trim().toLowerCase();
+    if (!q) return liveFinanceBySponsor;
+    return liveFinanceBySponsor.filter((r) => r.name.toLowerCase().includes(q));
+  }, [financeSearch, liveFinanceBySponsor]);
+
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
   return (
     <motion.div
-      className="space-y-6 pb-10"
+      className="relative space-y-6 pb-10"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
+      {/* Loading overlay */}
+      {apiLoading && (
+        <div className="absolute inset-0 z-30 bg-white/60 backdrop-blur-[1px] flex items-start justify-center pt-24 rounded-xl">
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-500 bg-white px-4 py-2.5 rounded-xl shadow-md border border-gray-100">
+            <FiRefreshCw className="animate-spin" size={14} />
+            Refreshing data…
+          </div>
+        </div>
+      )}
+
+      {/* Error banner */}
+      {apiError && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-semibold">
+          <FiAlertCircle size={15} />
+          {apiError}
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="flex items-start gap-3">
@@ -1142,6 +1571,15 @@ export default function AdminReports() {
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <DateRangeBadge startDate={dateRange.start} endDate={dateRange.end} />
+          <button
+            type="button"
+            onClick={fetchReportData}
+            disabled={apiLoading}
+            className="p-2 rounded-xl border border-gray-200 bg-white text-gray-400 hover:text-primary hover:border-primary/30 transition-colors"
+            title="Refresh data"
+          >
+            <FiRefreshCw size={15} className={apiLoading ? 'animate-spin' : ''} />
+          </button>
           <Button
             type="button"
             variant="primary"
@@ -1164,6 +1602,21 @@ export default function AdminReports() {
             onChange={handleDateRangeChange}
           />
 
+<<<<<<< HEAD
+=======
+          {activeTab === "cases" && (
+            <div className="w-full sm:w-auto sm:min-w-[220px]">
+              <Input
+                label="Visa type"
+                name="visaFilter"
+                value={visaFilter}
+                onChange={(e) => setVisaFilter(e.target.value)}
+                options={visaFilterOptions}
+              />
+            </div>
+          )}
+
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           {activeTab === "workload" && (
             <div className="w-full sm:flex-1 sm:min-w-[240px] max-w-md">
               <label
@@ -1226,6 +1679,7 @@ export default function AdminReports() {
           transition={{ duration: 0.2 }}
           className="space-y-6"
         >
+<<<<<<< HEAD
           {caseTypesLoading ? (
             <div className="text-center py-12">
               <FiLoader className="animate-spin inline-block text-secondary mb-2" size={28} />
@@ -1271,6 +1725,45 @@ export default function AdminReports() {
               )}
             </div>
           )}
+=======
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {liveCaseKpis.map((k) => (
+              <div key={k.id} className={`rounded-xl border p-4 ${k.bg} ${k.border}`}>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">{k.label}</p>
+                <p className={`text-3xl font-black ${k.valueClass}`}>{k.value}</p>
+                <p className="text-xs text-gray-500 mt-1">{k.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
+            <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
+              Cases by Visa Type
+            </h2>
+            {filteredVisaBars.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">No visa types match this filter.</p>
+            ) : (
+              <div className="space-y-4">
+                {filteredVisaBars.map((row) => (
+                  <div key={row.id}>
+                    <div className="flex justify-between text-xs sm:text-sm mb-1.5">
+                      <span className="font-semibold text-gray-700">{row.name}</span>
+                      <span className="font-mono text-gray-500">{row.cases} cases ({row.pct}%)</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <motion.div
+                        className={`h-full rounded-full ${row.bar}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${row.pct}%` }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
         </motion.div>
       )}
 
@@ -1358,11 +1851,40 @@ export default function AdminReports() {
           transition={{ duration: 0.2 }}
           className="grid grid-cols-1 xl:grid-cols-2 gap-6"
         >
+<<<<<<< HEAD
           {/* Revenue by Visa Type */}
+=======
+          {/* Live Financial KPIs */}
+          {liveFinanceSummary && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 xl:col-span-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="rounded-xl bg-green-50 border border-green-100 p-4">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Revenue</p>
+                  <p className="text-2xl font-black text-green-600">£{liveFinanceSummary.totalRevenue.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">{liveFinanceSummary.totalPaid} payments received</p>
+                </div>
+                <div className="rounded-xl bg-amber-50 border border-amber-100 p-4">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Outstanding</p>
+                  <p className="text-2xl font-black text-amber-600">£{liveFinanceSummary.totalOutstanding.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">Pending &amp; overdue payments</p>
+                </div>
+                {liveFinanceByStatus.map(s => (
+                  <div key={s.status} className="rounded-xl bg-gray-50 border border-gray-100 p-4">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1 capitalize">{s.status}</p>
+                    <p className="text-2xl font-black text-secondary">{s.count}</p>
+                    <p className="text-xs text-gray-500 mt-1">£{s.total.toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
             <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
               Revenue by Visa Type
             </h2>
+<<<<<<< HEAD
             {financeLoading ? (
               <div className="text-center py-8">
                 <FiLoader className="animate-spin inline-block text-secondary" size={20} />
@@ -1382,6 +1904,16 @@ export default function AdminReports() {
                     <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">
                       £{(row.total_amount || 0).toLocaleString()}
                     </span>
+=======
+            {filteredFinanceVisa.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">No records match your search.</p>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {filteredFinanceVisa.map((row, i) => (
+                  <div key={i} className="flex justify-between items-center text-sm gap-4">
+                    <span className="text-gray-700 font-medium">{row.name}</span>
+                    <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">£{row.total.toLocaleString()}</span>
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
                   </div>
                 ))}
               </div>
@@ -1406,23 +1938,42 @@ export default function AdminReports() {
               <p className="text-sm text-gray-400 text-center py-8">No sponsor revenue data available.</p>
             ) : (
               <div className="flex flex-col gap-2.5">
+<<<<<<< HEAD
                 {filteredFinanceSponsor.map((row) => (
                   <div key={row.sponsor_name} className="flex justify-between items-center text-sm gap-4">
                     <span className="text-gray-700 font-medium">{row.sponsor_name || "Unknown"}</span>
                     <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">
                       £{(row.total_amount || 0).toLocaleString()}
                     </span>
+=======
+                {filteredFinanceSponsor.map((row, i) => (
+                  <div key={i} className="flex justify-between items-center text-sm gap-4">
+                    <span className="text-gray-700 font-medium">{row.name}</span>
+                    <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">£{row.total.toLocaleString()}</span>
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
                   </div>
                 ))}
               </div>
             )}
+<<<<<<< HEAD
+=======
+            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center gap-4">
+              <span className="text-sm text-gray-500">Outstanding Payments</span>
+              <span className="font-mono font-bold text-red-600 tabular-nums">£{(apiData.financial?.summary?.totalOutstanding || 0).toLocaleString()}</span>
+            </div>
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           </div>
+
         </motion.div>
       )}
 
       {/* ── Performance Tab ── */}
       {activeTab === "performance" && (
-        <PerformanceTab dateRange={dateRange} />
+        <PerformanceTab 
+          dateRange={dateRange} 
+          performanceData={apiData.performance} 
+          deptOptions={deptOptions}
+        />
       )}
     </motion.div>
   );

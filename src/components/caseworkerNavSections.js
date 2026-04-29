@@ -15,10 +15,11 @@ import {
   CalendarClock,
   Files,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 
 /** Caseworker portal sidebar — sectioned nav aligned with portal workflow */
-export const caseworkerNavSections = [
+export const caseworkerNavSections = (taskCount = 0) => [
   {
     title: "Dashboard",
     standalone: true,
@@ -39,15 +40,10 @@ export const caseworkerNavSections = [
     title: "Workflow",
     items: [
       {
-        to: "/caseworker/pipeline",
-        label: "Pipeline view",
-        icon: BarChart3,
-      },
-      {
         to: "/caseworker/tasks",
         label: "Tasks",
         icon: ListChecks,
-        badge: 5,
+        badge: taskCount > 0 ? taskCount : null,
       },
       {
         to: "/caseworker/calendar",
@@ -84,6 +80,11 @@ export const caseworkerNavSections = [
         to: "/caseworker/people/sponsors",
         label: "Sponsor profiles",
         icon: Users,
+      },
+      {
+        to: "/caseworker/licence-reviews",
+        label: "Licence reviews",
+        icon: ShieldCheck,
       },
     ],
   },

@@ -3,12 +3,31 @@ import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../store/slices/authSlice";
 import { LogOut, HelpCircle, X } from "lucide-react";
 import eliteLogo from "../assets/elitepic_logo.png";
-import { caseworkerNavSections as navSections } from "./caseworkerNavSections";
+import { caseworkerNavSections } from "./caseworkerNavSections";
+import { useState, useEffect } from "react";
+import api from "../services/api";
 
 const CaseworkerSidebar = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
+  const [taskCount, setTaskCount] = useState(0);
+
+  // Fetch task count
+  useEffect(() => {
+    const fetchTaskCount = async () => {
+      try {
+        const response = await api.get("/api/tasks/assign?filter=overdue&limit=1");
+        if (response.data.status === "success") {
+          setTaskCount(response.data.data.pagination?.total || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching task count:", error);
+      }
+    };
+
+    fetchTaskCount();
+  }, []);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -65,7 +84,7 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
 
         <nav className="flex-1 overflow-y-auto no-scrollbar py-3 min-h-0">
           <div className="px-4 py-3 overflow-y-auto">
-            {navSections.map((section, sectionIdx) => (
+            {caseworkerNavSections(taskCount).map((section, sectionIdx) => (
               <div key={`${section.title}-${sectionIdx}`} className="mb-1">
                 {!section.standalone && section.title && (
                   <p className="text-[9.5px] font-black uppercase tracking-[0.18em] text-gray-400 px-3 pt-3 pb-1.5">
@@ -81,10 +100,9 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
                       onClick={onClose}
                       end={item.to === "/caseworker/dashboard"}
                       className={({ isActive }) =>
-                        `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 relative ${
-                          isActive
-                            ? "bg-primary text-white shadow-lg shadow-primary/20"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                        `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 relative ${isActive
+                          ? "bg-primary text-white shadow-lg shadow-primary/20"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-primary"
                         }`
                       }
                     >
@@ -92,20 +110,18 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
                         <>
                           <item.icon
                             size={17}
-                            className={`shrink-0 transition-colors ${
-                              isActive
+                            className={`shrink-0 transition-colors ${isActive
                                 ? "text-white"
                                 : "text-gray-400 group-hover:text-primary"
-                            }`}
+                              }`}
                           />
                           <span className="truncate">{item.label}</span>
                           {item.badge != null && (
                             <span
-                              className={`ml-auto shrink-0 min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-black ${
-                                isActive
+                              className={`ml-auto shrink-0 min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-black ${isActive
                                   ? "bg-white/25 text-white"
                                   : "bg-red-500 text-white"
-                              }`}
+                                }`}
                             >
                               {item.badge}
                             </span>
@@ -125,21 +141,32 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
 
         <div className="mt-auto border-t border-gray-100 shrink-0 p-6">
           <div className="flex items-center gap-3 p-3.5 rounded-3xl bg-gray-100 border border-gray-200 transition-all hover:bg-white hover:shadow-md">
-            <div className="w-11 h-11 bg-white shadow-sm border border-gray-200 text-primary rounded-xl flex items-center justify-center font-black text-sm shrink-0">
-              {user?.name?.charAt(0) || "U"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-gray-900 truncate">
-                {user?.name || "User"}
-              </p>
-              <p className="text-[10px] font-bold text-gray-600 truncate uppercase tracking-wider">
-                Profile
-              </p>
+            <div 
+              className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+              onClick={() => {
+                navigate("/caseworker/my-account");
+                onClose();
+              }}
+            >
+              <div className="w-11 h-11 bg-white shadow-sm border border-gray-200 text-primary rounded-xl flex items-center justify-center font-black text-sm shrink-0">
+                {user?.name?.charAt(0) || "U"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black text-gray-900 truncate">
+                  {user?.name || "User"}
+                </p>
+                <p className="text-[10px] font-bold text-gray-600 truncate uppercase tracking-wider">
+                  Profile
+                </p>
+              </div>
             </div>
             <button
               type="button"
-              onClick={handleLogout}
-              className="p-2 text-gray-600 hover:text-primary hover:bg-primary/10 rounded-xl transition-all shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLogout();
+              }}
+              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shrink-0"
               title="Sign out"
             >
               <LogOut size={18} />

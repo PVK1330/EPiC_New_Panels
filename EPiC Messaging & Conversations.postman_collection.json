@@ -1,0 +1,265 @@
+{
+  "info": {
+    "_postman_id": "4590f5ee-a9b0-4a3a-92af-7b22db450061",
+    "name": "EPiC Messaging & Conversations",
+    "description": "Thread-based messaging with role security and optional case context.\n\n**Response envelope (typical)**\n```json\n{\n  \"status\": \"success\",\n  \"message\": \"…\",\n  \"data\": { … }\n}\n```\n\n**GET /api/messages/conversations** — `data` is an object:\n- `data.count` — number of conversations\n- `data.conversations` — array of `{ id, user, case, lastMessage }`\n  - `lastMessage` may be `{ content, createdAt }` (not always nested `content.content`)\n\n**GET /api/messages/users** — `data` is an object:\n- `data.count`\n- `data.users` — array of chat-eligible users\n\n**Frontend** reads `data.conversations` / `data.users` (not a bare array on `data`).\n\n**Variables:** run **1. Login** first; the test script saves `jwt_token`. Adjust `receiver_user_id` / `thread_user_id` to match your inbox partner.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "39052936",
+    "_collection_link": "https://go.postman.co/collection/39052936-4590f5ee-a9b0-4a3a-92af-7b22db450061?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "1. Login (Get Token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+              "try {",
+              "  const json = pm.response.json();",
+              "  const d = json.data !== undefined && json.data !== null ? json.data : json;",
+              "  const token = d.token || json.token;",
+              "  if (token) {",
+              "    pm.collectionVariables.set('jwt_token', token);",
+              "    console.log('Collection variable jwt_token updated');",
+              "  } else {",
+              "    console.warn('No token on expected paths (data.token / token). Keys:', Object.keys(json));",
+              "  }",
+              "} catch (e) { console.error('Login test script:', e); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"admin@elitepic.com\",\n    \"password\": \"your_password\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Panel expects `response.data` to contain `user` and `token` (same shape this script reads). Change email/password to a real user."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Available Chat Users",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Cache-Control", "value": "no-store" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/messages/users",
+          "host": ["{{base_url}}"],
+          "path": ["api", "messages", "users"]
+        },
+        "description": "Returns `data.users` (array) and `data.count`."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Send Message (Start/Continue)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"receiverId\": {{receiver_user_id}},\n    \"content\": \"Hello! This is a test message to start a conversation.\",\n    \"messageType\": \"text\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/messages",
+          "host": ["{{base_url}}"],
+          "path": ["api", "messages"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. Send Message (About a Case)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"receiverId\": {{receiver_user_id}},\n    \"content\": \"I have a question about this case.\",\n    \"caseId\": {{case_id}},\n    \"messageType\": \"text\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/messages",
+          "host": ["{{base_url}}"],
+          "path": ["api", "messages"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. Get My Conversations (Inbox)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Cache-Control", "value": "no-store" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/messages/conversations",
+          "host": ["{{base_url}}"],
+          "path": ["api", "messages", "conversations"]
+        },
+        "description": "Returns `data.conversations` (array) and `data.count`. Each item includes `user`, optional `case`, and `lastMessage`."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Load Full Message Thread",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Cache-Control", "value": "no-store" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/messages/{{thread_user_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "messages", "{{thread_user_id}}"],
+          "query": [
+            {
+              "key": "caseId",
+              "value": "{{case_id}}",
+              "description": "Enable for case-scoped threads",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "`thread_user_id` = the other participant’s user id (same as `user.id` on a conversation row). Enable `caseId` query param when the thread is case-scoped."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Mark Messages as Read",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"senderId\": {{thread_user_id}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/messages/mark-read",
+          "host": ["{{base_url}}"],
+          "path": ["api", "messages", "mark-read"]
+        },
+        "description": "`senderId` is the other user whose inbound messages you are marking read (same id as thread partner)."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "jwt_token",
+      "value": ""
+    },
+    {
+      "key": "receiver_user_id",
+      "value": "7"
+    },
+    {
+      "key": "thread_user_id",
+      "value": "7"
+    },
+    {
+      "key": "case_id",
+      "value": "1"
+    }
+  ]
+}

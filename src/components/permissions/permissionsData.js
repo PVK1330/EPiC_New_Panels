@@ -1,144 +1,53 @@
 export const TAB_IDS = {
-  matrix: "matrix",
-  roles: "roles",
-  visibility: "visibility",
-  segregation: "segregation",
+  overview:    "overview",
+  matrix:      "matrix",
+  roles:       "roles",
+  permissions: "permissions",
+  userRoles:   "userRoles",
 };
 
 export const TABS = [
-  { id: TAB_IDS.matrix, label: "Module Matrix" },
-  { id: TAB_IDS.roles, label: "Role Assignment" },
-  { id: TAB_IDS.visibility, label: "Visibility Controls" },
-  { id: TAB_IDS.segregation, label: "Int / Ext Segregation" },
-];
-
-export const MODULE_MATRIX_ROWS = [
-  {
-    module: "Dashboard",
-    admin: "full",
-    caseworker: "full",
-    client: "limited",
-    sponsor: "limited",
-    read: true,
-    write: false,
-    approve: false,
-    delete: false,
-  },
-  {
-    module: "Case Management",
-    admin: "full",
-    caseworker: "full",
-    client: "none",
-    sponsor: "none",
-    read: true,
-    write: true,
-    approve: true,
-    delete: false,
-  },
-  {
-    module: "Finance",
-    admin: "full",
-    caseworker: "none",
-    client: "none",
-    sponsor: "none",
-    read: true,
-    write: false,
-    approve: true,
-    delete: false,
-  },
-  {
-    module: "User Management",
-    admin: "limited",
-    caseworker: "none",
-    client: "none",
-    sponsor: "none",
-    read: true,
-    write: true,
-    approve: false,
-    delete: true,
-  },
-  {
-    module: "Reports",
-    admin: "full",
-    caseworker: "limited",
-    client: "none",
-    sponsor: "none",
-    read: true,
-    write: false,
-    approve: false,
-    delete: false,
-  },
-  {
-    module: "Documents",
-    admin: "full",
-    caseworker: "full",
-    client: "limited",
-    sponsor: "limited",
-    read: true,
-    write: true,
-    approve: true,
-    delete: false,
-  },
-  {
-    module: "Audit Logs",
-    admin: "limited",
-    caseworker: "none",
-    client: "none",
-    sponsor: "none",
-    read: true,
-    write: false,
-    approve: false,
-    delete: false,
-  },
-  {
-    module: "Settings",
-    admin: "none",
-    caseworker: "none",
-    client: "none",
-    sponsor: "none",
-    read: true,
-    write: true,
-    approve: false,
-    delete: true,
-  },
-];
-
-export const ASSIGNMENT_USERS = [
-  { value: "u1", label: "Alice Patel — Caseworker" },
-  { value: "u2", label: "Marcus Green — Caseworker" },
-  { value: "u3", label: "Mohamed Rashid — Admin" },
-];
-
-export const ASSIGNMENT_ROLES = [
-  { value: "Admin", label: "Admin" },
-  { value: "Caseworker", label: "Caseworker" },
-  { value: "Client", label: "Client" },
-  { value: "Sponsor", label: "Sponsor" },
-];
-
-export const ACCESS_SCOPE_OPTIONS = [
-  { value: "own", label: "Own Cases Only" },
-  { value: "team", label: "Team Cases" },
-  { value: "all", label: "All Cases" },
-];
-
-export const MODULE_OPTIONS_MULTI = [
-  { value: "cases", label: "Cases" },
-  { value: "documents", label: "Documents" },
-  { value: "finance", label: "Finance" },
-  { value: "reports", label: "Reports" },
+  { id: TAB_IDS.overview,    label: "RBAC Overview",    icon: "chart" },
+  { id: TAB_IDS.matrix,      label: "Permission Matrix", icon: "grid" },
+  { id: TAB_IDS.roles,       label: "Role Management",  icon: "shield" },
+  { id: TAB_IDS.permissions, label: "Permissions",      icon: "lock" },
+  { id: TAB_IDS.userRoles,   label: "User Roles",       icon: "users" },
 ];
 
 export const CASE_VISIBILITY_OPTIONS = [
-  { value: "own", label: "Own Cases" },
+  { value: "own",  label: "Own Cases" },
   { value: "team", label: "Team Cases" },
-  { value: "all", label: "All Cases" },
+  { value: "all",  label: "All Cases" },
 ];
 
 export const CREATE_ROLE_INHERIT_OPTIONS = [
-  { value: "", label: "No inheritance (blank role)" },
-  { value: "admin", label: "Admin" },
+  { value: "",           label: "No inheritance (blank role)" },
+  { value: "admin",      label: "Admin" },
   { value: "caseworker", label: "Caseworker" },
-  { value: "client", label: "Client" },
-  { value: "sponsor", label: "Sponsor" },
+  { value: "client",     label: "Client" },
+  { value: "sponsor",    label: "Sponsor" },
+];
+
+export const MODULE_ACTION_OPTIONS = [
+  { value: "read",   label: "Read" },
+  { value: "write",  label: "Write" },
+  { value: "update", label: "Update" },
+  { value: "delete", label: "Delete" },
+  { value: "manage", label: "Manage" },
+  { value: "export", label: "Export" },
+  { value: "approve","label": "Approve" },
+];
+
+export const DEFAULT_MODULES = [
+  "Dashboard",
+  "Cases",
+  "Documents",
+  "Finance",
+  "Reports",
+  "Users",
+  "Settings",
+  "Audit",
+  "Escalations",
+  "Notifications",
+  "Permissions",
 ];

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   BarChart3,
@@ -6,7 +6,9 @@ import {
   CircleCheck,
   ClipboardList,
   Check,
+  Loader2,
 } from "lucide-react";
+import useCandidate from "../../hooks/useCandidate";
 
 const TABS = [
   { id: "status", label: "Application status", icon: BarChart3 },
@@ -14,142 +16,24 @@ const TABS = [
   { id: "actions", label: "Pending actions", icon: CircleCheck },
 ];
 
-const STAGES = [
-  {
-    state: "done",
-    name: "Application started",
-    date: "5 Apr 2026",
-    desc: "Application successfully created and initial setup completed.",
-  },
-  {
-    state: "current",
-    name: "Documents pending",
-    date: "Since 8 Apr 2026",
-    desc: "5 documents still required. Upload passport, bank statements, and CoS to proceed.",
-  },
-  {
-    state: "pending",
-    name: "Under review",
-    date: "Pending",
-    desc: "Caseworker will review all submitted documents.",
-  },
-  {
-    state: "pending",
-    name: "Drafting",
-    date: "Pending",
-    desc: "Application forms and supporting letters drafted.",
-  },
-  {
-    state: "pending",
-    name: "Submitted to UKVI",
-    date: "Pending",
-    desc: "Application formally submitted to UK Visas & Immigration.",
-  },
-  {
-    state: "pending",
-    name: "Decision pending",
-    date: "Pending",
-    desc: "Awaiting decision from UKVI. Typical processing: 3–8 weeks.",
-  },
-  {
-    state: "pending",
-    name: "Approved / refused",
-    date: "Pending",
-    desc: "",
-  },
-  {
-    state: "pending",
-    name: "Case closed",
-    date: "Pending",
-    desc: "",
-  },
+const STAGE_CONFIG = [
+  { name: "Application started", statusMatch: ["Lead"] },
+  { name: "Documents pending", statusMatch: ["Docs Pending"] },
+  { name: "Under review", statusMatch: ["Under Review", "Pending"] },
+  { name: "Drafting", statusMatch: ["Drafting"] },
+  { name: "Submitted to UKVI", statusMatch: ["Submitted"] },
+  { name: "Decision pending", statusMatch: ["Decision"] },
+  { name: "Approved / Refused", statusMatch: ["Approved", "Rejected"] },
+  { name: "Case closed", statusMatch: ["Closed", "Completed"] },
 ];
-
-const TIMELINE = [
-  {
-    dot: "bg-primary",
-    title: "Document rejected — bank statement",
-    time: "11 Apr 2026 · 10:32am",
-    desc: 'Caseworker: "Balance requirement not met for 28-day period. Please resubmit March statement."',
-  },
-  {
-    dot: "bg-secondary",
-    title: "Message from caseworker",
-    time: "10 Apr 2026 · 3:15pm",
-    desc: '"Please upload your latest bank statements for the past 3 months as we need to verify your finances."',
-  },
-  {
-    dot: "bg-emerald-500",
-    title: "Document approved — employment contract",
-    time: "9 Apr 2026 · 4:00pm",
-    desc: null,
-  },
-  {
-    dot: "bg-amber-500",
-    title: "Document uploaded — employment contract",
-    time: "9 Apr 2026 · 11:20am",
-    desc: null,
-  },
-  {
-    dot: "bg-emerald-500",
-    title: "Document approved — passport",
-    time: "8 Apr 2026 · 2:00pm",
-    desc: null,
-  },
-  {
-    dot: "bg-secondary",
-    title: "Application started",
-    time: "5 Apr 2026 · 9:00am",
-    desc: "Case VT-2024-0841 created. Caseworker Sarah Wilson assigned.",
-  },
-];
-
-const PENDING_ACTIONS = [
-  {
-    prio: "high",
-    title: "Upload passport copy",
-    tag: "Identity",
-    due: "Due: 18 Apr 2026",
-    cta: { label: "Upload now", to: "/candidate/upload-documents" },
-  },
-  {
-    prio: "high",
-    title: "Re-upload bank statement (March)",
-    tag: "Finance",
-    due: "Due: 20 Apr 2026",
-    cta: { label: "Re-upload", to: "/candidate/upload-documents" },
-  },
-  {
-    prio: "med",
-    title: "Upload certificate of sponsorship",
-    tag: "Employment",
-    due: "Due: 25 Apr 2026",
-    cta: { label: "Upload now", to: "/candidate/upload-documents" },
-  },
-  {
-    prio: "med",
-    title: "Pay remaining balance — £800",
-    tag: "Payment",
-    due: "Due: 30 Apr 2026",
-    cta: { label: "Pay now", to: "/candidate/payments" },
-  },
-  {
-    prio: "low",
-    title: "Confirm employment start date",
-    tag: "Details",
-    due: "No deadline set",
-    cta: { label: "Review", to: "/candidate/application" },
-  },
-];
-
-function prioDotClass(prio) {
-  if (prio === "high") return "bg-primary";
-  if (prio === "med") return "bg-amber-500";
-  return "bg-emerald-500";
-}
 
 const ApplicationStatus = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { myApplication, applicationLoading, getMyApplication } = useCandidate();
+
+  useEffect(() => {
+    getMyApplication();
+  }, [getMyApplication]);
 
   const activeTab = useMemo(() => {
     const t = searchParams.get("tab");
@@ -167,6 +51,26 @@ const ApplicationStatus = () => {
     },
     [setSearchParams],
   );
+
+  const caseData = myApplication?._relatedData?.cases?.[0] || {};
+  const currentStatus = caseData.status || "Lead";
+
+  // Determine current stage index
+  const currentStageIndex = STAGE_CONFIG.findIndex(s => s.statusMatch.includes(currentStatus));
+  const activeIndex = currentStageIndex === -1 ? 0 : currentStageIndex;
+
+  const STAGES = STAGE_CONFIG.map((stage, idx) => {
+    let state = "pending";
+    if (idx < activeIndex) state = "done";
+    else if (idx === activeIndex) state = "current";
+
+    return {
+      ...stage,
+      state,
+      date: state === "done" ? "Completed" : (state === "current" ? "In Progress" : "Pending"),
+      desc: state === "current" ? `Your case is currently at the ${stage.name} stage.` : ""
+    };
+  });
 
   const stagesFinal = STAGES.map((stage, idx) => {
     const isLast = idx === STAGES.length - 1;
@@ -204,6 +108,61 @@ const ApplicationStatus = () => {
     connectorClass: s.state === "done" ? "bg-emerald-500" : "bg-gray-200",
   }));
 
+  const TIMELINE = (caseData.timeline || []).map(entry => ({
+    dot: entry.actionType?.includes('rejected') ? "bg-primary" : (entry.actionType?.includes('approved') ? "bg-emerald-500" : "bg-secondary"),
+    title: entry.description,
+    time: new Date(entry.actionDate).toLocaleString(),
+    desc: entry.metadata?.notes || null
+  }));
+
+  const docs = myApplication?._relatedData?.documents || [];
+  const docSettings = myApplication?._relatedData?.documentSettings || [];
+
+  const PENDING_ACTIONS = [
+    // 1. Missing required documents
+    ...docSettings
+      .filter(s => s.is_required && !docs.some(d => d.documentType === s.field_key))
+      .map(s => ({
+        prio: "high",
+        title: `Upload ${s.field_label}`,
+        tag: "Required",
+        due: "Action Required",
+        cta: { label: "Upload now", to: "/candidate/upload-documents" },
+      })),
+    // 2. Rejected documents
+    ...docs
+      .filter(d => d.status === 'rejected')
+      .map(d => {
+        const s = docSettings.find(set => set.field_key === d.documentType);
+        return {
+          prio: "high",
+          title: `Re-upload ${s?.field_label || d.documentType}`,
+          tag: "Rejected",
+          due: "Correction Needed",
+          cta: { label: "Re-upload", to: "/candidate/upload-documents" },
+        };
+      }),
+    // 3. Unpaid balance
+    ...(caseData.totalAmount > caseData.paidAmount ? [{
+      prio: "med",
+      title: `Pay remaining balance — £${caseData.totalAmount - caseData.paidAmount}`,
+      tag: "Payment",
+      due: "Pending Payment",
+      cta: { label: "Pay now", to: "/candidate/payments" },
+    }] : [])
+  ];
+
+  if (applicationLoading && !myApplication) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-secondary" />
+        <p className="text-sm font-bold text-gray-400">Loading your case status...</p>
+      </div>
+    );
+  }
+
+  const visaName = caseData.visaType?.name || myApplication?.visaType || "Application in progress";
+
   return (
     <div className="space-y-6 pb-10 animate-in fade-in slide-in-from-top-4 duration-500">
       <header>
@@ -212,9 +171,9 @@ const ApplicationStatus = () => {
         </h1>
         <p className="text-sm font-bold text-gray-500 mt-1">
           Case reference:{" "}
-          <span className="text-secondary font-black">VT-2024-0841</span>
+          <span className="text-secondary font-black">{caseData.caseId || "TBD"}</span>
           <span className="mx-2 text-gray-300">·</span>
-          Skilled Worker visa
+          {visaName}
         </p>
       </header>
 
@@ -248,15 +207,16 @@ const ApplicationStatus = () => {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-black text-secondary tracking-tight">
-                Documents pending
+                {STAGES[activeIndex]?.name || currentStatus}
               </h2>
               <p className="text-sm font-bold text-gray-500 mt-1">
-                Your caseworker is waiting for 5 documents. Please upload them
-                to proceed.
+                {currentStatus === 'Docs Pending' 
+                  ? `Your caseworker is waiting for ${PENDING_ACTIONS.filter(a => a.tag !== 'Payment').length} documents. Please upload them to proceed.`
+                  : `Your application is currently: ${currentStatus}`}
               </p>
             </div>
             <span className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-amber-800">
-              In progress
+              {currentStatus}
             </span>
           </div>
 
@@ -296,7 +256,7 @@ const ApplicationStatus = () => {
 
       {activeTab === "timeline" && (
         <div className="rounded-2xl border border-gray-100 bg-white p-5 md:p-8 shadow-sm max-w-4xl space-y-0">
-          {TIMELINE.map((entry, i) => (
+          {TIMELINE.length > 0 ? TIMELINE.map((entry, i) => (
             <div key={`${entry.title}-${entry.time}`} className="flex gap-4">
               <div className="flex flex-col items-center w-10 shrink-0">
                 <div
@@ -318,19 +278,24 @@ const ApplicationStatus = () => {
                 ) : null}
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="text-center py-10">
+              <Clock3 className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+              <p className="text-sm font-bold text-gray-400">No timeline entries yet.</p>
+            </div>
+          )}
         </div>
       )}
 
       {activeTab === "actions" && (
         <div className="max-w-4xl space-y-3">
-          {PENDING_ACTIONS.map((a) => (
+          {PENDING_ACTIONS.length > 0 ? PENDING_ACTIONS.map((a, idx) => (
             <div
-              key={a.title}
+              key={`${a.title}-${idx}`}
               className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border border-gray-100 bg-white p-4 md:p-5 shadow-sm"
             >
               <span
-                className={`h-2 w-2 rounded-full shrink-0 ${prioDotClass(a.prio)}`}
+                className={`h-2 w-2 rounded-full shrink-0 bg-primary`}
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-black text-gray-900 capitalize">
@@ -348,7 +313,12 @@ const ApplicationStatus = () => {
                 {a.cta.label}
               </Link>
             </div>
-          ))}
+          )) : (
+            <div className="text-center py-10 bg-white rounded-2xl border border-gray-100">
+              <CircleCheck className="mx-auto h-12 w-12 text-emerald-400 mb-3" />
+              <p className="text-sm font-bold text-gray-400">No pending actions. You're all caught up!</p>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -31,6 +31,9 @@ const CaseDetailNotes = ({ notes }) => {
         Confidential — visible only to internal staff.
       </p>
       <div className="space-y-4 mb-6">
+        {notes.length === 0 && (
+          <p className="text-sm text-gray-400">No internal notes yet.</p>
+        )}
         {notes.map((n, i) => (
           <div key={i} className="p-4 rounded-xl bg-amber-50/50 border border-amber-100/80 text-sm text-gray-700">
             <p className="text-xs font-black text-amber-700 mb-1">

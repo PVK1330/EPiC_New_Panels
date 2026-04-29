@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Bell,
@@ -9,59 +9,73 @@ import {
   Filter,
   LayoutDashboard,
 } from "lucide-react";
+import {
+  getNotifications,
+  getNotificationStats,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+} from "../../services/notificationApi";
 
 const BusinessNotifications = () => {
   const [filterType, setFilterType] = useState("all");
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "alert",
-      title: "Worker Visa Expiring Soon",
-      message: "Ahmed Khan's skilled worker visa will expire on 15 Mar 2025",
-      timestamp: "2 hours ago",
-      read: false,
-    },
-    {
-      id: 2,
-      type: "success",
-      title: "COS Payment Processed",
-      message: "Your Certificate of Sponsorship payment of £3,500 has been processed successfully",
-      timestamp: "5 hours ago",
-      read: true,
-    },
-    {
-      id: 3,
-      type: "info",
-      title: "Compliance Audit Scheduled",
-      message: "Your quarterly compliance audit is scheduled for 15 Jan 2024 at 10:00 AM",
-      timestamp: "1 day ago",
-      read: true,
-    },
-    {
-      id: 4,
-      type: "alert",
-      title: "License Expiry Notice",
-      message: "Your sponsor license will expire in 84 days. Please prepare renewal documents",
-      timestamp: "3 days ago",
-      read: true,
-    },
-    {
-      id: 5,
-      type: "info",
-      title: "New Worker Added",
-      message: "Ananya Patel has been successfully added to your payroll system",
-      timestamp: "1 week ago",
-      read: true,
-    },
-    {
-      id: 6,
-      type: "success",
-      title: "Document Verified",
-      message: "Financial statements for Q4 2023 have been verified by compliance team",
-      timestamp: "2 weeks ago",
-      read: true,
-    },
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [stats, setStats] = useState({ total: 0, unread: 0, read: 0 });
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchNotifications();
+    fetchStats();
+  }, []);
+
+  const fetchNotifications = async () => {
+    setIsLoading(true);
+    try {
+      const res = await getNotifications();
+      if (res.data?.status === "success") {
+        const mappedNotifications = (res.data.data.notifications || []).map(n => ({
+          id: n.id,
+          type: n.type === 'error' ? 'alert' : n.type === 'warning' ? 'info' : n.type,
+          title: n.title,
+          message: n.message,
+          timestamp: formatTime(n.createdAt),
+          read: n.isRead,
+        }));
+        setNotifications(mappedNotifications);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const res = await getNotificationStats();
+      if (res.data?.status === "success") {
+        setStats(res.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+    }
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return "Unknown";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -94,23 +108,35 @@ const BusinessNotifications = () => {
     }
   };
 
-  const handleDelete = (id) => {
-    setNotifications(notifications.filter((notif) => notif.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      await deleteNotification(id);
+      setNotifications(notifications.filter((notif) => notif.id !== id));
+      fetchStats();
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
+    }
   };
 
-  const handleMarkAsRead = (id) => {
-    setNotifications(
-      notifications.map((notif) =>
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
+  const handleMarkAsRead = async (id) => {
+    try {
+      await markNotificationAsRead(id);
+      setNotifications(
+        notifications.map((notif) =>
+          notif.id === id ? { ...notif, read: true } : notif
+        )
+      );
+      fetchStats();
+    } catch (error) {
+      console.error("Failed to mark as read:", error);
+    }
   };
 
   const filteredNotifications = notifications.filter((notif) =>
     filterType === "all" || notif.type === filterType || (filterType === "unread" && !notif.read)
   );
 
-  const unreadCount = notifications.filter((notif) => !notif.read).length;
+  const unreadCount = stats.unread;
 
   return (
     <div className="space-y-10 pb-10">
@@ -141,7 +167,7 @@ const BusinessNotifications = () => {
             <Bell size={20} className="text-primary" />
             <span className="font-black">Total Notifications</span>
           </div>
-          <p className="text-3xl font-black text-secondary">{notifications.length}</p>
+          <p className="text-3xl font-black text-secondary">{stats.total}</p>
         </motion.div>
 
         <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -150,7 +176,7 @@ const BusinessNotifications = () => {
             <span className="font-black">Unread</span>
           </div>
           <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-sm font-black text-amber-700">
-            {unreadCount}
+            {stats.unread}
           </span>
         </motion.div>
 
@@ -159,7 +185,7 @@ const BusinessNotifications = () => {
             <CheckCircle2 size={20} className="text-emerald-600" />
             <span className="font-black">Read</span>
           </div>
-          <p className="text-3xl font-black text-secondary">{notifications.length - unreadCount}</p>
+          <p className="text-3xl font-black text-secondary">{stats.read}</p>
         </motion.div>
       </motion.div>
 

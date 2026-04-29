@@ -1,17 +1,29 @@
 import { useState } from "react";
-import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { setCredentials } from "../store/slices/authSlice";
+import { useDispatch } from "react-redux";
+import { ChevronDown } from "lucide-react";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import eliteLogo from "../assets/elitepic_logo.png";
+<<<<<<< HEAD
 import { ChevronDown } from "lucide-react";
 import authService from "../services/authService";
+=======
+import { setCredentials } from "../store/slices/authSlice";
+import {
+  loginUser,
+  registerUser,
+  forgotPassword,
+  verifyTwoFactor,
+} from "../services/auth.service";
+import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
 const VIEWS = {
   login: "login",
   register: "register",
   forgot: "forgot",
+  twoFactor: "twoFactor",
 };
 
 const COUNTRIES = [
@@ -67,11 +79,12 @@ const COUNTRIES = [
 ];
 
 const Login = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [view, setView] = useState(VIEWS.login);
 
+<<<<<<< HEAD
   const DEMO_CREDENTIALS = {
     candidate: {
       email: "candidate@demo.elitepic.com",
@@ -96,6 +109,11 @@ const Login = () => {
     password: DEMO_CREDENTIALS.admin.password,
     role: "admin",
   });
+=======
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
   const [registerForm, setRegisterForm] = useState({
     firstName: "",
@@ -105,7 +123,6 @@ const Login = () => {
     password: "",
     confirmPassword: "",
     dob: "",
-    countryCode: "+44",
     phone: "",
     address: "",
     city: "",
@@ -114,41 +131,18 @@ const Login = () => {
     pincode: "",
     nationality: "",
   });
-
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[1]); // Default to UK
-
-  const [forgotEmail, setForgotEmail] = useState("");
-
-  const roleDisplayName = {
-    candidate: "Demo Candidate",
-    caseworker: "Demo Caseworker",
-    admin: "Demo Admin",
-    business: "Demo Business",
-  };
-  const [errors, setErrors] = useState({});
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [registerErrors, setRegisterErrors] = useState({});
-  const [forgotError, setForgotError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [forgotLoading, setForgotLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
 
-  const roles = [
-    { value: "candidate", label: "Candidate" },
-    { value: "caseworker", label: "Caseworker" },
-    { value: "admin", label: "Admin" },
-    { value: "business", label: "Business" },
-  ];
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotError, setForgotError] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
 
-  const applyRole = (role) => {
-    const preset = DEMO_CREDENTIALS[role];
-    setForm((prev) => ({
-      ...prev,
-      role,
-      email: preset?.email ?? "",
-      password: preset?.password ?? "",
-    }));
-    setErrors({});
-  };
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [twoFactorError, setTwoFactorError] = useState("");
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [pendingLogin, setPendingLogin] = useState(null);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -162,7 +156,6 @@ const Login = () => {
 
   const handleCountryCodeChange = (country) => {
     setSelectedCountry(country);
-    setRegisterForm((prev) => ({ ...prev, countryCode: country.code }));
   };
 
   const validate = () => {
@@ -176,8 +169,7 @@ const Login = () => {
     const errs = {};
     if (!registerForm.firstName.trim())
       errs.firstName = "First name is required";
-    if (!registerForm.lastName.trim())
-      errs.lastName = "Last name is required";
+    if (!registerForm.lastName.trim()) errs.lastName = "Last name is required";
     if (!registerForm.email.trim()) errs.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email))
       errs.email = "Enter a valid email";
@@ -193,7 +185,8 @@ const Login = () => {
     if (!registerForm.state.trim()) errs.state = "State is required";
     if (!registerForm.country.trim()) errs.country = "Country is required";
     if (!registerForm.pincode.trim()) errs.pincode = "Pincode is required";
-    if (!registerForm.nationality.trim()) errs.nationality = "Nationality is required";
+    if (!registerForm.nationality.trim())
+      errs.nationality = "Nationality is required";
     return errs;
   };
 
@@ -201,9 +194,9 @@ const Login = () => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) return setErrors(errs);
-
     setLoading(true);
     try {
+<<<<<<< HEAD
       const response = await authService.login(form.email, form.password);
       
       console.log("📊 Full response object:", response);
@@ -272,6 +265,25 @@ const Login = () => {
       
       console.error("Final error message:", errorMessage);
       setErrors({ password: errorMessage });
+=======
+      const res = await loginUser({
+        email: form.email,
+        password: form.password,
+      });
+      if (res.data?.requires_2fa) {
+        setPendingLogin({ email: form.email, password: form.password });
+        setView(VIEWS.twoFactor);
+      } else {
+        const { user: userData, token: jwtToken } = res.data;
+        const role = ROLE_NAMES[userData.role_id] || "candidate";
+        dispatch(
+          setCredentials({ user: { ...userData, role }, token: jwtToken }),
+        );
+        navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
+      }
+    } catch (err) {
+      setErrors({ password: err.message || "Invalid credentials" });
+>>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
     } finally {
       setLoading(false);
     }
@@ -281,39 +293,21 @@ const Login = () => {
     e.preventDefault();
     const errs = validateRegister();
     if (Object.keys(errs).length) return setRegisterErrors(errs);
-
     setRegisterLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 400));
-      setForm((prev) => ({
-        ...prev,
+      await registerUser({
+        first_name: registerForm.firstName.trim(),
+        last_name: registerForm.lastName.trim(),
         email: registerForm.email.trim(),
-        password: "",
-        role: "candidate",
-      }));
-      setRegisterForm({
-        firstName: "",
-        middleName: "",
-        lastName: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        dob: "",
-        countryCode: "+44",
-        phone: "",
-        address: "",
-        city: "",
-        state: "",
-        country: "",
-        pincode: "",
-        nationality: "",
+        password: registerForm.password,
+        country_code: selectedCountry.code,
+        mobile: registerForm.phone.trim(),
+        role_id: 3,
       });
-      setSelectedCountry(COUNTRIES[1]);
-      setRegisterErrors({});
-      setView(VIEWS.login);
-      alert(
-        "Candidate account registered (demo). You can sign in with your email and password once the backend is connected.",
-      );
+      sessionStorage.setItem("pending_otp_email", registerForm.email.trim());
+      navigate("/verify-otp");
+    } catch (err) {
+      setRegisterErrors({ email: err.message || "Registration failed" });
     } finally {
       setRegisterLoading(false);
     }
@@ -330,23 +324,58 @@ const Login = () => {
       setForgotError("Enter a valid email");
       return;
     }
-
     setForgotLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 500));
-      alert(
-        `If an account exists for ${forgotEmail.trim()}, password reset instructions would be sent (demo — no email sent).`,
-      );
-      setForgotEmail("");
-      setView(VIEWS.login);
+      await forgotPassword(forgotEmail.trim());
+      sessionStorage.setItem("pending_reset_email", forgotEmail.trim());
+      navigate("/verify-reset-otp");
+    } catch (err) {
+      setForgotError(err.message || "Failed to send reset instructions");
     } finally {
       setForgotLoading(false);
     }
   };
 
+  const handleTwoFactorSubmit = async (e) => {
+    e.preventDefault();
+    if (!twoFactorCode || twoFactorCode.length !== 6) {
+      setTwoFactorError("Enter a valid 6-digit code");
+      return;
+    }
+    setTwoFactorLoading(true);
+    try {
+      const res = await verifyTwoFactor({
+        email: pendingLogin.email,
+        password: pendingLogin.password,
+        token: twoFactorCode,
+      });
+      const { user: userData, token: jwtToken } = res.data;
+      const role = ROLE_NAMES[userData.role_id] || "candidate";
+      dispatch(
+        setCredentials({ user: { ...userData, role }, token: jwtToken }),
+      );
+      navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
+    } catch (err) {
+      setTwoFactorError(err.message || "Invalid 2FA code");
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
+
+  const handleBackToLogin = () => {
+    setTwoFactorCode("");
+    setTwoFactorError("");
+    setPendingLogin(null);
+    setView(VIEWS.login);
+  };
+
   const shellClass =
     "bg-white rounded-xl shadow-lg p-8 w-full transition-[max-width] duration-200 " +
-    (view === VIEWS.login ? "max-w-sm" : view === VIEWS.register ? "max-w-2xl" : "max-w-md");
+    (view === VIEWS.login
+      ? "max-w-sm"
+      : view === VIEWS.register
+        ? "max-w-2xl"
+        : "max-w-md");
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4 py-10">
@@ -401,28 +430,6 @@ const Login = () => {
                   >
                     Forgot password?
                   </button>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-gray-700 block">
-                  Login as Role
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {roles.map((r) => (
-                    <button
-                      key={r.value}
-                      type="button"
-                      onClick={() => applyRole(r.value)}
-                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all duration-200 ${
-                        form.role === r.value
-                          ? "bg-primary border-primary text-white shadow-sm shadow-primary/20"
-                          : "bg-white border-gray-200 text-gray-600 hover:border-primary/50 hover:text-primary"
-                      }`}
-                    >
-                      {r.label}
-                    </button>
-                  ))}
                 </div>
               </div>
 
@@ -484,6 +491,7 @@ const Login = () => {
                   required
                 />
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Date of birth"
@@ -495,43 +503,51 @@ const Login = () => {
                   required
                 />
                 <div>
-                  <label className="text-xs font-bold text-gray-700 mb-2 block">
-                    Phone number
+                  <label className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2 block">
+                    Phone number <span className="text-primary ml-1">*</span>
                   </label>
                   <div className="flex gap-2">
                     <div className="relative">
                       <select
                         value={selectedCountry.code}
                         onChange={(e) => {
-                          const country = COUNTRIES.find(c => c.code === e.target.value);
+                          const country = COUNTRIES.find(
+                            (c) => c.code === e.target.value,
+                          );
                           if (country) handleCountryCodeChange(country);
                         }}
-                        className="appearance-none bg-gray-50/40 border border-gray-200 rounded-xl px-3 py-3 pr-8 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 cursor-pointer"
+                        className="appearance-none bg-white border border-gray-200 rounded-xl px-3 py-2 pr-8 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30 cursor-pointer"
                       >
-                        {COUNTRIES.map((country) => (
-                          <option key={country.code} value={country.code}>
+                        {COUNTRIES.map((country, i) => (
+                          <option key={i} value={country.code}>
                             {country.code}
                           </option>
                         ))}
                       </select>
-                      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                      <ChevronDown
+                        size={16}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+                      />
                     </div>
                     <Input
                       name="phone"
                       type="tel"
                       value={registerForm.phone}
                       onChange={handleRegisterChange}
-                      placeholder="20 1234 5678"
+                      placeholder="7911123456"
                       error={registerErrors.phone}
                       required
                       className="flex-1"
                     />
                   </div>
                   {registerErrors.phone && (
-                    <p className="mt-1 text-xs font-bold text-red-500">{registerErrors.phone}</p>
+                    <span className="text-xs text-primary mt-1 block">
+                      {registerErrors.phone}
+                    </span>
                   )}
                 </div>
               </div>
+
               <Input
                 label="Email"
                 name="email"
@@ -542,6 +558,7 @@ const Login = () => {
                 error={registerErrors.email}
                 required
               />
+
               <Input
                 label="Address"
                 name="address"
@@ -551,6 +568,7 @@ const Login = () => {
                 error={registerErrors.address}
                 required
               />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="City"
@@ -571,6 +589,7 @@ const Login = () => {
                   required
                 />
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Country"
@@ -591,6 +610,7 @@ const Login = () => {
                   required
                 />
               </div>
+
               <Input
                 label="Nationality"
                 name="nationality"
@@ -600,8 +620,11 @@ const Login = () => {
                 error={registerErrors.nationality}
                 required
               />
+
               <div className="border-t border-gray-200 pt-4 mt-4">
-                <h3 className="text-sm font-black text-secondary mb-4">Account credentials</h3>
+                <h3 className="text-sm font-black text-secondary mb-4">
+                  Account credentials
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label="Password"
@@ -625,14 +648,24 @@ const Login = () => {
                   />
                 </div>
               </div>
+
+              {registerErrors.email && !registerErrors.firstName && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm text-center font-medium">
+                  {registerErrors.email}
+                </div>
+              )}
+
               <Button
                 type="submit"
                 disabled={registerLoading}
                 className="w-full"
               >
-                {registerLoading ? "Creating account…" : "Create candidate account"}
+                {registerLoading
+                  ? "Creating account…"
+                  : "Create candidate account"}
               </Button>
             </form>
+
             <p className="mt-5 text-center text-sm text-gray-600">
               Already have an account?{" "}
               <button
@@ -652,8 +685,7 @@ const Login = () => {
               Reset password
             </h1>
             <p className="text-center text-xs font-bold text-gray-500 mb-6">
-              Enter the email you use for ElitePic. We’ll send reset instructions
-              when email is connected (demo shows a message only).
+              Enter the email you use for ElitePic and we'll send a reset code.
             </p>
             <form onSubmit={handleForgotSubmit} className="space-y-4">
               <Input
@@ -677,6 +709,50 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => setView(VIEWS.login)}
+                className="font-black text-secondary hover:text-primary hover:underline"
+              >
+                Back to sign in
+              </button>
+            </p>
+          </>
+        )}
+
+        {view === VIEWS.twoFactor && (
+          <>
+            <h1 className="text-lg font-black text-secondary text-center mb-1">
+              Two-factor authentication
+            </h1>
+            <p className="text-center text-xs font-bold text-gray-500 mb-6">
+              Enter the 6-digit code from your authenticator app
+            </p>
+            <form onSubmit={handleTwoFactorSubmit} className="space-y-4">
+              <Input
+                label="Authentication code"
+                name="twoFactorCode"
+                type="text"
+                value={twoFactorCode}
+                onChange={(e) => {
+                  setTwoFactorCode(
+                    e.target.value.replace(/\D/g, "").slice(0, 6),
+                  );
+                  setTwoFactorError("");
+                }}
+                placeholder="123456"
+                error={twoFactorError}
+                required
+              />
+              <Button
+                type="submit"
+                disabled={twoFactorLoading}
+                className="w-full"
+              >
+                {twoFactorLoading ? "Verifying…" : "Verify"}
+              </Button>
+            </form>
+            <p className="mt-5 text-center text-sm text-gray-600">
+              <button
+                type="button"
+                onClick={handleBackToLogin}
                 className="font-black text-secondary hover:text-primary hover:underline"
               >
                 Back to sign in

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
+import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiSettings,
@@ -10,596 +11,633 @@ import {
   FiMail,
   FiCreditCard,
   FiClock,
-  FiEdit2,
-  FiTrash2,
-  FiPlus,
   FiArrowRight,
+  FiCheckCircle,
+  FiMenu,
+  FiX,
+  FiFileText
 } from "react-icons/fi";
-import { RiSettings3Line } from "react-icons/ri";
+
+// Components
+import Modal from "../../components/Modal";
+import TwoFactorSetup from "../../components/TwoFactorSetup";
+import TwoFactorDisable from "../../components/TwoFactorDisable";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
-import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
-import Modal from "../../components/Modal";
 
-const timezones = ["UTC-05:00 Eastern Time", "UTC-06:00 Central Time", "UTC-07:00 Mountain Time", "UTC-08:00 Pacific Time"];
-const languages = ["English", "Spanish", "French", "German"];
-const dateFormats = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"];
-const roles = ["Administrator", "Caseworker", "Manager"];
+// Settings Sub-components
+import AccountSettings from "../../components/admin/settings/AccountSettings";
+import VisaSettings from "../../components/admin/settings/VisaSettings";
+import EmailSettings from "../../components/admin/settings/EmailSettings";
+import PaymentSettings from "../../components/admin/settings/PaymentSettings";
+import SLASettings from "../../components/admin/settings/SLASettings";
+import DepartmentSettings from "../../components/admin/settings/DepartmentSettings";
+import CategorySettings from "../../components/admin/settings/CategorySettings";
+import EmailTemplateEditor from "../../components/admin/settings/EmailTemplateEditor";
+import EmailTemplatePreview from "../../components/admin/settings/EmailTemplatePreview";
+import DocumentChecklistSettings from "../../components/admin/settings/DocumentChecklistSettings";
+
+// Services
+import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from "../../services/caseWorker";
+import { useToast } from "../../context/ToastContext";
+import {
+  getMe,
+  updateMe,
+  updateMePreferences,
+  changePassword,
+  getVisaTypes,
+  createVisaType,
+  updateVisaType,
+  deleteVisaType,
+  getPetitionTypes,
+  createPetitionType,
+  updatePetitionType,
+  deletePetitionType,
+  getCaseCategories,
+  createCaseCategory,
+  deleteCaseCategory,
+  getSlaRules,
+  createSlaRule,
+  updateSlaRule,
+  deleteSlaRule,
+  getEmailTemplates,
+  createEmailTemplate,
+  updateEmailTemplate,
+  deleteEmailTemplate,
+  getPaymentSetting,
+  updatePaymentSetting,
+} from "../../services/settingsService";
 
 const CONFIG_TABS = [
-  { id: "account", label: "Your account", icon: <FiUser size={16} /> },
-  { id: "visa", label: "Visa types", icon: <FiLayers size={16} /> },
-  { id: "categories", label: "Case categories", icon: <FiFolder size={16} /> },
-  { id: "roles", label: "Role permissions", icon: <FiShield size={16} /> },
-  { id: "email", label: "Email templates", icon: <FiMail size={16} /> },
-  { id: "payment", label: "Payment config", icon: <FiCreditCard size={16} /> },
-  { id: "sla", label: "SLA rules", icon: <FiClock size={16} /> },
+  { id: "account", label: "Account & Profile", icon: <FiUser />, color: "text-blue-500", bg: "bg-blue-50" },
+  { id: "visa", label: "Visa & Petitions", icon: <FiLayers />, color: "text-indigo-500", bg: "bg-indigo-50" },
+  { id: "checklist", label: "Document Checklists", icon: <FiFileText />, color: "text-teal-500", bg: "bg-teal-50" },
+  { id: "categories", label: "Case Categories", icon: <FiFolder />, color: "text-emerald-500", bg: "bg-emerald-50" },
+  { id: "departments", label: "Departments", icon: <FiFolder />, color: "text-violet-500", bg: "bg-violet-50" },
+  { id: "roles", label: "Role Permissions", icon: <FiShield />, color: "text-amber-500", bg: "bg-amber-50" },
+  { id: "email", label: "Email Templates", icon: <FiMail />, color: "text-rose-500", bg: "bg-rose-50" },
+  { id: "payment", label: "Payment Config", icon: <FiCreditCard />, color: "text-cyan-500", bg: "bg-cyan-50" },
+  { id: "sla", label: "SLA Rules", icon: <FiClock />, color: "text-orange-500", bg: "bg-orange-50" },
 ];
 
-const INITIAL_VISA_TYPES = [
-  { id: "visa-1", name: "Skilled Worker Visa" },
-  { id: "visa-2", name: "Indefinite Leave to Remain (ILR)" },
-  { id: "visa-3", name: "Graduate Visa" },
-  { id: "visa-4", name: "Student Visa" },
-  { id: "visa-5", name: "Sponsor Licence" },
-];
-
-const VISA_FORM_ID = "settings-visa-type-form";
-
-const EMAIL_TEMPLATE_OPTIONS = [
-  { value: "payment", label: "Payment reminder" },
-  { value: "doc", label: "Document request" },
-  { value: "opened", label: "Case opened" },
-  { value: "expiry", label: "Visa expiry alert" },
-  { value: "welcome", label: "Welcome email" },
-];
-
-const CURRENCY_OPTIONS = [
-  { value: "GBP", label: "GBP (£)" },
-  { value: "EUR", label: "EUR (€)" },
-  { value: "USD", label: "USD ($)" },
-];
-
-const selectClass =
-  "w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-secondary/30";
-
-function Toggle({ on, onToggle }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-secondary/40 ${
-        on ? "bg-primary" : "bg-gray-200"
-      }`}
-      aria-pressed={on}
-    >
-      <span
-        className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
-          on ? "translate-x-5" : "translate-x-0"
-        }`}
-      />
-    </button>
-  );
+function getApiError(error) {
+  const d = error?.response?.data;
+  const m = d?.message;
+  if (typeof m === "string") return m;
+  if (Array.isArray(m) && m.length) return m[0];
+  return error?.message || "Something went wrong";
 }
 
-const panelMotion = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -6 },
-  transition: { duration: 0.2 },
-};
-
 export default function AdminSettings() {
+  const { showToast } = useToast();
   const [configTab, setConfigTab] = useState("account");
-  const [visaTypes, setVisaTypes] = useState(INITIAL_VISA_TYPES);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // States
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  // Account States (DYNAMIC)
+  const [profile, setProfile] = useState({ first_name: "", last_name: "", email: "", country_code: "", mobile: "", avatar_url: "", role_name: "" });
+  const [profileFile, setProfileFile] = useState(null);
+  const [preferences, setPreferences] = useState({ two_factor_enabled: false, email_notifications: true, case_updates: true, payment_alerts: false, timezone: "UTC-05:00 Eastern Time", language: "English", date_format: "MM/DD/YYYY", data_collection: false });
+  const [security, setSecurity] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [passwordError, setPasswordError] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  // Shared States
+  const [visaTypes, setVisaTypes] = useState([]);
+  const [petitionTypes, setPetitionTypes] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [emailTemplates, setEmailTemplates] = useState([]);
+  const [slaRules, setSlaRules] = useState([]);
+  const [paymentConfig, setPaymentConfig] = useState({ currency: "GBP", pay_bank: true, pay_card: true, pay_cheque: false, invoice_prefix: "INV-", stripe_public_key: "", stripe_secret_key: "", paypal_client_id: "", paypal_secret: "", razorpay_key_id: "", razorpay_key_secret: "", active_gateway: "stripe" });
+
+  // Modal States
   const [visaModalOpen, setVisaModalOpen] = useState(false);
   const [visaModalMode, setVisaModalMode] = useState("add");
   const [editingVisaId, setEditingVisaId] = useState(null);
   const [visaFormName, setVisaFormName] = useState("");
   const [visaFormError, setVisaFormError] = useState("");
-  const [categoryInput, setCategoryInput] = useState("");
-  const [categories, setCategories] = useState(["Urgent", "VIP", "Standard"]);
 
-  const [emailTemplate, setEmailTemplate] = useState("payment");
-  const [emailSubject, setEmailSubject] = useState("[VisaFlow] Action Required: Outstanding Payment");
-  const [emailBody, setEmailBody] = useState(
-    `Dear {{client_name}},
+  const [petitionModalOpen, setPetitionModalOpen] = useState(false);
+  const [petitionModalMode, setPetitionModalMode] = useState("add");
+  const [editingPetitionId, setEditingPetitionId] = useState(null);
+  const [petitionFormName, setPetitionFormName] = useState("");
+  const [petitionFormError, setPetitionFormError] = useState("");
 
-We wanted to remind you that your outstanding balance of {{amount}} is now {{days_overdue}} days overdue.
+  const [departmentModalOpen, setDepartmentModalOpen] = useState(false);
+  const [departmentModalMode, setDepartmentModalMode] = useState("add");
+  const [editingDepartment, setEditingDepartment] = useState(null);
+  const [departmentFormName, setDepartmentFormName] = useState("");
+  const [departmentFormError, setDepartmentFormError] = useState("");
 
-Please arrange payment at your earliest convenience.
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailModalMode, setEmailModalMode] = useState("add");
+  const [editingEmailKey, setEditingEmailKey] = useState(null);
+  const [emailFormKey, setEmailFormKey] = useState("");
+  const [emailFormSubject, setEmailFormSubject] = useState("");
+  const [emailFormBody, setEmailFormBody] = useState("");
+  const [emailFormError, setEmailFormError] = useState("");
+  const [viewEmailModalOpen, setViewEmailModalOpen] = useState(false);
+  const [viewingTemplate, setViewingTemplate] = useState(null);
 
-Best regards,
-VisaFlow Team`,
-  );
+  const [slaModalOpen, setSlaModalOpen] = useState(false);
+  const [slaModalMode, setSlaModalMode] = useState("add");
+  const [editingSlaId, setEditingSlaId] = useState(null);
+  const [slaFormName, setSlaFormName] = useState("");
+  const [slaFormDays, setSlaFormDays] = useState("");
+  const [slaFormType, setSlaFormType] = useState("Visa");
+  const [slaFormError, setSlaFormError] = useState("");
 
-  const [currency, setCurrency] = useState("GBP");
-  const [payBank, setPayBank] = useState(true);
-  const [payCard, setPayCard] = useState(true);
-  const [payCheque, setPayCheque] = useState(false);
-  const [invoicePrefix, setInvoicePrefix] = useState("INV-");
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+  const [twoFactorMode, setTwoFactorMode] = useState("setup");
 
-  const [slaSkilled, setSlaSkilled] = useState("45");
-  const [slaIlr, setSlaIlr] = useState("30");
-  const [slaStudent, setSlaStudent] = useState("60");
-  const [slaEscalation, setSlaEscalation] = useState("3");
-  const [slaMissingDocs, setSlaMissingDocs] = useState("7");
+  // Load Data based on Tab
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      if (configTab === "account") {
+        const res = await getMe();
+        const { profile: p, preferences: pref } = res.data?.data || {};
+        if (p) setProfile(p);
+        if (pref) setPreferences(pref);
+      } else if (configTab === "visa") {
+        const [vRes, pRes] = await Promise.all([getVisaTypes(), getPetitionTypes()]);
+        setVisaTypes(vRes.data?.data?.visa_types ?? []);
+        setPetitionTypes(pRes.data?.data?.petition_types ?? []);
+      } else if (configTab === "categories") {
+        const res = await getCaseCategories();
+        setCategories(res.data?.data?.categories ?? []);
+      } else if (configTab === "departments") {
+        const res = await getDepartments();
+        setDepartments(res.data?.data?.departments ?? []);
+      } else if (configTab === "email") {
+        const res = await getEmailTemplates();
+        setEmailTemplates(res.data?.data?.templates ?? []);
+      } else if (configTab === "payment") {
+        const res = await getPaymentSetting();
+        if (res.data?.data) setPaymentConfig(res.data.data);
+      } else if (configTab === "sla") {
+        const res = await getSlaRules();
+        setSlaRules(res.data?.data?.rules ?? []);
+      }
+    } catch (e) {
+      const msg = getApiError(e);
+      setError(msg);
+      showToast({ message: msg, variant: "danger" });
+    } finally {
+      setLoading(false);
+    }
+  }, [configTab, showToast]);
 
-  const [profile, setProfile] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@company.com",
-    phone: "+1 (555) 123-4567",
-    role: "Administrator",
-  });
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  const [security, setSecurity] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-  const [twoFA, setTwoFA] = useState(false);
-
-  const [notifPrefs, setNotifPrefs] = useState({
-    emailNotifications: true,
-    caseUpdates: true,
-    paymentAlerts: false,
-  });
-
-  const [system, setSystem] = useState({
-    timezone: "UTC-05:00 Eastern Time",
-    language: "English",
-    dateFormat: "MM/DD/YYYY",
-  });
-  const [dataCollection, setDataCollection] = useState(false);
-
-  const handleProfile = (e) => setProfile((p) => ({ ...p, [e.target.name]: e.target.value }));
-  const handleSecurity = (e) => setSecurity((p) => ({ ...p, [e.target.name]: e.target.value }));
-  const handleSystem = (e) => setSystem((p) => ({ ...p, [e.target.name]: e.target.value }));
-  const toggleNotif = (key) => setNotifPrefs((p) => ({ ...p, [key]: !p[key] }));
-
-  const handleSave = () => {
-    console.log("Settings saved", {
-      profile,
-      security: { ...security, currentPassword: "***", newPassword: "***", confirmPassword: "***" },
-      notifPrefs,
-      system,
-      twoFA,
-      dataCollection,
-      configTab,
-      visaTypes,
-      categories,
-      email: { emailTemplate, emailSubject },
-      payment: { currency, payBank, payCard, payCheque, invoicePrefix },
-      sla: { slaSkilled, slaIlr, slaStudent, slaEscalation, slaMissingDocs },
-    });
+  // Account Handlers (DYNAMIC)
+  const handleProfileSave = async () => {
+    setSaving(true);
+    try {
+      let dataToSubmit = profile;
+      if (profileFile) {
+        dataToSubmit = new FormData();
+        Object.keys(profile).forEach(key => {
+          if (profile[key] !== null && profile[key] !== undefined) {
+            dataToSubmit.append(key, profile[key]);
+          }
+        });
+        dataToSubmit.append('profile_pic', profileFile);
+      }
+      // Parallel update for performance
+      await Promise.all([
+        updateMePreferences(preferences),
+        updateMe(dataToSubmit)
+      ]);
+      setProfileFile(null);
+      showToast({ message: "Profile and preferences updated successfully." });
+      loadData(); // Refresh to ensure sync
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleCancel = () => {
-    setProfile({ firstName: "John", lastName: "Doe", email: "john.doe@company.com", phone: "+1 (555) 123-4567", role: "Administrator" });
-    setSecurity({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    setSystem({ timezone: "UTC-05:00 Eastern Time", language: "English", dateFormat: "MM/DD/YYYY" });
-    setVisaTypes(INITIAL_VISA_TYPES);
-    setCategories(["Urgent", "VIP", "Standard"]);
-    setCategoryInput("");
-    setEmailSubject("[VisaFlow] Action Required: Outstanding Payment");
-    setCurrency("GBP");
-    setPayBank(true);
-    setPayCard(true);
-    setPayCheque(false);
-    setInvoicePrefix("INV-");
-    setSlaSkilled("45");
-    setSlaIlr("30");
-    setSlaStudent("60");
-    setSlaEscalation("3");
-    setSlaMissingDocs("7");
-  };
-
-  const openVisaModalAdd = () => {
-    setVisaModalMode("add");
-    setEditingVisaId(null);
-    setVisaFormName("");
-    setVisaFormError("");
-    setVisaModalOpen(true);
-  };
-
-  const openVisaModalEdit = (id) => {
-    const row = visaTypes.find((v) => v.id === id);
-    if (!row) return;
-    setVisaModalMode("edit");
-    setEditingVisaId(id);
-    setVisaFormName(row.name);
-    setVisaFormError("");
-    setVisaModalOpen(true);
-  };
-
-  const closeVisaModal = () => {
-    setVisaModalOpen(false);
-    setVisaFormName("");
-    setVisaFormError("");
-    setEditingVisaId(null);
-  };
-
-  const submitVisaForm = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    const trimmed = visaFormName.trim();
-    if (!trimmed) {
-      setVisaFormError("Name is required");
+    if (security.newPassword !== security.confirmPassword) {
+      setPasswordError("Passwords do not match");
       return;
     }
-    const duplicate = visaTypes.some((v) => v.name.toLowerCase() === trimmed.toLowerCase() && v.id !== editingVisaId);
-    if (duplicate) {
-      setVisaFormError("A visa type with this name already exists");
-      return;
+    setSavingPassword(true);
+    setPasswordError("");
+    try {
+      await changePassword({ current_password: security.currentPassword, new_password: security.newPassword });
+      showToast({ message: "Password updated successfully." });
+      setSecurity({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (e) {
+      setPasswordError(getApiError(e));
+    } finally {
+      setSavingPassword(false);
     }
-    if (visaModalMode === "add") {
-      setVisaTypes((prev) => [...prev, { id: `visa-${Date.now()}`, name: trimmed }]);
-    } else if (editingVisaId) {
-      setVisaTypes((prev) => prev.map((v) => (v.id === editingVisaId ? { ...v, name: trimmed } : v)));
-    }
-    closeVisaModal();
   };
 
-  const removeVisa = (id) => setVisaTypes((v) => v.filter((x) => x.id !== id));
-  const addCategory = () => {
-    const t = categoryInput.trim();
-    if (t && !categories.includes(t)) {
-      setCategories((c) => [...c, t]);
-      setCategoryInput("");
+  // Visa/Petition Handlers
+  const submitVisaForm = async (e) => {
+    e.preventDefault();
+    if (!visaFormName.trim()) return setVisaFormError("Name is required");
+    try {
+      if (visaModalMode === "add") await createVisaType({ name: visaFormName.trim() });
+      else await updateVisaType(editingVisaId, { name: visaFormName.trim() });
+      loadData();
+      setVisaModalOpen(false);
+      showToast({ message: `Visa type ${visaModalMode === "add" ? "added" : "updated"}.` });
+    } catch (e) { setVisaFormError(getApiError(e)); }
+  };
+
+  const submitPetitionForm = async (e) => {
+    e.preventDefault();
+    if (!petitionFormName.trim()) return setPetitionFormError("Name is required");
+    try {
+      if (petitionModalMode === "add") await createPetitionType({ name: petitionFormName.trim() });
+      else await updatePetitionType(editingPetitionId, { name: petitionFormName.trim() });
+      loadData();
+      setPetitionModalOpen(false);
+      showToast({ message: `Petition type ${petitionModalMode === "add" ? "added" : "updated"}.` });
+    } catch (e) { setPetitionFormError(getApiError(e)); }
+  };
+
+  // Department Handlers
+  const submitDepartmentForm = async (e) => {
+    e.preventDefault();
+    if (!departmentFormName.trim()) return setDepartmentFormError("Name is required");
+    try {
+      if (departmentModalMode === "add") await createDepartment({ name: departmentFormName.trim() });
+      else await updateDepartment({ oldName: editingDepartment, newName: departmentFormName.trim() });
+      loadData();
+      setDepartmentModalOpen(false);
+      showToast({ message: `Department ${departmentModalMode === "add" ? "added" : "updated"}.` });
+    } catch (e) { setDepartmentFormError(getApiError(e)); }
+  };
+
+  // Category Handlers
+  const handleCategoryAdd = async (name) => {
+    setSaving(true);
+    try {
+      await createCaseCategory({ name: name });
+      loadData();
+      showToast({ message: "Category added successfully." });
+    } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
+    finally { setSaving(false); }
+  };
+
+  const handleCategoryDelete = async (cat) => {
+    const res = await Swal.fire({ title: "Delete Category?", text: `Are you sure you want to remove "${cat.name}"?`, icon: "warning", showCancelButton: true });
+    if (res.isConfirmed) {
+      try {
+        await deleteCaseCategory(cat.id);
+        loadData();
+        showToast({ message: "Category deleted." });
+      } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
     }
+  };
+
+  // Email Handlers
+  const submitEmailForm = async (data) => {
+    if (!data.template_key.trim()) return setEmailFormError("Key is required");
+    try {
+      const payload = { template_key: data.template_key.trim(), subject: data.subject.trim(), body: data.body.trim() };
+      if (emailModalMode === "add") await createEmailTemplate(payload);
+      else await updateEmailTemplate(editingEmailKey, payload);
+      loadData();
+      setEmailModalOpen(false);
+      showToast({ message: "Email template saved." });
+    } catch (e) { setEmailFormError(getApiError(e)); }
+  };
+
+  // Payment Handlers
+  const handlePaymentSave = async () => {
+    setSaving(true);
+    try {
+      await updatePaymentSetting(paymentConfig);
+      showToast({ message: "Payment configuration updated." });
+    } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
+    finally { setSaving(false); }
+  };
+
+  // SLA Handlers
+  const submitSlaForm = async (e) => {
+    e.preventDefault();
+    if (!slaFormName.trim() || !slaFormDays) return setSlaFormError("Required fields missing");
+    try {
+      const payload = { name: slaFormName.trim(), days: parseInt(slaFormDays), rule_type: slaFormType };
+      if (slaModalMode === "add") await createSlaRule(payload);
+      else await updateSlaRule(editingSlaId, payload);
+      loadData();
+      setSlaModalOpen(false);
+      showToast({ message: "SLA rule saved." });
+    } catch (e) { setSlaFormError(getApiError(e)); }
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 pb-10 max-w-[1400px] mx-auto w-full">
-      <motion.div
-        className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2 sm:gap-3">
-            <RiSettings3Line className="text-primary shrink-0" size={32} />
-            <span className="truncate">Settings</span>
-          </h1>
-          <p className="text-primary font-bold text-sm mt-1">System configuration and preferences</p>
+    <div className="min-h-screen bg-gray-50/50 flex flex-col md:flex-row overflow-hidden font-sans">
+      {/* Sidebar - Desktop */}
+      <aside className="hidden md:flex w-72 flex-col bg-white border-r border-gray-100 h-screen sticky top-0 shadow-sm">
+        <div className="p-8 pb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-primary rounded-xl text-white shadow-lg shadow-primary/20">
+              <FiSettings size={22} />
+            </div>
+            <h1 className="text-xl font-black text-secondary tracking-tight">Admin Central</h1>
+          </div>
+          <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-black">System Preferences</p>
         </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <Button type="button" className="rounded-xl shadow-sm inline-flex items-center gap-2" onClick={handleSave}>
-            <FiSettings size={16} aria-hidden />
-            Save changes
-          </Button>
-        </div>
-      </motion.div>
-
-      <div className="space-y-3">
-        <h2 className="text-xs font-black text-gray-400 uppercase tracking-wider px-0.5">Settings</h2>
-        <SegmentedTabBar tabs={CONFIG_TABS} activeId={configTab} onChange={setConfigTab} layoutId="admin-settings-config-tab" />
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden min-h-[200px]">
-        <AnimatePresence mode="wait">
-          {configTab === "account" && (
-            <motion.div key="account" className="p-5 sm:p-6 space-y-8" {...panelMotion}>
-              <div>
-                <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Profile settings</h3>
-                <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-                    <div className="h-20 w-20 rounded-full bg-secondary/10 flex items-center justify-center shrink-0">
-                      <span className="text-2xl font-black text-secondary">JD</span>
-                    </div>
-                    <div>
-                      <Button type="button" className="rounded-xl">
-                        Change avatar
-                      </Button>
-                      <p className="mt-1 text-xs text-gray-500">JPG, GIF or PNG. Max size of 2MB</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="First name" name="firstName" value={profile.firstName} onChange={handleProfile} />
-                    <Input label="Last name" name="lastName" value={profile.lastName} onChange={handleProfile} />
-                  </div>
-                  <Input label="Email address" name="email" type="email" value={profile.email} onChange={handleProfile} />
-                  <Input label="Phone number" name="phone" type="tel" value={profile.phone} onChange={handleProfile} />
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="profile-role" className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                      Role
-                    </label>
-                    <select id="profile-role" name="role" value={profile.role} onChange={handleProfile} className={selectClass}>
-                      {roles.map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+        
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar pb-8">
+          {CONFIG_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => { setConfigTab(tab.id); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all group relative ${
+                configTab === tab.id 
+                ? "bg-secondary text-white shadow-xl shadow-secondary/20" 
+                : "text-gray-500 hover:bg-gray-50 hover:text-secondary"
+              }`}
+            >
+              <div className={`p-2 rounded-xl transition-colors ${
+                configTab === tab.id ? "bg-white/10" : `${tab.bg} ${tab.color}`
+              }`}>
+                {tab.icon}
               </div>
-
-              <div>
-                <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Security settings</h3>
-                <div className="space-y-6">
-                  <Input label="Current password" name="currentPassword" type="password" value={security.currentPassword} onChange={handleSecurity} />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="New password" name="newPassword" type="password" value={security.newPassword} onChange={handleSecurity} />
-                    <Input label="Confirm new password" name="confirmPassword" type="password" value={security.confirmPassword} onChange={handleSecurity} />
-                  </div>
-                  <div className="space-y-3">
-                    <p className="text-sm font-black text-secondary">Two-factor authentication</p>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Enable 2FA for enhanced security</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Receive a code on your phone when signing in</p>
-                      </div>
-                      <Toggle on={twoFA} onToggle={() => setTwoFA((v) => !v)} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Notification preferences</h3>
-                <div className="space-y-5">
-                  {[
-                    { key: "emailNotifications", label: "Email notifications", desc: "Receive notifications via email" },
-                    { key: "caseUpdates", label: "Case updates", desc: "Get notified about case status changes" },
-                    { key: "paymentAlerts", label: "Payment alerts", desc: "Receive payment due and overdue notifications" },
-                  ].map(({ key, label, desc }) => (
-                    <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-bold text-secondary">{label}</p>
-                        <p className="text-xs text-gray-500">{desc}</p>
-                      </div>
-                      <Toggle on={notifPrefs[key]} onToggle={() => toggleNotif(key)} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">System settings</h3>
-                <div className="space-y-6">
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="sys-tz" className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                      Time zone
-                    </label>
-                    <select id="sys-tz" name="timezone" value={system.timezone} onChange={handleSystem} className={selectClass}>
-                      {timezones.map((tz) => (
-                        <option key={tz} value={tz}>
-                          {tz}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="sys-lang" className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                      Language
-                    </label>
-                    <select id="sys-lang" name="language" value={system.language} onChange={handleSystem} className={selectClass}>
-                      {languages.map((l) => (
-                        <option key={l} value={l}>
-                          {l}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="sys-df" className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                      Date format
-                    </label>
-                    <select id="sys-df" name="dateFormat" value={system.dateFormat} onChange={handleSystem} className={selectClass}>
-                      {dateFormats.map((f) => (
-                        <option key={f} value={f}>
-                          {f}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-3">
-                    <p className="text-sm font-black text-secondary">Data privacy</p>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Data collection</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Allow collection of usage data for improvement</p>
-                      </div>
-                      <Toggle on={dataCollection} onToggle={() => setDataCollection((v) => !v)} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2 border-t border-gray-100">
-                <Button type="button" variant="ghost" className="rounded-xl w-full sm:w-auto" onClick={handleCancel}>
-                  Cancel
-                </Button>
-                <Button type="button" className="rounded-xl w-full sm:w-auto" onClick={handleSave}>
-                  Save changes
-                </Button>
-              </div>
-            </motion.div>
-          )}
-
-          {configTab === "visa" && (
-            <motion.div key="visa" className="p-5 sm:p-6" {...panelMotion}>
-              <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Visa types</h3>
-              <div className="flex flex-col gap-2.5 mb-5">
-                {visaTypes.map((row) => (
-                  <div
-                    key={row.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 rounded-xl bg-gray-50 border border-gray-100"
-                  >
-                    <span className="text-sm font-semibold text-secondary">{row.name}</span>
-                    <div className="flex gap-2 shrink-0">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="rounded-xl text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
-                        onClick={() => openVisaModalEdit(row.id)}
-                      >
-                        <FiEdit2 size={14} aria-hidden />
-                        Edit
-                      </Button>
-                      <Button type="button" variant="danger" className="rounded-xl text-xs px-3 py-1.5 inline-flex items-center gap-1.5" onClick={() => removeVisa(row.id)}>
-                        <FiTrash2 size={14} aria-hidden />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Button type="button" className="rounded-xl inline-flex items-center gap-2" onClick={openVisaModalAdd}>
-                <FiPlus size={16} aria-hidden />
-                Add visa type
-              </Button>
-            </motion.div>
-          )}
-
-          {configTab === "categories" && (
-            <motion.div key="categories" className="p-5 sm:p-6" {...panelMotion}>
-              <h3 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Case categories</h3>
-              <div className="flex flex-col sm:flex-row gap-3 max-w-xl">
-                <Input label="Add category" name="category" value={categoryInput} onChange={(e) => setCategoryInput(e.target.value)} placeholder="e.g. Urgent, VIP, Government…" className="flex-1" />
-                <div className="sm:pt-6">
-                  <Button type="button" className="rounded-xl w-full sm:w-auto" onClick={addCategory}>
-                    Add
-                  </Button>
-                </div>
-              </div>
-              {categories.length > 0 && (
-                <ul className="mt-4 flex flex-wrap gap-2">
-                  {categories.map((c) => (
-                    <li key={c} className="px-3 py-1.5 rounded-full text-xs font-bold bg-secondary/10 text-secondary border border-secondary/20">
-                      {c}
-                    </li>
-                  ))}
-                </ul>
+              <span className="text-sm font-bold tracking-tight">{tab.label}</span>
+              {configTab === tab.id && (
+                <motion.div layoutId="activeIndicator" className="ml-auto">
+                  <FiArrowRight size={16} />
+                </motion.div>
               )}
-            </motion.div>
-          )}
+            </button>
+          ))}
+        </nav>
 
-          {configTab === "roles" && (
-            <motion.div key="roles" className="p-5 sm:p-6" {...panelMotion}>
-              <h3 className="text-sm font-black text-secondary pb-3 mb-2 border-b border-gray-100">Role permissions</h3>
-              <p className="text-sm text-gray-500 mb-5 max-w-2xl leading-relaxed">
-                Configure role-level defaults. Use the permissions area for the full RBAC matrix.
-              </p>
-              <Link
-                to="/admin/permissions"
-                className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline"
-              >
-                Go to permissions &amp; RBAC
-                <FiArrowRight size={16} aria-hidden />
-              </Link>
-            </motion.div>
-          )}
+        <div className="p-6 border-t border-gray-50 bg-gray-50/30">
+          <Link to="/admin/dashboard" className="flex items-center justify-center gap-3 px-4 py-4 rounded-2xl bg-white border border-gray-100 text-primary font-black text-xs uppercase tracking-widest hover:shadow-lg transition-all">
+            Dashboard <FiArrowRight />
+          </Link>
+        </div>
+      </aside>
 
-          {configTab === "email" && (
-            <motion.div key="email" className="p-5 sm:p-6 space-y-4" {...panelMotion}>
-              <h3 className="text-sm font-black text-secondary pb-3 mb-2 border-b border-gray-100">Email templates</h3>
-              <Input
-                label="Template"
-                name="emailTemplate"
-                value={emailTemplate}
-                onChange={(e) => setEmailTemplate(e.target.value)}
-                options={EMAIL_TEMPLATE_OPTIONS}
-              />
-              <Input label="Subject" name="emailSubject" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
-              <div className="flex flex-col gap-1">
-                <label htmlFor="email-body" className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                  Body
-                </label>
-                <textarea
-                  id="email-body"
-                  value={emailBody}
-                  onChange={(e) => setEmailBody(e.target.value)}
-                  rows={8}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 resize-y min-h-[160px]"
-                />
-              </div>
-              <Button type="button" className="rounded-xl">
-                Save template
-              </Button>
-            </motion.div>
-          )}
-
-          {configTab === "payment" && (
-            <motion.div key="payment" className="p-5 sm:p-6 space-y-5" {...panelMotion}>
-              <h3 className="text-sm font-black text-secondary pb-3 mb-2 border-b border-gray-100">Payment configuration</h3>
-              <Input label="Default payment currency" name="currency" value={currency} onChange={(e) => setCurrency(e.target.value)} options={CURRENCY_OPTIONS} />
-              <div>
-                <p className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Payment methods accepted</p>
-                <div className="space-y-3">
-                  <label className="flex items-center justify-between gap-4 p-3 rounded-xl border border-gray-100 bg-gray-50/80 cursor-pointer">
-                    <span className="text-sm font-medium text-gray-800">Bank transfer</span>
-                    <Toggle on={payBank} onToggle={() => setPayBank((v) => !v)} />
-                  </label>
-                  <label className="flex items-center justify-between gap-4 p-3 rounded-xl border border-gray-100 bg-gray-50/80 cursor-pointer">
-                    <span className="text-sm font-medium text-gray-800">Credit / debit card</span>
-                    <Toggle on={payCard} onToggle={() => setPayCard((v) => !v)} />
-                  </label>
-                  <label className="flex items-center justify-between gap-4 p-3 rounded-xl border border-gray-100 bg-gray-50/80 cursor-pointer">
-                    <span className="text-sm font-medium text-gray-800">Cheque</span>
-                    <Toggle on={payCheque} onToggle={() => setPayCheque((v) => !v)} />
-                  </label>
-                </div>
-              </div>
-              <Input label="Invoice prefix" name="invoicePrefix" value={invoicePrefix} onChange={(e) => setInvoicePrefix(e.target.value)} />
-              <Button type="button" className="rounded-xl">
-                Save config
-              </Button>
-            </motion.div>
-          )}
-
-          {configTab === "sla" && (
-            <motion.div key="sla" className="p-5 sm:p-6 space-y-4" {...panelMotion}>
-              <h3 className="text-sm font-black text-secondary pb-3 mb-2 border-b border-gray-100">SLA rules</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
-                <Input label="Skilled worker — target days" name="slaSkilled" type="number" value={slaSkilled} onChange={(e) => setSlaSkilled(e.target.value)} />
-                <Input label="ILR — target days" name="slaIlr" type="number" value={slaIlr} onChange={(e) => setSlaIlr(e.target.value)} />
-                <Input label="Student visa — target days" name="slaStudent" type="number" value={slaStudent} onChange={(e) => setSlaStudent(e.target.value)} />
-                <Input label="Escalation trigger (days stuck)" name="slaEscalation" type="number" value={slaEscalation} onChange={(e) => setSlaEscalation(e.target.value)} />
-                <Input label="Missing docs escalation (days)" name="slaMissingDocs" type="number" value={slaMissingDocs} onChange={(e) => setSlaMissingDocs(e.target.value)} />
-              </div>
-              <Button type="button" className="rounded-xl">
-                Save SLA rules
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* Mobile Nav */}
+      <div className="md:hidden bg-white border-b border-gray-100 p-4 sticky top-0 z-50 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FiSettings className="text-primary" />
+          <h1 className="text-lg font-black text-secondary uppercase tracking-tighter">Settings</h1>
+        </div>
+        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 bg-gray-50 rounded-xl">
+          {mobileMenuOpen ? <FiX /> : <FiMenu />}
+        </button>
       </div>
+      
+      {mobileMenuOpen && (
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="md:hidden bg-white border-b border-gray-100 p-4 grid grid-cols-2 gap-2 z-40 fixed top-16 left-0 right-0 shadow-2xl">
+          {CONFIG_TABS.map((tab) => (
+            <button key={tab.id} onClick={() => { setConfigTab(tab.id); setMobileMenuOpen(false); }} className={`p-4 rounded-2xl text-xs font-black flex items-center gap-3 ${configTab === tab.id ? "bg-secondary text-white" : "bg-gray-50 text-gray-500"}`}>
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </motion.div>
+      )}
 
-      <Modal
-        open={visaModalOpen}
-        onClose={closeVisaModal}
-        title={visaModalMode === "add" ? "Add visa type" : "Edit visa type"}
-        maxWidthClass="max-w-md"
-        bodyClassName="px-5 py-5 sm:px-6"
-        footer={
-          <>
-            <Button type="button" variant="ghost" className="rounded-xl" onClick={closeVisaModal}>
-              Cancel
-            </Button>
-            <Button type="submit" form={VISA_FORM_ID} className="rounded-xl">
-              {visaModalMode === "add" ? "Add" : "Save"}
-            </Button>
-          </>
-        }
-      >
-        <form id={VISA_FORM_ID} onSubmit={submitVisaForm} className="space-y-4">
-          <Input
-            label="Visa type name"
-            name="visaName"
-            value={visaFormName}
-            onChange={(e) => {
-              setVisaFormName(e.target.value);
-              if (visaFormError) setVisaFormError("");
-            }}
-            placeholder="e.g. Skilled Worker Visa"
-            required
-            error={visaFormError}
-          />
-          <p className="text-[11px] text-gray-400 leading-relaxed">You can add more fields later (code, description, processing time).</p>
+      {/* Main Content Area */}
+      <main className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto max-w-[1600px] mx-auto w-full">
+        <header className="mb-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-black text-secondary tracking-tight mb-2">
+                {CONFIG_TABS.find(t => t.id === configTab)?.label}
+              </h2>
+              <div className="flex items-center gap-3 text-gray-500">
+                <span className="text-sm font-medium">Control Center</span>
+                <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                <span className="text-sm font-medium">{configTab.charAt(0).toUpperCase() + configTab.slice(1)}</span>
+              </div>
+            </div>
+            {configTab === "account" && (
+              <div className="flex items-center gap-3 px-5 py-2.5 bg-blue-50 text-blue-700 rounded-2xl border border-blue-100 shadow-sm">
+                <FiCheckCircle size={18} />
+                <span className="text-xs font-black uppercase tracking-widest">Real-time Sync</span>
+              </div>
+            )}
+          </div>
+        </header>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={configTab}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3, ease: "circOut" }}
+          >
+            {configTab === "account" && (
+              <AccountSettings 
+                profile={profile} 
+                profileFile={profileFile}
+                preferences={preferences}
+                onProfileChange={(e) => setProfile({...profile, [e.target.name]: e.target.value})}
+                onProfileFileChange={(f) => setProfileFile(f)}
+                onPreferenceChange={(e) => setPreferences({...preferences, [e.target.name]: e.target.value})}
+                onPreferenceToggle={(id) => setPreferences({...preferences, [id]: !preferences[id]})}
+                onSave={handleProfileSave}
+                saving={saving}
+                security={security}
+                onSecurityChange={(e) => setSecurity({...security, [e.target.name]: e.target.value})}
+                onPasswordSubmit={handlePasswordSubmit}
+                savingPassword={savingPassword}
+                passwordError={passwordError}
+                onReset2FA={() => { setTwoFactorMode("setup"); setTwoFactorModalOpen(true); }}
+                onDisable2FA={() => { setTwoFactorMode("disable"); setTwoFactorModalOpen(true); }}
+              />
+            )}
+
+            {configTab === "visa" && (
+              <VisaSettings
+                visaTypes={visaTypes}
+                petitionTypes={petitionTypes}
+                loading={loading}
+                onAddVisa={() => { setVisaModalMode("add"); setVisaFormName(""); setVisaModalOpen(true); }}
+                onEditVisa={(id) => { const v = visaTypes.find(x => x.id === id); setVisaModalMode("edit"); setEditingVisaId(id); setVisaFormName(v.name); setVisaModalOpen(true); }}
+                onDeleteVisa={async (id) => { const r = await Swal.fire({ title: "Delete Visa Type?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteVisaType(id); loadData(); } }}
+                onAddPetition={() => { setPetitionModalMode("add"); setPetitionFormName(""); setPetitionModalOpen(true); }}
+                onEditPetition={(id) => { const p = petitionTypes.find(x => x.id === id); setPetitionModalMode("edit"); setEditingPetitionId(id); setPetitionFormName(p.name); setPetitionModalOpen(true); }}
+                onDeletePetition={async (id) => { const r = await Swal.fire({ title: "Delete Petition Type?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deletePetitionType(id); loadData(); } }}
+                error={error}
+              />
+            )}
+
+            {configTab === "checklist" && (
+              <DocumentChecklistSettings />
+            )}
+
+            {configTab === "categories" && (
+              <CategorySettings 
+                categories={categories}
+                loading={loading}
+                onAdd={handleCategoryAdd}
+                onDelete={handleCategoryDelete}
+                saving={saving}
+                error={error}
+              />
+            )}
+
+            {configTab === "departments" && (
+              <DepartmentSettings 
+                departments={departments}
+                loading={loading}
+                onAdd={() => { setDepartmentModalMode("add"); setDepartmentFormName(""); setDepartmentModalOpen(true); }}
+                onEdit={(name) => { setDepartmentModalMode("edit"); setEditingDepartment(name); setDepartmentFormName(name); setDepartmentModalOpen(true); }}
+                onDelete={async (name) => { const r = await Swal.fire({ title: "Delete Department?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteDepartment({ name }); loadData(); } }}
+                error={error}
+              />
+            )}
+
+            {configTab === "roles" && (
+              <div className="bg-white p-12 md:p-20 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/20 text-center">
+                <div className="inline-flex p-8 bg-amber-50 rounded-full mb-8 text-amber-500 shadow-inner">
+                  <FiShield size={64} />
+                </div>
+                <h3 className="text-2xl font-black text-secondary mb-4 tracking-tight">Access Control & Roles</h3>
+                <p className="text-gray-500 max-w-xl mx-auto mb-10 text-lg font-medium leading-relaxed">
+                  Manage user permissions, define hierarchical roles, and secure your system with granular RBAC settings in the specialized permissions module.
+                </p>
+                <Link 
+                  to="/admin/permissions" 
+                  className="inline-flex items-center gap-4 px-10 py-5 bg-secondary text-white rounded-2xl font-black text-sm shadow-2xl shadow-secondary/30 hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  Configure RBAC Matrix <FiArrowRight />
+                </Link>
+              </div>
+            )}
+
+            {configTab === "email" && (
+              <EmailSettings 
+                templates={emailTemplates}
+                loading={loading}
+                onAdd={() => { setEmailModalMode("add"); setEmailFormKey(""); setEmailFormSubject(""); setEmailFormBody(""); setEmailModalOpen(true); }}
+                onEdit={(key) => { const t = emailTemplates.find(x => x.template_key === key); setEmailModalMode("edit"); setEditingEmailKey(key); setEmailFormKey(t.template_key); setEmailFormSubject(t.subject); setEmailFormBody(t.body); setEmailModalOpen(true); }}
+                onDelete={async (key) => { const r = await Swal.fire({ title: "Delete Template?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteEmailTemplate(key); loadData(); } }}
+                onView={(key) => { setViewingTemplate(emailTemplates.find(x => x.template_key === key)); setViewEmailModalOpen(true); }}
+                error={error}
+              />
+            )}
+
+            {configTab === "payment" && (
+              <PaymentSettings 
+                config={paymentConfig}
+                onConfigChange={(key, val) => setPaymentConfig({...paymentConfig, [key]: val})}
+                onToggle={(key) => setPaymentConfig({...paymentConfig, [key]: !paymentConfig[key]})}
+                onSave={handlePaymentSave}
+                saving={saving}
+                loading={loading}
+                error={error}
+              />
+            )}
+
+            {configTab === "sla" && (
+              <SLASettings 
+                rules={slaRules}
+                loading={loading}
+                onAdd={() => { setSlaModalMode("add"); setSlaFormName(""); setSlaFormDays(""); setSlaModalOpen(true); }}
+                onEdit={(id) => { const r = slaRules.find(x => x.id === id); setSlaModalMode("edit"); setEditingSlaId(id); setSlaFormName(r.name); setSlaFormDays(r.days); setSlaFormType(r.rule_type); setSlaModalOpen(true); }}
+                onDelete={async (id) => { const r = await Swal.fire({ title: "Delete SLA?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteSlaRule(id); loadData(); } }}
+                error={error}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      {/* Modals */}
+      <Modal open={visaModalOpen} onClose={() => setVisaModalOpen(false)} title="Visa Type Configuration">
+        <form onSubmit={submitVisaForm} className="space-y-6 p-2">
+          <Input label="Visa Designation" value={visaFormName} onChange={(e) => setVisaFormName(e.target.value)} error={visaFormError} placeholder="e.g. EB-1 Extraordinary Ability" autoFocus />
+          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Save Configuration</Button>
         </form>
+      </Modal>
+
+      <Modal open={petitionModalOpen} onClose={() => setPetitionModalOpen(false)} title="Petition Type Setup">
+        <form onSubmit={submitPetitionForm} className="space-y-6 p-2">
+          <Input label="Petition Identifier" value={petitionFormName} onChange={(e) => setPetitionFormName(e.target.value)} error={petitionFormError} placeholder="e.g. Form I-140" autoFocus />
+          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Initialize Petition</Button>
+        </form>
+      </Modal>
+
+      <Modal open={departmentModalOpen} onClose={() => setDepartmentModalOpen(false)} title="Department Management">
+        <form onSubmit={submitDepartmentForm} className="space-y-6 p-2">
+          <Input label="Department Designation" value={departmentFormName} onChange={(e) => setDepartmentFormName(e.target.value)} error={departmentFormError} placeholder="e.g. Legal Compliance" autoFocus />
+          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Update Registry</Button>
+        </form>
+      </Modal>
+
+      {/* Email Editor Modal */}
+      <Modal 
+        open={emailModalOpen} 
+        onClose={() => setEmailModalOpen(false)} 
+        title=""
+        maxWidthClass="max-w-6xl" 
+        bodyClassName="p-0"
+        footer={null}
+      >
+        <EmailTemplateEditor 
+          initialData={emailModalMode === "add" ? null : { template_key: editingEmailKey, subject: emailFormSubject, body: emailFormBody }}
+          mode={emailModalMode}
+          onSave={submitEmailForm}
+          onCancel={() => setEmailModalOpen(false)}
+          error={emailFormError}
+          saving={saving}
+        />
+      </Modal>
+
+      {/* Email Preview Modal */}
+      <Modal 
+        open={viewEmailModalOpen} 
+        onClose={() => setViewEmailModalOpen(false)} 
+        title=""
+        maxWidthClass="max-w-5xl"
+        bodyClassName="p-0"
+        footer={null}
+      >
+        <EmailTemplatePreview 
+          template={viewingTemplate}
+          onClose={() => setViewEmailModalOpen(false)}
+        />
+      </Modal>
+
+      <Modal open={slaModalOpen} onClose={() => setSlaModalOpen(false)} title="SLA Rule Matrix">
+        <form onSubmit={submitSlaForm} className="space-y-6 p-2">
+          <Input label="Rule Designation" value={slaFormName} onChange={(e) => setSlaFormName(e.target.value)} placeholder="e.g. Standard Processing" autoFocus />
+          <Input label="Target Duration (Days)" type="number" value={slaFormDays} onChange={(e) => setSlaFormDays(e.target.value)} placeholder="45" />
+          <div className="flex flex-col gap-3">
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Policy Scope</label>
+            <select className="w-full border-2 border-gray-100 rounded-2xl px-6 py-4 bg-white text-sm font-bold outline-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all" value={slaFormType} onChange={(e) => setSlaFormType(e.target.value)}>
+              <option value="Visa">Visa Type Specific</option>
+              <option value="Global">Global Enterprise Policy</option>
+            </select>
+          </div>
+          {slaFormError && <p className="text-xs text-red-500 font-black px-2 flex items-center gap-2"><FiX /> {slaFormError}</p>}
+          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Enforce Policy</Button>
+        </form>
+      </Modal>
+
+      <Modal open={twoFactorModalOpen} onClose={() => setTwoFactorModalOpen(false)} title="" maxWidthClass="max-w-md" bodyClassName="p-0" footer={null}>
+        {twoFactorMode === "setup" ? (
+          <TwoFactorSetup onSetupComplete={() => { setTwoFactorModalOpen(false); loadData(); }} onCancel={() => setTwoFactorModalOpen(false)} />
+        ) : (
+          <TwoFactorDisable onDisableComplete={() => { setTwoFactorModalOpen(false); loadData(); }} onCancel={() => setTwoFactorModalOpen(false)} />
+        )}
       </Modal>
     </div>
   );

@@ -12,15 +12,20 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { logout } from "../store/slices/authSlice";
+import NotificationDropdown from "./Notifications/NotificationDropdown";
+import MessageDropdown from "./notifications/MessageDropdown";
 
 const Header = ({ onMenuClick }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const dropdownRef = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
+  
+  const fullName = user?.first_name 
+    ? `${user.first_name} ${user.last_name || ''}`.trim() 
+    : user?.email?.split('@')[0] || "User";
 
   const roleLabel =
     user?.role === "caseworker"
@@ -30,16 +35,6 @@ const Header = ({ onMenuClick }) => {
         : user?.role
           ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
           : "";
-
-  const notificationsPath = useMemo(() => {
-    if (!user?.role) return null;
-    if (user.role === "candidate") {
-      return "/candidate/communication?tab=notifications";
-    }
-    if (user.role === "admin") return "/admin/notifications";
-    if (user.role === "business") return "/business/notifications";
-    return null;
-  }, [user?.role]);
 
   const profileSettingsPath = useMemo(() => {
     if (!user?.role) return null;
@@ -61,7 +56,6 @@ const Header = ({ onMenuClick }) => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsProfileOpen(false);
-        setIsNotificationOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -69,7 +63,7 @@ const Header = ({ onMenuClick }) => {
   }, []);
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shrink-0">
+    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40 shrink-0">
       {/* Left: hamburger (mobile) + breadcrumbs */}
       <div className="flex items-center gap-2 min-w-0 overflow-hidden">
         {onMenuClick && (
@@ -128,66 +122,10 @@ const Header = ({ onMenuClick }) => {
           </span>
         </button>
 
-        {/* Notifications — opens full notifications page when route exists */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => {
-              if (notificationsPath) {
-                navigate(notificationsPath);
-                setIsNotificationOpen(false);
-                setIsProfileOpen(false);
-                return;
-              }
-              setIsNotificationOpen(!isNotificationOpen);
-            }}
-            className={`p-2 rounded-full transition-colors relative group ${isNotificationOpen
-                ? "bg-gray-100 text-primary"
-                : "text-gray-500 hover:bg-gray-100"
-              }`}
-            aria-label={
-              notificationsPath ? "Open notifications page" : "Notifications"
-            }
-          >
-            <Bell size={20} />
-            <span className="absolute top-2 right-2.5 w-2 h-2 bg-primary border-2 border-white rounded-full" />
-          </button>
 
-          {!notificationsPath && isNotificationOpen && (
-            <div className="absolute right-0 mt-3 w-72 sm:w-80 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                <h3 className="font-bold text-gray-900">Notifications</h3>
-                <button
-                  type="button"
-                  className="text-xs text-primary hover:underline font-semibold"
-                >
-                  Mark all as read
-                </button>
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                <div className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer">
-                  <p className="text-sm text-gray-600">
-                    <span className="font-bold text-gray-900">System</span>{" "}
-                    updated your application status.
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">2 hours ago</p>
-                </div>
-                <div className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer">
-                  <p className="text-sm text-gray-600">
-                    New message from{" "}
-                    <span className="font-bold text-gray-900">Admin Support</span>.
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">5 hours ago</p>
-                </div>
-              </div>
-              <div className="p-3 bg-gray-50 text-center">
-                <span className="text-sm text-gray-400 font-medium">
-                  Quick preview — open your portal for full history
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Notifications with real-time count */}
+        <MessageDropdown />
+        <NotificationDropdown />
 
         {/* Profile */}
         <div className="relative">
@@ -199,11 +137,11 @@ const Header = ({ onMenuClick }) => {
               }`}
           >
             <div className="w-9 h-9 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold text-sm shadow-inner">
-              {user?.name?.charAt(0) || "U"}
+              {fullName.charAt(0).toUpperCase()}
             </div>
             <div className="text-left hidden sm:block">
               <p className="text-sm font-bold text-gray-900 leading-none">
-                {user?.name || "User"}
+                {fullName}
               </p>
               <p className="text-xs text-gray-500 mt-1">{roleLabel}</p>
             </div>
@@ -213,7 +151,7 @@ const Header = ({ onMenuClick }) => {
             <div className="absolute right-0 mt-3 w-56 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden py-2 animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="px-4 py-2 border-b border-gray-100 mb-2">
                 <p className="text-sm font-bold text-gray-900">
-                  {user?.name || "User"}
+                  {fullName}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
                   {user?.email || "user@example.com"}
