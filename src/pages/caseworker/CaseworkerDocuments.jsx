@@ -3,16 +3,10 @@ import { useLocation } from "react-router-dom";
 import { FileText, Upload, X, CheckCircle, AlertCircle } from "lucide-react";
 import api from "../../services/api";
 import { getCaseChecklist } from "../../services/documentChecklistApi";
+import { useToast } from "../../context/ToastContext";
+import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 
-const DOC_TYPES = [
-  "Passport",
-  "Right to work",
-  "English language certificate",
-  "Certificate of sponsorship",
-  "Job offer letter",
-  "Bank statement",
-  "Other",
-];
+const DOC_TYPES = DOCUMENT_TYPE_OPTIONS;
 
 
 
@@ -40,7 +34,7 @@ export default function CaseworkerDocuments() {
   const fileInputRef = useRef(null);
   const [cases, setCases] = useState([]);
   const [caseId, setCaseId] = useState("");
-  const [docType, setDocType] = useState(DOC_TYPES[0]);
+  const [docType, setDocType] = useState("General");
   const [notes, setNotes] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [rejectModal, setRejectModal] = useState({ isOpen: false, doc: null, note: "" });
@@ -62,6 +56,7 @@ export default function CaseworkerDocuments() {
   });
   const [uploadErrors, setUploadErrors] = useState({});
   const [uploadingForItem, setUploadingForItem] = useState(null);
+  const { showToast } = useToast();
 
   const isMissingRoute = location.pathname.includes("/documents/missing");
 
@@ -278,7 +273,7 @@ export default function CaseworkerDocuments() {
 
   const handleUpload = async () => {
     if (!selectedFile || !caseId) {
-      alert("Please select a file and case");
+      showToast({ message: "Please select a file and case.", variant: "warning" });
       return;
     }
 
@@ -288,7 +283,7 @@ export default function CaseworkerDocuments() {
       const userId = selectedCase?.candidateId;
 
       if (!userId) {
-        alert("Unable to determine user ID from selected case");
+        showToast({ message: "Unable to determine user ID from selected case.", variant: "danger" });
         return;
       }
 
@@ -312,7 +307,7 @@ export default function CaseworkerDocuments() {
         },
       });
 
-      alert("Document uploaded successfully!");
+      showToast({ message: "Document uploaded successfully.", variant: "success" });
       setSelectedFile(null);
       setNotes("");
       setExpiryDate("");
@@ -324,7 +319,10 @@ export default function CaseworkerDocuments() {
       fetchMissingDocuments();
     } catch (error) {
       console.error("Error uploading document:", error);
-      alert("Failed to upload document");
+      showToast({
+        message: error.response?.data?.message || "Failed to upload document.",
+        variant: "danger",
+      });
     } finally {
       setUploading(false);
     }
@@ -339,10 +337,10 @@ export default function CaseworkerDocuments() {
       fetchReviewDocuments();
       fetchAllDocuments();
       fetchMissingDocuments();
-      alert("Document approved successfully!");
+      showToast({ message: "Document approved successfully.", variant: "success" });
     } catch (error) {
       console.error("Error approving document:", error);
-      alert("Failed to approve document");
+      showToast({ message: "Failed to approve document.", variant: "danger" });
     }
   };
 
@@ -358,10 +356,10 @@ export default function CaseworkerDocuments() {
       fetchReviewDocuments();
       fetchAllDocuments();
       fetchMissingDocuments();
-      alert("Document rejected successfully!");
+      showToast({ message: "Document rejected successfully.", variant: "success" });
     } catch (error) {
       console.error("Error rejecting document:", error);
-      alert("Failed to reject document");
+      showToast({ message: "Failed to reject document.", variant: "danger" });
     }
   };
 
@@ -377,9 +375,10 @@ export default function CaseworkerDocuments() {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      showToast({ message: "Document download started.", variant: "success" });
     } catch (error) {
       console.error("Error downloading document:", error);
-      alert("Failed to download document");
+      showToast({ message: "Failed to download document.", variant: "danger" });
     }
   };
 
@@ -791,15 +790,11 @@ export default function CaseworkerDocuments() {
                     disabled={!!uploadingForItem}
                     className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary disabled:bg-gray-50 disabled:text-gray-500"
                   >
-                    <option value="General">General</option>
-                    <option value="Passport">Passport</option>
-                    <option value="Visa">Visa</option>
-                    <option value="English Certificate">English Certificate</option>
-                    <option value="Right to Work">Right to Work</option>
-                    <option value="Education Certificate">Education Certificate</option>
-                    <option value="Employment Contract">Employment Contract</option>
-                    <option value="Sponsor Documents">Sponsor Documents</option>
-                    <option value="Other">Other</option>
+                    {DOC_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>

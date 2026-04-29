@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
   Upload,
@@ -21,20 +22,11 @@ import {
   triggerDownload,
 } from "../../services/documentApi";
 import useCandidate from "../../hooks/useCandidate";
+import { useToast } from "../../context/ToastContext";
+import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 
-const DOC_TYPES = [
-  "— Select document type —",
-  "Passport",
-  "Bank statement",
-  "Payslip",
-  "Employment contract",
-  "Certificate of sponsorship",
-  "Utility bill",
-  "Academic certificate",
-  "BRP Card",
-  "National ID",
-  "Other",
-];
+const DOC_TYPE_PLACEHOLDER = "— Select document type —";
+const DOC_TYPES = [DOC_TYPE_PLACEHOLDER, ...DOCUMENT_TYPE_OPTIONS];
 
 // Map document status → badge style
 const STATUS_STYLES = {
@@ -53,7 +45,13 @@ const STATUS_ICON = {
   missing:      null,
 };
 
+const getCandidateStatusLabel = (status) => {
+  if (status === "uploaded" || status === "under_review") return "pending review";
+  return status?.replace("_", " ") || "unknown";
+};
+
 const UploadDocuments = () => {
+  const [searchParams] = useSearchParams();
   const user = useSelector((state) => state.auth.user);
   const userId = user?.id || user?.userId;
 
@@ -74,8 +72,30 @@ const UploadDocuments = () => {
   const [viewItem, setViewItem]       = useState(null);
   const [downloading, setDownloading] = useState(false);
   const inputRef = useRef(null);
+  const { showToast } = useToast();
+  const prefillDocumentType = searchParams.get("documentType");
+  const prefillDescription = searchParams.get("documentName");
 
   const { myApplication, getMyApplication } = useCandidate();
+
+  const resolvedPrefillType = useMemo(() => {
+    if (!prefillDocumentType) return null;
+    const normalizedPrefill = prefillDocumentType.trim().toLowerCase();
+    return (
+      DOC_TYPES.find((type) => type.toLowerCase() === normalizedPrefill) ||
+      DOC_TYPES.find((type) => type.toLowerCase().includes(normalizedPrefill)) ||
+      null
+    );
+  }, [prefillDocumentType]);
+
+  useEffect(() => {
+    if (resolvedPrefillType) {
+      setDocType(resolvedPrefillType);
+    }
+    if (prefillDescription) {
+      setDescription(prefillDescription);
+    }
+  }, [resolvedPrefillType, prefillDescription]);
 
   // ── Load uploaded documents & application data ─────────────────────────────
   const loadDocuments = useCallback(async () => {
@@ -139,7 +159,7 @@ const UploadDocuments = () => {
 
   // ── Real upload ────────────────────────────────────────────────────────────
   const handleUpload = async () => {
-    if (docType === DOC_TYPES[0]) {
+    if (docType === DOC_TYPE_PLACEHOLDER) {
       setUploadError("Please select a document type.");
       return;
     }
@@ -175,8 +195,9 @@ const UploadDocuments = () => {
       );
 
       setUploadSuccess(true);
+      showToast({ message: "Document uploaded successfully.", variant: "success" });
       clearFile();
-      setDocType(DOC_TYPES[0]);
+      setDocType(DOC_TYPE_PLACEHOLDER);
       setDescription("");
       // Refresh document list
       await loadDocuments();
@@ -184,6 +205,10 @@ const UploadDocuments = () => {
       setUploadError(
         err?.response?.data?.message || "Upload failed. Please try again."
       );
+      showToast({
+        message: err?.response?.data?.message || "Upload failed. Please try again.",
+        variant: "danger",
+      });
     } finally {
       setUploading(false);
     }
@@ -195,8 +220,9 @@ const UploadDocuments = () => {
     try {
       const res = await downloadDocument(item.id);
       triggerDownload(res.data, item.userFileName || item.documentName);
+      showToast({ message: "Document download started.", variant: "success" });
     } catch {
-      alert("Download failed. Please try again.");
+      showToast({ message: "Download failed. Please try again.", variant: "danger" });
     } finally {
       setDownloading(false);
     }
@@ -422,7 +448,7 @@ const UploadDocuments = () => {
                   <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
                     <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full border ${STATUS_STYLES[item.status] || STATUS_STYLES.missing}`}>
                       {STATUS_ICON[item.status]}
-                      {item.status?.replace("_", " ") || "Unknown"}
+                      {getCandidateStatusLabel(item.status)}
                     </span>
                     <div className="flex items-center gap-1">
                       <button
@@ -478,7 +504,7 @@ const UploadDocuments = () => {
               <div className="rounded-lg bg-gray-50 px-3 py-2">
                 <p className="text-gray-400 font-bold uppercase tracking-wider text-[9px] mb-1">Status</p>
                 <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${STATUS_STYLES[viewItem.status] || STATUS_STYLES.missing}`}>
-                  {viewItem.status?.replace("_", " ") || "—"}
+                  {getCandidateStatusLabel(viewItem.status)}
                 </span>
               </div>
             </div>

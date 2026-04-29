@@ -14,3 +14,21 @@ export const ROLE_ROUTES = {
   3: "/candidate/dashboard",
   4: "/business/dashboard",
 };
+
+export const DOCUMENT_TYPE_OPTIONS = [
+  "General",
+  "Passport",
+  "Visa",
+  "Right to Work",
+  "English Certificate",
+  "Certificate of Sponsorship",
+  "Job Offer Letter",
+  "Bank Statement",
+  "Employment Contract",
+  "Academic Certificate",
+  "Utility Bill",
+  "BRP Card",
+  "National ID",
+  "Sponsor Documents",
+  "Other",
+];

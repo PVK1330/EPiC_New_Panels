@@ -16,6 +16,7 @@ import {
 import Modal from "../../components/Modal";
 import useCandidate from "../../hooks/useCandidate";
 import { downloadDocument, triggerDownload } from "../../services/documentApi";
+import { useToast } from "../../context/ToastContext";
 
 const FILTERS = [
   { id: "all", label: "All documents" },
@@ -48,7 +49,7 @@ function statusLabel(status) {
     case "required":
       return "Required";
     case "uploaded":
-      return "Uploaded";
+      return "Pending Review";
     case "under_review":
       return "Under Review";
     case "approved":
@@ -65,6 +66,7 @@ const DocumentChecklist = () => {
   const [viewDoc, setViewDoc] = useState(null);
   const [downloading, setDownloading] = useState(false);
   const { myApplication, applicationLoading, getMyApplication } = useCandidate();
+  const { showToast } = useToast();
 
   useEffect(() => {
     getMyApplication();
@@ -164,8 +166,9 @@ const DocumentChecklist = () => {
     try {
       const res = await downloadDocument(item.fileData.id);
       triggerDownload(res.data, item.fileData.userFileName || item.fileData.documentName);
+      showToast({ message: "Document download started.", variant: "success" });
     } catch {
-      alert("Download failed. Please try again.");
+      showToast({ message: "Download failed. Please try again.", variant: "danger" });
     } finally {
       setDownloading(false);
     }
@@ -324,7 +327,7 @@ const DocumentChecklist = () => {
                       
                       {(doc.status === "missing" || doc.status === "rejected") && (
                         <Link
-                          to="/candidate/upload-documents"
+                          to={`/candidate/upload-documents?documentType=${encodeURIComponent(doc.fileData?.documentType || doc.name)}&documentName=${encodeURIComponent(doc.fileData?.userFileName || doc.name)}`}
                           className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-black text-primary hover:bg-primary hover:text-white transition-colors"
                         >
                           <Upload size={14} />
@@ -408,7 +411,7 @@ const DocumentChecklist = () => {
               )}
               
               <Link
-                to="/candidate/upload-documents"
+                to={`/candidate/upload-documents?documentType=${encodeURIComponent(viewDoc.fileData?.documentType || viewDoc.name)}&documentName=${encodeURIComponent(viewDoc.fileData?.userFileName || viewDoc.name)}`}
                 onClick={() => setViewDoc(null)}
                 className="flex-1 rounded-xl bg-primary py-3 text-center text-sm font-black text-white hover:bg-primary-dark"
               >
