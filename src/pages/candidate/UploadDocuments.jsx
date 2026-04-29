@@ -20,6 +20,7 @@ import {
   downloadDocument,
   triggerDownload,
 } from "../../services/documentApi";
+import useCandidate from "../../hooks/useCandidate";
 
 const DOC_TYPES = [
   "— Select document type —",
@@ -74,12 +75,15 @@ const UploadDocuments = () => {
   const [downloading, setDownloading] = useState(false);
   const inputRef = useRef(null);
 
-  // ── Load uploaded documents ────────────────────────────────────────────────
+  const { myApplication, getMyApplication } = useCandidate();
+
+  // ── Load uploaded documents & application data ─────────────────────────────
   const loadDocuments = useCallback(async () => {
     if (!userId) return;
     setHistoryLoading(true);
     setHistoryError(null);
     try {
+      await getMyApplication(); // Get application to find active case ID
       const res = await getUserDocuments(userId);
       setHistory(res.data?.data?.documents ?? []);
     } catch {
@@ -87,7 +91,7 @@ const UploadDocuments = () => {
     } finally {
       setHistoryLoading(false);
     }
-  }, [userId]);
+  }, [userId, getMyApplication]);
 
   useEffect(() => {
     loadDocuments();
@@ -154,6 +158,10 @@ const UploadDocuments = () => {
     setUploadSuccess(false);
 
     try {
+      // Find active case ID if available
+      const activeCase = myApplication?._relatedData?.cases?.[0];
+      const caseIdToAttach = activeCase ? activeCase.id : undefined;
+
       await uploadDocumentsApi(
         [file],
         {
@@ -161,6 +169,7 @@ const UploadDocuments = () => {
           documentType: docType,
           documentCategory: "candidate",
           userFileName: description.trim() || file.name,
+          caseId: caseIdToAttach, // Attach case ID so caseworker sees it
         },
         (pct) => setUploadProgress(pct)
       );
