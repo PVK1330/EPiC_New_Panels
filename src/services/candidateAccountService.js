@@ -8,6 +8,10 @@ export const patchCandidatePreferences = (data) =>
 export const submitCandidateFeedback = (data) =>
   api.post("/api/candidate/account/feedback", data);
 
+/** FormData: category, severity, subject, description, optional case_id, attachments[] */
+export const submitCandidateIssueReport = (formData) =>
+  api.post("/api/candidate/account/issue-report", formData);
+
 export const postCandidateConsent = (data) =>
   api.post("/api/candidate/account/consent", data || {});
 

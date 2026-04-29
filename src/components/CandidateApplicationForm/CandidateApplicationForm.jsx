@@ -227,6 +227,14 @@ function sanitizeForApi(payload) {
   return out;
 }
 
+/** Format a date string as "DD MMM YYYY" for display, or "N/A" on failure. */
+function formatDate(dateStr) {
+  if (!dateStr) return "N/A";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "N/A";
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 /** Per-step required-field validation. Returns { fieldName: "error message" }. */
 function validateStep(stepIndex, data) {
   const errs = {};
@@ -311,12 +319,18 @@ export default function CandidateApplicationForm({
   const [internalForm, setInternalForm] = useState(getInitialApplicationFormData);
   const [step, setStep] = useState(0);
   const [showSecondParent, setShowSecondParent] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [draftLoading, setDraftLoading] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
   const [caseworkers, setCaseworkers] = useState([]);
   const [caseworkersLoading, setCaseworkersLoading] = useState(false);
+  // Locked application state
+  const [isLocked, setIsLocked] = useState(false);
+  const [submittedAt, setSubmittedAt] = useState(null);
+  // Banner state: null = hidden, string = message to show
+  const [apiError, setApiError] = useState(null);
+  const [showSubmitWarning, setShowSubmitWarning] = useState(true);
 
   const isControlled =
     controlledFormData !== undefined && setControlledFormData !== undefined;
@@ -337,19 +351,28 @@ export default function CandidateApplicationForm({
         if (cancelled) return;
 
         if (result.ok && result.application) {
+          const app = result.application;
+
+          // If already submitted and locked, show the locked screen instead
+          if (app.status === "submitted" && app.isLocked === true) {
+            setIsLocked(true);
+            setSubmittedAt(app.submittedAt ?? null);
+            return; // finally block clears draftLoading
+          }
+
           // Use the existing mapper: it normalises null→"", ISO dates→YYYY-MM-DD
           const restored = candidateRowToApplicationForm({
-            first_name: result.application.firstName ?? "",
-            last_name: result.application.lastName ?? "",
-            email: result.application.email ?? "",
+            first_name: app.firstName ?? "",
+            last_name: app.lastName ?? "",
+            email: app.email ?? "",
             country_code: "",
-            mobile: result.application.contactNumber ?? "",
-            application: result.application,
+            mobile: app.contactNumber ?? "",
+            application: app,
           });
           setInternalForm(restored);
           if (restored.parent2Name) setShowSecondParent(true);
           // Only show "Draft restored" banner if it's NOT already submitted
-          if (result.application.status !== "submitted") {
+          if (app.status !== "submitted") {
             setDraftRestored(true);
           }
         } else {
@@ -418,10 +441,11 @@ export default function CandidateApplicationForm({
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear the error for this field as soon as the user edits it
+    // Clear field error and any API-level banner as soon as the user types
     if (formErrors[name]) {
       setFormErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
     }
+    if (apiError) setApiError(null);
   };
 
   const handleCustomResponseChange = (fieldId, value) => {
@@ -485,19 +509,23 @@ export default function CandidateApplicationForm({
     // Sanitize date fields — convert empty strings to null
     const payload = sanitizeForApi(cleaned);
 
-    setSubmitting(true);
+    setIsSubmitting(true);
+    setApiError(null);
     const result = await submitApplication(payload);
-    setSubmitting(false);
+    setIsSubmitting(false);
 
     if (result.ok) {
-      alert("Application submitted successfully!");
       navigate("/candidate/dashboard");
     } else {
-      const msg =
-        result.error?.response?.data?.message ||
-        result.error?.message ||
-        "Submission failed. Please try again.";
-      alert(msg);
+      const status = result.error?.response?.status;
+      if (status === 409) {
+        setApiError(
+          result.error.response.data?.message ||
+          "Your application has already been submitted and is currently under review.",
+        );
+      } else {
+        setApiError("Something went wrong. Please try again.");
+      }
     }
   };
 
@@ -516,24 +544,25 @@ export default function CandidateApplicationForm({
 
     if (result.ok) {
       try {
-        localStorage.setItem(
-          "elitepic_application_draft",
-          JSON.stringify(formData),
-        );
+        localStorage.setItem("elitepic_application_draft", JSON.stringify(formData));
       } catch {
         /* ignore storage errors */
       }
-      alert("Draft saved successfully.");
     } else {
-      // Fall back to local-only save if API fails
-      try {
-        localStorage.setItem(
-          "elitepic_application_draft",
-          JSON.stringify(formData),
+      const status = result.error?.response?.status;
+      if (status === 403) {
+        // Locked application — show backend message, skip localStorage fallback
+        setApiError(
+          result.error.response.data?.message ||
+          "Your application is locked and cannot be edited. Contact your caseworker.",
         );
-        alert("Saved locally on this device (server unavailable).");
+        return;
+      }
+      // Non-403 API failure — fall back to local-only save silently
+      try {
+        localStorage.setItem("elitepic_application_draft", JSON.stringify(formData));
       } catch {
-        alert("Could not save draft.");
+        /* ignore storage errors */
       }
     }
   };
@@ -551,6 +580,51 @@ export default function CandidateApplicationForm({
   const outerClass =
     containerClassName ??
     "mx-auto max-w-5xl rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6 md:p-8";
+
+  // ── Locked / submitted screen ────────────────────────────────────────────
+  if (isLocked && variant === "candidate") {
+    return (
+      <div className={embedded ? "w-full" : outerClass}>
+        <div className="flex flex-col items-center gap-6 py-16 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary/10">
+            <svg
+              className="h-8 w-8 text-secondary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-2xl font-black tracking-tight text-gray-900">
+              Application Submitted
+            </h2>
+            <p className="mt-1 text-sm font-bold text-gray-400">
+              Submitted on: {formatDate(submittedAt)}
+            </p>
+          </div>
+          <p className="max-w-md text-sm font-bold leading-relaxed text-gray-600">
+            Your application is currently under review. This process takes up to
+            7 working days. You will be notified by your caseworker if any
+            changes are required.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate("/candidate/dashboard")}
+            className="rounded-xl bg-secondary px-8 py-3 text-sm font-black text-white shadow-md shadow-secondary/20 transition-colors hover:bg-secondary-dark"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={embedded ? "w-full" : outerClass}>
@@ -615,6 +689,36 @@ export default function CandidateApplicationForm({
                 type="button"
                 onClick={() => setDraftRestored(false)}
                 className="ml-auto shrink-0 text-green-500 hover:text-green-700"
+                aria-label="Dismiss"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+
+          {/* API error banner (409 duplicate, 403 locked, other failures) */}
+          {apiError && (
+            <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+              <svg
+                className="mt-0.5 h-4 w-4 shrink-0 text-red-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p className="flex-1 text-sm font-bold text-red-800">{apiError}</p>
+              <button
+                type="button"
+                onClick={() => setApiError(null)}
+                className="ml-auto shrink-0 text-red-400 hover:text-red-600"
                 aria-label="Dismiss"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1403,13 +1507,46 @@ export default function CandidateApplicationForm({
               </div>
             )}
 
+            {/* Amber warning banner — only on final step, candidate form, before submit */}
+            {step >= lastStep && variant === "candidate" && showSubmitWarning && (
+              <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <svg
+                  className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <p className="flex-1 text-sm font-bold text-amber-800">
+                  Once submitted, your application cannot be edited until your caseworker requests
+                  changes. Please review all details carefully.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowSubmitWarning(false)}
+                  className="ml-auto shrink-0 text-amber-500 hover:text-amber-700"
+                  aria-label="Dismiss"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
             <div className="flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="flex flex-col gap-2 sm:flex-row">
                 {variant === "candidate" && (
                   <button
                     type="button"
                     onClick={handleSaveDraft}
-                    disabled={submitting || applicationLoading}
+                    disabled={isSubmitting || applicationLoading}
                     className="rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition-colors hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {applicationLoading ? "Saving…" : "Save draft"}
@@ -1447,10 +1584,32 @@ export default function CandidateApplicationForm({
                     key="submit-btn"
                     type="button"
                     onClick={handleSubmit}
-                    disabled={submitting || applicationLoading}
-                    className="rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition-colors hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
+                    disabled={isSubmitting || applicationLoading}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition-colors hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {submitting
+                    {isSubmitting && (
+                      <svg
+                        className="h-4 w-4 animate-spin"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                        />
+                      </svg>
+                    )}
+                    {isSubmitting
                       ? "Submitting…"
                       : variant === "admin"
                         ? "Save client"
