@@ -2,10 +2,14 @@ import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Search, Settings, Grid3x3, List, Calendar as CalendarIcon, Clock, MapPin, Users, Video, Phone, X, Edit, Trash2, Eye, UserCheck, CheckCircle2 } from "lucide-react";
 import MicrosoftConnect from "../../components/MicrosoftConnect";
 import CreateMeetingModal from "../../components/CreateMeetingModal";
-import { getUpcomingMeetings } from "../../services/teamsApi";
-import { getMyAppointments } from "../../services/appointmentApi";
+import {
+  createTeamsMeeting,
+  getTeamsMeetings,
+  cancelTeamsMeeting,
+} from "../../services/teamsApi";
+import { getMyAppointments, deleteAppointment } from "../../services/appointmentApi";
 
-const Calendar = () => {
+export default function CandidateCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState("month");
   const [showEventModal, setShowEventModal] = useState(false);
@@ -17,8 +21,17 @@ const Calendar = () => {
   const [teamsMeetings, setTeamsMeetings] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [savingEvent, setSavingEvent] = useState(false);
 
   const today = new Date();
+
+  const eventColorMap = {
+    meeting: "bg-blue-500",
+    deadline: "bg-red-500",
+    call: "bg-amber-500",
+    task: "bg-green-500",
+    teams: "bg-purple-500",
+  };
 
   useEffect(() => {
     fetchTeamsMeetings();
@@ -28,8 +41,11 @@ const Calendar = () => {
   const fetchTeamsMeetings = async () => {
     try {
       setLoadingTeams(true);
-      const response = await getUpcomingMeetings(30);
-      setTeamsMeetings(response.data.meetings || []);
+      const body = await getTeamsMeetings();
+      const list = body?.data?.meetings || [];
+      setTeamsMeetings(
+        list.filter((m) => m.status !== "cancelled")
+      );
     } catch (error) {
       console.error("Failed to fetch Teams meetings:", error);
       setTeamsMeetings([]);
@@ -69,12 +85,7 @@ const Calendar = () => {
         };
       });
 
-      setEvents(prev => {
-        // Filter out existing backend-sourced appointments to avoid duplicates, 
-        // keeping manually added local events (from this session)
-        const localEvents = prev.filter(e => !e.isBackendApp && typeof e.id !== 'number' || e.id > 200); 
-        return [...mappedEvents]; // For now, let's just use server as source of truth
-      });
+      setEvents(mappedEvents);
     } catch (error) {
       console.error("Failed to fetch internal appointments:", error);
     } finally {
@@ -94,21 +105,30 @@ const Calendar = () => {
     [events]
   );
 
-  // Convert Teams meetings to event format
-  const teamsEvents = teamsMeetings.map((meeting) => ({
-    id: `teams-${meeting.id}`,
-    title: meeting.subject,
-    date: new Date(meeting.start_time),
-    endDate: new Date(meeting.end_time),
-    type: "teams",
-    location: "Microsoft Teams",
-    attendees: meeting.attendees?.map((a) => a.email) || [],
-    description: meeting.description || "",
-    color: "bg-purple-500",
-    joinUrl: meeting.join_url,
-    isTeamsMeeting: true,
-    completed: new Date(meeting.end_time) < today,
-  }));
+  // Convert Teams / calendar API meetings to event format
+  const teamsEvents = teamsMeetings.map((meeting) => {
+    const calType = meeting.event_type || "teams";
+    const loc =
+      meeting.location?.trim() ||
+      (calType === "teams" ? "Microsoft Teams" : "");
+    return {
+      id: `teams-${meeting.id}`,
+      title: meeting.subject,
+      date: new Date(meeting.start_time),
+      endDate: new Date(meeting.end_time),
+      type: calType,
+      location: loc,
+      attendees: (meeting.attendees || [])
+        .map((a) => (typeof a === "string" ? a : a?.email))
+        .filter(Boolean),
+      description: meeting.description || "",
+      color: eventColorMap[calType] || eventColorMap.teams,
+      joinUrl: meeting.join_url,
+      isTeamsMeeting: true,
+      teamsNumericId: meeting.id,
+      completed: new Date(meeting.end_time) < today,
+    };
+  });
 
   const allEvents = useMemo(
     () => [...eventsWithCompletion, ...teamsEvents],
@@ -175,36 +195,41 @@ const Calendar = () => {
     }
   };
 
-  const handleCreateEvent = () => {
-    if (newEvent.title && newEvent.date && newEvent.time) {
-      const eventDateTime = new Date(`${newEvent.date}T${newEvent.time}`);
-      const endDateTime = new Date(
-        eventDateTime.getTime() + parseInt(newEvent.duration) * 60000
-      );
+  const handleCreateEvent = async () => {
+    if (!newEvent.title || !newEvent.date || !newEvent.time) return;
 
-      const colorMap = {
-        meeting: "bg-blue-500",
-        deadline: "bg-red-500",
-        call: "bg-amber-500",
-        task: "bg-green-500",
-      };
+    const eventDateTime = new Date(`${newEvent.date}T${newEvent.time}`);
+    const endDateTime = new Date(
+      eventDateTime.getTime() + parseInt(newEvent.duration, 10) * 60000
+    );
 
-      const event = {
-        id: Date.now(),
-        title: newEvent.title,
-        date: eventDateTime,
-        endDate: endDateTime,
-        type: newEvent.type,
-        location: newEvent.location,
-        attendees: newEvent.attendees
-          ? newEvent.attendees.split(",").map((a) => a.trim())
-          : [],
-        description: newEvent.description,
-        color: colorMap[newEvent.type] || "bg-blue-500",
-        completed: endDateTime < today,
-      };
+    const attendeeParts = newEvent.attendees
+      ? newEvent.attendees.split(",").map((a) => a.trim()).filter(Boolean)
+      : [];
+    const attendees = attendeeParts.map((email) => ({
+      email,
+      type: "required",
+    }));
 
-      setEvents((prev) => [...prev, event]);
+    try {
+      setSavingEvent(true);
+      const body = await createTeamsMeeting({
+        subject: newEvent.title,
+        description: newEvent.description || "",
+        start_time: eventDateTime.toISOString(),
+        end_time: endDateTime.toISOString(),
+        attendees: attendees.length ? attendees : undefined,
+        meeting_type: "online",
+        event_type: newEvent.type,
+        location: newEvent.location || "",
+        reminder_minutes: parseInt(newEvent.duration, 10) <= 30 ? 15 : 30,
+      });
+
+      if (body?.status === "error") {
+        throw new Error(body?.message || "Create failed");
+      }
+
+      await fetchTeamsMeetings();
       setShowEventModal(false);
       setNewEvent({
         title: "",
@@ -216,6 +241,15 @@ const Calendar = () => {
         attendees: "",
         description: "",
       });
+    } catch (error) {
+      console.error("Failed to create calendar event:", error);
+      alert(
+        error?.response?.data?.message ||
+          error.message ||
+          "Could not save event. Try again."
+      );
+    } finally {
+      setSavingEvent(false);
     }
   };
 
@@ -224,9 +258,27 @@ const Calendar = () => {
     setShowEventDetailModal(true);
   };
 
-  const handleDeleteEvent = (eventId) => {
-    setEvents((prev) => prev.filter((e) => e.id !== eventId));
-    setShowEventDetailModal(false);
+  const handleDeleteEvent = async (event) => {
+    if (!event) return;
+    try {
+      if (event.isTeamsMeeting && event.teamsNumericId != null) {
+        await cancelTeamsMeeting(event.teamsNumericId);
+        await fetchTeamsMeetings();
+      } else if (event.isBackendApp && typeof event.id === "number") {
+        await deleteAppointment(event.id);
+        await fetchAppointments();
+      } else {
+        setEvents((prev) => prev.filter((e) => e.id !== event.id));
+      }
+      setShowEventDetailModal(false);
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error("Failed to delete event:", error);
+      alert(
+        error?.response?.data?.message ||
+          "Could not delete this event."
+      );
+    }
   };
 
   const formatEventTime = (date) =>
@@ -249,11 +301,12 @@ const Calendar = () => {
   const filteredEvents = useMemo(() => {
     if (!searchQuery) return allEvents;
     const q = searchQuery.toLowerCase();
-    return allEvents.filter(
-      (e) =>
-        e.title.toLowerCase().includes(q) ||
-        e.description.toLowerCase().includes(q)
-    );
+    return allEvents.filter((e) => {
+      const title = (e.title || "").toLowerCase();
+      const desc = (e.description || "").toLowerCase();
+      const loc = (e.location || "").toLowerCase();
+      return title.includes(q) || desc.includes(q) || loc.includes(q);
+    });
   }, [allEvents, searchQuery]);
 
   // Separate upcoming vs completed for the list section
@@ -286,18 +339,35 @@ const Calendar = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-secondary">Candidate Calendar</h1>
+          <h1 className="text-3xl font-black text-secondary">My calendar</h1>
           <p className="text-gray-500 mt-1">
-            Schedule events, meetings, and deadlines
+            Your appointments, personal calendar events, and Teams meetings in one place
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => setShowEventModal(true)}
+            type="button"
+            onClick={() => {
+              setSelectedDate(today);
+              setNewEvent((prev) => ({
+                ...prev,
+                date: today.toISOString().split("T")[0],
+                time: "09:00",
+              }));
+              setShowEventModal(true);
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-xl hover:bg-secondary/90 transition-colors"
           >
             <Plus size={16} />
             New Event
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowTeamsModal(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-secondary text-secondary rounded-xl hover:bg-secondary/5 transition-colors"
+          >
+            <Video size={16} />
+            Teams meeting
           </button>
         </div>
       </div>
@@ -684,16 +754,20 @@ const Calendar = () => {
 
               <div className="flex gap-3 mt-6">
                 <button
+                  type="button"
+                  disabled={savingEvent}
                   onClick={() => setShowEventModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
+                  disabled={savingEvent}
                   onClick={handleCreateEvent}
-                  className="flex-1 px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors"
+                  className="flex-1 px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors disabled:opacity-60"
                 >
-                  Create Event
+                  {savingEvent ? "Saving…" : "Create Event"}
                 </button>
               </div>
             </div>
@@ -741,6 +815,8 @@ const Calendar = () => {
                             ? "bg-amber-100 text-amber-700"
                             : selectedEvent.type === "deadline"
                             ? "bg-red-100 text-red-700"
+                            : selectedEvent.type === "teams"
+                            ? "bg-purple-100 text-purple-700"
                             : "bg-green-100 text-green-700"
                         }`}
                       >
@@ -815,6 +891,23 @@ const Calendar = () => {
                     </div>
                   )}
 
+                  {!selectedEvent.isTeamsMeeting && selectedEvent.meeting_url && (
+                    <div className="flex items-center gap-3">
+                      <Video size={16} className="text-gray-400" />
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500">Meeting link</p>
+                        <a
+                          href={selectedEvent.meeting_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-bold text-indigo-600 hover:text-indigo-700 underline break-all"
+                        >
+                          {selectedEvent.meeting_url}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
                   {selectedEvent.attendees &&
                     selectedEvent.attendees.length > 0 && (
                       <div className="flex items-start gap-3">
@@ -847,21 +940,21 @@ const Calendar = () => {
 
                 <div className="flex gap-3 pt-4 border-t border-gray-200">
                   <button
+                    type="button"
                     onClick={() => setShowEventDetailModal(false)}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <Edit size={16} />
-                    Edit
+                    Close
                   </button>
-                  {!selectedEvent.isTeamsMeeting && (
-                    <button
-                      onClick={() => handleDeleteEvent(selectedEvent.id)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                      Delete
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteEvent(selectedEvent)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
                 </div>
               </div>
             </div>
@@ -955,4 +1048,3 @@ const EventRow = ({ event, onClick, formatEventTime, isCompleted = false }) => {
   );
 };
 
-export default Calendar;

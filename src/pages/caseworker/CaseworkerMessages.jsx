@@ -1,44 +1,145 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSelector } from "react-redux";
 import SearchBar from "../../components/SearchBar";
-import FilterTabs from "../../components/FilterTabs";
 import MessagePanel from "../../components/messaging/MessagePanel";
 import useMessaging from "../../hooks/useMessaging";
 
+function formatRoleTab(roleKey) {
+  if (roleKey === "All") return "All";
+  if (!roleKey) return roleKey;
+  const lower = roleKey.toLowerCase();
+  if (lower === "business" || lower === "sponsor") return "Business/Sponsor";
+  return roleKey.charAt(0).toUpperCase() + roleKey.slice(1).toLowerCase();
+}
+
 const CaseworkerMessages = () => {
+  const { user } = useSelector((s) => s.auth);
   const [activeId, setActiveId] = useState(null);
+  const [query, setQuery] = useState("");
+  const [draft, setDraft] = useState("");
+  const [roleFilter, setRoleFilter] = useState("All");
+
   const {
     threads,
     messagesByThread,
-    loading,
     fetchThread,
     sendMessage: apiSendMessage,
+    availableUsers,
   } = useMessaging({ activeThreadPartnerId: activeId });
-  const [draft, setDraft] = useState("");
-  const [query, setQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState("All");
 
-  // Filter live threads by role if needed
+  const mergedThreads = useMemo(() => {
+    const myId = user?.id;
+    const byUser = new Map();
+
+    (availableUsers || []).forEach((u) => {
+      if (u.id == null || u.id === myId) return;
+      byUser.set(u.id, {
+        id: u.id,
+        name: u.name,
+        email: u.email || "",
+        initials: u.initials,
+        role: u.role || "User",
+      });
+    });
+
+    (threads || []).forEach((t) => {
+      if (t.id == null || t.id === myId) return;
+      if (!byUser.has(t.id)) {
+        byUser.set(t.id, {
+          id: t.id,
+          name: t.name,
+          email: "",
+          initials: t.initials,
+          role: t.role || "User",
+        });
+      }
+    });
+
+    const rows = Array.from(byUser.values()).map((u) => {
+      const convs = (threads || []).filter((t) => t.id === u.id);
+      const primary =
+        [...convs].sort((a, b) => (b.unread || 0) - (a.unread || 0))[0] || null;
+      const unreadTotal = convs.reduce((s, t) => s + (t.unread || 0), 0);
+      return {
+        id: u.id,
+        name: u.name,
+        initials: u.initials,
+        role: u.role || "User",
+        preview:
+          primary?.preview ||
+          (convs.length ? "Open thread" : "No messages yet — click to start"),
+        time: primary?.time || "",
+        rawTime: primary?.rawTime || null,
+        unread: unreadTotal,
+        conversationId: primary?.conversationId,
+        caseId: primary?.caseId ?? null,
+        caseDisplayId: primary?.caseDisplayId,
+        avatarClass: primary?.avatarClass || "bg-indigo-600",
+        email: u.email,
+      };
+    });
+
+    return rows.sort((a, b) => {
+      const timeA = a.rawTime ? new Date(a.rawTime).getTime() : 0;
+      const timeB = b.rawTime ? new Date(b.rawTime).getTime() : 0;
+      if (timeA !== timeB) return timeB - timeA;
+      return (a.name || "").localeCompare(b.name || "", undefined, {
+        sensitivity: "base",
+      });
+    });
+  }, [availableUsers, threads, user?.id]);
+
+  const roleTabs = useMemo(() => {
+    const roles = new Set(["admin", "business", "candidate"]);
+    mergedThreads.forEach((t) => {
+      if (t.role) {
+        const r = t.role.toLowerCase();
+        if (r === "sponsor") roles.add("business");
+        else roles.add(r);
+      }
+    });
+    return ["All", ...Array.from(roles).filter(r => r !== "caseworker").sort()];
+  }, [mergedThreads]);
+
   const filteredThreads = useMemo(() => {
-    let base = threads;
-    if (activeFilter !== "All") {
-      base = base.filter((t) => t.role?.toLowerCase() === activeFilter.toLowerCase());
+    let list = mergedThreads;
+    if (roleFilter !== "All") {
+      list = list.filter((t) => {
+        const tRole = (t.role || "").toLowerCase();
+        const fRole = roleFilter.toLowerCase();
+        if (fRole === "business") return tRole === "business" || tRole === "sponsor";
+        return tRole === fRole;
+      });
     }
-    return base;
-  }, [threads, activeFilter]);
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (t) =>
+          (t.name || "").toLowerCase().includes(q) ||
+          (t.email || "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [mergedThreads, roleFilter, query]);
 
   const activeCaseId = useMemo(
-    () => threads.find((t) => t.id === activeId)?.caseId ?? null,
-    [threads, activeId],
+    () => mergedThreads.find((t) => t.id === activeId)?.caseId ?? null,
+    [mergedThreads, activeId],
   );
 
-  // Set first thread as active initially if available
   useEffect(() => {
-    if (filteredThreads.length > 0 && !activeId) {
-      setActiveId(filteredThreads[0].id);
+    if (filteredThreads.length > 0) {
+      if (
+        activeId == null ||
+        !filteredThreads.some((t) => t.id === activeId)
+      ) {
+        setActiveId(filteredThreads[0].id);
+      }
+    } else {
+      setActiveId(null);
     }
   }, [filteredThreads, activeId]);
 
-  // Load messages when active thread changes
   useEffect(() => {
     if (activeId) {
       fetchThread(activeId, activeCaseId);
@@ -59,7 +160,7 @@ const CaseworkerMessages = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-0 h-[calc(100dvh-7rem)] sm:h-[calc(100vh-140px)] max-h-[calc(100dvh-4rem)] gap-3 sm:gap-4 pb-4 sm:pb-6">
+    <div className="flex flex-col min-h-0 h-[calc(100dvh-96px)] md:h-[calc(100vh-128px)] gap-3 sm:gap-4 w-full">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-2 shrink-0 min-w-0">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-black text-secondary tracking-tight">
@@ -69,12 +170,9 @@ const CaseworkerMessages = () => {
             Manage case communications and team updates.
           </p>
         </div>
-        <div className="shrink-0 overflow-x-auto pb-1 -mb-1">
-          <FilterTabs active={activeFilter} onChange={setActiveFilter} />
-        </div>
       </div>
 
-      <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <MessagePanel
           embedded={true}
           threads={filteredThreads}
@@ -87,6 +185,24 @@ const CaseworkerMessages = () => {
           onDraftChange={setDraft}
           onSend={handleSend}
           showOnline
+          filterNode={
+            <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-full">
+              {roleTabs.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setRoleFilter(tab)}
+                  className={`flex-1 text-[11px] font-semibold py-1.5 px-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
+                    roleFilter === tab
+                      ? "bg-white text-indigo-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {formatRoleTab(tab)}
+                </button>
+              ))}
+            </div>
+          }
         />
       </div>
     </div>

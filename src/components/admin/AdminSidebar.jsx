@@ -57,6 +57,7 @@ const navSections = [
       { to: "/admin/calendar", label: "Calendar", icon: RiCalendarLine },
       { to: "/admin/assign", label: "Assign / Reassign", icon: RiUserAddLine },
       { to: "/admin/escalations", label: "Escalations", icon: RiAlarmWarningLine },
+      { to: "/admin/licence-requests", label: "Licence Requests", icon: RiShieldCheckLine },
     ],
   },
   {
@@ -198,8 +199,8 @@ const AdminSidebar = ({ isOpen, onClose }) => {
                         <item.icon
                           size={17}
                           className={`shrink-0 transition-colors ${isActive
-                              ? "text-white"
-                              : "text-gray-400 group-hover:text-primary"
+                            ? "text-white"
+                            : "text-gray-400 group-hover:text-primary"
                             }`}
                         />
                         <span className="truncate">{item.label}</span>

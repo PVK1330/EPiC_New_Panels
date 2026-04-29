@@ -36,6 +36,7 @@ import CaseworkerClients from '../pages/caseworker/CaseworkerClients';
 import CaseworkerPerformance from '../pages/caseworker/CaseworkerPerformance';
 import CaseworkerMessages from '../pages/caseworker/CaseworkerMessages';
 import CaseworkerFinance from '../pages/caseworker/CaseworkerFinance';
+import CaseworkerLicenceApplications from '../pages/caseworker/CaseworkerLicenceApplications';
 
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminCases from '../pages/admin/AdminCases';
@@ -58,9 +59,10 @@ import AdminDepartments from '../pages/admin/AdminDepartments';
 import AdminDocuments from '../pages/admin/AdminDocuments';
 import AdminMessages from '../pages/admin/AdminMessages';
 import AdminCalendar from '../pages/admin/AdminCalendar';
+import AdminLicenceApplications from '../pages/admin/AdminLicenceApplications';
 
 import BusinessDashboard from '../pages/business/BusinessDashboard';
-import BussinessProfile from '../pages/business/BusinessProfile';import CandidateCalendar from '../pages/candidate/CandidateCalendar';
+import BussinessProfile from '../pages/business/BusinessProfile'; import CandidateCalendar from '../pages/candidate/CandidateCalendar';
 import BusinessCalendar from '../pages/business/BusinessCalendar';
 import BusinessRegistration from '../pages/business/BusinessRegistration';
 import KeyPersonnel from '../pages/business/BusinessPersonnel';
@@ -170,6 +172,7 @@ const AppRouter = () => {
           <Route path="departments" element={<AdminDepartments />} />
           <Route path="documents" element={<AdminDocuments />} />
           <Route path="messages" element={<AdminMessages />} />
+          <Route path="licence-requests" element={<AdminLicenceApplications />} />
         </Route>
 
         <Route
@@ -230,6 +233,7 @@ const AppRouter = () => {
           <Route path="messages" element={<CaseworkerMessages />} />
           <Route path="finance" element={<CaseworkerFinance />} />
           <Route path="performance" element={<CaseworkerPerformance />} />
+          <Route path="licence-reviews" element={<CaseworkerLicenceApplications />} />
         </Route>
 
         <Route
@@ -242,6 +246,8 @@ const AppRouter = () => {
         >
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<BusinessDashboard />} />
+          <Route path="apply-licence" element={<ApplyLicence />} />
+          <Route path="licence-documents" element={<LicenceDocuments />} />
           <Route path="profile" element={<BussinessProfile />} />
           <Route path="personnel" element={<KeyPersonnel />} />
           <Route path="licence" element={<LicenceStatus />} />
@@ -266,8 +272,6 @@ const AppRouter = () => {
           <Route path="invoices" element={<Invoices />} />
           <Route path="my-candidates" element={<MyCandidates />} />
           <Route path="reports" element={<Reports />} />
-          <Route path="apply-licence" element={<ApplyLicence />} />
-          <Route path="licence-documents" element={<LicenceDocuments />} />
         </Route>
 
         <Route

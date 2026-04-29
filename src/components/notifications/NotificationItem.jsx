@@ -117,14 +117,16 @@ const NotificationItem = ({ notification }) => {
           </p>
 
           {/* Metadata */}
-          {notification.metadata && (
-            <div className="mt-2 text-xs text-gray-500">
-              {notification.metadata.senderName && (
-                <span>From: {notification.metadata.senderName}</span>
-              )}
-              {notification.metadata.messageType && (
-                <span className="ml-2">Type: {notification.metadata.messageType}</span>
-              )}
+          {notification.metadata && Object.keys(notification.metadata).length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+              {Object.entries(notification.metadata).map(([key, value]) => {
+                if (['senderId', 'conversationId', 'entityId', 'applicationId'].includes(key)) return null;
+                return (
+                  <span key={key} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium capitalize">
+                    <span className="opacity-60">{key.replace(/([A-Z])/g, ' $1').trim()}:</span> {Array.isArray(value) ? value.join(', ') : String(value)}
+                  </span>
+                );
+              })}
             </div>
           )}
 

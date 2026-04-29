@@ -107,6 +107,7 @@ const useMessaging = (opts = {}) => {
           role: normalizeRoleLabel(otherUser.role?.name),
           preview: preview || "No messages yet",
           time: String(lastMsg.createdAt || conv.lastMessageTime || "").split("T")[0],
+          rawTime: lastMsg.createdAt || conv.lastMessageTime || null,
           unread: conv.unreadCount ?? 0,
           caseId: caseData.id,
           caseDisplayId: caseData.caseId,
@@ -313,6 +314,7 @@ const useMessaging = (opts = {}) => {
             ...t,
             preview: mappedMsg.text,
             time: String(m.createdAt || "").split("T")[0] || t.time,
+            rawTime: m.createdAt || t.rawTime,
           };
         });
       });
@@ -347,6 +349,7 @@ const useMessaging = (opts = {}) => {
                 unread: payload.unreadCount ?? t.unread,
                 preview: preview || t.preview,
                 time: timeStr || t.time,
+                rawTime: last.createdAt || t.rawTime,
               }
             : t,
         );

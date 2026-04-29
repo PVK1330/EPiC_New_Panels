@@ -26,6 +26,7 @@ const MessagePanel = ({
   placeholder = "Type a message…",
   showOnline = false,
   onlineThreadId,
+  filterNode,
 }) => {
   const messagesScrollRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -143,6 +144,7 @@ const MessagePanel = ({
                 className="w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none min-h-[44px]"
               />
             </div>
+            {filterNode && <div className="mt-2 -mb-1 overflow-x-auto pb-1">{filterNode}</div>}
           </div>
 
           <div className="overflow-y-auto flex-1 min-h-0 overscroll-contain custom-scrollbar touch-pan-y">
