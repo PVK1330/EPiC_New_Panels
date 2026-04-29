@@ -81,6 +81,7 @@ export default function CaseworkerDocuments() {
   useEffect(() => {
     if (caseId) {
       fetchAllDocuments();
+      fetchReviewDocuments();
       fetchMissingDocuments();
     }
   }, [caseId]);
@@ -123,22 +124,17 @@ export default function CaseworkerDocuments() {
 
   const fetchReviewDocuments = async () => {
     try {
-      // Fetch documents from all cases
-      if (cases.length === 0) return;
-      
-      const allDocs = [];
-      for (const c of cases) {
-        try {
-          const response = await api.get(`/api/caseworker/documents/case/${c.id}`);
-          const documents = response.data.data.documents || [];
-          allDocs.push(...documents);
-        } catch (err) {
-          console.error(`Error fetching documents for case ${c.id}:`, err);
-        }
+      // Fetch documents only for selected case
+      if (!caseId) {
+        setReviewDocuments([]);
+        return;
       }
       
+      const response = await api.get(`/api/caseworker/documents/case/${caseId}`);
+      const documents = response.data.data.documents || [];
+      
       // Filter for pending review (uploaded status)
-      const pendingDocs = allDocs.filter(d => 
+      const pendingDocs = documents.filter(d => 
         d.status === 'uploaded'
       );
       setReviewDocuments(pendingDocs);
