@@ -6,6 +6,7 @@ import Input from "../components/Input";
 import Button from "../components/Button";
 import eliteLogo from "../assets/elitepic_logo.png";
 import { ChevronDown } from "lucide-react";
+import authService from "../services/authService";
 
 const VIEWS = {
   login: "login",
@@ -81,7 +82,7 @@ const Login = () => {
       password: "demo123",
     },
     admin: {
-      email: "admin@demo.elitepic.com",
+      email: "admin@elitepic.com",
       password: "admin123",
     },
     business: {
@@ -91,9 +92,9 @@ const Login = () => {
   };
 
   const [form, setForm] = useState({
-    email: DEMO_CREDENTIALS.candidate.email,
-    password: DEMO_CREDENTIALS.candidate.password,
-    role: "candidate",
+    email: DEMO_CREDENTIALS.admin.email,
+    password: DEMO_CREDENTIALS.admin.password,
+    role: "admin",
   });
 
   const [registerForm, setRegisterForm] = useState({
@@ -203,20 +204,74 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const { role } = form;
-      const name =
-        roleDisplayName[role] ?? role.charAt(0).toUpperCase() + role.slice(1);
+      const response = await authService.login(form.email, form.password);
+      
+      console.log("📊 Full response object:", response);
+      
+      if (response.status === "success") {
+        // Check if 2FA is required
+        if (response.data?.requires_2fa) {
+          // TODO: Handle 2FA verification flow
+          alert("2FA verification required. Feature coming soon.");
+          return;
+        }
 
-      dispatch(
-        setCredentials({
-          user: { name, email: form.email, role },
-          token: "demo-token",
-        }),
-      );
+        if (response.data?.user && response.data?.token) {
+          const { user, token } = response.data;
+          
+          // Store token in localStorage
+          localStorage.setItem("token", token);
+          
+          // Get role name from user object and convert to lowercase
+          const roleName = (user.role_name || form.role).toLowerCase();
+          
+          dispatch(
+            setCredentials({
+              user: {
+                id: user.id,
+                name: `${user.first_name} ${user.last_name}`,
+                email: user.email,
+                role: roleName,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                roleId: user.role_id,
+                status: user.status,
+              },
+              token: token,
+            }),
+          );
 
-      navigate(`/${role}/dashboard`);
-    } catch {
-      setErrors({ password: "Invalid credentials" });
+          // Navigate to dashboard based on role
+          console.log("🚀 Navigating to:", `/${roleName}/dashboard`);
+          navigate(`/${roleName}/dashboard`);
+        } else {
+          console.error("❌ Missing user or token in response:", response.data);
+          setErrors({ password: "Login response incomplete - missing user or token" });
+        }
+      } else {
+        console.warn("⚠️ Response status not success:", response.status);
+        setErrors({ password: response.data?.message || response.message || "Login failed" });
+      }
+    } catch (error) {
+      console.error("🔴 Login error caught:", error);
+      console.error("Error response:", error.response);
+      
+      let errorMessage = "Invalid credentials. Please try again.";
+      
+      if (error.response?.status === 401) {
+        errorMessage = "Invalid email or password";
+      } else if (error.response?.status === 403) {
+        errorMessage = "Account is inactive or suspended";
+      } else if (error.response?.status === 400) {
+        errorMessage = error.response?.data?.message || "Invalid request";
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error("Final error message:", errorMessage);
+      setErrors({ password: errorMessage });
     } finally {
       setLoading(false);
     }

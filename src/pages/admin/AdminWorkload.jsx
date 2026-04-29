@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import { FiBarChart2, FiDownload } from "react-icons/fi";
 import { RiBarChartLine } from "react-icons/ri";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
+import axios from "axios"
+import { useEffect } from "react";
+
 
 const TABS = [
   { id: "team", label: "Team Workload" },
@@ -11,83 +14,7 @@ const TABS = [
   { id: "deadlines", label: "Deadline Monitor" },
 ];
 
-const TEAM_ROWS = [
-  {
-    id: "ap",
-    name: "Alice Patel",
-    initials: "AP",
-    avatarBg: "bg-blue-500",
-    activeCases: 21,
-    overdue: 2,
-    overdueChip: "bg-red-100 text-red-700",
-    tasksPending: 8,
-    avgCompletion: "4.2 days",
-    workloadPct: 87,
-    barClass: "bg-blue-500",
-    warn: false,
-    pctTextClass: "text-gray-700",
-  },
-  {
-    id: "mg",
-    name: "Marcus Green",
-    initials: "MG",
-    avatarBg: "bg-green-500",
-    activeCases: 16,
-    overdue: 5,
-    overdueChip: "bg-amber-100 text-amber-800",
-    tasksPending: 12,
-    avgCompletion: "5.8 days",
-    workloadPct: 65,
-    barClass: "bg-amber-400",
-    warn: false,
-    pctTextClass: "text-gray-700",
-  },
-  {
-    id: "fk",
-    name: "Fatima Khan",
-    initials: "FK",
-    avatarBg: "bg-amber-500",
-    activeCases: 18,
-    overdue: 3,
-    overdueChip: "bg-amber-100 text-amber-800",
-    tasksPending: 6,
-    avgCompletion: "3.9 days",
-    workloadPct: 72,
-    barClass: "bg-amber-400",
-    warn: false,
-    pctTextClass: "text-gray-700",
-  },
-  {
-    id: "jo",
-    name: "James Osei",
-    initials: "JO",
-    avatarBg: "bg-red-500",
-    activeCases: 23,
-    overdue: 8,
-    overdueChip: "bg-red-100 text-red-700",
-    tasksPending: 15,
-    avgCompletion: "7.1 days",
-    workloadPct: 92,
-    barClass: "bg-red-500",
-    warn: true,
-    pctTextClass: "text-red-600 font-bold",
-  },
-  {
-    id: "rm",
-    name: "Rina Mehta",
-    initials: "RM",
-    avatarBg: "bg-purple-500",
-    activeCases: 13,
-    overdue: 0,
-    overdueChip: "bg-green-100 text-green-700",
-    tasksPending: 4,
-    avgCompletion: "3.4 days",
-    workloadPct: 50,
-    barClass: "bg-green-500",
-    warn: false,
-    pctTextClass: "text-green-600 font-bold",
-  },
-];
+
 
 const TASK_ROWS = [
   {
@@ -201,8 +128,115 @@ function WorkloadMeter({ pct, barClass, warn, pctTextClass }) {
   );
 }
 
+const getInitials = (name) => {
+  return name
+    ?.split(" ")
+    .map(word => word[0])
+    .join("")
+    .toUpperCase();
+};
+
+const getAvatarBg = (pct) => {
+  if (pct >= 85) return "bg-red-500";
+  if (pct >= 70) return "bg-yellow-500";
+  return "bg-green-500";
+};
+
+const getOverdueChip = (overdue) => {
+  if (overdue === 0) return "bg-green-100 text-green-700";
+  if (overdue <= 3) return "bg-yellow-100 text-yellow-700";
+  return "bg-red-100 text-red-700";
+};
+
 const AdminWorkload = () => {
   const [tab, setTab] = useState("team");
+  const [teamworkload, setteamworkload] = useState();
+  const [pendingtasks, setpendingtasks] = useState();
+  const [deadlinemonitor, setdeadlinemonitor] = useState();
+
+  async function fetchWorkloadData() {
+    const token = localStorage.getItem("token"); // Adjust if you store the token differently
+    try {
+      const response = await axios.get("http://localhost:5000/api/workload/team-workload", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const { caseworkers } = response.data.data;
+      setteamworkload(caseworkers);
+
+    } catch (error) {
+      console.error("Error fetching workload data:", error);
+    }
+  }
+  async function fetchpendingtaskData() {
+    const token = localStorage.getItem("token"); // Adjust if you store the token differently
+    try {
+      const response = await axios.get("http://localhost:5000/api/workload/pending-tasks", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const { tasks } = response.data.data
+      setpendingtasks(tasks);
+    } catch (error) {
+      console.error("Error fetching workload data:", error);
+    }
+  }
+
+  async function fetchdeadlineData() {
+    const token = localStorage.getItem("token"); // Adjust if you store the token differently
+    try {
+      const response = await axios.get("http://localhost:5000/api/workload/deadline-monitor", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const { cases } = response.data.data
+      setdeadlinemonitor(cases);
+    } catch (error) {
+      console.error("Error fetching workload data:", error);
+    }
+  }
+async function fetchexportreportdata() {
+  const token = localStorage.getItem("token");
+
+  try {
+    const response = await axios.get(
+      "http://localhost:5000/api/workload/export-report",
+      {
+        responseType: "blob",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+   // Create file download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.setAttribute("download", "workload-report.csv"); // change name if needed
+
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    
+
+    console.log("Downloaded successfully ✅");
+  } catch (error) {
+    console.error("Download error:", error);
+  }
+}
+
+  useEffect(() => {
+    fetchWorkloadData();
+  }, []); // Empty dependency array means this runs once on mount
+
+
 
   return (
     <motion.div
@@ -223,6 +257,7 @@ const AdminWorkload = () => {
         </div>
         <button
           type="button"
+          onClick={()=> fetchexportreportdata()}
           className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm shrink-0 self-start"
         >
           <FiDownload size={14} />
@@ -256,34 +291,79 @@ const AdminWorkload = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {TEAM_ROWS.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 ${row.avatarBg}`}>
-                          {row.initials}
+                {teamworkload?.map((item, index) => {
+                  const row = {
+                    id: item.caseworker_id || index,
+
+                    name: item.caseworker_name,
+                    initials: getInitials(item.caseworker_name),
+                    avatarBg: getAvatarBg(item.workload_percentage),
+
+                    activeCases: item.active_cases,
+                    overdue: item.overdue,
+                    overdueChip: getOverdueChip(item.overdue),
+
+                    tasksPending: item.tasks_pending,
+                    avgCompletion: `${item.avg_completion_time_days} days`,
+
+                    workloadPct: item.workload_percentage,
+                    barClass:
+                      item.workload_percentage >= 85
+                        ? "bg-red-500"
+                        : item.workload_percentage >= 70
+                          ? "bg-yellow-500"
+                          : "bg-green-500",
+
+                    warn: item.workload_percentage >= 90,
+                    pctTextClass:
+                      item.workload_percentage >= 85
+                        ? "text-red-600"
+                        : "text-gray-700",
+                  };
+
+                  return (
+                    <tr key={row.id} className="hover:bg-gray-50/80 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black ${row.avatarBg}`}>
+                            {row.initials}
+                          </div>
+                          <span className="text-sm font-bold text-secondary">
+                            {row.name}
+                          </span>
                         </div>
-                        <span className="text-sm font-bold text-secondary whitespace-nowrap">{row.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-gray-800 tabular-nums">{row.activeCases}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${row.overdueChip}`}>{row.overdue}</span>
-                    </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-gray-700 tabular-nums">{row.tasksPending}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{row.avgCompletion}</td>
-                    <td className="px-4 py-3">
-                      <WorkloadMeter pct={row.workloadPct} barClass={row.barClass} warn={row.warn} pctTextClass={row.pctTextClass} />
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      <td className="px-4 py-3">{row.activeCases}</td>
+
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs ${row.overdueChip}`}>
+                          {row.overdue}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3">{row.tasksPending}</td>
+
+                      <td className="px-4 py-3">{row.avgCompletion}</td>
+
+                      <td className="px-4 py-3">
+                        <WorkloadMeter
+                          pct={row.workloadPct}
+                          barClass={row.barClass}
+                          warn={row.warn}
+                          pctTextClass={row.pctTextClass}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </motion.div>
       )}
 
-      {tab === "tasks" && (
+      {tab === "tasks" && fetchpendingtaskData()&& (
         <motion.div
           key="tasks"
           initial={{ opacity: 0, y: 8 }}
@@ -307,28 +387,77 @@ const AdminWorkload = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {TASK_ROWS.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-4 py-3 text-sm font-semibold text-secondary max-w-xs">{r.task}</td>
-                    <td className="px-4 py-3">
-                      <Link to={`/admin/case-detail/${r.caseId}`} className="font-mono text-sm font-bold text-primary hover:underline">
-                        #{r.caseId}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{r.assigned}</td>
-                    <td className={`px-4 py-3 text-sm whitespace-nowrap ${r.dueClass}`}>{r.due}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${r.statusClass}`}>{r.status}</span>
-                    </td>
-                  </tr>
-                ))}
+                {pendingtasks?.map((item, index) => {
+                  const isOverdue = item.days_remaining < 0;
+
+                  const formattedDate = new Date(item.due_date).toLocaleDateString(
+                    "en-GB",
+                    { day: "2-digit", month: "short", year: "numeric" }
+                  );
+
+                  const statusConfig = {
+                    pending: "bg-gray-100 text-gray-600",
+                    "in progress": "bg-yellow-100 text-yellow-700",
+                    completed: "bg-green-100 text-green-700",
+                    overdue: "bg-red-100 text-red-600",
+                  };
+
+                  const statusText = isOverdue
+                    ? "Overdue"
+                    : item.status === "pending"
+                      ? "Pending"
+                      : item.status === "in_progress"
+                        ? "In Progress"
+                        : item.status;
+
+                  const statusClass = isOverdue
+                    ? statusConfig.overdue
+                    : statusConfig[item.status] || "bg-gray-100 text-gray-600";
+
+                  return (
+                    <tr key={item.task_id || index} className="hover:bg-gray-50/80">
+
+                      {/* TASK */}
+                      <td className="px-4 py-3 text-sm font-semibold text-blue-600">
+                        {item.title}
+                      </td>
+
+                      {/* CASE */}
+                      <td className="px-4 py-3 text-sm font-bold text-red-500">
+                        #{item.case_code}
+                      </td>
+
+                      {/* ASSIGNED TO */}
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {item.assigned_to}
+                      </td>
+
+                      {/* DUE DATE */}
+                      <td
+                        className={`px-4 py-3 text-sm font-semibold ${isOverdue ? "text-red-600" : "text-gray-600"
+                          }`}
+                      >
+                        {formattedDate}
+                      </td>
+
+                      {/* STATUS */}
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold ${statusClass}`}
+                        >
+                          {statusText}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        </motion.div>
+        </motion.div> 
       )}
 
-      {tab === "deadlines" && (
+      {tab === "deadlines" && fetchdeadlineData() && (
         <motion.div
           key="deadlines"
           initial={{ opacity: 0, y: 8 }}
@@ -352,22 +481,68 @@ const AdminWorkload = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {DEADLINE_ROWS.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-4 py-3">
-                      <Link to={`/admin/case-detail/${r.caseId}`} className="font-mono text-sm font-bold text-primary hover:underline">
-                        #{r.caseId}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-secondary whitespace-nowrap">{r.candidate}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{r.caseworker}</td>
-                    <td className={`px-4 py-3 text-sm whitespace-nowrap ${r.deadlineClass}`}>{r.deadline}</td>
-                    <td className={`px-4 py-3 text-sm tabular-nums ${r.daysClass}`}>{r.daysRemaining}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${r.riskClass}`}>{r.risk}</span>
-                    </td>
-                  </tr>
-                ))}
+                {deadlinemonitor?.map((item, index) => {
+                  const days = item.days_remaining;
+
+                  // Format date like "28 Mar 2026"
+                  const formattedDate = new Date(item.deadline).toLocaleDateString(
+                    "en-GB",
+                    { day: "2-digit", month: "short", year: "numeric" }
+                  );
+
+                  // Risk logic
+                  let riskText = "On Track";
+                  let riskClass = "bg-green-100 text-green-700";
+                  let daysClass = "text-green-600";
+
+                  if (days < 0) {
+                    riskText = "Breached";
+                    riskClass = "bg-red-100 text-red-600";
+                    daysClass = "text-red-600";
+                  } else if (days <= 15) {
+                    riskText = "At Risk";
+                    riskClass = "bg-yellow-100 text-yellow-700";
+                    daysClass = "text-yellow-600";
+                  }
+
+                  return (
+                    <tr key={item.case_id || index} className="hover:bg-gray-50/80">
+
+                      {/* CASE ID */}
+                      <td className="px-4 py-3 text-sm font-bold text-red-500">
+                        #{item.case_code}
+                      </td>
+
+                      {/* CANDIDATE */}
+                      <td className="px-4 py-3 text-sm font-semibold text-blue-600">
+                        {item.candidate_name}
+                      </td>
+
+                      {/* CASEWORKER */}
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {item.caseworker_name || "N/A"}
+                      </td>
+
+                      {/* DEADLINE */}
+                      <td className={`px-4 py-3 text-sm font-semibold ${daysClass}`}>
+                        {formattedDate}
+                      </td>
+
+                      {/* DAYS REMAINING */}
+                      <td className={`px-4 py-3 text-sm font-bold ${daysClass}`}>
+                        {days}
+                      </td>
+
+                      {/* RISK */}
+                      <td className="px-4 py-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${riskClass}`}>
+                          {riskText}
+                        </span>
+                      </td>
+
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

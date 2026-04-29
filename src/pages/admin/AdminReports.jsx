@@ -1,15 +1,27 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
 import {
   FiCalendar, FiDownload, FiSearch, FiChevronLeft, FiChevronRight,
   FiX, FiEye, FiUser, FiCheckCircle, FiAlertCircle, FiClock,
   FiTrendingUp, FiTrendingDown, FiStar, FiFileText, FiArrowLeft,
-  FiFilter,
+  FiFilter, FiLoader,
 } from "react-icons/fi";
 import { RiBarChartLine } from "react-icons/ri";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
+
+// ─── API Configuration ───────────────────────────────────────────────────────
+const API_BASE_URL = "http://localhost:5000/api/workload";
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+};
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -18,263 +30,6 @@ const TABS = [
   { id: "workload", label: "Workload Reports" },
   { id: "finance", label: "Financial Reports" },
   { id: "performance", label: "Performance Reports" },
-];
-
-const CASE_KPIS = [
-  {
-    id: "opened",
-    label: "Cases Opened (Month)",
-    value: "84",
-    sub: "↑ 14% vs last month",
-    bg: "bg-blue-50",
-    border: "border-blue-100",
-    valueClass: "text-blue-600",
-  },
-  {
-    id: "closed",
-    label: "Cases Closed (Month)",
-    value: "218",
-    sub: "↑ 18% vs last month",
-    bg: "bg-green-50",
-    border: "border-green-100",
-    valueClass: "text-green-600",
-  },
-  {
-    id: "avg",
-    label: "Avg Completion Time",
-    value: "4.8d",
-    sub: "↓ 0.4 days improvement",
-    bg: "bg-amber-50",
-    border: "border-amber-100",
-    valueClass: "text-amber-700",
-  },
-];
-
-const CASES_BY_VISA = [
-  { id: "sw", name: "Skilled Worker", cases: 412, pct: 32, bar: "bg-blue-500" },
-  { id: "ilr", name: "ILR", cases: 284, pct: 22, bar: "bg-purple-500" },
-  { id: "stu", name: "Student Visa", cases: 218, pct: 17, bar: "bg-green-500" },
-  { id: "grad", name: "Graduate Visa", cases: 192, pct: 15, bar: "bg-amber-400" },
-  { id: "spon", name: "Sponsor Licence", cases: 178, pct: 14, bar: "bg-red-500" },
-];
-
-const VISA_FILTER_OPTIONS = [
-  { value: "all", label: "All visa types" },
-  ...CASES_BY_VISA.map((v) => ({ value: v.id, label: v.name })),
-];
-
-const WORKLOAD_ROWS = [
-  {
-    id: "ap",
-    name: "Alice Patel",
-    initials: "AP",
-    avatarBg: "bg-blue-500",
-    active: 21,
-    completed: 84,
-    sla: "78/84",
-    slaPct: "92.8%",
-    slaChip: "bg-green-100 text-green-700",
-  },
-  {
-    id: "mg",
-    name: "Marcus Green",
-    initials: "MG",
-    avatarBg: "bg-green-500",
-    active: 16,
-    completed: 61,
-    sla: "48/61",
-    slaPct: "78.7%",
-    slaChip: "bg-amber-100 text-amber-800",
-  },
-  {
-    id: "jo",
-    name: "James Osei",
-    initials: "JO",
-    avatarBg: "bg-red-500",
-    active: 23,
-    completed: 42,
-    sla: "26/42",
-    slaPct: "61.9%",
-    slaChip: "bg-red-100 text-red-700",
-  },
-];
-
-const FINANCE_BY_VISA = [
-  { id: "sw", label: "Skilled Worker", amount: "£112,400" },
-  { id: "ilr", label: "ILR", amount: "£68,200" },
-  { id: "spon", label: "Sponsor Licence", amount: "£54,800" },
-  { id: "stu", label: "Student Visa", amount: "£28,400" },
-  { id: "grad", label: "Graduate Visa", amount: "£20,400" },
-];
-
-const FINANCE_BY_SPONSOR = [
-  { id: "tn", label: "TechNova Ltd", amount: "£48,200" },
-  { id: "gh", label: "GlobalHire Inc", amount: "£34,100" },
-  { id: "ac", label: "Apex Consulting", amount: "£22,800" },
-  { id: "bs", label: "BlueSky Co", amount: "£18,200" },
-];
-
-const OUTSTANDING = "£61,400";
-
-// ─── Performance Data ─────────────────────────────────────────────────────────
-
-const PERFORMANCE_CASEWORKERS = [
-  {
-    id: "CW-001",
-    name: "Alice Patel",
-    initials: "AP",
-    avatarBg: "bg-blue-500",
-    department: "Immigration",
-    email: "alice.patel@firm.co.uk",
-    joinDate: "Mar 2021",
-    totalCases: 412,
-    activeCases: 21,
-    completedCases: 391,
-    slaMetPct: 92.8,
-    avgCompletionDays: 3.9,
-    clientSatisfaction: 4.8,
-    escalations: 3,
-    visaBreakdown: [
-      { type: "Skilled Worker", count: 180 },
-      { type: "ILR", count: 110 },
-      { type: "Student Visa", count: 72 },
-      { type: "Graduate Visa", count: 50 },
-    ],
-    recentCases: [
-      { id: "CS-4412", client: "TechNova Ltd", type: "Skilled Worker", status: "Completed", date: "12 Jun 2025", sla: "Met" },
-      { id: "CS-4389", client: "GlobalHire Inc", type: "ILR", status: "Completed", date: "10 Jun 2025", sla: "Met" },
-      { id: "CS-4401", client: "Apex Consulting", type: "Student Visa", status: "In Progress", date: "14 Jun 2025", sla: "On Track" },
-      { id: "CS-4377", client: "BlueSky Co", type: "Graduate Visa", status: "Completed", date: "08 Jun 2025", sla: "Met" },
-      { id: "CS-4355", client: "TechNova Ltd", type: "Sponsor Licence", status: "Completed", date: "04 Jun 2025", sla: "Breached" },
-    ],
-    monthlyTrend: [62, 68, 71, 75, 80, 78, 84, 91, 88, 95, 84, 91],
-  },
-  {
-    id: "CW-002",
-    name: "Marcus Green",
-    initials: "MG",
-    avatarBg: "bg-green-500",
-    department: "Immigration",
-    email: "marcus.green@firm.co.uk",
-    joinDate: "Jul 2022",
-    totalCases: 284,
-    activeCases: 16,
-    completedCases: 268,
-    slaMetPct: 78.7,
-    avgCompletionDays: 5.2,
-    clientSatisfaction: 4.2,
-    escalations: 9,
-    visaBreakdown: [
-      { type: "Skilled Worker", count: 95 },
-      { type: "Sponsor Licence", count: 88 },
-      { type: "ILR", count: 61 },
-      { type: "Student Visa", count: 40 },
-    ],
-    recentCases: [
-      { id: "CS-4410", client: "BlueSky Co", type: "Sponsor Licence", status: "Completed", date: "13 Jun 2025", sla: "Breached" },
-      { id: "CS-4398", client: "TechNova Ltd", type: "Skilled Worker", status: "In Progress", date: "11 Jun 2025", sla: "At Risk" },
-      { id: "CS-4382", client: "GlobalHire Inc", type: "ILR", status: "Completed", date: "09 Jun 2025", sla: "Met" },
-      { id: "CS-4370", client: "Apex Consulting", type: "Student Visa", status: "Completed", date: "06 Jun 2025", sla: "Met" },
-      { id: "CS-4351", client: "BlueSky Co", type: "Skilled Worker", status: "Completed", date: "02 Jun 2025", sla: "Breached" },
-    ],
-    monthlyTrend: [40, 45, 48, 52, 55, 50, 58, 61, 65, 60, 62, 68],
-  },
-  {
-    id: "CW-003",
-    name: "James Osei",
-    initials: "JO",
-    avatarBg: "bg-red-500",
-    department: "Compliance",
-    email: "james.osei@firm.co.uk",
-    joinDate: "Jan 2023",
-    totalCases: 198,
-    activeCases: 23,
-    completedCases: 175,
-    slaMetPct: 61.9,
-    avgCompletionDays: 6.8,
-    clientSatisfaction: 3.6,
-    escalations: 18,
-    visaBreakdown: [
-      { type: "Sponsor Licence", count: 90 },
-      { type: "Skilled Worker", count: 55 },
-      { type: "ILR", count: 35 },
-      { type: "Graduate Visa", count: 18 },
-    ],
-    recentCases: [
-      { id: "CS-4415", client: "Apex Consulting", type: "Sponsor Licence", status: "In Progress", date: "14 Jun 2025", sla: "At Risk" },
-      { id: "CS-4405", client: "TechNova Ltd", type: "Skilled Worker", status: "Completed", date: "12 Jun 2025", sla: "Breached" },
-      { id: "CS-4390", client: "GlobalHire Inc", type: "ILR", status: "In Progress", date: "10 Jun 2025", sla: "At Risk" },
-      { id: "CS-4372", client: "BlueSky Co", type: "Graduate Visa", status: "Completed", date: "07 Jun 2025", sla: "Met" },
-      { id: "CS-4348", client: "TechNova Ltd", type: "Sponsor Licence", status: "Completed", date: "01 Jun 2025", sla: "Breached" },
-    ],
-    monthlyTrend: [28, 30, 26, 32, 35, 31, 38, 42, 40, 44, 42, 48],
-  },
-  {
-    id: "CW-004",
-    name: "Sophie Turner",
-    initials: "ST",
-    avatarBg: "bg-purple-500",
-    department: "Immigration",
-    email: "sophie.turner@firm.co.uk",
-    joinDate: "Sep 2020",
-    totalCases: 531,
-    activeCases: 14,
-    completedCases: 517,
-    slaMetPct: 96.1,
-    avgCompletionDays: 3.2,
-    clientSatisfaction: 4.9,
-    escalations: 1,
-    visaBreakdown: [
-      { type: "Skilled Worker", count: 220 },
-      { type: "ILR", count: 160 },
-      { type: "Graduate Visa", count: 90 },
-      { type: "Student Visa", count: 61 },
-    ],
-    recentCases: [
-      { id: "CS-4416", client: "GlobalHire Inc", type: "Skilled Worker", status: "In Progress", date: "14 Jun 2025", sla: "On Track" },
-      { id: "CS-4407", client: "TechNova Ltd", type: "ILR", status: "Completed", date: "12 Jun 2025", sla: "Met" },
-      { id: "CS-4393", client: "Apex Consulting", type: "Graduate Visa", status: "Completed", date: "10 Jun 2025", sla: "Met" },
-      { id: "CS-4380", client: "BlueSky Co", type: "Student Visa", status: "Completed", date: "08 Jun 2025", sla: "Met" },
-      { id: "CS-4362", client: "GlobalHire Inc", type: "Skilled Worker", status: "Completed", date: "05 Jun 2025", sla: "Met" },
-    ],
-    monthlyTrend: [75, 80, 82, 88, 90, 88, 95, 98, 102, 108, 104, 110],
-  },
-  {
-    id: "CW-005",
-    name: "David Nwosu",
-    initials: "DN",
-    avatarBg: "bg-amber-500",
-    department: "Compliance",
-    email: "david.nwosu@firm.co.uk",
-    joinDate: "May 2022",
-    totalCases: 319,
-    activeCases: 18,
-    completedCases: 301,
-    slaMetPct: 85.4,
-    avgCompletionDays: 4.5,
-    clientSatisfaction: 4.5,
-    escalations: 6,
-    visaBreakdown: [
-      { type: "ILR", count: 120 },
-      { type: "Skilled Worker", count: 95 },
-      { type: "Sponsor Licence", count: 62 },
-      { type: "Student Visa", count: 42 },
-    ],
-    recentCases: [
-      { id: "CS-4414", client: "BlueSky Co", type: "ILR", status: "Completed", date: "13 Jun 2025", sla: "Met" },
-      { id: "CS-4402", client: "Apex Consulting", type: "Skilled Worker", status: "In Progress", date: "11 Jun 2025", sla: "On Track" },
-      { id: "CS-4388", client: "TechNova Ltd", type: "Sponsor Licence", status: "Completed", date: "09 Jun 2025", sla: "Met" },
-      { id: "CS-4375", client: "GlobalHire Inc", type: "ILR", status: "Completed", date: "07 Jun 2025", sla: "Breached" },
-      { id: "CS-4358", client: "BlueSky Co", type: "Student Visa", status: "Completed", date: "03 Jun 2025", sla: "Met" },
-    ],
-    monthlyTrend: [48, 52, 55, 58, 60, 57, 65, 68, 70, 74, 72, 78],
-  },
-];
-
-const DEPT_OPTIONS = [
-  { value: "all", label: "All departments" },
-  { value: "Immigration", label: "Immigration" },
-  { value: "Compliance", label: "Compliance" },
 ];
 
 const MONTH_NAMES = [
@@ -835,17 +590,6 @@ function PerformanceDetailModal({ caseworker, onClose }) {
             >
               Close
             </Button>
-            <Button
-              type="button"
-              variant="primary"
-              className="rounded-xl inline-flex items-center gap-2"
-              onClick={() => {
-                alert(`Performance report for ${caseworker.name} (${caseworker.id}) would be downloaded.`);
-              }}
-            >
-              <FiDownload size={14} />
-              Download Report
-            </Button>
           </div>
         </motion.div>
       </motion.div>
@@ -860,6 +604,13 @@ function PerformanceTab({ dateRange }) {
   const [deptFilter, setDeptFilter] = useState("all");
   const [slaFilter, setSlaFilter] = useState("all");
   const [selectedCW, setSelectedCW] = useState(null);
+  const [caseworkers, setCaseworkers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const DEPT_OPTIONS = [
+    { value: "all", label: "All departments" },
+  ];
 
   const SLA_OPTIONS = [
     { value: "all", label: "All SLA levels" },
@@ -868,31 +619,109 @@ function PerformanceTab({ dateRange }) {
     { value: "low", label: "Low (<75%)" },
   ];
 
+  // Fetch caseworkers on component mount
+  useEffect(() => {
+    const fetchCaseworkers = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await axios.get(`${API_BASE_URL}/caseworkers`, {
+          headers: getAuthHeaders(),
+        });
+        console.log("Fetched caseworkers:", response.data.data);
+        setCaseworkers(response.data.data || []);
+        
+      } catch (err) {
+        console.error("Error fetching caseworkers:", err);
+        setError("Failed to load caseworker data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCaseworkers();
+  }, []);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return PERFORMANCE_CASEWORKERS.filter((cw) => {
+    return (caseworkers ?? []).filter((cw) => {
       const matchSearch =
         !q ||
-        cw.name.toLowerCase().includes(q) ||
-        cw.id.toLowerCase().includes(q) ||
-        cw.department.toLowerCase().includes(q);
+        (cw.name && cw.name.toLowerCase().includes(q)) ||
+        (cw.id && String(cw.id).toLowerCase().includes(q)) ||
+        (cw.department && cw.department.toLowerCase().includes(q));
+      
       const matchDept = deptFilter === "all" || cw.department === deptFilter;
+      
+      const slaMetPct = cw.workload_percentage || 0;
       const matchSla =
         slaFilter === "all" ||
-        (slaFilter === "high" && cw.slaMetPct >= 90) ||
-        (slaFilter === "mid" && cw.slaMetPct >= 75 && cw.slaMetPct < 90) ||
-        (slaFilter === "low" && cw.slaMetPct < 75);
+        (slaFilter === "high" && slaMetPct >= 90) ||
+        (slaFilter === "mid" && slaMetPct >= 75 && slaMetPct < 90) ||
+        (slaFilter === "low" && slaMetPct < 75);
+      
       return matchSearch && matchDept && matchSla;
     });
-  }, [search, deptFilter, slaFilter]);
+  }, [search, deptFilter, slaFilter, caseworkers]);
+
 
   // Summary KPIs
-  const avgSla = (
-    PERFORMANCE_CASEWORKERS.reduce((s, c) => s + c.slaMetPct, 0) /
-    PERFORMANCE_CASEWORKERS.length
-  ).toFixed(1);
-  const totalCases = PERFORMANCE_CASEWORKERS.reduce((s, c) => s + c.totalCases, 0);
-  const topPerformer = [...PERFORMANCE_CASEWORKERS].sort((a, b) => b.slaMetPct - a.slaMetPct)[0];
+
+  const data = caseworkers || []
+  const avgSla = data.length > 0
+    ? (data.reduce((s, c) => s + (c.workload_percentage || 0), 0) / data.length).toFixed(1)
+    : 0;
+  
+  const totalCases = data.reduce((s, c) => s + (c.active_cases || 0) + (c.completed_cases || 0), 0);
+  
+  const topPerformer = data.length > 0
+    ? data.reduce((max, c) => (c.workload_percentage || 0) > (max.workload_percentage || 0) ? c : max)
+    : null;
+
+  // Handle download report
+  const handleDownloadReport = async (caseworkerId) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/caseworkers/${caseworkerId}/report/pdf`,
+        {
+          headers: getAuthHeaders(),
+          responseType: "blob",
+        }
+      );
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `caseworker-report-${caseworkerId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error downloading report:", err);
+      alert("Failed to download report");
+    }
+  };
+
+  // Handle view performance details
+  const handleViewPerformance = async (caseworkerId) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/caseworkers/${caseworkerId}/report`,
+        {
+          headers: getAuthHeaders(),
+        }
+      );
+      
+      if (response.data?.data) {
+        setSelectedCW(response.data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching caseworker performance:", err);
+      alert("Failed to load performance details");
+    }
+  };
 
   return (
     <>
@@ -915,22 +744,23 @@ function PerformanceTab({ dateRange }) {
           <div className="rounded-xl border border-blue-100 p-4 bg-blue-50">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Cases (All Staff)</p>
             <p className="text-3xl font-black text-blue-600">{totalCases.toLocaleString()}</p>
-            <p className="text-xs text-gray-500 mt-1">across {PERFORMANCE_CASEWORKERS.length} caseworkers</p>
+            <p className="text-xs text-gray-500 mt-1">across {caseworkers?.length} caseworkers</p>
           </div>
           <div className="rounded-xl border border-green-100 p-4 bg-green-50">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Avg SLA Performance</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Avg Performance</p>
             <p className="text-3xl font-black text-green-600">{avgSla}%</p>
             <p className="text-xs text-gray-500 mt-1">team average this period</p>
           </div>
           <div className="rounded-xl border border-amber-100 p-4 bg-amber-50">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Top Performer</p>
-            <div className="flex items-center gap-2 mt-1">
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0 ${topPerformer.avatarBg}`}>
-                {topPerformer.initials}
+            {topPerformer ? (
+              <div>
+                <p className="text-lg font-black text-amber-700">{topPerformer.name || "N/A"}</p>
+                <p className="text-xs text-gray-500 mt-1">{(topPerformer.workload_percentage || 0).toFixed(1)}% · {topPerformer.active_cases || 0} active</p>
               </div>
-              <p className="text-lg font-black text-amber-700">{topPerformer.name}</p>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">{topPerformer.slaMetPct}% SLA · {topPerformer.totalCases} cases</p>
+            ) : (
+              <p className="text-sm text-gray-500">No data available</p>
+            )}
           </div>
         </div>
 
@@ -958,17 +788,6 @@ function PerformanceTab({ dateRange }) {
               </div>
             </div>
 
-            {/* Department filter */}
-            <div className="w-full sm:w-auto sm:min-w-[200px]">
-              <Input
-                label="Department"
-                name="deptFilter"
-                value={deptFilter}
-                onChange={(e) => setDeptFilter(e.target.value)}
-                options={DEPT_OPTIONS}
-              />
-            </div>
-
             {/* SLA filter */}
             <div className="w-full sm:w-auto sm:min-w-[200px]">
               <Input
@@ -981,10 +800,10 @@ function PerformanceTab({ dateRange }) {
             </div>
 
             {/* Reset */}
-            {(search || deptFilter !== "all" || slaFilter !== "all") && (
+            {(search || slaFilter !== "all") && (
               <button
                 type="button"
-                onClick={() => { setSearch(""); setDeptFilter("all"); setSlaFilter("all"); }}
+                onClick={() => { setSearch(""); setSlaFilter("all"); }}
                 className="self-end px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 transition-colors inline-flex items-center gap-1.5"
               >
                 <FiX size={12} /> Reset filters
@@ -999,147 +818,112 @@ function PerformanceTab({ dateRange }) {
             <div>
               <h2 className="text-sm font-black text-secondary">Caseworker Performance Report</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Showing {filtered.length} of {PERFORMANCE_CASEWORKERS.length} caseworkers
-                {dateRange.start && dateRange.end
-                  ? ` · ${formatDate(dateRange.start)} – ${formatDate(dateRange.end)}`
-                  : ""}
+                Showing {filtered.length} of {caseworkers?.length} caseworkers
               </p>
             </div>
-            <Button
-              type="button"
-              variant="primary"
-              className="rounded-xl inline-flex items-center gap-2 self-start sm:self-auto"
-              onClick={() => alert("Full team performance report export initiated.")}
-            >
-              <FiDownload size={14} />
-              Export All
-            </Button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead>
-                <tr className="bg-gray-50 text-left">
-                  {[
-                    "Caseworker",
-                    "ID",
-                    "Department",
-                    "Active",
-                    "Completed",
-                    "SLA Met",
-                    "Avg Days",
-                    "Satisfaction",
-                    "Escalations",
-                    "Trend",
-                    "Actions",
-                  ].map((h) => (
-                    <th key={h} className={tableHead}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={11} className="px-4 py-12 text-center text-sm text-gray-400">
-                      <div className="flex flex-col items-center gap-2">
-                        <FiUser size={28} className="text-gray-200" />
-                        <span>No caseworkers match your filters.</span>
-                      </div>
-                    </td>
+          {loading ? (
+            <div className="px-5 py-12 text-center">
+              <FiLoader className="animate-spin inline-block text-secondary mb-2" size={24} />
+              <p className="text-sm text-gray-500">Loading caseworker data...</p>
+            </div>
+          ) : error ? (
+            <div className="px-5 py-12 text-center">
+              <FiAlertCircle className="inline-block text-red-500 mb-2" size={24} />
+              <p className="text-sm text-red-500">{error}</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead>
+                  <tr className="bg-gray-50 text-left">
+                    {["Caseworker", "Email", "Department", "Active", "Completed", "Workload %", "Status", "Actions"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    ))}
                   </tr>
-                ) : (
-                  filtered.map((cw) => (
-                    <motion.tr
-                      key={cw.id}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="hover:bg-gray-50/80 transition-colors group"
-                    >
-                      {/* Caseworker */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black text-white shrink-0 ${cw.avatarBg}`}>
-                            {cw.initials}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-secondary whitespace-nowrap">{cw.name}</p>
-                            <p className="text-[10px] text-gray-400">{cw.email}</p>
-                          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
+                        <div className="flex flex-col items-center gap-2">
+                          <FiUser size={28} className="text-gray-200" />
+                          <span>No caseworkers match your filters.</span>
                         </div>
                       </td>
-                      {/* ID */}
-                      <td className="px-4 py-3.5">
-                        <span className="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">{cw.id}</span>
-                      </td>
-                      {/* Dept */}
-                      <td className="px-4 py-3.5">
-                        <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">{cw.department}</span>
-                      </td>
-                      {/* Active */}
-                      <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.activeCases}</td>
-                      {/* Completed */}
-                      <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.completedCases}</td>
-                      {/* SLA */}
-                      <td className="px-4 py-3.5">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getSlaColor(cw.slaMetPct)}`}>
-                          {cw.slaMetPct}%
-                        </span>
-                      </td>
-                      {/* Avg Days */}
-                      <td className="px-4 py-3.5 text-sm font-mono text-gray-700 tabular-nums">{cw.avgCompletionDays}d</td>
-                      {/* Satisfaction */}
-                      <td className="px-4 py-3.5">
-                        <StarRating value={cw.clientSatisfaction} />
-                      </td>
-                      {/* Escalations */}
-                      <td className="px-4 py-3.5">
-                        <span className={`text-sm font-bold tabular-nums ${cw.escalations <= 3 ? "text-green-600" : cw.escalations <= 8 ? "text-amber-600" : "text-red-600"}`}>
-                          {cw.escalations}
-                        </span>
-                      </td>
-                      {/* Trend sparkline */}
-                      <td className="px-4 py-3.5">
-                        <Sparkline
-                          data={cw.monthlyTrend}
-                          color={
-                            cw.monthlyTrend[11] > cw.monthlyTrend[0] ? "#22c55e" : "#ef4444"
-                          }
-                        />
-                      </td>
-                      {/* Actions */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedCW(cw)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-secondary/30 text-secondary bg-secondary/5 hover:bg-secondary/10 transition-colors whitespace-nowrap"
-                          >
-                            <FiEye size={12} />
-                            View
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => alert(`Downloading report for ${cw.name} (${cw.id})...`)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors whitespace-nowrap"
-                          >
-                            <FiDownload size={12} />
-                            Report
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                    </tr>
+                  ) : (
+                    filtered.map((cw) => (
+                      <motion.tr
+                        key={cw.id}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="hover:bg-gray-50/80 transition-colors group"
+                      >
+                        {/* Caseworker */}
+                        <td className="px-4 py-3.5">
+                          <p className="text-sm font-bold text-secondary whitespace-nowrap">{cw.name || "N/A"}</p>
+                        </td>
+                        {/* Email */}
+                        <td className="px-4 py-3.5">
+                          <p className="text-[10px] text-gray-400 whitespace-nowrap">{cw.email || "N/A"}</p>
+                        </td>
+                        {/* Dept */}
+                        <td className="px-4 py-3.5">
+                          <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">{cw.department || "N/A"}</span>
+                        </td>
+                        {/* Active */}
+                        <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.active_cases || 0}</td>
+                        {/* Completed */}
+                        <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.completed_cases || 0}</td>
+                        {/* Workload % */}
+                        <td className="px-4 py-3.5">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getSlaColor(cw.workload_percentage || 0)}`}>
+                            {(cw.workload_percentage || 0).toFixed(1)}%
+                          </span>
+                        </td>
+                        {/* Status */}
+                        <td className="px-4 py-3.5">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${cw.health_status === 'healthy' ? 'bg-green-100 text-green-700' : cw.health_status === 'moderate' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700'}`}>
+                            {cw.health_status || "Unknown"}
+                          </span>
+                        </td>
+                        {/* Actions */}
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleViewPerformance(cw.id || cw.caseworker_id)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-secondary/30 text-secondary bg-secondary/5 hover:bg-secondary/10 transition-colors whitespace-nowrap"
+                            >
+                              <FiEye size={12} />
+                              View
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadReport(cw.id || cw.caseworker_id)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors whitespace-nowrap"
+                            >
+                              <FiDownload size={12} />
+                              Report
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Table footer */}
           {filtered.length > 0 && (
             <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
               <span>{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
               <span className="font-mono">
-                Team avg SLA: <span className="font-black text-secondary">{avgSla}%</span>
+                Team avg workload: <span className="font-black text-secondary">{avgSla}%</span>
               </span>
             </div>
           )}
@@ -1153,37 +937,185 @@ function PerformanceTab({ dateRange }) {
 
 export default function AdminReports() {
   const [activeTab, setActiveTab] = useState("cases");
-  const [visaFilter, setVisaFilter] = useState("all");
-  const [workloadSearch, setWorkloadSearch] = useState("");
-  const [financeSearch, setFinanceSearch] = useState("");
   const [dateRange, setDateRange] = useState({ start: null, end: null });
+
+  // Case Type Data
+  const [caseTypes, setCaseTypes] = useState([]);
+  const [caseTypesLoading, setCaseTypesLoading] = useState(false);
+  const [caseTypesError, setCaseTypesError] = useState(null);
+
+  // Workload Data
+  const [workload, setWorkload] = useState([]);
+  const [workloadLoading, setWorkloadLoading] = useState(false);
+  const [workloadError, setWorkloadError] = useState(null);
+  const [workloadSearch, setWorkloadSearch] = useState("");
+
+  // Financial Data
+  const [revenueByVisa, setRevenueByVisa] = useState([]);
+  const [revenueBySponsor, setRevenueBySponsor] = useState([]);
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [financeError, setFinanceError] = useState(null);
+  const [financeSearch, setFinanceSearch] = useState("");
+
+  // Tab visibility tracking for lazy loading
+  const [loadedTabs, setLoadedTabs] = useState(new Set(["cases"])); // Default to cases tab
+
+  // ─── API Fetch Functions ──────────────────────────────────────
+
+  // Fetch case type report
+  const fetchCaseTypeReport = async () => {
+    setCaseTypesLoading(true);
+    setCaseTypesError(null);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/reports/case-types`, {
+        headers: getAuthHeaders(),
+      });
+      
+      if (response.data?.data) {
+        setCaseTypes(response.data.data.cases || []);
+      }
+    } catch (err) {
+      console.error("Error fetching case type report:", err);
+      setCaseTypesError("Failed to load case type data");
+    } finally {
+      setCaseTypesLoading(false);
+    }
+  };
+
+  // Fetch workload report
+  const fetchWorkloadReport = async () => {
+    setWorkloadLoading(true);
+    setWorkloadError(null);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/reports/workload`, {
+        headers: getAuthHeaders(),
+      });
+      
+      if (response.data?.data?.caseworkers) {
+        setWorkload(response.data.data.caseworkers || []);
+      }
+    } catch (err) {
+      console.error("Error fetching workload report:", err);
+      setWorkloadError("Failed to load workload data");
+    } finally {
+      setWorkloadLoading(false);
+    }
+  };
+
+  // Fetch financial reports
+  const fetchFinancialReports = async () => {
+    setFinanceLoading(true);
+    setFinanceError(null);
+    try {
+      const [visaResponse, sponsorResponse] = await Promise.all([
+        axios.get(`${API_BASE_URL}/reports/revenue-by-visa-type`, {
+          headers: getAuthHeaders(),
+        }),
+        axios.get(`${API_BASE_URL}/reports/revenue-by-sponsor`, {
+          headers: getAuthHeaders(),
+        }),
+      ]);
+
+      if (visaResponse.data?.data) {
+        setRevenueByVisa(visaResponse.data.data.revenue || []);
+      }
+
+      if (sponsorResponse.data?.data) {
+        setRevenueBySponsor(sponsorResponse.data.data.revenue || []);
+      }
+    } catch (err) {
+      console.error("Error fetching financial reports:", err);
+      setFinanceError("Failed to load financial data");
+    } finally {
+      setFinanceLoading(false);
+    }
+  };
+
+  // Handle tab change - lazy load data when tab is clicked
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+
+    // Load data only if not already loaded
+    if (!loadedTabs.has(tabId)) {
+      const newLoadedTabs = new Set(loadedTabs);
+      newLoadedTabs.add(tabId);
+      setLoadedTabs(newLoadedTabs);
+
+      if (tabId === "cases") {
+        fetchCaseTypeReport();
+      } else if (tabId === "workload") {
+        fetchWorkloadReport();
+      } else if (tabId === "finance") {
+        fetchFinancialReports();
+      }
+    }
+  };
+
+  // Load case types report on mount
+  useEffect(() => {
+    fetchCaseTypeReport();
+  }, []);
 
   function handleDateRangeChange({ start, end }) {
     setDateRange({ start, end });
   }
 
-  const filteredVisaBars = useMemo(() => {
-    if (visaFilter === "all") return CASES_BY_VISA;
-    return CASES_BY_VISA.filter((v) => v.id === visaFilter);
-  }, [visaFilter]);
+  // Handle export combined PDF
+  const handleExportPDF = async () => {
+    try {
+      // Check if date range is selected
+      if (!dateRange.start || !dateRange.end) {
+        alert("Please select a date range before exporting");
+        return;
+      }
 
+      // Format dates as YYYY-MM-DD
+      const startDate = dateRange.start.toISOString().split('T')[0];
+      const endDate = dateRange.end.toISOString().split('T')[0];
+
+      const response = await axios.get(`${API_BASE_URL}/reports/export-pdf`, {
+        headers: getAuthHeaders(),
+        responseType: "blob",
+        params: {
+          startDate,
+          endDate,
+        },
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `combined-reports-${startDate}_to_${endDate}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error exporting PDF:", err);
+      alert("Failed to export PDF report");
+    }
+  };
+
+  // Filter workload data
   const filteredWorkload = useMemo(() => {
     const q = workloadSearch.trim().toLowerCase();
-    if (!q) return WORKLOAD_ROWS;
-    return WORKLOAD_ROWS.filter((r) => r.name.toLowerCase().includes(q));
-  }, [workloadSearch]);
+    if (!q) return workload;
+    return workload.filter((r) => (r.caseworker_name || "").toLowerCase().includes(q));
+  }, [workloadSearch, workload]);
 
+  // Filter finance data
   const filteredFinanceVisa = useMemo(() => {
     const q = financeSearch.trim().toLowerCase();
-    if (!q) return FINANCE_BY_VISA;
-    return FINANCE_BY_VISA.filter((r) => r.label.toLowerCase().includes(q));
-  }, [financeSearch]);
+    if (!q) return revenueByVisa;
+    return revenueByVisa.filter((r) => (r.visa_type || "").toLowerCase().includes(q));
+  }, [financeSearch, revenueByVisa]);
 
   const filteredFinanceSponsor = useMemo(() => {
     const q = financeSearch.trim().toLowerCase();
-    if (!q) return FINANCE_BY_SPONSOR;
-    return FINANCE_BY_SPONSOR.filter((r) => r.label.toLowerCase().includes(q));
-  }, [financeSearch]);
+    if (!q) return revenueBySponsor;
+    return revenueBySponsor.filter((r) => (r.sponsor_name || "").toLowerCase().includes(q));
+  }, [financeSearch, revenueBySponsor]);
 
   return (
     <motion.div
@@ -1214,6 +1146,7 @@ export default function AdminReports() {
             type="button"
             variant="primary"
             className="rounded-xl shadow-sm inline-flex items-center gap-2"
+            onClick={handleExportPDF}
           >
             <FiDownload size={14} />
             Export PDF
@@ -1230,18 +1163,6 @@ export default function AdminReports() {
             endDate={dateRange.end}
             onChange={handleDateRangeChange}
           />
-
-          {activeTab === "cases" && (
-            <div className="w-full sm:w-auto sm:min-w-[220px]">
-              <Input
-                label="Visa type"
-                name="visaFilter"
-                value={visaFilter}
-                onChange={(e) => setVisaFilter(e.target.value)}
-                options={VISA_FILTER_OPTIONS}
-              />
-            </div>
-          )}
 
           {activeTab === "workload" && (
             <div className="w-full sm:flex-1 sm:min-w-[240px] max-w-md">
@@ -1292,7 +1213,7 @@ export default function AdminReports() {
       <SegmentedTabBar
         tabs={TABS}
         activeId={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         layoutId="admin-reports-tab"
       />
 
@@ -1305,43 +1226,51 @@ export default function AdminReports() {
           transition={{ duration: 0.2 }}
           className="space-y-6"
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {CASE_KPIS.map((k) => (
-              <div key={k.id} className={`rounded-xl border p-4 ${k.bg} ${k.border}`}>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">{k.label}</p>
-                <p className={`text-3xl font-black ${k.valueClass}`}>{k.value}</p>
-                <p className="text-xs text-gray-500 mt-1">{k.sub}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
-            <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
-              Cases by Visa Type
-            </h2>
-            {filteredVisaBars.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">No visa types match this filter.</p>
-            ) : (
-              <div className="space-y-4">
-                {filteredVisaBars.map((row) => (
-                  <div key={row.id}>
-                    <div className="flex justify-between text-xs sm:text-sm mb-1.5">
-                      <span className="font-semibold text-gray-700">{row.name}</span>
-                      <span className="font-mono text-gray-500">{row.cases} cases ({row.pct}%)</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <motion.div
-                        className={`h-full rounded-full ${row.bar}`}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${row.pct}%` }}
-                        transition={{ duration: 0.5, ease: "easeOut" }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {caseTypesLoading ? (
+            <div className="text-center py-12">
+              <FiLoader className="animate-spin inline-block text-secondary mb-2" size={28} />
+              <p className="text-sm text-gray-500">Loading case reports...</p>
+            </div>
+          ) : caseTypesError ? (
+            <div className="text-center py-12">
+              <FiAlertCircle className="inline-block text-red-500 mb-2" size={28} />
+              <p className="text-sm text-red-500">{caseTypesError}</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
+              <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
+                Cases by Type
+              </h2>
+              {caseTypes.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">No case type data available.</p>
+              ) : (
+                <div className="space-y-4">
+                  {caseTypes.map((row, idx) => {
+                    const total = caseTypes.reduce((sum, c) => sum + (c.count || 0), 0);
+                    const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;
+                    const colors = ["bg-blue-500", "bg-purple-500", "bg-green-500", "bg-amber-400", "bg-red-500"];
+                    
+                    return (
+                      <div key={row.type || idx}>
+                        <div className="flex justify-between text-xs sm:text-sm mb-1.5">
+                          <span className="font-semibold text-gray-700">{row.type || "Unknown"}</span>
+                          <span className="font-mono text-gray-500">{row.count || 0} cases ({pct}%)</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <motion.div
+                            className={`h-full rounded-full ${colors[idx % colors.length]}`}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -1355,53 +1284,68 @@ export default function AdminReports() {
           className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
         >
           <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="text-sm font-black text-secondary">Cases per Caseworker</h2>
+            <h2 className="text-sm font-black text-secondary">Team Workload</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Active load, completions, and SLA
-              {dateRange.start && dateRange.end
-                ? ` · ${formatDate(dateRange.start)} – ${formatDate(dateRange.end)}`
-                : ""}
+              Active cases, overdue cases, and workload metrics
             </p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px]">
-              <thead>
-                <tr className="bg-gray-50 text-left">
-                  {["Caseworker", "Active", "Completed", "SLA Met", "SLA Performance"].map((h) => (
-                    <th key={h} className={tableHead}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filteredWorkload.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400">
-                      No caseworkers match your search.
-                    </td>
+
+          {workloadLoading ? (
+            <div className="px-5 py-12 text-center">
+              <FiLoader className="animate-spin inline-block text-secondary mb-2" size={28} />
+              <p className="text-sm text-gray-500">Loading workload data...</p>
+            </div>
+          ) : workloadError ? (
+            <div className="px-5 py-12 text-center">
+              <FiAlertCircle className="inline-block text-red-500 mb-2" size={28} />
+              <p className="text-sm text-red-500">{workloadError}</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px]">
+                <thead>
+                  <tr className="bg-gray-50 text-left">
+                    {["Caseworker", "Email", "Active", "Overdue", "Pending Tasks", "Workload %", "Health"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    ))}
                   </tr>
-                ) : (
-                  filteredWorkload.map((r) => (
-                    <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0 ${r.avatarBg}`}>
-                            {r.initials}
-                          </div>
-                          <span className="text-sm font-bold text-secondary whitespace-nowrap">{r.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-800 tabular-nums">{r.active}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-800 tabular-nums">{r.completed}</td>
-                      <td className="px-4 py-3 text-sm font-mono text-gray-700">{r.sla}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${r.slaChip}`}>{r.slaPct}</span>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filteredWorkload.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-400">
+                        No caseworkers match your search.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    filteredWorkload.map((r) => (
+                      <tr key={r.caseworker_id} className="hover:bg-gray-50/80 transition-colors">
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-bold text-secondary whitespace-nowrap">{r.caseworker_name || "Unknown"}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-gray-500 whitespace-nowrap">{r.email || "N/A"}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-800 tabular-nums">{r.active_cases || 0}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-800 tabular-nums">{r.overdue || 0}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-800 tabular-nums">{r.tasks_pending || 0}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getSlaColor(r.workload_percentage || 0)}`}>
+                            {(r.workload_percentage || 0).toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${r.health_color === 'green' ? 'bg-green-100 text-green-700' : r.health_color === 'amber' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700'}`}>
+                            {r.health_status || "Unknown"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -1414,44 +1358,64 @@ export default function AdminReports() {
           transition={{ duration: 0.2 }}
           className="grid grid-cols-1 xl:grid-cols-2 gap-6"
         >
+          {/* Revenue by Visa Type */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
             <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
               Revenue by Visa Type
             </h2>
-            {filteredFinanceVisa.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">No lines match your search.</p>
+            {financeLoading ? (
+              <div className="text-center py-8">
+                <FiLoader className="animate-spin inline-block text-secondary" size={20} />
+              </div>
+            ) : financeError ? (
+              <div className="text-center py-8">
+                <FiAlertCircle className="inline-block text-red-500 mb-2" size={20} />
+                <p className="text-xs text-red-500">Failed to load data</p>
+              </div>
+            ) : filteredFinanceVisa.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">No visa revenue data available.</p>
             ) : (
               <div className="flex flex-col gap-2.5">
                 {filteredFinanceVisa.map((row) => (
-                  <div key={row.id} className="flex justify-between items-center text-sm gap-4">
-                    <span className="text-gray-700 font-medium">{row.label}</span>
-                    <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">{row.amount}</span>
+                  <div key={row.visa_type} className="flex justify-between items-center text-sm gap-4">
+                    <span className="text-gray-700 font-medium">{row.visa_type || "Unknown"}</span>
+                    <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">
+                      £{(row.total_amount || 0).toLocaleString()}
+                    </span>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
+          {/* Revenue by Sponsor */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
             <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
               Revenue by Sponsor
             </h2>
-            {filteredFinanceSponsor.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">No sponsors match your search.</p>
+            {financeLoading ? (
+              <div className="text-center py-8">
+                <FiLoader className="animate-spin inline-block text-secondary" size={20} />
+              </div>
+            ) : financeError ? (
+              <div className="text-center py-8">
+                <FiAlertCircle className="inline-block text-red-500 mb-2" size={20} />
+                <p className="text-xs text-red-500">Failed to load data</p>
+              </div>
+            ) : filteredFinanceSponsor.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">No sponsor revenue data available.</p>
             ) : (
               <div className="flex flex-col gap-2.5">
                 {filteredFinanceSponsor.map((row) => (
-                  <div key={row.id} className="flex justify-between items-center text-sm gap-4">
-                    <span className="text-gray-700 font-medium">{row.label}</span>
-                    <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">{row.amount}</span>
+                  <div key={row.sponsor_name} className="flex justify-between items-center text-sm gap-4">
+                    <span className="text-gray-700 font-medium">{row.sponsor_name || "Unknown"}</span>
+                    <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">
+                      £{(row.total_amount || 0).toLocaleString()}
+                    </span>
                   </div>
                 ))}
               </div>
             )}
-            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center gap-4">
-              <span className="text-sm text-gray-500">Outstanding Payments</span>
-              <span className="font-mono font-bold text-red-600 tabular-nums">{OUTSTANDING}</span>
-            </div>
           </div>
         </motion.div>
       )}
