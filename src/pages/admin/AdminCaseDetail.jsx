@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiArrowLeft, FiFlag, FiSave, FiDownload, FiChevronDown, FiFileText, FiTable } from "react-icons/fi";
@@ -15,7 +15,24 @@ import CaseDetailCommunication from "../../components/caseDetail/CaseDetailCommu
 import CaseDetailNotes from "../../components/caseDetail/CaseDetailNotes";
 import CaseDetailAuditLog from "../../components/caseDetail/CaseDetailAuditLog";
 import { CASE_DETAIL_TABS, TAB_IDS, DEFAULT_CASE_DETAIL } from "../../components/caseDetail/caseDetailData";
-import useCaseDetail from "../../hooks/useCaseDetail";
+import { 
+  getCaseById, 
+  getDocumentsByCaseId, 
+  uploadCaseDocument, 
+  updateCaseDocumentStatus, 
+  deleteCaseDocument, 
+  downloadCaseDocument,
+  getCaseNotesByCaseId,
+  addCaseNote,
+  deleteCaseNote,
+  getAllCaseTasks,
+  getTasksByCaseId,
+  addCaseTask,
+  updateCaseTask,
+  deleteCaseTask,
+  exportCaseCSV,
+  exportCasePDF
+} from "../../services/caseDetailApi";
 
 const DOC_STATUS_LABEL = {
   missing: "Missing",
@@ -47,45 +64,150 @@ const AdminCaseDetail = () => {
   const [flagErr, setFlagErr] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
 
-  const {
-    // case
-    caseData,
-    caseLoading,
-    fetchCaseDetail,
-    // documents
-    documents,
-    docsLoading,
-    fetchDocuments,
-    uploadDocument,
-    changeDocumentStatus,
-    downloadDocument,
-    removeDocument,
-    // notes
-    notes,
-    notesLoading,
-    fetchNotes,
-    addNote,
-    removeNote,
-    // tasks
-    tasks,
-    tasksLoading,
-    fetchTasks,
-    addTask,
-    editTask,
-    removeTask,
-    // exports
-    exportPDF,
-    exportCSV,
-  } = useCaseDetail();
+  // State for data
+  const [caseData, setCaseData] = useState(null);
+  const [caseLoading, setCaseLoading] = useState(false);
+  const [documents, setDocuments] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [notes, setNotes] = useState([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [tasks, setTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+
+  const cleanId = caseId ? caseId.replace(/^#/, "") : "";
+
+  // Fetch case detail
+  const fetchCaseDetail = useCallback(async (id) => {
+    setCaseLoading(true);
+    try {
+      const res = await getCaseById(id);
+      if (res.data?.status === "success") {
+        setCaseData(res.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching case detail:", error);
+    } finally {
+      setCaseLoading(false);
+    }
+  }, []);
+
+  // Fetch documents
+  const fetchDocuments = useCallback(async (id) => {
+    setDocsLoading(true);
+    try {
+      const res = await getDocumentsByCaseId(id);
+      if (res.data?.status === "success") {
+        setDocuments(res.data.data.documents || []);
+      }
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+      setDocuments([]);
+    } finally {
+      setDocsLoading(false);
+    }
+  }, []);
+
+  // Fetch notes
+  const fetchNotes = useCallback(async (id) => {
+    setNotesLoading(true);
+    try {
+      const res = await getCaseNotesByCaseId(id, 1, 20);
+      if (res.data?.status === "success") {
+        setNotes(res.data.data.notes || []);
+      }
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+      setNotes([]);
+    } finally {
+      setNotesLoading(false);
+    }
+  }, []);
+
+  // Fetch tasks
+  const fetchTasks = useCallback(async (id) => {
+    setTasksLoading(true);
+    try {
+      const res = await getTasksByCaseId(id);
+      if (res.data?.status === "success") {
+        setTasks(res.data.data.tasks || []);
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      setTasks([]);
+    } finally {
+      setTasksLoading(false);
+    }
+  }, []);
+
+  // Upload document
+  const uploadDocumentHandler = useCallback(async (formData) => {
+    return uploadCaseDocument(formData);
+  }, []);
+
+  // Change document status
+  const changeDocumentStatusHandler = useCallback(async (id, data) => {
+    const res = await updateCaseDocumentStatus(id, data);
+    return res;
+  }, []);
+
+  // Download document
+  const downloadDocumentHandler = useCallback(async (id) => {
+    return downloadCaseDocument(id);
+  }, []);
+
+  // Remove document
+  const removeDocumentHandler = useCallback(async (id) => {
+    const res = await deleteCaseDocument(id);
+    return res;
+  }, []);
+
+  // Add note
+  const addNoteHandler = useCallback(async (data) => {
+    const res = await addCaseNote(data);
+    return res;
+  }, []);
+
+  // Remove note
+  const removeNoteHandler = useCallback(async (noteId) => {
+    const res = await deleteCaseNote(noteId);
+    return res;
+  }, []);
+
+  // Add task
+  const addTaskHandler = useCallback(async (data) => {
+    const res = await addCaseTask(data);
+    return res;
+  }, []);
+
+  // Edit task
+  const editTaskHandler = useCallback(async (id, data) => {
+    const res = await updateCaseTask(id, data);
+    return res;
+  }, []);
+
+  // Remove task
+  const removeTaskHandler = useCallback(async (id) => {
+    const res = await deleteCaseTask(id);
+    return res;
+  }, []);
+
+  // Export PDF
+  const exportPDFHandler = useCallback(async (id) => {
+    return exportCasePDF(id);
+  }, []);
+
+  // Export CSV
+  const exportCSVHandler = useCallback(async (id) => {
+    return exportCaseCSV(id);
+  }, []);
 
   useEffect(() => {
     if (!caseId) return;
-    const cleanId = caseId.replace(/^#/, "");
     fetchCaseDetail(cleanId);
     fetchTasks(cleanId);
     fetchNotes(cleanId);
     fetchDocuments(cleanId);
-  }, [caseId, fetchCaseDetail, fetchTasks, fetchNotes, fetchDocuments]);
+  }, [caseId, cleanId, fetchCaseDetail, fetchTasks, fetchNotes, fetchDocuments]);
 
   // Map tasks from hook to component-expected shape
   const mappedTasks = useMemo(
@@ -285,7 +407,7 @@ const AdminCaseDetail = () => {
     if (!caseId) return;
     try {
       const cleanId = caseId.replace(/^#/, "");
-      const response = await exportPDF(cleanId);
+      const response = await exportPDFHandler(cleanId);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -303,7 +425,7 @@ const AdminCaseDetail = () => {
     if (!caseId) return;
     try {
       const cleanId = caseId.replace(/^#/, "");
-      const response = await exportCSV(cleanId);
+      const response = await exportCSVHandler(cleanId);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -332,12 +454,12 @@ const AdminCaseDetail = () => {
   const handleAddNote = async (content) => {
     if (!caseId || !content?.trim()) return;
     const cleanId = caseId.replace(/^#/, "");
-    await addNote({ caseId: Number(cleanId), content });
+    await addNoteHandler({ caseId: Number(cleanId), content });
     await fetchNotes(cleanId);
   };
 
   const handleDeleteNote = async (noteId) => {
-    await removeNote(noteId);
+    await removeNoteHandler(noteId);
     const cleanId = caseId.replace(/^#/, "");
     await fetchNotes(cleanId);
   };
@@ -345,37 +467,37 @@ const AdminCaseDetail = () => {
   // ── Task handlers (passed as props so CaseDetailTasks can wire them up) ───
   const handleAddTask = async (taskData) => {
     const cleanId = caseId.replace(/^#/, "");
-    await addTask({ ...taskData, case_id: Number(cleanId) });
+    await addTaskHandler({ ...taskData, case_id: cleanId });
     await fetchTasks(cleanId);
   };
 
   const handleEditTask = async (id, taskData) => {
-    await editTask(id, taskData);
+    await editTaskHandler(id, taskData);
     const cleanId = caseId.replace(/^#/, "");
     await fetchTasks(cleanId);
   };
 
   const handleDeleteTask = async (id) => {
-    await removeTask(id);
+    await removeTaskHandler(id);
     const cleanId = caseId.replace(/^#/, "");
     await fetchTasks(cleanId);
   };
 
   // ── Document handlers ──────────────────────────────────────────────────────
   const handleUploadDocument = async (formData) => {
-    await uploadDocument(formData);
+    await uploadDocumentHandler(formData);
     const cleanId = caseId.replace(/^#/, "");
     await fetchDocuments(cleanId);
   };
 
   const handleChangeDocumentStatus = async (docId, status) => {
-    await changeDocumentStatus(docId, { status });
+    await changeDocumentStatusHandler(docId, { status });
     const cleanId = caseId.replace(/^#/, "");
     await fetchDocuments(cleanId);
   };
 
   const handleDownloadDocument = async (docId) => {
-    const response = await downloadDocument(docId);
+    const response = await downloadDocumentHandler(docId);
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
@@ -386,7 +508,7 @@ const AdminCaseDetail = () => {
   };
 
   const handleDeleteDocument = async (docId) => {
-    await removeDocument(docId);
+    await removeDocumentHandler(docId);
     const cleanId = caseId.replace(/^#/, "");
     await fetchDocuments(cleanId);
   };
@@ -396,11 +518,9 @@ const AdminCaseDetail = () => {
     [TAB_IDS.documents]: (
       <CaseDetailDocuments
         documents={data.documents}
-        loading={docsLoading}
-        onUpload={handleUploadDocument}
-        onChangeStatus={handleChangeDocumentStatus}
-        onDownload={handleDownloadDocument}
-        onDelete={handleDeleteDocument}
+        caseId={cleanId}
+        uploadDocument={handleUploadDocument}
+        changeDocumentStatus={handleChangeDocumentStatus}
       />
     ),
     [TAB_IDS.tasks]: (

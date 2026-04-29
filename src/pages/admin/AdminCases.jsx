@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { INITIAL_CASES } from "../../data/casesData";
@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
-import { getCases, createCase, updateCase, deleteCase, getVisaTypes, getPetitionTypes, getCandidates, getSponsors, getCaseworkers, updateCaseStatus, exportCases } from "../../services/caseApi";
+import { getCases, createCase, updateCase, deleteCase, getVisaTypes, getPetitionTypes, getCandidates, getSponsors, getCaseworkers, updateCaseStatus, exportCases, getAllUsers, getDepartments } from "../../services/caseApi";
 
 
 
@@ -306,13 +306,24 @@ function CaseFormModal({
                   onChange={onChange}
                   placeholder="e.g. Software Engineer"
                 />
-                <Input
-                  label="Department"
-                  name="department"
-                  value={formData.department}
-                  onChange={onChange}
-                  placeholder="e.g. Engineering"
-                />
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">
+                    Department
+                  </label>
+                  <select
+                    name="department"
+                    value={formData.department}
+                    onChange={onChange}
+                    className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                  >
+                    <option value="">Select department</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
             <div>
@@ -557,6 +568,7 @@ export default function AdminCases() {
   const [candidates, setCandidates] = useState([]);
   const [sponsors, setSponsors] = useState([]);
   const [caseworkers, setCaseworkers] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
   // Create caseworker name map
   const caseworkerNameMap = {};
@@ -607,82 +619,129 @@ export default function AdminCases() {
   const [filterType, setFilterType] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [visaTypeFilter, setVisaTypeFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Fetch cases from API
+  // Fetch cases from API with pagination and filters
   useEffect(() => {
     const fetchCasesFromAPI = async () => {
       try {
-        const response = await getCases();
-        if (response?.data?.data?.cases) {
-          // Map API data to existing structure
-          const mappedCases = response.data.data.cases.map(c => ({
-            caseId: c.caseId,
-            candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : '—',
-            candidateId: c.candidateId,
-            business: c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—',
-            businessId: c.sponsorId,
-            visaType: c.visaType?.name || '—',
-            petitionType: c.petitionType?.name || '—',
-            status: c.status,
-            priority: c.priority,
-            submitted: c.submitted ? new Date(c.submitted).toLocaleDateString() : new Date(c.created_at).toLocaleDateString(),
-            caseworkerIds: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId : [],
-            caseworkerId: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId.join(', ') : c.assignedcaseworkerId,
-            caseworker: Array.isArray(c.assignedcaseworkerId) ? `${c.assignedcaseworkerId.length} assigned` : '—',
-            targetSubmissionDate: c.targetSubmissionDate,
-            lcaNumber: c.lcaNumber,
-            receiptNumber: c.receiptNumber,
-            nationality: c.nationality,
-            jobTitle: c.jobTitle,
-            department: c.department,
-            salaryOffered: c.salaryOffered,
-            totalAmount: c.totalAmount,
-            paidAmount: c.paidAmount,
-            notes: c.notes,
-          }));
-          setCases(mappedCases);
-        }
-      } catch (error) {
-        console.error("Error fetching cases from API, using mock data:", error);
-        // Keep INITIAL_CASES as fallback
+        setLoading(true);
+        const params = {
+          page,
+          limit: 50,
+          search: searchQuery,
+          status: filterType === "all" ? "" : filterType,
+          priority: priorityFilter === "all" ? "" : priorityFilter,
+          visaTypeId: visaTypeFilter === "all" ? "" : visaTypeFilter,
+          sortBy: "created_at",
+          sortOrder: "DESC",
+        };
+        const response = await getCases(params);
+
+        // Map API response to component structure
+        const mappedCases = response.data.data.cases.map((c) => ({
+          caseId: c.caseId || `#C-${c.id}`,
+          candidate: c.candidate
+            ? `${c.candidate.first_name} ${c.candidate.last_name}`
+            : "Unknown",
+          business:
+            c.sponsor?.sponsorProfile?.companyName ||
+            c.sponsor?.sponsorProfile?.tradingName ||
+            c.sponsor?.first_name ||
+            "Unknown",
+          visa: c.visaType?.name || "Unknown",
+          status: c.status,
+          target: c.targetSubmissionDate || c.created_at,
+          priority: c.priority?.toLowerCase() || "medium",
+          payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
+          id: c.id,
+          candidateId: c.candidateId,
+          sponsorId: c.sponsorId,
+          businessId: c.businessId,
+          department: c.department,
+          sponsor: c.sponsor,
+          caseworkerIds: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId : (c.assignedcaseworkerId ? [c.assignedcaseworkerId] : []),
+          caseworker:
+            c.caseworkers && c.caseworkers.length > 0
+              ? c.caseworkers
+                  .map((cw) => `${cw.first_name} ${cw.last_name}`)
+                  .join(", ")
+              : "Unassigned",
+          caseworkerId: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId.join(', ') : c.assignedcaseworkerId,
+          visaType: c.visaType?.name || "Unknown",
+          petitionType: c.petitionType?.name || "Unknown",
+          submitted: c.submitted ? new Date(c.submitted).toLocaleDateString() : new Date(c.created_at).toLocaleDateString(),
+          targetSubmissionDate: c.targetSubmissionDate,
+          lcaNumber: c.lcaNumber,
+          receiptNumber: c.receiptNumber,
+          nationality: c.nationality,
+          jobTitle: c.jobTitle,
+          salaryOffered: c.salaryOffered,
+          totalAmount: c.totalAmount,
+          paidAmount: c.paidAmount,
+          notes: c.notes,
+        }));
+
+        setCases(mappedCases);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching cases:", err);
+        setError("Failed to load cases. Please try again.");
+        // Fallback to demo data on error
+        setCases([...INITIAL_CASES]);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchCasesFromAPI();
 
-    // Fetch visa types, petition types, candidates, sponsors, caseworkers
+    fetchCasesFromAPI();
+  }, [page, searchQuery, filterType, priorityFilter, visaTypeFilter]);
+
+  // Helper function to map payment status
+  const mapPaymentStatus = (paid, total) => {
+    if (!total || total === 0) return "outstanding";
+    const ratio = paid / total;
+    if (ratio >= 1) return "paid";
+    if (ratio >= 0.5) return "partial";
+    return "outstanding";
+  };
+
+  // Fetch dropdown data for new case form
+  useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        const [visaRes, petitionRes, candidateRes, sponsorRes, caseworkerRes] = await Promise.all([
+        const [visaRes, petitionRes, usersRes, deptRes] = await Promise.all([
           getVisaTypes(),
           getPetitionTypes(),
-          getCandidates(),
-          getSponsors(),
-          getCaseworkers(),
+          getAllUsers(),
+          getDepartments(),
         ]);
-        
+
         if (visaRes?.data?.data?.visa_types) {
           setVisaTypes(visaRes.data.data.visa_types);
         }
-        
+
         if (petitionRes?.data?.data?.petition_types) {
           setPetitionTypes(petitionRes.data.data.petition_types);
         }
-        
-        if (candidateRes?.data?.data?.candidates) {
-          setCandidates(candidateRes.data.data.candidates);
+
+        if (usersRes?.data?.data) {
+          const { candidate, sponsor, caseworker } = usersRes.data.data;
+          setCandidates(candidate || []);
+          setSponsors(sponsor || []);
+          setCaseworkers(caseworker || []);
         }
-        
-        if (sponsorRes?.data?.data?.sponsors) {
-          setSponsors(sponsorRes.data.data.sponsors);
+
+        if (deptRes?.data?.data?.departments) {
+          setDepartments(deptRes.data.data.departments);
         }
-        
-        if (caseworkerRes?.data?.data?.caseworkers) {
-          setCaseworkers(caseworkerRes.data.data.caseworkers);
-        }
-      } catch (error) {
-        console.error("Error fetching dropdown data:", error);
+      } catch (err) {
+        console.error("Error fetching dropdown data:", err);
       }
     };
+
     fetchDropdownData();
   }, []);
 

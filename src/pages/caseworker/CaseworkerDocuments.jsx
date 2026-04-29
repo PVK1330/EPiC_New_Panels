@@ -162,6 +162,9 @@ export default function CaseworkerDocuments() {
       if (expiryDate) {
         formData.append("expiryDate", expiryDate);
       }
+      if (notes) {
+        formData.append("notes", notes);
+      }
 
       const response = await api.post("/api/caseworker/documents/upload", formData, {
         headers: {

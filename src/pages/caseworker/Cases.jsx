@@ -24,6 +24,8 @@ import Modal from "../../components/Modal";
 import CaseTimeline from "../../components/CaseTimeline";
 import useCaseDetail from "../../hooks/useCaseDetail";
 import { getCaseworkerCases, getVisaTypes, getPetitionTypes, getAllUsers, createCaseworkerCase, updateCaseworkerCase, getDepartments, getCaseworkerCaseDetails, getCaseDocuments, uploadDocument, updateDocument, deleteDocument, updateDocumentStatus, downloadDocument, getCaseNotes, createCaseNote, updateCaseNote, deleteCaseNote, getTasks, getTaskByCaseId, createTask, updateTask, deleteTask, exportCases } from "../../services/caseApi";
+import { getCaseAuditLogs } from "../../services/auditApi";
+import { getCaseChecklist } from "../../services/documentChecklistApi";
 
 const PAGE_SIZE = 7;
 
@@ -2406,6 +2408,7 @@ const Cases = () => {
                 { id: "comms", label: "Communication" },
                 { id: "notes", label: "Notes" },
                 { id: "timeline", label: "Timeline" },
+                 { id: "auditlogs", label: "Audit Logs" },
               ].map((t) => (
                 <button
                   key={t.id}
@@ -2445,6 +2448,9 @@ const Cases = () => {
               )}
               {detailTab === "timeline" && (
                 <CaseTimeline caseId={detailCase?.id} currentUser={user} />
+              )}
+              {detailTab === "auditlogs" && (
+                <AuditLogsTab caseId={detailCase?.id} />
               )}
             </div>
           </>
@@ -3239,17 +3245,22 @@ function DocumentsTab({ caseId, candidateId }) {
     fetchDocuments,
     uploadDocument,
   } = useCaseDetail();
+  const [checklist, setChecklist] = useState(null);
+  const [checklistLoading, setChecklistLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadForm, setUploadForm] = useState({
-    documentType: "General",
+    documentType: "",
     documentCategory: "candidate",
     userFileName: "",
+    expiryDate: "",
+    notes: "",
   });
   const [uploadErrors, setUploadErrors] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [viewDocumentOpen, setViewDocumentOpen] = useState(false);
   const [viewDocumentUrl, setViewDocumentUrl] = useState("");
+  const [uploadingForItem, setUploadingForItem] = useState(null);
 
   const closeViewDocument = useCallback(() => {
     setViewDocumentOpen(false);
@@ -3260,6 +3271,25 @@ function DocumentsTab({ caseId, candidateId }) {
     if (!caseId) return;
     fetchDocuments(caseId);
   }, [caseId, fetchDocuments]);
+
+  const fetchChecklist = useCallback(async () => {
+    if (!caseId) return;
+    setChecklistLoading(true);
+    try {
+      const res = await getCaseChecklist(caseId);
+      if (res.data?.status === 'success') {
+        setChecklist(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch checklist:", err);
+    } finally {
+      setChecklistLoading(false);
+    }
+  }, [caseId]);
+
+  useEffect(() => {
+    fetchChecklist();
+  }, [fetchChecklist]);
 
   const getBadgeColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -3277,14 +3307,23 @@ function DocumentsTab({ caseId, candidateId }) {
     }
   };
 
-  const openUploadModal = useCallback(() => {
+  const loadColor = (load) => {
+    if (load >= 10) return "bg-red-50 text-red-700 border-red-200";
+    if (load >= 5) return "bg-amber-50 text-amber-700 border-amber-200";
+    return "bg-green-50 text-green-700 border-green-200";
+  };
+
+  const openUploadModal = useCallback((item = null) => {
     setUploadErrors({});
     setUploadForm({
-      documentType: "General",
+      documentType: item ? item.documentType : "General",
       documentCategory: "candidate",
-      userFileName: "",
+      userFileName: item ? item.documentName : "",
+      expiryDate: "",
+      notes: "",
     });
     setSelectedFile(null);
+    setUploadingForItem(item);
     setUploadOpen(true);
   }, []);
 
@@ -3292,11 +3331,14 @@ function DocumentsTab({ caseId, candidateId }) {
     setUploadOpen(false);
     setUploadErrors({});
     setUploadForm({
-      documentType: "General",
+      documentType: "",
       documentCategory: "candidate",
       userFileName: "",
+      expiryDate: "",
+      notes: "",
     });
     setSelectedFile(null);
+    setUploadingForItem(null);
   }, []);
 
   const handleFileChange = (e) => {
@@ -3328,11 +3370,18 @@ function DocumentsTab({ caseId, candidateId }) {
         "userFileName",
         uploadForm.userFileName || selectedFile.name,
       );
+      if (uploadForm.expiryDate) {
+        formData.append("expiryDate", uploadForm.expiryDate);
+      }
+      if (uploadForm.notes) {
+        formData.append("notes", uploadForm.notes);
+      }
 
       const response = await uploadDocument(formData);
 
       if (response.data.status === "success") {
         await fetchDocuments(caseId);
+        await fetchChecklist();
         closeUploadModal();
       }
     } catch (error) {
@@ -3345,59 +3394,218 @@ function DocumentsTab({ caseId, candidateId }) {
     } finally {
       setUploading(false);
     }
-  }, [uploadForm, selectedFile, caseId, candidateId, closeUploadModal]);
+  }, [uploadForm, selectedFile, caseId, candidateId, closeUploadModal, uploadDocument, fetchDocuments, fetchChecklist]);
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'approved':
+      case 'uploaded':
+        return 'bg-green-100 text-green-700 border-green-200';
+      case 'under_review':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'rejected':
+        return 'bg-red-100 text-red-700 border-red-200';
+      case 'missing':
+      default:
+        return 'bg-gray-100 text-gray-600 border-gray-200';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'approved':
+      case 'uploaded':
+        return <Check size={14} className="text-green-600" />;
+      case 'under_review':
+        return <Clock size={14} className="text-blue-600" />;
+      case 'rejected':
+        return <X size={14} className="text-red-600" />;
+      case 'missing':
+      default:
+        return <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-400" />;
+    }
+  };
+
+  const categoryLabels = {
+    identity: 'Identity Documents',
+    education: 'Education & Qualifications',
+    work: 'Work Experience',
+    financial: 'Financial Documents',
+    medical: 'Medical Documents',
+    legal: 'Legal Documents',
+    other: 'Other Documents'
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={openUploadModal}
-          className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white"
-        >
-          Upload document
-        </button>
-      </div>
-      <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">
-        Case documents
-      </p>
-      {loading ? (
-        <p className="text-sm text-gray-500">Loading documents...</p>
-      ) : documents.length === 0 ? (
-        <p className="text-sm text-gray-500">No documents uploaded yet.</p>
-      ) : (
-        documents.map((doc) => (
-          <div
-            key={doc.id}
-            className="flex flex-wrap items-center gap-3 border-b border-gray-100 pb-3"
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100">
-              <FileText size={18} className="text-secondary" />
+    <div className="space-y-6">
+      {/* Document Checklist Section */}
+      {checklist && !checklistLoading && Object.keys(checklist.checklist).length > 0 && (
+        <>
+          {/* Progress Overview */}
+          <div className="bg-gradient-to-r from-secondary/5 to-primary/5 rounded-xl border border-secondary/10 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-black text-secondary uppercase tracking-wide">
+                Document Completion Progress
+              </h4>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl font-black text-secondary">
+                  {checklist.completionPercentage}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => openUploadModal()}
+                  className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white"
+                >
+                  + Add Document
+                </button>
+              </div>
             </div>
-            <div className="flex-1 min-w-[140px]">
-              <p className="text-sm font-bold text-gray-900">
-                {doc.userFileName || doc.documentName}
-              </p>
-              <p className="text-[11px] font-bold text-gray-500">
-                Uploaded {new Date(doc.uploadedAt).toLocaleDateString()} ·{" "}
-                {doc.documentType}
-              </p>
+            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-secondary to-primary transition-all duration-500 ease-out"
+                style={{ width: `${checklist.completionPercentage}%` }}
+              />
             </div>
-            <span
-              className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${getBadgeColor(doc.status)}`}
-            >
-              {doc.status || "Uploaded"}
-            </span>
-            <button
-              type="button"
-              onClick={() => window.open(doc.documentUrl, "_blank")}
-              className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black text-gray-600"
-            >
-              View
-            </button>
+            <div className="flex justify-between mt-2 text-xs text-gray-600">
+              <span>{checklist.completed} of {checklist.required} required documents completed</span>
+              <span>{checklist.total} total documents</span>
+            </div>
           </div>
-        ))
+
+          {/* Checklist by Category */}
+          {Object.entries(checklist.checklist).map(([category, items]) => (
+            <div key={category} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50">
+                <h5 className="text-sm font-bold text-secondary">
+                  {categoryLabels[category] || category}
+                </h5>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {items.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="px-5 py-4 hover:bg-gray-50/50 transition-colors flex items-start gap-4"
+                  >
+                    <div className="shrink-0 mt-0.5">
+                      {getStatusIcon(item.status)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {item.documentName}
+                        </p>
+                        {item.isRequired && (
+                          <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">
+                            Required
+                          </span>
+                        )}
+                        {!item.isRequired && (
+                          <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                            Optional
+                          </span>
+                        )}
+                      </div>
+                      {item.description && (
+                        <p className="text-xs text-gray-500 mb-2">{item.description}</p>
+                      )}
+                      <div className="flex items-center gap-3">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusColor(item.status)}`}>
+                          {item.status.replace('_', ' ')}
+                        </span>
+                        {item.expiryDate && (
+                          <span className="text-[10px] text-gray-500">
+                            Expires: {new Date(item.expiryDate).toLocaleDateString()}
+                          </span>
+                        )}
+                        {item.uploadedAt && (
+                          <span className="text-[10px] text-gray-500">
+                            Uploaded: {new Date(item.uploadedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {item.status === 'missing' ? (
+                      <button
+                        type="button"
+                        onClick={() => openUploadModal(item)}
+                        className="shrink-0 rounded-lg border border-secondary/30 bg-secondary/10 px-3 py-1.5 text-[11px] font-black text-secondary hover:bg-secondary/20 transition-colors"
+                      >
+                        Add
+                      </button>
+                    ) : item.documentId ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const doc = documents.find(d => d.id === item.documentId);
+                          if (doc && doc.documentUrl) {
+                            window.open(doc.documentUrl, "_blank");
+                          }
+                        }}
+                        className="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-black text-gray-600 hover:bg-gray-50 transition-colors"
+                      >
+                        View
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </>
       )}
+
+      {/* General uploaded documents - always shown below checklist */}
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">
+            All uploaded documents
+          </p>
+          {/* <button
+            type="button"
+            onClick={openUploadModal}
+            className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white"
+          >
+            Upload documents
+          </button> */}
+        </div>
+        {loading ? (
+          <p className="text-sm text-gray-500">Loading documents...</p>
+        ) : documents.length === 0 ? (
+          <p className="text-sm text-gray-500">No documents uploaded yet.</p>
+        ) : (
+          documents.map((doc) => (
+            <div
+              key={doc.id}
+              className="flex flex-wrap items-center gap-3 border-b border-gray-100 pb-3"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                <FileText size={18} className="text-secondary" />
+              </div>
+              <div className="flex-1 min-w-[140px]">
+                <p className="text-sm font-bold text-gray-900">
+                  {doc.userFileName || doc.documentName}
+                </p>
+                <p className="text-[11px] font-bold text-gray-500">
+                  Uploaded {new Date(doc.uploadedAt).toLocaleDateString()} ·{" "}
+                  {doc.documentType}
+                </p>
+              </div>
+              <span
+                className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${getBadgeColor(doc.status)}`}
+              >
+                {doc.status || "Uploaded"}
+              </span>
+              <button
+                type="button"
+                onClick={() => window.open(doc.documentUrl, "_blank")}
+                className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black text-gray-600"
+              >
+                View
+              </button>
+            </div>
+          ))
+        )}
+      </div>
 
       <Modal
         open={uploadOpen}
@@ -3449,7 +3657,8 @@ function DocumentsTab({ caseId, candidateId }) {
                 onChange={(e) =>
                   setUploadForm((f) => ({ ...f, documentType: e.target.value }))
                 }
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                disabled={!!uploadingForItem}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary disabled:bg-gray-50 disabled:text-gray-500"
               >
                 <option value="General">General</option>
                 <option value="Passport">Passport</option>
@@ -3486,6 +3695,33 @@ function DocumentsTab({ caseId, candidateId }) {
                 <option value="other">Other</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Expiry date (optional)
+            </label>
+            <input
+              type="date"
+              value={uploadForm.expiryDate}
+              onChange={(e) =>
+                setUploadForm((f) => ({ ...f, expiryDate: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Notes (optional)
+            </label>
+            <textarea
+              value={uploadForm.notes}
+              onChange={(e) =>
+                setUploadForm((f) => ({ ...f, notes: e.target.value }))
+              }
+              rows={3}
+              placeholder="Add any notes about this document…"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary resize-y min-h-[72px]"
+            />
           </div>
           {uploadErrors.api && (
             <p className="text-xs font-bold text-red-600 mt-1">
@@ -4002,6 +4238,144 @@ function TimelineTab({ candidate }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function AuditLogsTab({ caseId }) {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    dateRange: "last30",
+    status: "all"
+  });
+
+  const fetchAuditLogs = useCallback(async () => {
+    if (!caseId) return;
+    setLoading(true);
+    try {
+      const res = await getCaseAuditLogs(caseId, {
+        page: 1,
+        limit: 20,
+        dateRange: filters.dateRange,
+        status: filters.status
+      });
+      
+      if (res.data?.status === 'success') {
+        setLogs(res.data.data.logs);
+      }
+    } catch (err) {
+      console.error("Failed to fetch audit logs:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [caseId, filters]);
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [fetchAuditLogs]);
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h4 className="text-sm font-black text-secondary uppercase tracking-wide">
+          Case Audit Logs
+        </h4>
+        <div className="flex gap-2">
+          <select
+            name="dateRange"
+            value={filters.dateRange}
+            onChange={handleFilterChange}
+            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-secondary/30"
+          >
+            <option value="last7">Last 7 days</option>
+            <option value="last30">Last 30 days</option>
+            <option value="last90">Last 3 months</option>
+            <option value="all">All time</option>
+          </select>
+          <select
+            name="status"
+            value={filters.status}
+            onChange={handleFilterChange}
+            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-secondary/30"
+          >
+            <option value="all">All status</option>
+            <option value="Success">Success</option>
+            <option value="Failed">Failed</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                {["Timestamp", "User", "Action", "Resource", "Status", "Details"].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                    Loading audit logs...
+                  </td>
+                </tr>
+              ) : logs.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                    No audit logs found for this case
+                  </td>
+                </tr>
+              ) : (
+                logs.map((log, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
+                      {log.timestamp}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-full bg-secondary/10 flex items-center justify-center shrink-0">
+                          <span className="text-[10px] font-bold text-secondary">
+                            {log.initials}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-secondary">{log.user}</p>
+                          <p className="text-[10px] text-gray-500">{log.role}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${log.actionClass}`}>
+                        {log.action}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">{log.resource}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${log.statusClass}`}>
+                        {log.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs max-w-xs truncate" title={log.details}>
+                      {log.details}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

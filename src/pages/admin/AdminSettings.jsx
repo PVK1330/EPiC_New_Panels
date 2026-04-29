@@ -14,7 +14,8 @@ import {
   FiArrowRight,
   FiCheckCircle,
   FiMenu,
-  FiX
+  FiX,
+  FiFileText
 } from "react-icons/fi";
 
 // Components
@@ -34,6 +35,7 @@ import DepartmentSettings from "../../components/admin/settings/DepartmentSettin
 import CategorySettings from "../../components/admin/settings/CategorySettings";
 import EmailTemplateEditor from "../../components/admin/settings/EmailTemplateEditor";
 import EmailTemplatePreview from "../../components/admin/settings/EmailTemplatePreview";
+import DocumentChecklistSettings from "../../components/admin/settings/DocumentChecklistSettings";
 
 // Services
 import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from "../../services/caseWorker";
@@ -69,6 +71,7 @@ import {
 const CONFIG_TABS = [
   { id: "account", label: "Account & Profile", icon: <FiUser />, color: "text-blue-500", bg: "bg-blue-50" },
   { id: "visa", label: "Visa & Petitions", icon: <FiLayers />, color: "text-indigo-500", bg: "bg-indigo-50" },
+  { id: "checklist", label: "Document Checklists", icon: <FiFileText />, color: "text-teal-500", bg: "bg-teal-50" },
   { id: "categories", label: "Case Categories", icon: <FiFolder />, color: "text-emerald-500", bg: "bg-emerald-50" },
   { id: "departments", label: "Departments", icon: <FiFolder />, color: "text-violet-500", bg: "bg-violet-50" },
   { id: "roles", label: "Role Permissions", icon: <FiShield />, color: "text-amber-500", bg: "bg-amber-50" },
@@ -461,7 +464,7 @@ export default function AdminSettings() {
             )}
 
             {configTab === "visa" && (
-              <VisaSettings 
+              <VisaSettings
                 visaTypes={visaTypes}
                 petitionTypes={petitionTypes}
                 loading={loading}
@@ -473,6 +476,10 @@ export default function AdminSettings() {
                 onDeletePetition={async (id) => { const r = await Swal.fire({ title: "Delete Petition Type?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deletePetitionType(id); loadData(); } }}
                 error={error}
               />
+            )}
+
+            {configTab === "checklist" && (
+              <DocumentChecklistSettings />
             )}
 
             {configTab === "categories" && (
