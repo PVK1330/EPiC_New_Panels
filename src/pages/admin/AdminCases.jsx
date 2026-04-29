@@ -18,10 +18,17 @@ import {
 } from "lucide-react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
-import { getCases, createCase, updateCase, deleteCase, getVisaTypes, getPetitionTypes, getCandidates, getSponsors, getCaseworkers, updateCaseStatus, exportCases } from "../../services/caseApi";
-
-
-
+import {
+  getCases,
+  createCase,
+  updateCase,
+  deleteCase,
+  getVisaTypes,
+  getPetitionTypes,
+  getAllUsers,
+  updateCaseStatus,
+  exportCases,
+} from "../../services/caseApi";
 
 const statusBadge = {
   Approved: "bg-green-100 text-green-800",
@@ -260,13 +267,18 @@ function CaseFormModal({
                       name="candidateId"
                       value={formData.candidateId}
                       onChange={(e) => {
-                        const selectedCandidate = candidates.find(c => c.id === parseInt(e.target.value));
-                        setFormData(prev => ({
+                        const selectedCandidate = candidates.find(
+                          (c) => c.id === parseInt(e.target.value),
+                        );
+                        setFormData((prev) => ({
                           ...prev,
                           candidateId: e.target.value,
-                          candidateName: selectedCandidate ? `${selectedCandidate.first_name} ${selectedCandidate.last_name}` : ''
+                          candidateName: selectedCandidate
+                            ? `${selectedCandidate.first_name} ${selectedCandidate.last_name}`
+                            : "",
                         }));
-                        if (errors.candidateId) setErrors(prev => ({ ...prev, candidateId: '' }));
+                        if (errors.candidateId)
+                          setErrors((prev) => ({ ...prev, candidateId: "" }));
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${errors.candidateId ? "border-red-400" : "border-gray-300"}`}
                     >
@@ -329,13 +341,18 @@ function CaseFormModal({
                       name="businessId"
                       value={formData.businessId}
                       onChange={(e) => {
-                        const selectedSponsor = sponsors.find(s => s.id === parseInt(e.target.value));
-                        setFormData(prev => ({
+                        const selectedSponsor = sponsors.find(
+                          (s) => s.id === parseInt(e.target.value),
+                        );
+                        setFormData((prev) => ({
                           ...prev,
                           businessId: e.target.value,
-                          businessName: selectedSponsor ? `${selectedSponsor.first_name} ${selectedSponsor.last_name}` : ''
+                          businessName: selectedSponsor
+                            ? `${selectedSponsor.first_name} ${selectedSponsor.last_name}`
+                            : "",
                         }));
-                        if (errors.businessId) setErrors(prev => ({ ...prev, businessId: '' }));
+                        if (errors.businessId)
+                          setErrors((prev) => ({ ...prev, businessId: "" }));
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${errors.businessId ? "border-red-400" : "border-gray-300"}`}
                     >
@@ -460,7 +477,14 @@ function CaseFormModal({
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <CaseworkerMultiSelect
-                options={caseworkers.length > 0 ? caseworkers.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}` })) : CASE_WORKERS}
+                options={
+                  caseworkers.length > 0
+                    ? caseworkers.map((c) => ({
+                        id: c.id,
+                        name: `${c.first_name} ${c.last_name}`,
+                      }))
+                    : CASE_WORKERS
+                }
                 value={formData.assignedCaseworkerIds || []}
                 onChange={onCaseworkerIdsChange}
                 error={errors.assignedCaseworkers}
@@ -560,14 +584,14 @@ export default function AdminCases() {
 
   // Create caseworker name map
   const caseworkerNameMap = {};
-  caseworkers.forEach(cw => {
+  caseworkers.forEach((cw) => {
     caseworkerNameMap[cw.id] = `${cw.first_name} ${cw.last_name}`;
   });
 
   // Helper function to get caseworker names from IDs
   const getCaseworkerNames = (ids) => {
-    const cwIds = Array.isArray(ids) ? ids : (ids ? [ids] : []);
-    return cwIds.map(id => caseworkerNameMap[id] || `ID:${id}`).join(', ');
+    const cwIds = Array.isArray(ids) ? ids : ids ? [ids] : [];
+    return cwIds.map((id) => caseworkerNameMap[id] || `ID:${id}`).join(", ");
   };
 
   // Calculate dynamic stats from cases
@@ -581,21 +605,21 @@ export default function AdminCases() {
     },
     {
       label: "Pending",
-      value: cases.filter(c => c.status === 'Pending').length,
+      value: cases.filter((c) => c.status === "Pending").length,
       bg: "bg-yellow-100",
       color: "text-yellow-600",
       Icon: Clock,
     },
     {
       label: "Approved",
-      value: cases.filter(c => c.status === 'Approved').length,
+      value: cases.filter((c) => c.status === "Approved").length,
       bg: "bg-green-100",
       color: "text-green-600",
       Icon: CheckCircle,
     },
     {
       label: "Rejected",
-      value: cases.filter(c => c.status === 'Rejected').length,
+      value: cases.filter((c) => c.status === "Rejected").length,
       bg: "bg-red-100",
       color: "text-red-600",
       Icon: XCircle,
@@ -615,20 +639,32 @@ export default function AdminCases() {
         const response = await getCases();
         if (response?.data?.data?.cases) {
           // Map API data to existing structure
-          const mappedCases = response.data.data.cases.map(c => ({
+          const mappedCases = response.data.data.cases.map((c) => ({
             caseId: c.caseId || c.id.toString(),
-            candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : '—',
+            candidate: c.candidate
+              ? `${c.candidate.first_name} ${c.candidate.last_name}`
+              : "—",
             candidateId: c.candidateId,
-            business: c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—',
+            business: c.sponsor
+              ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
+              : "—",
             businessId: c.sponsorId,
-            visaType: c.visaType?.name || '—',
-            petitionType: c.petitionType?.name || '—',
+            visaType: c.visaType?.name || "—",
+            petitionType: c.petitionType?.name || "—",
             status: c.status,
             priority: c.priority,
-            submitted: c.submitted ? new Date(c.submitted).toLocaleDateString() : new Date(c.created_at).toLocaleDateString(),
-            caseworkerIds: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId : [],
-            caseworkerId: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId.join(', ') : c.assignedcaseworkerId,
-            caseworker: Array.isArray(c.assignedcaseworkerId) ? `${c.assignedcaseworkerId.length} assigned` : '—',
+            submitted: c.submitted
+              ? new Date(c.submitted).toLocaleDateString()
+              : new Date(c.created_at).toLocaleDateString(),
+            caseworkerIds: Array.isArray(c.assignedcaseworkerId)
+              ? c.assignedcaseworkerId
+              : [],
+            caseworkerId: Array.isArray(c.assignedcaseworkerId)
+              ? c.assignedcaseworkerId.join(", ")
+              : c.assignedcaseworkerId,
+            caseworker: Array.isArray(c.assignedcaseworkerId)
+              ? `${c.assignedcaseworkerId.length} assigned`
+              : "—",
             targetSubmissionDate: c.targetSubmissionDate,
             lcaNumber: c.lcaNumber,
             receiptNumber: c.receiptNumber,
@@ -649,35 +685,29 @@ export default function AdminCases() {
     };
     fetchCasesFromAPI();
 
-    // Fetch visa types, petition types, candidates, sponsors, caseworkers
+    // Fetch visa types, petition types, and all users (candidates / sponsors / caseworkers)
+    // getAllUsers returns { candidate: [], sponsor: [], caseworker: [] } (singular keys)
     const fetchDropdownData = async () => {
       try {
-        const [visaRes, petitionRes, candidateRes, sponsorRes, caseworkerRes] = await Promise.all([
+        const [visaRes, petitionRes, usersRes] = await Promise.all([
           getVisaTypes(),
           getPetitionTypes(),
-          getCandidates(),
-          getSponsors(),
-          getCaseworkers(),
+          getAllUsers(),
         ]);
-        
+
         if (visaRes?.data?.data?.visa_types) {
           setVisaTypes(visaRes.data.data.visa_types);
         }
-        
+
         if (petitionRes?.data?.data?.petition_types) {
           setPetitionTypes(petitionRes.data.data.petition_types);
         }
-        
-        if (candidateRes?.data?.data?.candidates) {
-          setCandidates(candidateRes.data.data.candidates);
-        }
-        
-        if (sponsorRes?.data?.data?.sponsors) {
-          setSponsors(sponsorRes.data.data.sponsors);
-        }
-        
-        if (caseworkerRes?.data?.data?.caseworkers) {
-          setCaseworkers(caseworkerRes.data.data.caseworkers);
+
+        if (usersRes?.data?.data) {
+          const { candidate, sponsor, caseworker } = usersRes.data.data;
+          setCandidates(candidate || []);
+          setSponsors(sponsor || []);
+          setCaseworkers(caseworker || []);
         }
       } catch (error) {
         console.error("Error fetching dropdown data:", error);
@@ -707,8 +737,7 @@ export default function AdminCases() {
     if (!formData.businessId) e.businessId = "Required";
     if (!formData.visaTypeId) e.visaTypeId = "Required";
     const n = formData.assignedCaseworkerIds?.length || 0;
-    if (n < 1 || n > 2)
-      e.assignedCaseworkers = "Select 1 or 2 caseworkers";
+    if (n < 1 || n > 2) e.assignedCaseworkers = "Select 1 or 2 caseworkers";
     if (!formData.targetSubmissionDate) e.targetSubmissionDate = "Required";
     if (formData.totalAmount <= 0) e.totalAmount = "Must be > 0";
     setErrors(e);
@@ -743,22 +772,34 @@ export default function AdminCases() {
       // Refresh cases from API
       const response = await getCases();
       if (response?.data?.data?.cases) {
-        const mappedCases = response.data.data.cases.map(c => ({
+        const mappedCases = response.data.data.cases.map((c) => ({
           caseId: c.caseId || c.id.toString(),
-          candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : '—',
+          candidate: c.candidate
+            ? `${c.candidate.first_name} ${c.candidate.last_name}`
+            : "—",
           candidateId: c.candidateId,
-          business: c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—',
+          business: c.sponsor
+            ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
+            : "—",
           businessId: c.sponsorId,
-          visaType: c.visaType?.name || '—',
-          petitionType: c.petitionType?.name || '—',
+          visaType: c.visaType?.name || "—",
+          petitionType: c.petitionType?.name || "—",
           visaTypeId: c.visaTypeId,
           petitionTypeId: c.petitionTypeId,
           status: c.status,
           priority: c.priority,
-          submitted: c.submitted ? new Date(c.submitted).toLocaleDateString() : new Date(c.created_at).toLocaleDateString(),
-          caseworkerIds: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId : [],
-          caseworkerId: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId.join(', ') : c.assignedcaseworkerId,
-          caseworker: Array.isArray(c.assignedcaseworkerId) ? `${c.assignedcaseworkerId.length} assigned` : '—',
+          submitted: c.submitted
+            ? new Date(c.submitted).toLocaleDateString()
+            : new Date(c.created_at).toLocaleDateString(),
+          caseworkerIds: Array.isArray(c.assignedcaseworkerId)
+            ? c.assignedcaseworkerId
+            : [],
+          caseworkerId: Array.isArray(c.assignedcaseworkerId)
+            ? c.assignedcaseworkerId.join(", ")
+            : c.assignedcaseworkerId,
+          caseworker: Array.isArray(c.assignedcaseworkerId)
+            ? `${c.assignedcaseworkerId.length} assigned`
+            : "—",
           targetSubmissionDate: c.targetSubmissionDate,
           lcaNumber: c.lcaNumber,
           receiptNumber: c.receiptNumber,
@@ -779,7 +820,9 @@ export default function AdminCases() {
     } catch (error) {
       setIsLoading(false);
       console.error("Error creating case:", error);
-      alert("Error creating case. Please ensure Candidate ID, Business ID, Visa Type, and Petition Type are provided.");
+      alert(
+        "Error creating case. Please ensure Candidate ID, Business ID, Visa Type, and Petition Type are provided.",
+      );
     }
   };
 
@@ -828,7 +871,8 @@ export default function AdminCases() {
         candidateId: formData.candidateId || selectedCase.candidateId,
         sponsorId: formData.businessId || selectedCase.businessId,
         visaTypeId: parseInt(formData.visaTypeId) || selectedCase.visaTypeId,
-        petitionTypeId: parseInt(formData.petitionTypeId) || selectedCase.petitionTypeId,
+        petitionTypeId:
+          parseInt(formData.petitionTypeId) || selectedCase.petitionTypeId,
         priority: formData.priority,
         targetSubmissionDate: formData.targetSubmissionDate,
         lcaNumber: formData.lcaNumber,
@@ -846,22 +890,34 @@ export default function AdminCases() {
       // Refresh cases from API
       const response = await getCases();
       if (response?.data?.data?.cases) {
-        const mappedCases = response.data.data.cases.map(c => ({
+        const mappedCases = response.data.data.cases.map((c) => ({
           caseId: c.caseId || c.id.toString(),
-          candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : '—',
+          candidate: c.candidate
+            ? `${c.candidate.first_name} ${c.candidate.last_name}`
+            : "—",
           candidateId: c.candidateId,
-          business: c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—',
+          business: c.sponsor
+            ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
+            : "—",
           businessId: c.sponsorId,
-          visaType: c.visaType?.name || '—',
-          petitionType: c.petitionType?.name || '—',
+          visaType: c.visaType?.name || "—",
+          petitionType: c.petitionType?.name || "—",
           visaTypeId: c.visaTypeId,
           petitionTypeId: c.petitionTypeId,
           status: c.status,
           priority: c.priority,
-          submitted: c.submitted ? new Date(c.submitted).toLocaleDateString() : new Date(c.created_at).toLocaleDateString(),
-          caseworkerIds: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId : [],
-          caseworkerId: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId.join(', ') : c.assignedcaseworkerId,
-          caseworker: Array.isArray(c.assignedcaseworkerId) ? `${c.assignedcaseworkerId.length} assigned` : '—',
+          submitted: c.submitted
+            ? new Date(c.submitted).toLocaleDateString()
+            : new Date(c.created_at).toLocaleDateString(),
+          caseworkerIds: Array.isArray(c.assignedcaseworkerId)
+            ? c.assignedcaseworkerId
+            : [],
+          caseworkerId: Array.isArray(c.assignedcaseworkerId)
+            ? c.assignedcaseworkerId.join(", ")
+            : c.assignedcaseworkerId,
+          caseworker: Array.isArray(c.assignedcaseworkerId)
+            ? `${c.assignedcaseworkerId.length} assigned`
+            : "—",
           targetSubmissionDate: c.targetSubmissionDate,
           lcaNumber: c.lcaNumber,
           receiptNumber: c.receiptNumber,
@@ -892,22 +948,34 @@ export default function AdminCases() {
       // Refresh cases from API
       const response = await getCases();
       if (response?.data?.data?.cases) {
-        const mappedCases = response.data.data.cases.map(c => ({
+        const mappedCases = response.data.data.cases.map((c) => ({
           caseId: c.caseId || c.id.toString(),
-          candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : '—',
+          candidate: c.candidate
+            ? `${c.candidate.first_name} ${c.candidate.last_name}`
+            : "—",
           candidateId: c.candidateId,
-          business: c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—',
+          business: c.sponsor
+            ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
+            : "—",
           businessId: c.sponsorId,
-          visaType: c.visaType?.name || '—',
-          petitionType: c.petitionType?.name || '—',
+          visaType: c.visaType?.name || "—",
+          petitionType: c.petitionType?.name || "—",
           visaTypeId: c.visaTypeId,
           petitionTypeId: c.petitionTypeId,
           status: c.status,
           priority: c.priority,
-          submitted: c.submitted ? new Date(c.submitted).toLocaleDateString() : new Date(c.created_at).toLocaleDateString(),
-          caseworkerIds: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId : [],
-          caseworkerId: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId.join(', ') : c.assignedcaseworkerId,
-          caseworker: Array.isArray(c.assignedcaseworkerId) ? `${c.assignedcaseworkerId.length} assigned` : '—',
+          submitted: c.submitted
+            ? new Date(c.submitted).toLocaleDateString()
+            : new Date(c.created_at).toLocaleDateString(),
+          caseworkerIds: Array.isArray(c.assignedcaseworkerId)
+            ? c.assignedcaseworkerId
+            : [],
+          caseworkerId: Array.isArray(c.assignedcaseworkerId)
+            ? c.assignedcaseworkerId.join(", ")
+            : c.assignedcaseworkerId,
+          caseworker: Array.isArray(c.assignedcaseworkerId)
+            ? `${c.assignedcaseworkerId.length} assigned`
+            : "—",
           targetSubmissionDate: c.targetSubmissionDate,
           lcaNumber: c.lcaNumber,
           receiptNumber: c.receiptNumber,
@@ -930,15 +998,15 @@ export default function AdminCases() {
   };
 
   const handleApprove = async (caseId) => {
-    setSelectedCase(cases.find(c => c.caseId === caseId));
-    setApproveRejectAction('approve');
+    setSelectedCase(cases.find((c) => c.caseId === caseId));
+    setApproveRejectAction("approve");
     setApproveRejectNote("");
     setApproveRejectOpen(true);
   };
 
   const handleReject = async (caseId) => {
-    setSelectedCase(cases.find(c => c.caseId === caseId));
-    setApproveRejectAction('reject');
+    setSelectedCase(cases.find((c) => c.caseId === caseId));
+    setApproveRejectAction("reject");
     setApproveRejectNote("");
     setApproveRejectOpen(true);
   };
@@ -947,27 +1015,47 @@ export default function AdminCases() {
     if (!selectedCase) return;
     setIsLoading(true);
     try {
-      console.log("Updating case:", selectedCase.caseId, "to status:", approveRejectAction === 'approve' ? 'Approved' : 'Rejected');
-      await updateCaseStatus(selectedCase.caseId, approveRejectAction === 'approve' ? 'Approved' : 'Rejected');
+      console.log(
+        "Updating case:",
+        selectedCase.caseId,
+        "to status:",
+        approveRejectAction === "approve" ? "Approved" : "Rejected",
+      );
+      await updateCaseStatus(
+        selectedCase.caseId,
+        approveRejectAction === "approve" ? "Approved" : "Rejected",
+      );
       // Refresh cases from API
       const response = await getCases();
       if (response?.data?.data?.cases) {
-        const mappedCases = response.data.data.cases.map(c => ({
+        const mappedCases = response.data.data.cases.map((c) => ({
           caseId: c.caseId || c.id.toString(),
-          candidate: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : '—',
+          candidate: c.candidate
+            ? `${c.candidate.first_name} ${c.candidate.last_name}`
+            : "—",
           candidateId: c.candidateId,
-          business: c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—',
+          business: c.sponsor
+            ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
+            : "—",
           businessId: c.sponsorId,
-          visaType: c.visaType?.name || '—',
-          petitionType: c.petitionType?.name || '—',
+          visaType: c.visaType?.name || "—",
+          petitionType: c.petitionType?.name || "—",
           visaTypeId: c.visaTypeId,
           petitionTypeId: c.petitionTypeId,
           status: c.status,
           priority: c.priority,
-          submitted: c.submitted ? new Date(c.submitted).toLocaleDateString() : new Date(c.created_at).toLocaleDateString(),
-          caseworkerIds: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId : [],
-          caseworkerId: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId.join(', ') : c.assignedcaseworkerId,
-          caseworker: Array.isArray(c.assignedcaseworkerId) ? `${c.assignedcaseworkerId.length} assigned` : '—',
+          submitted: c.submitted
+            ? new Date(c.submitted).toLocaleDateString()
+            : new Date(c.created_at).toLocaleDateString(),
+          caseworkerIds: Array.isArray(c.assignedcaseworkerId)
+            ? c.assignedcaseworkerId
+            : [],
+          caseworkerId: Array.isArray(c.assignedcaseworkerId)
+            ? c.assignedcaseworkerId.join(", ")
+            : c.assignedcaseworkerId,
+          caseworker: Array.isArray(c.assignedcaseworkerId)
+            ? `${c.assignedcaseworkerId.length} assigned`
+            : "—",
           targetSubmissionDate: c.targetSubmissionDate,
           lcaNumber: c.lcaNumber,
           receiptNumber: c.receiptNumber,
@@ -996,17 +1084,25 @@ export default function AdminCases() {
     try {
       const params = {};
       if (searchQuery) params.search = searchQuery;
-      if (filterType !== 'all') params.status = filterType === 'approved' ? 'Approved' : filterType === 'rejected' ? 'Rejected' : filterType === 'review' ? 'Review' : 'Pending';
-      if (priorityFilter !== 'all') params.priority = priorityFilter;
-      if (visaTypeFilter !== 'all') params.visaType = visaTypeFilter;
+      if (filterType !== "all")
+        params.status =
+          filterType === "approved"
+            ? "Approved"
+            : filterType === "rejected"
+              ? "Rejected"
+              : filterType === "review"
+                ? "Review"
+                : "Pending";
+      if (priorityFilter !== "all") params.priority = priorityFilter;
+      if (visaTypeFilter !== "all") params.visaType = visaTypeFilter;
 
       const response = await exportCases(params);
-      
+
       // Create a blob URL and download the file
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', 'cases_export.csv');
+      link.setAttribute("download", "cases_export.csv");
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1028,25 +1124,26 @@ export default function AdminCases() {
       caseIdStr.includes(query) ||
       candidateStr.includes(query) ||
       businessStr.includes(query);
-    
+
     const matchesFilter =
       filterType === "all" ||
-      (filterType?.toLowerCase() === "lead" && c.status?.toLowerCase() === "lead") ||
+      (filterType?.toLowerCase() === "lead" &&
+        c.status?.toLowerCase() === "lead") ||
       (filterType === "approved" && c.status === "Approved") ||
       (filterType === "pending" && c.status === "Pending") ||
       (filterType === "rejected" && c.status === "Rejected") ||
       (filterType === "review" && c.status === "Review");
-    
+
     const matchesPriority =
       priorityFilter === "all" ||
       (priorityFilter === "low" && c.priority === "low") ||
       (priorityFilter === "medium" && c.priority === "medium") ||
       (priorityFilter === "high" && c.priority === "high") ||
       (priorityFilter === "urgent" && c.priority === "urgent");
-    
+
     const matchesVisaType =
       visaTypeFilter === "all" || c.visaType === visaTypeFilter;
-    
+
     return matchesSearch && matchesFilter && matchesPriority && matchesVisaType;
   });
 
@@ -1120,7 +1217,10 @@ export default function AdminCases() {
         <div className="px-6 py-4 border-b border-gray-100">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+              <Search
+                className="absolute left-3 top-3 text-gray-400"
+                size={18}
+              />
               <input
                 type="text"
                 placeholder="Search cases..."
@@ -1237,7 +1337,11 @@ export default function AdminCases() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => navigate(`/admin/case-detail/${c.caseId.replace(/^#/, '')}`)}
+                        onClick={() =>
+                          navigate(
+                            `/admin/case-detail/${c.caseId.replace(/^#/, "")}`,
+                          )
+                        }
                         className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
                         title="View"
                       >
@@ -1341,7 +1445,10 @@ export default function AdminCases() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <motion.div className="absolute inset-0 bg-black/40" onClick={() => setApproveRejectOpen(false)} />
+            <motion.div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setApproveRejectOpen(false)}
+            />
             <motion.div
               className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6"
               initial={{ scale: 0.95, opacity: 0 }}
@@ -1349,12 +1456,14 @@ export default function AdminCases() {
               exit={{ scale: 0.95, opacity: 0 }}
             >
               <h3 className="text-lg font-black text-secondary mb-2">
-                {approveRejectAction === 'approve' ? 'Approve Case' : 'Reject Case'}
+                {approveRejectAction === "approve"
+                  ? "Approve Case"
+                  : "Reject Case"}
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                {approveRejectAction === 'approve' 
-                  ? 'Approving this case will send a notification to the candidate and assigned caseworkers.'
-                  : 'Rejecting this case will send a notification to the candidate and assigned caseworkers.'}
+                {approveRejectAction === "approve"
+                  ? "Approving this case will send a notification to the candidate and assigned caseworkers."
+                  : "Rejecting this case will send a notification to the candidate and assigned caseworkers."}
               </p>
               <div className="mb-4">
                 <label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -1369,19 +1478,26 @@ export default function AdminCases() {
                 />
               </div>
               <div className="flex justify-end gap-3">
-                <Button variant="ghost" onClick={() => setApproveRejectOpen(false)}>
+                <Button
+                  variant="ghost"
+                  onClick={() => setApproveRejectOpen(false)}
+                >
                   Cancel
                 </Button>
                 <button
                   onClick={handleApproveRejectSubmit}
                   disabled={isLoading}
                   className={`px-4 py-2 text-white text-sm font-bold rounded-lg transition-colors ${
-                    approveRejectAction === 'approve'
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-red-600 hover:bg-red-700'
-                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    approveRejectAction === "approve"
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-red-600 hover:bg-red-700"
+                  } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
-                  {isLoading ? 'Processing...' : approveRejectAction === 'approve' ? 'Approve' : 'Reject'}
+                  {isLoading
+                    ? "Processing..."
+                    : approveRejectAction === "approve"
+                      ? "Approve"
+                      : "Reject"}
                 </button>
               </div>
             </motion.div>
