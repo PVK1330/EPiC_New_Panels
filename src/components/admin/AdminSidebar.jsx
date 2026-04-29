@@ -57,6 +57,7 @@ const navSections = [
       { to: "/admin/calendar", label: "Calendar", icon: RiCalendarLine },
       { to: "/admin/assign", label: "Assign / Reassign", icon: RiUserAddLine },
       { to: "/admin/escalations", label: "Escalations", icon: RiAlarmWarningLine },
+      { to: "/admin/licence-requests", label: "Licence Requests", icon: RiShieldCheckLine },
     ],
   },
   {

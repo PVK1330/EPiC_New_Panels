@@ -50,8 +50,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
     {
       label: "Sponsorship",
       items: [
-        { to: "/business/licence", label: "Licence Status", icon: FileText },
-        { to: "/business/apply-licence", label: "Apply / Renew Licence", icon: FileText },
+        { to: "/business/licence", label: "Licence Management", icon: FileText },
         { to: "/business/licence-documents", label: "Licence Documents", icon: FileText },
         { to: "/business/cosallocation", label: "CoS Allocation", icon: Package },
         { to: "/business/workers", label: "Sponsored Workers", icon: Users },

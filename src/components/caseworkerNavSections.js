@@ -15,6 +15,7 @@ import {
   CalendarClock,
   Files,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 
 /** Caseworker portal sidebar — sectioned nav aligned with portal workflow */
@@ -79,6 +80,11 @@ export const caseworkerNavSections = (taskCount = 0) => [
         to: "/caseworker/people/sponsors",
         label: "Sponsor profiles",
         icon: Users,
+      },
+      {
+        to: "/caseworker/licence-reviews",
+        label: "Licence reviews",
+        icon: ShieldCheck,
       },
     ],
   },
