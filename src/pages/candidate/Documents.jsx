@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { FileText, Upload, Download, Eye, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import Modal from "../../components/Modal";
 import { getUserDocuments, downloadDocument, triggerDownload } from "../../services/documentApi";
+import { useToast } from "../../context/ToastContext";
 
 const DocumentItem = ({ doc, onView, onDownload }) => {
   const isUploaded = doc.status === "uploaded" || doc.status === "approved" || doc.status === "under_review";
@@ -11,6 +12,11 @@ const DocumentItem = ({ doc, onView, onDownload }) => {
   const dDate = new Date(doc.uploadedAt || doc.created_at);
   const dateStr = dDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   const timeStr = dDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+  const statusLabel =
+    doc.status === "uploaded" || doc.status === "under_review"
+      ? "Pending Review"
+      : doc.status?.replace("_", " ") || "Unknown";
 
   return (
     <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:shadow-md mb-4">
@@ -31,7 +37,7 @@ const DocumentItem = ({ doc, onView, onDownload }) => {
               "text-gray-500"
             }`}
           >
-            {doc.status?.replace("_", " ") || "Unknown"}
+            {statusLabel}
           </p>
         </div>
       </div>
@@ -70,6 +76,7 @@ const Documents = () => {
   
   const [viewDoc, setViewDoc] = useState(null);
   const [downloading, setDownloading] = useState(false);
+  const { showToast } = useToast();
 
   const loadDocs = useCallback(async () => {
     if (!userId) return;
@@ -94,8 +101,9 @@ const Documents = () => {
     try {
       const res = await downloadDocument(doc.id);
       triggerDownload(res.data, doc.userFileName || doc.documentName);
+      showToast({ message: "Document download started.", variant: "success" });
     } catch {
-      alert("Failed to download document.");
+      showToast({ message: "Failed to download document.", variant: "danger" });
     } finally {
       setDownloading(false);
     }
