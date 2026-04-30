@@ -1,5 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import axios from "axios";
+import { getToken } from "../../utils/storage.js";
 
 const StatCard = ({ label, value, color = "secondary", suffix }) => {
   const colorMap = {
@@ -55,12 +57,60 @@ const Pill = ({ variant = "blue", children }) => {
 
 const CaseworkerPerformance = () => {
   const user = useSelector((s) => s.auth.user);
+  const [performanceData, setPerformanceData] = useState(null);
+  const [activityLog, setActivityLog] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const monthLabel = useMemo(() => {
     const d = new Date();
     const m = d.toLocaleString("en-GB", { month: "long" });
     return `${m} ${d.getFullYear()}`;
   }, []);
+
+  useEffect(() => {
+    const fetchPerformanceData = async () => {
+      try {
+        const token = getToken();
+        const [perfResponse, activityResponse] = await Promise.all([
+          axios.get('http://localhost:5000/api/caseworker/performance', {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get('http://localhost:5000/api/caseworker/activity-log?limit=20', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+
+        setPerformanceData(perfResponse.data.data);
+        setActivityLog(activityResponse.data.data);
+      } catch (err) {
+        console.error('Error fetching performance data:', err);
+        setError('Failed to load performance data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPerformanceData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Loading performance data...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
+
+  const { overall, cases, tasks, documents, monthlyTrend } = performanceData || {};
 
   return (
     <div className="space-y-6">
@@ -88,11 +138,13 @@ const CaseworkerPerformance = () => {
             Overall Performance Score
           </div>
           <div className="text-6xl font-black tracking-tight text-purple-700">
-            87
+            {overall?.score || 0}
             <span className="text-xl text-gray-400 font-bold">/100</span>
           </div>
           <div className="text-sm text-green-600 font-bold mt-2">
-            ↑ +5 points vs last month
+            {monthlyTrend && monthlyTrend.length > 1 
+              ? `↑ ${Math.max(0, overall?.score - monthlyTrend[monthlyTrend.length - 2]?.score || 0)} points vs last month`
+              : 'No previous data'}
           </div>
         </div>
 
@@ -101,31 +153,31 @@ const CaseworkerPerformance = () => {
             <div className="text-[11px] text-gray-500 font-mono uppercase tracking-wider mb-1">
               SLA Rate
             </div>
-            <div className="text-2xl font-black text-green-600">92%</div>
+            <div className="text-2xl font-black text-green-600">{overall?.slaRate || 0}%</div>
           </div>
           <div className="text-center">
             <div className="text-[11px] text-gray-500 font-mono uppercase tracking-wider mb-1">
               Completion
             </div>
-            <div className="text-2xl font-black text-secondary">78%</div>
+            <div className="text-2xl font-black text-secondary">{overall?.completionRate || 0}%</div>
           </div>
           <div className="text-center">
             <div className="text-[11px] text-gray-500 font-mono uppercase tracking-wider mb-1">
               Overdue Rate
             </div>
-            <div className="text-2xl font-black text-red-600">16%</div>
+            <div className="text-2xl font-black text-red-600">{overall?.overdueRate || 0}%</div>
           </div>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Cases Assigned" value="24" color="secondary" />
-        <StatCard label="Cases Completed" value="11" color="green" />
-        <StatCard label="Avg Completion Time" value="18" suffix="days" color="amber" />
-        <StatCard label="SLA Compliance" value="92" suffix="%" color="teal" />
-        <StatCard label="Overdue Cases" value="4" color="red" />
-        <StatCard label="Doc Accuracy" value="88" suffix="%" color="purple" />
+        <StatCard label="Cases Assigned" value={cases?.assigned || 0} color="secondary" />
+        <StatCard label="Cases Completed" value={cases?.completed || 0} color="green" />
+        <StatCard label="Avg Completion Time" value={cases?.avgCompletionTime || 0} suffix="days" color="amber" />
+        <StatCard label="SLA Compliance" value={overall?.slaRate || 0} suffix="%" color="teal" />
+        <StatCard label="Overdue Cases" value={cases?.overdue || 0} color="red" />
+        <StatCard label="Doc Accuracy" value={documents?.accuracy || 0} suffix="%" color="purple" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -135,12 +187,12 @@ const CaseworkerPerformance = () => {
             <div className="text-sm font-black text-secondary">Metric Breakdown</div>
           </div>
           <div className="p-5">
-            <BarRow label="SLA Compliance" value={92} colorClass="bg-green-500" />
-            <BarRow label="Cases Completed" value={78} colorClass="bg-secondary" />
-            <BarRow label="Avg Completion" value={65} colorClass="bg-purple-600" />
-            <BarRow label="Doc Accuracy" value={88} colorClass="bg-amber-500" />
-            <BarRow label="Task Completion" value={74} colorClass="bg-teal-500" />
-            <BarRow label="Overdue Rate" value={16} colorClass="bg-red-500" />
+            <BarRow label="SLA Compliance" value={overall?.slaRate || 0} colorClass="bg-green-500" />
+            <BarRow label="Cases Completed" value={overall?.completionRate || 0} colorClass="bg-secondary" />
+            <BarRow label="Avg Completion" value={Math.min(100, Math.max(0, 100 - (cases?.avgCompletionTime || 0) * 2))} colorClass="bg-purple-600" />
+            <BarRow label="Doc Accuracy" value={documents?.accuracy || 0} colorClass="bg-amber-500" />
+            <BarRow label="Task Completion" value={tasks?.completionRate || 0} colorClass="bg-teal-500" />
+            <BarRow label="Overdue Rate" value={overall?.overdueRate || 0} colorClass="bg-red-500" />
           </div>
         </div>
 
@@ -151,25 +203,24 @@ const CaseworkerPerformance = () => {
           </div>
           <div className="p-5">
             <div className="grid grid-cols-4 gap-3 mb-4">
-              {[
-                ["JAN", 72, "text-gray-400"],
-                ["FEB", 78, "text-gray-400"],
-                ["MAR", 82, "text-gray-400"],
-                ["APR", 87, "text-secondary"],
-              ].map(([m, v, cls]) => (
-                <div key={m} className="text-center">
-                  <div className={`text-[10px] font-mono uppercase ${cls} mb-1`}>{m}</div>
-                  <div className={`text-base font-black ${cls}`}>{v}</div>
+              {(monthlyTrend || []).map((trend, idx) => (
+                <div key={idx} className="text-center">
+                  <div className={`text-[10px] font-mono uppercase ${idx === monthlyTrend.length - 1 ? 'text-secondary' : 'text-gray-400'} mb-1`}>
+                    {trend.month}
+                  </div>
+                  <div className={`text-base font-black ${idx === monthlyTrend.length - 1 ? 'text-secondary' : 'text-gray-400'}`}>
+                    {trend.score}
+                  </div>
                 </div>
               ))}
             </div>
 
             <div className="flex items-end gap-2 h-28 pt-4">
-              {[72, 78, 82, 87].map((v, idx) => (
+              {(monthlyTrend || []).map((trend, idx) => (
                 <div
                   key={idx}
-                  className={`flex-1 rounded-t-md ${idx === 3 ? "bg-secondary" : "bg-secondary/30"}`}
-                  style={{ height: `${v}%` }}
+                  className={`flex-1 rounded-t-md ${idx === monthlyTrend.length - 1 ? "bg-secondary" : "bg-secondary/30"}`}
+                  style={{ height: `${Math.max(10, trend.score)}%` }}
                 />
               ))}
             </div>
@@ -201,21 +252,46 @@ const CaseworkerPerformance = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {[
-                ["Apr 7 · 10:32am", <Pill variant="green">Document Approved</Pill>, "#C-2401", "Approved Passport Copy for Ahmed Al-Rashid"],
-                ["Apr 7 · 9:55am", <Pill variant="yellow">Task Updated</Pill>, "#C-2398", "Updated “Draft application form” to In Progress"],
-                ["Apr 6 · 4:20pm", <Pill variant="purple">Status Changed</Pill>, "#C-2385", "Moved Ivan Petrov → Review stage"],
-                ["Apr 6 · 2:14pm", <Pill variant="green">Message Sent</Pill>, "#C-2401", "Requested English language certificate from Ahmed"],
-                ["Apr 5 · 11:30am", <Pill variant="red">Reminder Sent</Pill>, "#C-2380", "Document reminder sent to Fatima Al-Zahra"],
-                ["Apr 4 · 3:45pm", <Pill variant="green">Note Added</Pill>, "#C-2401", "Added internal case note"],
-              ].map(([time, action, code, details], idx) => (
-                <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-xs font-mono text-gray-500">{time}</td>
-                  <td className="px-4 py-3">{action}</td>
-                  <td className="px-4 py-3 text-xs font-mono text-secondary">{code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{details}</td>
+              {activityLog.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                    No activity log entries found
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                activityLog.map((log, idx) => {
+                  const date = new Date(log.actionDate);
+                  const timeStr = date.toLocaleString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true 
+                  });
+                  
+                  const actionVariant = {
+                    'case_created': 'green',
+                    'status_changed': 'purple',
+                    'document_uploaded': 'blue',
+                    'document_reviewed': 'green',
+                    'note_added': 'yellow',
+                    'assignment_changed': 'purple',
+                  }[log.actionType] || 'blue';
+
+                  return (
+                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-xs font-mono text-gray-500">{timeStr}</td>
+                      <td className="px-4 py-3">
+                        <Pill variant={actionVariant}>{log.actionType.replace(/_/g, ' ')}</Pill>
+                      </td>
+                      <td className="px-4 py-3 text-xs font-mono text-secondary">
+                        {log.case?.caseId ? `#${log.case.caseId}` : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{log.description}</td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
