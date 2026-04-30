@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -37,8 +31,16 @@ import {
   updateUserProfile,
   changeOwnPassword,
 } from "../../services/candidateAccountService";
+import useDownloads from "../../hooks/useDownloads";
 
-const RATING_LABELS = ["", "Needs work", "Fair", "Good", "Very good", "Excellent"];
+const RATING_LABELS = [
+  "",
+  "Needs work",
+  "Fair",
+  "Good",
+  "Very good",
+  "Excellent",
+];
 
 const EXP_TAGS = [
   { id: "easy", label: "Easy to use", emoji: "✅" },
@@ -106,22 +108,22 @@ const SEVERITY_OPTIONS = [
 
 const PACK_ITEMS = [
   {
+    id: "filled",
     icon: FileText,
     name: "Filled application forms",
-    meta: "PDF · Generated 11 Apr 2026 · 2.4 MB",
-    available: true,
+    meta: "PDF · Complete record with labelled answers",
   },
   {
+    id: "zip",
     icon: FolderArchive,
     name: "Supporting documents bundle",
-    meta: "ZIP · All approved documents · 12.8 MB",
-    available: true,
+    meta: "ZIP · Your uploaded files (original names preserved)",
   },
   {
+    id: "case",
     icon: BarChart3,
     name: "Case summary report",
-    meta: "PDF · Auto-generated overview",
-    available: true,
+    meta: "PDF · Case status, milestones, and overview",
   },
 ];
 
@@ -219,6 +221,12 @@ const CandidateAccount = () => {
   const dispatch = useDispatch();
   const reduxUser = useSelector((state) => state.auth.user);
   const { showToast } = useToast();
+  const {
+    busy: downloadBusy,
+    downloadFilledApplicationPdf,
+    downloadCaseSummaryPdf,
+    downloadSupportingDocumentsZip,
+  } = useDownloads();
   const [searchParams, setSearchParams] = useSearchParams();
   const finalSectionRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -332,31 +340,34 @@ const CandidateAccount = () => {
   const [consentSaving, setConsentSaving] = useState(false);
   const [deletionSaving, setDeletionSaving] = useState(false);
 
-  const applyUserToStore = useCallback((u) => {
-    if (!u) return;
-    const token = getToken();
-    if (!token) return;
-    const prev = store.getState().auth.user;
-    dispatch(
-      setCredentials({
-        user: {
-          ...prev,
-          id: u.id ?? prev?.id,
-          first_name: u.first_name ?? prev?.first_name,
-          last_name: u.last_name ?? prev?.last_name,
-          email: u.email ?? prev?.email,
-          role_id: u.role_id ?? prev?.role_id,
-          role_name: prev?.role_name,
-          status: prev?.status,
-          gender: u.gender ?? prev?.gender,
-          profile_pic: u.profile_pic ?? prev?.profile_pic,
-          two_factor_enabled:
-            u.two_factor_enabled ?? prev?.two_factor_enabled,
-        },
-        token,
-      }),
-    );
-  }, [dispatch]);
+  const applyUserToStore = useCallback(
+    (u) => {
+      if (!u) return;
+      const token = getToken();
+      if (!token) return;
+      const prev = store.getState().auth.user;
+      dispatch(
+        setCredentials({
+          user: {
+            ...prev,
+            id: u.id ?? prev?.id,
+            first_name: u.first_name ?? prev?.first_name,
+            last_name: u.last_name ?? prev?.last_name,
+            email: u.email ?? prev?.email,
+            role_id: u.role_id ?? prev?.role_id,
+            role_name: prev?.role_name,
+            status: prev?.status,
+            gender: u.gender ?? prev?.gender,
+            profile_pic: u.profile_pic ?? prev?.profile_pic,
+            two_factor_enabled:
+              u.two_factor_enabled ?? prev?.two_factor_enabled,
+          },
+          token,
+        }),
+      );
+    },
+    [dispatch],
+  );
 
   const loadAccount = useCallback(async () => {
     setAccountLoading(true);
@@ -392,7 +403,9 @@ const CandidateAccount = () => {
       setFeedbackSubmittedAt(lf?.createdAt || null);
       if (lf) {
         setRating(Number(lf.rating) || 4);
-        setExpSelected(new Set(Array.isArray(lf.experience_tags) ? lf.experience_tags : []));
+        setExpSelected(
+          new Set(Array.isArray(lf.experience_tags) ? lf.experience_tags : []),
+        );
         setComments(typeof lf.comments === "string" ? lf.comments : "");
       } else {
         setRating(4);
@@ -419,7 +432,13 @@ const CandidateAccount = () => {
     setEmail(reduxUser?.email ?? "");
     setTwoFactorEnabled(!!reduxUser?.two_factor_enabled);
     setGender(reduxUser?.gender || "");
-  }, [reduxUser?.first_name, reduxUser?.last_name, reduxUser?.email, reduxUser?.two_factor_enabled, reduxUser?.gender]);
+  }, [
+    reduxUser?.first_name,
+    reduxUser?.last_name,
+    reduxUser?.email,
+    reduxUser?.two_factor_enabled,
+    reduxUser?.gender,
+  ]);
 
   const toggleExp = (id) => {
     setExpSelected((prev) => {
@@ -430,15 +449,33 @@ const CandidateAccount = () => {
     });
   };
 
-  const demoDownload = (label) => {
-    window.alert(`Demo: "${label}" would download in a live app.`);
+  const handlePackDownload = async (packId) => {
+    let result;
+    if (packId === "filled") {
+      result = await downloadFilledApplicationPdf();
+    } else if (packId === "zip") {
+      result = await downloadSupportingDocumentsZip();
+    } else if (packId === "case") {
+      result = await downloadCaseSummaryPdf();
+    } else return;
+    if (result.ok) {
+      showToast({ message: "Download started." });
+    } else {
+      showToast({
+        variant: "danger",
+        message: result.message || apiErrorMessage(result.error),
+      });
+    }
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        showToast({ variant: "danger", message: "File size must be under 5MB" });
+        showToast({
+          variant: "danger",
+          message: "File size must be under 5MB",
+        });
         return;
       }
       setProfilePicFile(file);
@@ -456,7 +493,8 @@ const CandidateAccount = () => {
     if (!mobile || String(mobile).length < 6) {
       showToast({
         variant: "danger",
-        message: "Enter a valid phone number (include country code, e.g. +44 …).",
+        message:
+          "Enter a valid phone number (include country code, e.g. +44 …).",
       });
       return;
     }
@@ -602,7 +640,10 @@ const CandidateAccount = () => {
     const next = [...reportFiles];
     for (const f of picked.slice(0, room)) {
       if (!f.type.startsWith("image/")) {
-        showToast({ variant: "danger", message: "Only image files are allowed." });
+        showToast({
+          variant: "danger",
+          message: "Only image files are allowed.",
+        });
         continue;
       }
       if (f.size > 5 * 1024 * 1024) {
@@ -750,18 +791,31 @@ const CandidateAccount = () => {
                     <row.icon size={24} strokeWidth={2} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-black text-gray-900">{row.name}</p>
+                    <p className="text-sm font-black text-gray-900">
+                      {row.name}
+                    </p>
                     <p className="text-xs font-bold text-gray-500 mt-0.5">
                       {row.meta}
                     </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => demoDownload(row.name)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-secondary/30 bg-secondary/10 px-4 py-2.5 text-xs font-black text-secondary transition-all hover:bg-secondary hover:text-white shrink-0"
+                    disabled={
+                      downloadBusy.filledPdf ||
+                      downloadBusy.casePdf ||
+                      downloadBusy.zip
+                    }
+                    onClick={() => handlePackDownload(row.id)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-secondary/30 bg-secondary/10 px-4 py-2.5 text-xs font-black text-secondary transition-all hover:bg-secondary hover:text-white shrink-0 disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Download size={16} strokeWidth={2.5} />
-                    Download
+                    {row.id === "filled" && downloadBusy.filledPdf
+                      ? "Preparing…"
+                      : row.id === "zip" && downloadBusy.zip
+                        ? "Preparing…"
+                        : row.id === "case" && downloadBusy.casePdf
+                          ? "Preparing…"
+                          : "Download"}
                   </button>
                 </div>
               ))}
@@ -788,7 +842,9 @@ const CandidateAccount = () => {
                     <row.icon size={24} strokeWidth={2} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-black text-gray-800">{row.name}</p>
+                    <p className="text-sm font-black text-gray-800">
+                      {row.name}
+                    </p>
                     <p className="text-xs font-bold text-gray-500 mt-0.5">
                       {row.meta}
                     </p>
@@ -805,7 +861,7 @@ const CandidateAccount = () => {
       )}
 
       {tab === "feedback" && (
-        <div className="max-w-xl rounded-[1.25rem] border border-gray-100 bg-white p-6 shadow-sm md:p-8">
+        <div className="max-w-7xl rounded-[1.25rem] border border-gray-100 bg-white p-6 shadow-sm md:p-8">
           {accountLoading ? (
             <p className="text-sm font-bold text-gray-500">Loading…</p>
           ) : (
@@ -867,7 +923,11 @@ const CandidateAccount = () => {
               <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-2">
                 Overall rating
               </label>
-              <div className="flex gap-2 mb-2" role="group" aria-label="Star rating">
+              <div
+                className="flex gap-2 mb-2"
+                role="group"
+                aria-label="Star rating"
+              >
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button
                     key={n}
@@ -964,16 +1024,16 @@ const CandidateAccount = () => {
       )}
 
       {tab === "report" && (
-        <div className="max-w-2xl space-y-6">
+        <div className="max-w-7xl space-y-6">
           <div className="rounded-[1.25rem] border border-amber-100 bg-amber-50/60 p-4 text-sm font-bold text-amber-950">
             <p className="font-black text-amber-900">How we handle reports</p>
             <p className="mt-1 text-amber-900/85 leading-relaxed">
               Use this form for operational issues (access, documents, payments,
-              case status, bugs). Reports are delivered to your assigned caseworkers
-              (when applicable) and to{" "}
+              case status, bugs). Reports are delivered to your assigned
+              caseworkers (when applicable) and to{" "}
               <span className="font-black">all active administrators</span> for
-              visibility and triage. For life-threatening emergencies, contact local
-              emergency services — not this form.
+              visibility and triage. For life-threatening emergencies, contact
+              local emergency services — not this form.
             </p>
           </div>
 
@@ -988,7 +1048,9 @@ const CandidateAccount = () => {
             {caseInfo?.caseId ? (
               <p className="mb-4 rounded-xl bg-gray-50 px-3 py-2 text-xs font-bold text-gray-600">
                 Linked case reference:{" "}
-                <span className="font-black text-secondary">{caseInfo.caseId}</span>
+                <span className="font-black text-secondary">
+                  {caseInfo.caseId}
+                </span>
               </p>
             ) : null}
 
@@ -1264,11 +1326,7 @@ const CandidateAccount = () => {
                 {[
                   ["Current password", currentPassword, setCurrentPassword],
                   ["New password", newPassword, setNewPassword],
-                  [
-                    "Confirm new password",
-                    confirmPassword,
-                    setConfirmPassword,
-                  ],
+                  ["Confirm new password", confirmPassword, setConfirmPassword],
                 ].map(([label, val, setVal]) => (
                   <div key={label}>
                     <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
@@ -1419,11 +1477,17 @@ const CandidateAccount = () => {
                 <>
                   <p className="text-sm font-bold text-gray-500 leading-relaxed">
                     Our{" "}
-                    <button type="button" className="text-secondary font-black hover:underline">
+                    <button
+                      type="button"
+                      className="text-secondary font-black hover:underline"
+                    >
                       Terms of service
                     </button>{" "}
                     and{" "}
-                    <button type="button" className="text-secondary font-black hover:underline">
+                    <button
+                      type="button"
+                      className="text-secondary font-black hover:underline"
+                    >
                       Privacy policy
                     </button>
                     {consentDateLabel ? (
@@ -1444,7 +1508,8 @@ const CandidateAccount = () => {
                       <>
                         .{" "}
                         <span className="text-gray-700 font-black">
-                          We do not have a recorded acceptance date for your account yet.
+                          We do not have a recorded acceptance date for your
+                          account yet.
                         </span>
                       </>
                     )}{" "}
