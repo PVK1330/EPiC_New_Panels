@@ -26,6 +26,8 @@ import useCaseDetail from "../../hooks/useCaseDetail";
 import { getCaseworkerCases, getVisaTypes, getPetitionTypes, getAllUsers, createCaseworkerCase, updateCaseworkerCase, getDepartments, getCaseworkerCaseDetails, getCaseDocuments, uploadDocument, updateDocument, deleteDocument, updateDocumentStatus, downloadDocument, getCaseNotes, createCaseNote, updateCaseNote, deleteCaseNote, getTasks, getTaskByCaseId, createTask, updateTask, deleteTask, exportCases } from "../../services/caseApi";
 import { getCaseAuditLogs } from "../../services/auditApi";
 import { getCaseChecklist } from "../../services/documentChecklistApi";
+import { useToast } from "../../context/ToastContext";
+import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 
 const PAGE_SIZE = 7;
 
@@ -2462,7 +2464,7 @@ const Cases = () => {
               {detailTab === "tasks" && <TasksTab caseId={detailCase?.id} />}
               {detailTab === "payments" && <PaymentsTab />}
               {detailTab === "comms" && (
-                <CommsTab candidate={detailCase.candidate} />
+                <CommsTab candidate={detailCase.candidate} caseId={detailCase.caseId} />
               )}
               {detailTab === "notes" && (
                 <NotesTab
@@ -3268,6 +3270,7 @@ function DocumentsTab({ caseId, candidateId }) {
     docsLoading: loading,
     fetchDocuments,
     uploadDocument,
+    changeDocumentStatus,
   } = useCaseDetail();
   const [checklist, setChecklist] = useState(null);
   const [checklistLoading, setChecklistLoading] = useState(true);
@@ -3285,6 +3288,8 @@ function DocumentsTab({ caseId, candidateId }) {
   const [viewDocumentOpen, setViewDocumentOpen] = useState(false);
   const [viewDocumentUrl, setViewDocumentUrl] = useState("");
   const [uploadingForItem, setUploadingForItem] = useState(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+  const { showToast } = useToast();
 
   const closeViewDocument = () => {
     setViewDocumentOpen(false);
@@ -3419,6 +3424,34 @@ function DocumentsTab({ caseId, candidateId }) {
       setUploading(false);
     }
   }, [uploadForm, selectedFile, caseId, candidateId, closeUploadModal, uploadDocument, fetchDocuments, fetchChecklist]);
+
+  const handleDocumentStatusChange = useCallback(
+    async (documentId, status) => {
+      try {
+        setStatusUpdatingId(documentId);
+        const reviewNotes =
+          status === "approved"
+            ? "Document approved by caseworker"
+            : "Document rejected by caseworker";
+        await changeDocumentStatus(documentId, { status, reviewNotes });
+        await fetchDocuments(caseId);
+        await fetchChecklist();
+        showToast({
+          message:
+            status === "approved"
+              ? "Document approved successfully."
+              : "Document rejected successfully.",
+          variant: "success",
+        });
+      } catch (error) {
+        console.error("Error updating document status:", error);
+        showToast({ message: "Failed to update document status.", variant: "danger" });
+      } finally {
+        setStatusUpdatingId(null);
+      }
+    },
+    [changeDocumentStatus, fetchDocuments, fetchChecklist, caseId],
+  );
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -3626,6 +3659,26 @@ function DocumentsTab({ caseId, candidateId }) {
               >
                 View
               </button>
+              {(doc.status === "uploaded" || doc.status === "under_review") && (
+                <>
+                  <button
+                    type="button"
+                    disabled={statusUpdatingId === doc.id}
+                    onClick={() => handleDocumentStatusChange(doc.id, "approved")}
+                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-800 disabled:opacity-50"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    disabled={statusUpdatingId === doc.id}
+                    onClick={() => handleDocumentStatusChange(doc.id, "rejected")}
+                    className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 disabled:opacity-50"
+                  >
+                    Reject
+                  </button>
+                </>
+              )}
             </div>
           ))
         )}
@@ -3676,7 +3729,7 @@ function DocumentsTab({ caseId, candidateId }) {
               <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
                 Document type
               </label>
-              <select
+                  <select
                 value={uploadForm.documentType}
                 onChange={(e) =>
                   setUploadForm((f) => ({ ...f, documentType: e.target.value }))
@@ -3684,17 +3737,11 @@ function DocumentsTab({ caseId, candidateId }) {
                 disabled={!!uploadingForItem}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary disabled:bg-gray-50 disabled:text-gray-500"
               >
-                <option value="General">General</option>
-                <option value="Passport">Passport</option>
-                <option value="Visa">Visa</option>
-                <option value="English Certificate">English Certificate</option>
-                <option value="Right to Work">Right to Work</option>
-                <option value="Education Certificate">
-                  Education Certificate
-                </option>
-                <option value="Employment Contract">Employment Contract</option>
-                <option value="Sponsor Documents">Sponsor Documents</option>
-                <option value="Other">Other</option>
+                    {DOCUMENT_TYPE_OPTIONS.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
               </select>
             </div>
             <div>
@@ -4060,13 +4107,53 @@ function PaymentsTab() {
   );
 }
 
-function CommsTab({ candidate }) {
-  const initial = candidate
+function CommsTab({ candidate, caseId }) {
+  const navigate = useNavigate();
+  const candidateName =
+    typeof candidate === "string" && candidate.trim() ? candidate : "Candidate";
+  const initial = candidateName
     .split(" ")
+    .filter(Boolean)
     .map((w) => w[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState([
+    {
+      id: "c1",
+      side: "candidate",
+      sender: candidateName,
+      text: "Hi — I've uploaded my passport copy. Please let me know if you need anything else.",
+      time: "1 Apr · 10:32am",
+    },
+    {
+      id: "c2",
+      side: "you",
+      sender: "You",
+      text: "Thanks! I still need your English language certificate — please upload by 10 Apr.",
+      time: "1 Apr · 11:05am",
+    },
+  ]);
+
+  const handleSend = () => {
+    if (!draft.trim()) return;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `c-${Date.now()}`,
+        side: "you",
+        sender: "You",
+        text: draft.trim(),
+        time: new Date().toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      },
+    ]);
+    setDraft("");
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
@@ -4078,53 +4165,60 @@ function CommsTab({ candidate }) {
         </button>
         <button
           type="button"
+          onClick={() =>
+            navigate(
+              `/caseworker/messages${caseId ? `?caseId=${encodeURIComponent(caseId)}` : ""}`,
+            )
+          }
           className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-black text-gray-600"
         >
-          Sponsor chat
+          Open full communication
         </button>
       </div>
       <div className="space-y-3">
-        <div className="flex gap-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-[10px] font-black text-secondary">
-            {initial}
-          </div>
-          <div className="max-w-[85%]">
-            <p className="text-[10px] font-bold text-gray-500 mb-1">
-              {candidate}
-            </p>
-            <div className="rounded-2xl rounded-bl-sm border border-gray-100 bg-gray-50 px-3 py-2">
-              <p className="text-sm font-bold text-gray-800">
-                Hi — I&apos;ve uploaded my passport copy. Please let me know if
-                you need anything else.
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex gap-2 ${message.side === "you" ? "flex-row-reverse" : ""}`}
+          >
+            <div
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${
+                message.side === "you"
+                  ? "bg-gradient-to-br from-secondary to-indigo-500 text-white"
+                  : "bg-secondary/15 text-secondary"
+              }`}
+            >
+              {message.side === "you" ? "You" : initial}
+            </div>
+            <div className={`max-w-[85%] ${message.side === "you" ? "text-right" : ""}`}>
+              <p className="text-[10px] font-bold text-gray-500 mb-1">
+                {message.sender}
               </p>
-              <p className="text-[10px] text-gray-400 mt-1">1 Apr · 10:32am</p>
+              <div
+                className={`rounded-2xl px-3 py-2 text-left inline-block ${
+                  message.side === "you"
+                    ? "rounded-br-sm border border-secondary/20 bg-secondary/10"
+                    : "rounded-bl-sm border border-gray-100 bg-gray-50"
+                }`}
+              >
+                <p className="text-sm font-bold text-gray-800">{message.text}</p>
+                <p className="text-[10px] text-gray-500 mt-1">{message.time}</p>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex gap-2 flex-row-reverse">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-secondary to-indigo-500 text-[10px] font-black text-white">
-            You
-          </div>
-          <div className="max-w-[85%] text-right">
-            <p className="text-[10px] font-bold text-gray-500 mb-1">You</p>
-            <div className="rounded-2xl rounded-br-sm border border-secondary/20 bg-secondary/10 px-3 py-2 text-left inline-block">
-              <p className="text-sm font-bold text-gray-800">
-                Thanks! I still need your English language certificate — please
-                upload by 10 Apr.
-              </p>
-              <p className="text-[10px] text-gray-500 mt-1">1 Apr · 11:05am</p>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
       <div className="flex gap-2 pt-4 border-t border-gray-100">
         <input
           type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
           placeholder="Type a message…"
           className="flex-1 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
         />
         <button
           type="button"
+          onClick={handleSend}
           className="rounded-xl bg-secondary px-4 py-2 text-xs font-black text-white"
         >
           <Send className="inline mr-1" size={14} />

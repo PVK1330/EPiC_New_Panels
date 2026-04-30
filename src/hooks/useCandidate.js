@@ -4,6 +4,7 @@ import {
   getMyApplication as getMyApplicationApi,
   submitApplication as submitApplicationApi,
   saveApplicationDraft as saveApplicationDraftApi,
+  unlockApplication as unlockApplicationApi,
 } from "../services/candidateApi";
 
 export default function useCandidate() {
@@ -101,6 +102,21 @@ export default function useCandidate() {
     }
   }, []);
 
+  /**
+   * Unlock a submitted application so the candidate can edit it again.
+   * Intended to be called by admin / caseworker views.
+   * @param {number} candidateId
+   */
+  const unlockApplication = useCallback(async (candidateId) => {
+    try {
+      await unlockApplicationApi(candidateId);
+      setMyApplication((prev) => prev ? { ...prev, isLocked: false } : prev);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e };
+    }
+  }, []);
+
   return {
     // admin list
     candidates,
@@ -114,5 +130,6 @@ export default function useCandidate() {
     getMyApplication,
     submitApplication,
     saveApplicationDraft,
+    unlockApplication,
   };
 }

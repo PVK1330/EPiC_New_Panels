@@ -18,6 +18,7 @@ import {
   Lock,
   Settings,
   Star,
+  AlertTriangle,
 } from "lucide-react";
 import Modal from "../../components/Modal";
 import TwoFactorSetup from "../../components/TwoFactorSetup";
@@ -30,6 +31,7 @@ import {
   fetchCandidateAccount,
   patchCandidatePreferences,
   submitCandidateFeedback,
+  submitCandidateIssueReport,
   postCandidateConsent,
   postCandidateDataDeletionRequest,
   updateUserProfile,
@@ -43,6 +45,63 @@ const EXP_TAGS = [
   { id: "fast", label: "Fast process", emoji: "⚡" },
   { id: "support", label: "Great support", emoji: "💬" },
   { id: "guidance", label: "Clear guidance", emoji: "📋" },
+];
+
+/** Match backend ISSUE_CATEGORY_IDS — incident intake categories */
+const ISSUE_CATEGORY_OPTIONS = [
+  {
+    id: "portal_access",
+    label: "Portal & access",
+    hint: "Login, session, timeouts, or permissions",
+  },
+  {
+    id: "documents_uploads",
+    label: "Documents & uploads",
+    hint: "Upload failures, missing documents, checklist",
+  },
+  {
+    id: "payments_billing",
+    label: "Payments & billing",
+    hint: "Charges, invoices, payment errors",
+  },
+  {
+    id: "case_status",
+    label: "Case / application status",
+    hint: "Stages, delays, incorrect status",
+  },
+  {
+    id: "communication",
+    label: "Communication",
+    hint: "Messages, email, notifications",
+  },
+  {
+    id: "appointments",
+    label: "Appointments & calendar",
+    hint: "Scheduling, cancellations, reminders",
+  },
+  {
+    id: "account_profile",
+    label: "Account & profile",
+    hint: "Profile data, 2FA, preferences",
+  },
+  {
+    id: "technical_bug",
+    label: "Technical error / bug",
+    hint: "Unexpected errors, broken links",
+  },
+  {
+    id: "privacy_security",
+    label: "Privacy & security",
+    hint: "Data concerns, suspected misuse",
+  },
+  { id: "other", label: "Other", hint: "Anything else not listed above" },
+];
+
+const SEVERITY_OPTIONS = [
+  { id: "low", label: "Low — minor inconvenience" },
+  { id: "medium", label: "Medium — affects my progress" },
+  { id: "high", label: "High — urgent for my case" },
+  { id: "urgent", label: "Urgent — blocked or serious risk" },
 ];
 
 const PACK_ITEMS = [
@@ -166,7 +225,12 @@ const CandidateAccount = () => {
 
   const tabParam = searchParams.get("tab");
   const tab = useMemo(() => {
-    if (tabParam === "feedback" || tabParam === "profile") return tabParam;
+    if (
+      tabParam === "feedback" ||
+      tabParam === "profile" ||
+      tabParam === "report"
+    )
+      return tabParam;
     return "downloads";
   }, [tabParam]);
 
@@ -197,6 +261,11 @@ const CandidateAccount = () => {
           title: "Feedback",
           sub: "Share your experience with ElitePic.",
         };
+      case "report":
+        return {
+          title: "Report an issue",
+          sub: "Structured incident report — routed to your caseworking team and administrators.",
+        };
       case "profile":
         return {
           title: "Profile & settings",
@@ -212,6 +281,15 @@ const CandidateAccount = () => {
 
   const [accountLoading, setAccountLoading] = useState(false);
   const [prefsSaving, setPrefsSaving] = useState(false);
+
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackSubmittedAt, setFeedbackSubmittedAt] = useState(null);
+  const [reportCategory, setReportCategory] = useState("portal_access");
+  const [reportSeverity, setReportSeverity] = useState("medium");
+  const [reportSubject, setReportSubject] = useState("");
+  const [reportDescription, setReportDescription] = useState("");
+  const [reportFiles, setReportFiles] = useState([]);
+  const [reportSending, setReportSending] = useState(false);
 
   const [rating, setRating] = useState(4);
   const [expSelected, setExpSelected] = useState(() => new Set(["easy"]));
@@ -308,7 +386,10 @@ const CandidateAccount = () => {
 
       setCaseInfo(d.case || null);
 
+      setFeedbackSubmitted(!!d.feedbackSubmitted || !!d.lastFeedback);
+
       const lf = d.lastFeedback;
+      setFeedbackSubmittedAt(lf?.createdAt || null);
       if (lf) {
         setRating(Number(lf.rating) || 4);
         setExpSelected(new Set(Array.isArray(lf.experience_tags) ? lf.experience_tags : []));
@@ -317,6 +398,7 @@ const CandidateAccount = () => {
         setRating(4);
         setExpSelected(new Set(["easy"]));
         setComments("");
+        setFeedbackSubmittedAt(null);
       }
     } catch (error) {
       showToast({
@@ -474,20 +556,111 @@ const CandidateAccount = () => {
   const handleSubmitFeedback = async () => {
     setFeedbackSending(true);
     try {
-      await submitCandidateFeedback({
+      const res = await submitCandidateFeedback({
         rating,
         experience_tags: Array.from(expSelected),
         comments,
         caseworker_id: selectedStaffId,
       });
+      const fb = res.data?.data?.feedback;
+      if (fb) {
+        setRating(Number(fb.rating) || 4);
+        setExpSelected(
+          new Set(Array.isArray(fb.experience_tags) ? fb.experience_tags : []),
+        );
+        setComments(typeof fb.comments === "string" ? fb.comments : "");
+        if (fb.createdAt) setFeedbackSubmittedAt(fb.createdAt);
+      }
+      setFeedbackSubmitted(true);
       showToast({ message: "Thanks — your feedback has been recorded." });
-      setRating(4);
-      setExpSelected(new Set(["easy"]));
-      setComments("");
+    } catch (error) {
+      const msg = apiErrorMessage(error);
+      if (error?.response?.status === 409) {
+        setFeedbackSubmitted(true);
+        showToast({ variant: "warning", message: msg });
+      } else {
+        showToast({ variant: "danger", message: msg });
+      }
+    } finally {
+      setFeedbackSending(false);
+    }
+  };
+
+  const handleReportFilesChange = (e) => {
+    const picked = Array.from(e.target.files || []);
+    const max = 5;
+    const existing = reportFiles.length;
+    const room = max - existing;
+    if (room <= 0) {
+      showToast({
+        variant: "danger",
+        message: "Maximum 5 images allowed.",
+      });
+      e.target.value = "";
+      return;
+    }
+    const next = [...reportFiles];
+    for (const f of picked.slice(0, room)) {
+      if (!f.type.startsWith("image/")) {
+        showToast({ variant: "danger", message: "Only image files are allowed." });
+        continue;
+      }
+      if (f.size > 5 * 1024 * 1024) {
+        showToast({ variant: "danger", message: `"${f.name}" exceeds 5MB.` });
+        continue;
+      }
+      next.push(f);
+    }
+    setReportFiles(next);
+    e.target.value = "";
+  };
+
+  const removeReportFile = (index) => {
+    setReportFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmitIssueReport = async () => {
+    if (!reportSubject.trim() || reportSubject.trim().length < 3) {
+      showToast({
+        variant: "danger",
+        message: "Enter a clear subject (at least 3 characters).",
+      });
+      return;
+    }
+    if (!reportDescription.trim() || reportDescription.trim().length < 10) {
+      showToast({
+        variant: "danger",
+        message: "Describe the issue in at least 10 characters.",
+      });
+      return;
+    }
+    setReportSending(true);
+    try {
+      const fd = new FormData();
+      fd.append("category", reportCategory);
+      fd.append("severity", reportSeverity);
+      fd.append("subject", reportSubject.trim());
+      fd.append("description", reportDescription.trim());
+      if (caseInfo?.id != null) {
+        fd.append("case_id", String(caseInfo.id));
+      }
+      reportFiles.forEach((file) => {
+        fd.append("attachments", file);
+      });
+      await submitCandidateIssueReport(fd);
+      showToast({
+        message:
+          "Report submitted. Your caseworking team and administrators have been notified.",
+      });
+      setReportSubject("");
+      setReportDescription("");
+      setReportFiles([]);
+      setReportSeverity("medium");
+      setReportCategory("portal_access");
     } catch (error) {
       showToast({ variant: "danger", message: apiErrorMessage(error) });
     } finally {
-      setFeedbackSending(false);
+      setReportSending(false);
     }
   };
 
@@ -539,6 +712,7 @@ const CandidateAccount = () => {
         {[
           { id: "downloads", label: "Downloads", icon: Download },
           { id: "feedback", label: "Feedback", icon: Star },
+          { id: "report", label: "Report issue", icon: AlertTriangle },
           { id: "profile", label: "Profile & settings", icon: Settings },
         ].map(({ id, label, icon: Icon }) => (
           <button
@@ -649,6 +823,7 @@ const CandidateAccount = () => {
                       <button
                         key={staff.id}
                         type="button"
+                        disabled={feedbackSubmitted}
                         onClick={() => setSelectedStaffId(staff.id)}
                         className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black transition-all ${
                           selectedStaffId === staff.id
@@ -668,6 +843,7 @@ const CandidateAccount = () => {
                     ))}
                     <button
                       type="button"
+                      disabled={feedbackSubmitted}
                       onClick={() => setSelectedStaffId(null)}
                       className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black transition-all ${
                         selectedStaffId === null
@@ -697,7 +873,7 @@ const CandidateAccount = () => {
                     key={n}
                     type="button"
                     onClick={() => setRating(n)}
-                    disabled={feedbackSending}
+                    disabled={feedbackSubmitted || feedbackSending}
                     className={`text-3xl leading-none transition-transform hover:scale-110 ${
                       n <= rating ? "" : "grayscale opacity-40"
                     }`}
@@ -721,7 +897,7 @@ const CandidateAccount = () => {
                     <button
                       key={tag.id}
                       type="button"
-                      disabled={feedbackSending}
+                      disabled={feedbackSubmitted || feedbackSending}
                       onClick={() => toggleExp(tag.id)}
                       className={`rounded-xl border px-3.5 py-2.5 text-left text-sm font-bold transition-all ${
                         on
@@ -743,27 +919,203 @@ const CandidateAccount = () => {
                 className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-2"
               >
                 Comments
+                {feedbackSubmitted ? (
+                  <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-800">
+                    Submitted
+                  </span>
+                ) : null}
               </label>
-              <textarea
-                id="feedback-comments"
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
-                disabled={feedbackSending}
-                placeholder="Share any specific feedback, suggestions, or comments…"
-                rows={5}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-3 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none resize-y min-h-[100px] mb-5"
-              />
+              <div className="relative mb-5">
+                <textarea
+                  id="feedback-comments"
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  readOnly={feedbackSubmitted}
+                  disabled={feedbackSubmitted || feedbackSending}
+                  placeholder="Share any specific feedback, suggestions, or comments…"
+                  rows={5}
+                  className={`w-full rounded-xl border px-3.5 py-3 text-sm font-bold text-gray-800 placeholder:text-gray-400 outline-none resize-y min-h-[100px] ${
+                    feedbackSubmitted
+                      ? "border-emerald-200 bg-emerald-50/40 cursor-default text-gray-700"
+                      : "border-gray-200 bg-gray-50/50 focus:border-secondary focus:ring-2 focus:ring-secondary/15"
+                  }`}
+                  aria-label="Feedback comments"
+                />
+                {feedbackSubmittedAt ? (
+                  <p className="mt-2 text-[11px] font-bold text-gray-400">
+                    Recorded on {formatConsentDate(feedbackSubmittedAt)}
+                  </p>
+                ) : null}
+              </div>
+
+              {!feedbackSubmitted ? (
+                <button
+                  type="button"
+                  onClick={handleSubmitFeedback}
+                  disabled={feedbackSending}
+                  className="rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-md shadow-primary/20 hover:bg-primary-dark transition-colors disabled:opacity-60"
+                >
+                  {feedbackSending ? "Submitting…" : "Submit feedback"}
+                </button>
+              ) : null}
+            </>
+          )}
+        </div>
+      )}
+
+      {tab === "report" && (
+        <div className="max-w-2xl space-y-6">
+          <div className="rounded-[1.25rem] border border-amber-100 bg-amber-50/60 p-4 text-sm font-bold text-amber-950">
+            <p className="font-black text-amber-900">How we handle reports</p>
+            <p className="mt-1 text-amber-900/85 leading-relaxed">
+              Use this form for operational issues (access, documents, payments,
+              case status, bugs). Reports are delivered to your assigned caseworkers
+              (when applicable) and to{" "}
+              <span className="font-black">all active administrators</span> for
+              visibility and triage. For life-threatening emergencies, contact local
+              emergency services — not this form.
+            </p>
+          </div>
+
+          <div className="rounded-[1.25rem] border border-gray-100 bg-white p-6 shadow-sm md:p-8">
+            <h2 className="text-base font-black text-gray-900 mb-1">
+              Incident details
+            </h2>
+            <p className="text-xs font-bold text-gray-500 mb-6">
+              Fields marked with context help us route your ticket faster.
+            </p>
+
+            {caseInfo?.caseId ? (
+              <p className="mb-4 rounded-xl bg-gray-50 px-3 py-2 text-xs font-bold text-gray-600">
+                Linked case reference:{" "}
+                <span className="font-black text-secondary">{caseInfo.caseId}</span>
+              </p>
+            ) : null}
+
+            <div className="space-y-5">
+              <div>
+                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
+                  Category
+                </label>
+                <select
+                  value={reportCategory}
+                  onChange={(e) => setReportCategory(e.target.value)}
+                  disabled={reportSending || accountLoading}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                >
+                  {ISSUE_CATEGORY_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] font-bold text-gray-400">
+                  {
+                    ISSUE_CATEGORY_OPTIONS.find((o) => o.id === reportCategory)
+                      ?.hint
+                  }
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
+                  Severity / impact
+                </label>
+                <select
+                  value={reportSeverity}
+                  onChange={(e) => setReportSeverity(e.target.value)}
+                  disabled={reportSending || accountLoading}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                >
+                  {SEVERITY_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="issue-subject"
+                  className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5"
+                >
+                  Short summary
+                </label>
+                <input
+                  id="issue-subject"
+                  type="text"
+                  value={reportSubject}
+                  onChange={(e) => setReportSubject(e.target.value)}
+                  disabled={reportSending || accountLoading}
+                  placeholder="e.g. Cannot upload passport scan — error 413"
+                  maxLength={255}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="issue-description"
+                  className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5"
+                >
+                  What happened? Steps to reproduce (if any)
+                </label>
+                <textarea
+                  id="issue-description"
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  disabled={reportSending || accountLoading}
+                  placeholder="Include what you expected, what you saw instead, browser/device if relevant…"
+                  rows={6}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-3 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none resize-y min-h-[120px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
+                  Screenshots (optional, max 5 · JPEG/PNG/GIF/WebP · 5MB each)
+                </label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  multiple
+                  disabled={reportSending || accountLoading}
+                  onChange={handleReportFilesChange}
+                  className="block w-full text-xs font-bold text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-secondary/10 file:px-3 file:py-2 file:text-xs file:font-black file:text-secondary"
+                />
+                {reportFiles.length > 0 ? (
+                  <ul className="mt-2 space-y-1">
+                    {reportFiles.map((f, idx) => (
+                      <li
+                        key={`${f.name}-${idx}`}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5 text-xs font-bold text-gray-700"
+                      >
+                        <span className="truncate">{f.name}</span>
+                        <button
+                          type="button"
+                          className="shrink-0 text-[11px] font-black text-red-600 hover:underline"
+                          onClick={() => removeReportFile(idx)}
+                          disabled={reportSending}
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
 
               <button
                 type="button"
-                onClick={handleSubmitFeedback}
-                disabled={feedbackSending}
-                className="rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-md shadow-primary/20 hover:bg-primary-dark transition-colors disabled:opacity-60"
+                onClick={handleSubmitIssueReport}
+                disabled={reportSending || accountLoading}
+                className="w-full rounded-xl bg-secondary px-6 py-3 text-sm font-black text-white shadow-md shadow-secondary/20 hover:opacity-95 transition-opacity disabled:opacity-60 sm:w-auto"
               >
-                {feedbackSending ? "Submitting…" : "Submit feedback"}
+                {reportSending ? "Submitting report…" : "Submit report"}
               </button>
-            </>
-          )}
+            </div>
+          </div>
         </div>
       )}
 

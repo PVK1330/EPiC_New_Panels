@@ -44,3 +44,7 @@ export const submitApplication = (data) =>
 /** Save progress as a draft without changing submission status */
 export const saveApplicationDraft = (data) =>
   api.put('/api/candidate/application', data);
+
+/** Unlock a submitted application (admin / caseworker only) */
+export const unlockApplication = (candidateId) =>
+  api.patch(`/api/candidate-application/${candidateId}/unlock`);
