@@ -23,22 +23,22 @@ export const getMyLicenceApplications = () => api.get("/api/business/licence/my-
 export const getLicenceApplicationDetails = (id) => api.get(`/api/business/licence/details/${id}`);
 
 export const updateLicenceApplication = async (id, data) => {
-    const formData = new FormData();
-    Object.keys(data).forEach(key => {
-        if (key === 'documents' && Array.isArray(data[key])) {
-            data[key].forEach(file => {
-                if (file instanceof File) {
-                    formData.append('documents', file);
-                }
-            });
-        } else if (data[key] !== undefined && data[key] !== null) {
-            formData.append(key, data[key]);
+  const formData = new FormData();
+  Object.keys(data).forEach(key => {
+    if (key === 'documents' && Array.isArray(data[key])) {
+      data[key].forEach(file => {
+        if (file instanceof File) {
+          formData.append('documents', file);
         }
-    });
+      });
+    } else if (data[key] !== undefined && data[key] !== null) {
+      formData.append(key, data[key]);
+    }
+  });
 
-    return await api.put(`/api/business/licence/update/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-    });
+  return await api.put(`/api/business/licence/update/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
 };
 
 export const deleteMyLicenceApplication = (id) => api.delete(`/api/business/licence/delete/${id}`);

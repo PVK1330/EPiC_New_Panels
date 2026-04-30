@@ -465,10 +465,10 @@ export default function BusinessDashboard() {
                   <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.visaExpiry}</td>
                   <td className="px-4 py-4">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black ${worker.status === "Active"
-                        ? "bg-green-100 text-green-700"
-                        : worker.status === "Pending"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
+                      ? "bg-green-100 text-green-700"
+                      : worker.status === "Pending"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-red-100 text-red-700"
                       }`}>
                       {worker.status}
                     </span>

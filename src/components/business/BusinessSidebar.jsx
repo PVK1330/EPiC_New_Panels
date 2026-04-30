@@ -12,7 +12,6 @@ import {
   X,
   UserCheck,
   DollarSign,
-  Briefcase,
   TrendingUp,
   Calendar,
 } from "lucide-react";
@@ -54,12 +53,6 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
         { to: "/business/licence-documents", label: "Licence Documents", icon: FileText },
         { to: "/business/cosallocation", label: "CoS Allocation", icon: Package },
         { to: "/business/workers", label: "Sponsored Workers", icon: Users },
-      ],
-    },
-    {
-      label: "Candidates",
-      items: [
-        { to: "/business/my-candidates", label: "My Candidates", icon: Briefcase },
       ],
     },
     {

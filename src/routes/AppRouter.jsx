@@ -84,7 +84,6 @@ import BusinessSettings from '../pages/business/BusinessSettings';
 import ReportingObligations from '../pages/business/ReportingObligations';
 import EmployeeRecords from '../pages/business/EmployeeRecords';
 import Invoices from '../pages/business/Invoices';
-import MyCandidates from '../pages/business/MyCandidates';
 import Reports from '../pages/business/Reports';
 import ApplyLicence from '../pages/business/ApplyLicence';
 import LicenceDocuments from '../pages/business/LicenceDocuments';
@@ -270,7 +269,6 @@ const AppRouter = () => {
           <Route path="reporting-obligations" element={<ReportingObligations />} />
           <Route path="employee-records" element={<EmployeeRecords />} />
           <Route path="invoices" element={<Invoices />} />
-          <Route path="my-candidates" element={<MyCandidates />} />
           <Route path="reports" element={<Reports />} />
         </Route>
 
