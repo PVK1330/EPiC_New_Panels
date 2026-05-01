@@ -31,249 +31,6 @@ import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 
 const PAGE_SIZE = 7;
 
-/** Demo dataset — 24 cases */
-const CASES_DATA = [
-  {
-    caseId: "#C-2401",
-    candidate: "Ahmed Al-Rashid",
-    business: "TechCorp Ltd",
-    visa: "Tier 2",
-    status: "on_track",
-    target: "2026-04-18",
-    priority: "high",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2398",
-    candidate: "Priya Sharma",
-    business: "Nexus Group",
-    visa: "Skilled Worker",
-    status: "due_soon",
-    target: "2026-04-12",
-    priority: "medium",
-    payment: "partial",
-  },
-  {
-    caseId: "#C-2391",
-    candidate: "Carlos Mendes",
-    business: "BuildRight Inc",
-    visa: "Intra-Co",
-    status: "overdue",
-    target: "2026-04-03",
-    priority: "urgent",
-    payment: "outstanding",
-  },
-  {
-    caseId: "#C-2389",
-    candidate: "Mei Lin Chen",
-    business: "Global Finance",
-    visa: "Graduate",
-    status: "on_track",
-    target: "2026-05-02",
-    priority: "low",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2385",
-    candidate: "Ivan Petrov",
-    business: "EnviroTech",
-    visa: "Tier 2",
-    status: "on_track",
-    target: "2026-05-15",
-    priority: "low",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2380",
-    candidate: "Fatima Al-Zahra",
-    business: "MediCare Group",
-    visa: "Health & Care",
-    status: "due_soon",
-    target: "2026-04-20",
-    priority: "medium",
-    payment: "partial",
-  },
-  {
-    caseId: "#C-2376",
-    candidate: "Rajesh Patel",
-    business: "Innovate Corp",
-    visa: "Skilled Worker",
-    status: "on_track",
-    target: "2026-06-01",
-    priority: "low",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2370",
-    candidate: "Sofia Nielsen",
-    business: "Nordic AI Ltd",
-    visa: "Skilled Worker",
-    status: "on_track",
-    target: "2026-06-12",
-    priority: "medium",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2365",
-    candidate: "James O'Connor",
-    business: "Celtic Foods",
-    visa: "Tier 2",
-    status: "due_soon",
-    target: "2026-04-25",
-    priority: "high",
-    payment: "partial",
-  },
-  {
-    caseId: "#C-2360",
-    candidate: "Yuki Tanaka",
-    business: "Tokyo Trade UK",
-    visa: "Intra-Co",
-    status: "on_track",
-    target: "2026-07-01",
-    priority: "low",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2355",
-    candidate: "Elena Popov",
-    business: "EuroBuild",
-    visa: "Skilled Worker",
-    status: "overdue",
-    target: "2026-03-28",
-    priority: "urgent",
-    payment: "outstanding",
-  },
-  {
-    caseId: "#C-2350",
-    candidate: "Marcus Webb",
-    business: "Webb Legal",
-    visa: "Graduate",
-    status: "completed",
-    target: "2026-03-01",
-    priority: "low",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2344",
-    candidate: "Nomsa Dlamini",
-    business: "HealthFirst",
-    visa: "Health & Care",
-    status: "on_track",
-    target: "2026-05-30",
-    priority: "medium",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2339",
-    candidate: "Lukas Meyer",
-    business: "AutoParts DE UK",
-    visa: "Tier 2",
-    status: "on_track",
-    target: "2026-06-20",
-    priority: "low",
-    payment: "partial",
-  },
-  {
-    caseId: "#C-2332",
-    candidate: "Anna Kowalski",
-    business: "PolskaBake",
-    visa: "Skilled Worker",
-    status: "due_soon",
-    target: "2026-04-22",
-    priority: "high",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2328",
-    candidate: "David Mensah",
-    business: "AfriCommerce",
-    visa: "Skilled Worker",
-    status: "on_track",
-    target: "2026-07-05",
-    priority: "medium",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2321",
-    candidate: "Hannah Scott",
-    business: "Scott Retail",
-    visa: "Graduate",
-    status: "overdue",
-    target: "2026-04-01",
-    priority: "high",
-    payment: "outstanding",
-  },
-  {
-    caseId: "#C-2315",
-    candidate: "Omar Farouk",
-    business: "Desert Tech",
-    visa: "Tier 2",
-    status: "on_track",
-    target: "2026-08-01",
-    priority: "medium",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2310",
-    candidate: "Chloe Martin",
-    business: "Martin Design",
-    visa: "Skilled Worker",
-    status: "completed",
-    target: "2026-02-15",
-    priority: "low",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2304",
-    candidate: "Diego Silva",
-    business: "Silva Logistics",
-    visa: "Intra-Co",
-    status: "on_track",
-    target: "2026-09-10",
-    priority: "low",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2299",
-    candidate: "Grace Okonkwo",
-    business: "Lagos Express UK",
-    visa: "Skilled Worker",
-    status: "due_soon",
-    target: "2026-04-28",
-    priority: "medium",
-    payment: "partial",
-  },
-  {
-    caseId: "#C-2293",
-    candidate: "Tom Bradley",
-    business: "Bradley Farms",
-    visa: "Tier 2",
-    status: "on_track",
-    target: "2026-10-01",
-    priority: "low",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2288",
-    candidate: "Wang Lei",
-    business: "Pacific Imports",
-    visa: "Skilled Worker",
-    status: "on_track",
-    target: "2026-06-18",
-    priority: "high",
-    payment: "paid",
-  },
-  {
-    caseId: "#C-2281",
-    candidate: "Isabelle Fortin",
-    business: "Fortin Avocats UK",
-    visa: "Graduate",
-    status: "completed",
-    target: "2026-01-20",
-    priority: "low",
-    payment: "paid",
-  },
-];
 
 const REASSIGN_REASONS = [
   "Caseworker unavailable / on leave",
@@ -600,7 +357,7 @@ const Cases = () => {
   const [newCaseErrors, setNewCaseErrors] = useState({});
   const [editCaseId, setEditCaseId] = useState(null);
   const [editCaseForm, setEditCaseForm] = useState(() =>
-    caseToEditForm(CASES_DATA[0]),
+    emptyNewCaseForm()
   );
   const [editCaseErrors, setEditCaseErrors] = useState({});
   const [visaTypes, setVisaTypes] = useState([]);
@@ -675,7 +432,7 @@ const Cases = () => {
         console.error("Error fetching cases:", err);
         setError("Failed to load cases. Please try again.");
         // Fallback to demo data on error
-        setCases([...CASES_DATA]);
+        setCases([]);
       } finally {
         setLoading(false);
       }
@@ -3132,13 +2889,21 @@ function OverviewTab({ c, userName }) {
 }
 
 function DocumentsTab({ caseId, candidateId }) {
-  const {
-    documents,
-    docsLoading: loading,
-    fetchDocuments,
-    uploadDocument,
-    changeDocumentStatus,
-  } = useCaseDetail();
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchDocuments = useCallback(async (caseId) => {
+    setLoading(true);
+    try {
+      const res = await getCaseDocuments(caseId);
+      setDocuments(res.data?.data?.documents || []);
+    } catch (e) {
+      console.error(e);
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
   const [checklist, setChecklist] = useState(null);
   const [checklistLoading, setChecklistLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -3294,7 +3059,7 @@ function DocumentsTab({ caseId, candidateId }) {
           status === "approved"
             ? "Document approved by caseworker"
             : "Document rejected by caseworker";
-        await changeDocumentStatus(documentId, { status, reviewNotes });
+        await updateDocumentStatus(documentId, { status, reviewNotes });
         await fetchDocuments(caseId);
         await fetchChecklist();
         showToast({
@@ -3311,7 +3076,7 @@ function DocumentsTab({ caseId, candidateId }) {
         setStatusUpdatingId(null);
       }
     },
-    [changeDocumentStatus, fetchDocuments, fetchChecklist, caseId],
+    [updateDocumentStatus, fetchDocuments, fetchChecklist, caseId],
   );
 
   const getStatusColor = (status) => {
