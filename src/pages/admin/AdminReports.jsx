@@ -5,11 +5,7 @@ import {
   FiCalendar, FiDownload, FiSearch, FiChevronLeft, FiChevronRight,
   FiX, FiEye, FiUser, FiCheckCircle, FiAlertCircle, FiClock,
   FiTrendingUp, FiTrendingDown, FiStar, FiFileText, FiArrowLeft,
-<<<<<<< HEAD
-  FiFilter, FiLoader,
-=======
-  FiFilter, FiRefreshCw,
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
+  FiFilter, FiLoader, FiRefreshCw
 } from "react-icons/fi";
 import { RiBarChartLine } from "react-icons/ri";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
@@ -45,13 +41,6 @@ const TABS = [
   { id: "performance", label: "Performance Reports" },
 ];
 
-<<<<<<< HEAD
-=======
-
-
-// ─── Performance Data ─────────────────────────────────────────────────────────
-
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -133,6 +122,10 @@ function StarRating({ value }) {
 
 // Mini sparkline using SVG
 function Sparkline({ data, color = "#6366f1" }) {
+  if (!data || data.length === 0) {
+    return <svg width={80} height={30} className="overflow-visible"><text x={5} y={20} fontSize={10} fill="#999">No data</text></svg>;
+  }
+  
   const max = Math.max(...data);
   const min = Math.min(...data);
   const range = max - min || 1;
@@ -264,8 +257,8 @@ function DateRangePicker({ startDate, endDate, onChange }) {
               rounded = isStart && isEnd
                 ? "rounded-lg"
                 : isStart
-                ? "rounded-l-lg rounded-r-none"
-                : "rounded-r-lg rounded-l-none";
+                  ? "rounded-l-lg rounded-r-none"
+                  : "rounded-r-lg rounded-l-none";
             } else if (isInRange) {
               bg = "bg-secondary/10";
               text = "text-secondary font-semibold";
@@ -300,9 +293,8 @@ function DateRangePicker({ startDate, endDate, onChange }) {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className={`inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-xl bg-white transition-all w-full sm:w-auto sm:min-w-[260px] ${
-          open ? "border-secondary/50 ring-2 ring-secondary/20 shadow-sm" : "border-gray-200 hover:border-gray-300"
-        }`}
+        className={`inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-xl bg-white transition-all w-full sm:w-auto sm:min-w-[260px] ${open ? "border-secondary/50 ring-2 ring-secondary/20 shadow-sm" : "border-gray-200 hover:border-gray-300"
+          }`}
       >
         <FiCalendar size={14} className="text-gray-400 shrink-0" />
         {hasRange ? (
@@ -434,8 +426,8 @@ function DateRangeBadge({ startDate, endDate }) {
     startDate && endDate
       ? `${formatDate(startDate)} → ${formatDate(endDate)}`
       : startDate
-      ? `From ${formatDate(startDate)}`
-      : `Until ${formatDate(endDate)}`;
+        ? `From ${formatDate(startDate)}`
+        : `Until ${formatDate(endDate)}`;
   let days = null;
   if (startDate && endDate) {
     const diff = endDate.getTime() - startDate.getTime();
@@ -516,12 +508,12 @@ function PerformanceDetailModal({ caseworker, onClose }) {
           {/* Modal Header */}
           <div className="flex items-center justify-between p-5 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0 ${caseworker.avatarBg}`}>
-                {caseworker.initials}
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0 ${caseworker.avatarBg || "bg-blue-500"}`}>
+                {caseworker.initials || "N/A"}
               </div>
               <div>
-                <h2 className="text-base font-black text-secondary">{caseworker.name}</h2>
-                <p className="text-xs text-gray-400">{caseworker.id} · {caseworker.department} · Joined {caseworker.joinDate}</p>
+                <h2 className="text-base font-black text-secondary">{caseworker.name || "N/A"}</h2>
+                <p className="text-xs text-gray-400">{caseworker.id || "N/A"} · {caseworker.department || "General"} · Joined {caseworker.joinDate || new Date().toLocaleDateString("en-GB")}</p>
               </div>
             </div>
             <button
@@ -537,10 +529,10 @@ function PerformanceDetailModal({ caseworker, onClose }) {
             {/* KPI Row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: "Total Cases", value: caseworker.totalCases, icon: <FiFileText size={14} />, color: "text-blue-600", bg: "bg-blue-50" },
-                { label: "SLA Met", value: `${caseworker.slaMetPct}%`, icon: <FiCheckCircle size={14} />, color: "text-green-600", bg: "bg-green-50" },
-                { label: "Avg Days", value: `${caseworker.avgCompletionDays}d`, icon: <FiClock size={14} />, color: "text-amber-700", bg: "bg-amber-50" },
-                { label: "Escalations", value: caseworker.escalations, icon: <FiAlertCircle size={14} />, color: "text-red-600", bg: "bg-red-50" },
+                { label: "Total Cases", value: caseworker.totalCases || 0, icon: <FiFileText size={14} />, color: "text-blue-600", bg: "bg-blue-50" },
+                { label: "SLA Met", value: `${caseworker.slaMetPct || 0}%`, icon: <FiCheckCircle size={14} />, color: "text-green-600", bg: "bg-green-50" },
+                { label: "Avg Days", value: `${caseworker.avgCompletionDays || 0}d`, icon: <FiClock size={14} />, color: "text-amber-700", bg: "bg-amber-50" },
+                { label: "Escalations", value: caseworker.escalations || 0, icon: <FiAlertCircle size={14} />, color: "text-red-600", bg: "bg-red-50" },
               ].map((k) => (
                 <div key={k.label} className={`rounded-xl p-3.5 ${k.bg} border border-white`}>
                   <div className={`flex items-center gap-1.5 mb-1 ${k.color}`}>
@@ -556,76 +548,90 @@ function PerformanceDetailModal({ caseworker, onClose }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">Client Satisfaction</p>
-                <StarRating value={caseworker.clientSatisfaction} />
-                <p className="text-xs text-gray-400 mt-1.5">{caseworker.completedCases} completed cases reviewed</p>
+                <StarRating value={caseworker.clientSatisfaction || 3} />
+                <p className="text-xs text-gray-400 mt-1.5">{caseworker.completedCases || 0} completed cases reviewed</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">12-Month Case Trend</p>
-                <Sparkline data={caseworker.monthlyTrend} color="#6366f1" />
-                <p className="text-xs text-gray-400 mt-1">
-                  {caseworker.monthlyTrend[11] > caseworker.monthlyTrend[0]
-                    ? <span className="text-green-600 font-bold">↑ Improving</span>
-                    : <span className="text-red-500 font-bold">↓ Declining</span>}
-                </p>
+                <Sparkline data={caseworker.monthlyTrend || Array(12).fill(0)} color="#6366f1" />
+                {caseworker.monthlyTrend && caseworker.monthlyTrend.length > 0 ? (
+                  <p className="text-xs text-gray-400 mt-1">
+                    {caseworker.monthlyTrend[caseworker.monthlyTrend.length - 1] > caseworker.monthlyTrend[0]
+                      ? <span className="text-green-600 font-bold">↑ Improving</span>
+                      : <span className="text-red-500 font-bold">↓ Declining</span>}
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400 mt-1">No trend data</p>
+                )}
               </div>
             </div>
 
             {/* Visa Breakdown */}
             <div>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">Cases by Visa Type</p>
-              <div className="space-y-2">
-                {caseworker.visaBreakdown.map((v) => {
-                  const pct = Math.round((v.count / caseworker.totalCases) * 100);
-                  return (
-                    <div key={v.type}>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="font-semibold text-gray-700">{v.type}</span>
-                        <span className="text-gray-500 font-mono">{v.count} ({pct}%)</span>
+              {caseworker.visaBreakdown && caseworker.visaBreakdown.length > 0 ? (
+                <div className="space-y-2">
+                  {caseworker.visaBreakdown.map((v) => {
+                    const pct = caseworker.totalCases > 0 ? Math.round((v.count / caseworker.totalCases) * 100) : 0;
+                    return (
+                      <div key={v.type}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="font-semibold text-gray-700">{v.type}</span>
+                          <span className="text-gray-500 font-mono">{v.count} ({pct}%)</span>
+                        </div>
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full rounded-full bg-secondary"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full rounded-full bg-secondary"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${pct}%` }}
-                          transition={{ duration: 0.5, ease: "easeOut" }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400">No visa type data available</p>
+              )}
             </div>
 
             {/* Recent Cases */}
             <div>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">Recent Cases</p>
-              <div className="rounded-xl border border-gray-100 overflow-hidden">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-gray-50 text-left">
-                      {["Case ID", "Client", "Visa Type", "Status", "Date", "SLA"].map(h => (
-                        <th key={h} className="px-3 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {caseworker.recentCases.map((c) => (
-                      <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
-                        <td className="px-3 py-2.5 font-mono text-secondary font-bold">{c.id}</td>
-                        <td className="px-3 py-2.5 font-medium text-gray-700 whitespace-nowrap">{c.client}</td>
-                        <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">{c.type}</td>
-                        <td className="px-3 py-2.5">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${getCaseStatusChip(c.status)}`}>{c.status}</span>
-                        </td>
-                        <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">{c.date}</td>
-                        <td className="px-3 py-2.5">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${getSlaStatusChip(c.sla)}`}>{c.sla}</span>
-                        </td>
+              {caseworker.recentCases && caseworker.recentCases.length > 0 ? (
+                <div className="rounded-xl border border-gray-100 overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-gray-50 text-left">
+                        {["Case ID", "Client", "Visa Type", "Status", "Date", "SLA"].map(h => (
+                          <th key={h} className="px-3 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {caseworker.recentCases.map((c) => (
+                        <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
+                          <td className="px-3 py-2.5 font-mono text-secondary font-bold">{c.id || c.caseId || "N/A"}</td>
+                          <td className="px-3 py-2.5 font-medium text-gray-700 whitespace-nowrap">{c.client || "N/A"}</td>
+                          <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">{c.type || "N/A"}</td>
+                          <td className="px-3 py-2.5">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${getCaseStatusChip(c.status)}`}>{c.status || "N/A"}</span>
+                          </td>
+                          <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">{c.date || "N/A"}</td>
+                          <td className="px-3 py-2.5">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${getSlaStatusChip(c.sla)}`}>{c.sla || "N/A"}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-400">
+                  <p className="text-sm">No recent cases available</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -639,34 +645,6 @@ function PerformanceDetailModal({ caseworker, onClose }) {
             >
               Close
             </Button>
-<<<<<<< HEAD
-=======
-            <Button
-              type="button"
-              variant="primary"
-              className="rounded-xl inline-flex items-center gap-2"
-              onClick={() => {
-                const reportRows = caseworker.recentCases.map(c => ({
-                  CaseworkerID: caseworker.id,
-                  CaseworkerName: caseworker.name,
-                  CaseID: c.id,
-                  Client: c.client,
-                  VisaType: c.type,
-                  Status: c.status,
-                  Date: c.date,
-                  SLA: c.sla
-                }));
-                if (reportRows.length === 0) {
-                  alert("No recent cases available to export for this caseworker.");
-                } else {
-                  exportToCsv(`${caseworker.id}_performance_report.csv`, reportRows);
-                }
-              }}
-            >
-              <FiDownload size={14} />
-              Download Report
-            </Button>
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           </div>
         </motion.div>
       </motion.div>
@@ -684,12 +662,10 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
   const [caseworkers, setCaseworkers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
+  const [searchTimeout, setSearchTimeout] = useState(null);
   const DEPT_OPTIONS = [
     { value: "all", label: "All departments" },
   ];
-
-  const dataSource = performanceData || [];
 
   const SLA_OPTIONS = [
     { value: "all", label: "All SLA levels" },
@@ -698,72 +674,136 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
     { value: "low", label: "Low (<75%)" },
   ];
 
-  // Fetch caseworkers on component mount
-  useEffect(() => {
-    const fetchCaseworkers = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await axios.get(`${API_BASE_URL}/caseworkers`, {
-          headers: getAuthHeaders(),
-        });
-        console.log("Fetched caseworkers:", response.data.data);
-        setCaseworkers(response.data.data || []);
-        
-      } catch (err) {
-        console.error("Error fetching caseworkers:", err);
-        setError("Failed to load caseworker data");
-      } finally {
-        setLoading(false);
-      }
-    };
+  async function fetchcaseworkersdata() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/caseworkers`, {
+        headers: getAuthHeaders(),
+      })
+      console.log("Fetched caseworkers data:", response.data.data);
+      setCaseworkers(response.data.data || []);
 
-    fetchCaseworkers();
+    } catch (error) {
+      console.log(error.message)
+    }
+  }
+
+
+  // API-based fetch with query parameters
+  const fetchFilteredCaseworkers = useCallback(async (searchTerm = "", dept = "all", sla = "all") => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+
+      if (searchTerm.trim()) {
+        params.append("search", searchTerm.trim());
+      }
+
+      if (dept !== "all") {
+        params.append("department", dept);
+      }
+
+      if (sla !== "all") {
+        // Map UI filter values to API values
+        const slaMap = { high: "high", mid: "medium", low: "low" };
+        params.append("sla_level", slaMap[sla] || sla);
+      }
+
+      const queryString = params.toString();
+      const url = `${API_BASE_URL}/caseworkers/filter?${queryString}`;
+      const response = await axios.get(url, {
+        headers: getAuthHeaders(),
+      });
+      
+      // Normalize data from filter endpoint
+      const normalizedData = (response.data.data || []).map(cw => {
+        const user = cw.User || {};
+        return {
+          id: cw.user_id || cw.id,
+          caseworker_id: cw.user_id || cw.id,
+          name: `${user.first_name || cw.first_name || ''} ${user.last_name || cw.last_name || ''}`.trim(),
+          email: user.email || cw.email || 'N/A',
+          department: cw.department || 'General',
+          active_cases: cw.active_cases || 0,
+          completed_cases: cw.completed_cases || 0,
+          workload_percentage: cw.sla_percentage || cw.workload_percentage || 0,
+          health_status: cw.health_status || (cw.sla_percentage >= 80 ? 'healthy' : cw.sla_percentage >= 60 ? 'moderate' : 'stressed'),
+          initials: `${(user.first_name || cw.first_name || 'N').charAt(0)}${(user.last_name || cw.last_name || 'A').charAt(0)}`.toUpperCase(),
+        };
+      });
+      
+      setCaseworkers(normalizedData);
+    } catch (err) {
+      console.error("Error fetching caseworkers:", err);
+      setError("Failed to load caseworker data");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-<<<<<<< HEAD
-    return (caseworkers ?? []).filter((cw) => {
-=======
-    return dataSource.filter((cw) => {
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
-      const matchSearch =
-        !q ||
-        (cw.name && cw.name.toLowerCase().includes(q)) ||
-        (cw.id && String(cw.id).toLowerCase().includes(q)) ||
-        (cw.department && cw.department.toLowerCase().includes(q));
-      
-      const matchDept = deptFilter === "all" || cw.department === deptFilter;
-      
-      const slaMetPct = cw.workload_percentage || 0;
-      const matchSla =
-        slaFilter === "all" ||
-        (slaFilter === "high" && slaMetPct >= 90) ||
-        (slaFilter === "mid" && slaMetPct >= 75 && slaMetPct < 90) ||
-        (slaFilter === "low" && slaMetPct < 75);
-      
-      return matchSearch && matchDept && matchSla;
-    });
-  }, [search, deptFilter, slaFilter, caseworkers]);
+  // Fetch on component mount
+  useEffect(() => {
+    fetchFilteredCaseworkers();
+  }, [fetchFilteredCaseworkers]);
+
+  // Handle search input with debouncing
+  const handleSearchChange = useCallback((value) => {
+    setSearch(value);
+
+    // Clear previous timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // Set new debounced timeout (300ms)
+    const timeout = setTimeout(() => {
+      fetchFilteredCaseworkers(value, deptFilter, slaFilter);
+    }, 300);
+
+    setSearchTimeout(timeout);
+  }, [deptFilter, slaFilter, fetchFilteredCaseworkers, searchTimeout]);
+
+  // Handle department filter change
+  const handleDeptFilterChange = useCallback((newDept) => {
+    setDeptFilter(newDept);
+    fetchFilteredCaseworkers(search, newDept, slaFilter);
+  }, [search, slaFilter, fetchFilteredCaseworkers]);
+
+  // Handle SLA filter change
+  const handleSlaFilterChange = useCallback((newSla) => {
+    setSlaFilter(newSla);
+    fetchFilteredCaseworkers(search, deptFilter, newSla);
+  }, [search, deptFilter, fetchFilteredCaseworkers]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
 
 
   // Summary KPIs
-<<<<<<< HEAD
-
-  const data = caseworkers || []
+  const data =  caseworkers || [];
   const avgSla = data.length > 0
     ? (data.reduce((s, c) => s + (c.workload_percentage || 0), 0) / data.length).toFixed(1)
     : 0;
-  
+
   const totalCases = data.reduce((s, c) => s + (c.active_cases || 0) + (c.completed_cases || 0), 0);
-  
+
   const topPerformer = data.length > 0
     ? data.reduce((max, c) => (c.workload_percentage || 0) > (max.workload_percentage || 0) ? c : max)
     : null;
 
   // Handle download report
   const handleDownloadReport = async (caseworkerId) => {
+    if (!caseworkerId) {
+      alert("Invalid caseworker ID");
+      return;
+    }
+    
     try {
       const response = await axios.get(
         `${API_BASE_URL}/caseworkers/${caseworkerId}/report/pdf`,
@@ -772,24 +812,40 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
           responseType: "blob",
         }
       );
+
+      // Get filename from response header if available
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `caseworker_report_${caseworkerId}_${Date.now()}.pdf`;
       
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) filename = match[1];
+      }
+
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `caseworker-report-${caseworkerId}.pdf`);
+      link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
+      
+      console.log("Report downloaded successfully:", filename);
     } catch (err) {
       console.error("Error downloading report:", err);
-      alert("Failed to download report");
+      alert("Failed to download report. Please try again.");
     }
   };
 
   // Handle view performance details
   const handleViewPerformance = async (caseworkerId) => {
+    if (!caseworkerId) {
+      alert("Invalid caseworker ID");
+      return;
+    }
+
     try {
       const response = await axios.get(
         `${API_BASE_URL}/caseworkers/${caseworkerId}/report`,
@@ -798,22 +854,44 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
         }
       );
       
+      console.log("Fetched performance details:", response.data);
+
       if (response.data?.data) {
-        setSelectedCW(response.data.data);
+        // Ensure all required fields exist with defaults
+        const data = response.data.data;
+        const normalizedData = {
+          id: data.id,
+          name: data.name || "N/A",
+          email: data.email || "N/A",
+          department: data.department || "General",
+          joinDate: data.joinDate || new Date().toLocaleDateString("en-GB"),
+          initials: data.initials || "N/A",
+          avatarBg: data.avatarBg || "bg-blue-500",
+          
+          // Performance metrics
+          totalCases: data.totalCases || 0,
+          completedCases: data.completedCases || 0,
+          slaMetPct: data.slaMetPct || 0,
+          avgCompletionDays: data.avgCompletionDays || 0,
+          escalations: data.escalations || 0,
+          clientSatisfaction: data.clientSatisfaction || 3,
+          
+          // Breakdowns and trends
+          visaBreakdown: data.visaBreakdown || [],
+          recentCases: data.recentCases || [],
+          monthlyTrend: data.monthlyTrend || Array(12).fill(0),
+        };
+        
+        setSelectedCW(normalizedData);
+      } else {
+        alert("Failed to load performance details");
       }
     } catch (err) {
       console.error("Error fetching caseworker performance:", err);
-      alert("Failed to load performance details");
+      alert("Failed to load performance details. Please try again.");
     }
   };
-=======
-  const avgSla = dataSource.length > 0 ? (
-    dataSource.reduce((s, c) => s + c.slaMetPct, 0) / dataSource.length
-  ).toFixed(1) : "0.0";
-  const totalCases = dataSource.reduce((s, c) => s + c.totalCases, 0);
-  const topPerformer = dataSource.length > 0 ? [...dataSource].sort((a, b) => b.slaMetPct - a.slaMetPct)[0] : null;
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
-
+    
   return (
     <>
       {selectedCW && (
@@ -832,43 +910,30 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
       >
         {/* Summary KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Total Cases Card */}
           <div className="rounded-xl border border-blue-100 p-4 bg-blue-50">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Cases (All Staff)</p>
-            <p className="text-3xl font-black text-blue-600">{totalCases.toLocaleString()}</p>
-<<<<<<< HEAD
-            <p className="text-xs text-gray-500 mt-1">across {caseworkers?.length} caseworkers</p>
-=======
-            <p className="text-xs text-gray-500 mt-1">across {dataSource.length} caseworkers</p>
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">Total Cases (All Staff)</p>
+            <p className="text-4xl font-black text-blue-600">{totalCases}</p>
+            <p className="text-xs text-gray-500 mt-1">across all caseworkers</p>
           </div>
+
+          {/* Avg Performance Card */}
           <div className="rounded-xl border border-green-100 p-4 bg-green-50">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Avg Performance</p>
-            <p className="text-3xl font-black text-green-600">{avgSla}%</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">Avg Performance</p>
+            <p className="text-4xl font-black text-green-600">{avgSla}%</p>
             <p className="text-xs text-gray-500 mt-1">team average this period</p>
           </div>
+
+          {/* Top Performer Card */}
           <div className="rounded-xl border border-amber-100 p-4 bg-amber-50">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Top Performer</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">Top Performer</p>
             {topPerformer ? (
-<<<<<<< HEAD
               <div>
                 <p className="text-lg font-black text-amber-700">{topPerformer.name || "N/A"}</p>
-                <p className="text-xs text-gray-500 mt-1">{(topPerformer.workload_percentage || 0).toFixed(1)}% · {topPerformer.active_cases || 0} active</p>
+                <p className="text-xs text-gray-500 mt-2">{(topPerformer.workload_percentage || 0).toFixed(1)}% · {topPerformer.active_cases || 0} active</p>
               </div>
             ) : (
               <p className="text-sm text-gray-500">No data available</p>
-=======
-              <>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0 ${topPerformer.avatarBg}`}>
-                    {topPerformer.initials}
-                  </div>
-                  <p className="text-lg font-black text-amber-700">{topPerformer.name}</p>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">{topPerformer.slaMetPct}% SLA · {topPerformer.totalCases} cases</p>
-              </>
-            ) : (
-              <p className="text-sm text-gray-500 mt-2">No data available</p>
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
             )}
           </div>
         </div>
@@ -890,34 +955,19 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
                 <input
                   type="search"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="e.g. Alice or CW-001"
-                  className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 bg-white"
+                  className="w-full border border-gray-200 rounded-xl pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30"
                 />
               </div>
             </div>
-
-<<<<<<< HEAD
-=======
-            {/* Department filter */}
-            <div className="w-full sm:w-auto sm:min-w-[200px]">
-              <Input
-                label="Department"
-                name="deptFilter"
-                value={deptFilter}
-                onChange={(e) => setDeptFilter(e.target.value)}
-                options={deptOptions}
-              />
-            </div>
-
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
             {/* SLA filter */}
             <div className="w-full sm:w-auto sm:min-w-[200px]">
               <Input
                 label="SLA level"
                 name="slaFilter"
                 value={slaFilter}
-                onChange={(e) => setSlaFilter(e.target.value)}
+                onChange={(e) => handleSlaFilterChange(e.target.value)}
                 options={SLA_OPTIONS}
               />
             </div>
@@ -926,7 +976,10 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
             {(search || slaFilter !== "all") && (
               <button
                 type="button"
-                onClick={() => { setSearch(""); setSlaFilter("all"); }}
+                onClick={() => {
+                  handleSearchChange("");
+                  handleSlaFilterChange("all");
+                }}
                 className="self-end px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 transition-colors inline-flex items-center gap-1.5"
               >
                 <FiX size={12} /> Reset filters
@@ -941,42 +994,9 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
             <div>
               <h2 className="text-sm font-black text-secondary">Caseworker Performance Report</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-<<<<<<< HEAD
-                Showing {filtered.length} of {caseworkers?.length} caseworkers
+                Showing {caseworkers.length} caseworker{caseworkers.length !== 1 ? "s" : ""}
               </p>
             </div>
-=======
-                Showing {filtered.length} of {dataSource.length} caseworkers
-                {dateRange.start && dateRange.end
-                  ? ` · ${formatDate(dateRange.start)} – ${formatDate(dateRange.end)}`
-                  : ""}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="primary"
-              className="rounded-xl inline-flex items-center gap-2 self-start sm:self-auto"
-              onClick={() => {
-                const rows = filtered.map(cw => ({
-                  ID: cw.id,
-                  Name: cw.name,
-                  Email: cw.email,
-                  Department: cw.department,
-                  ActiveCases: cw.activeCases,
-                  CompletedCases: cw.completedCases,
-                  TotalCases: cw.totalCases,
-                  SLAMetPct: `${cw.slaMetPct}%`,
-                  AvgCompletionDays: cw.avgCompletionDays,
-                  ClientSatisfaction: cw.clientSatisfaction,
-                  Escalations: cw.escalations
-                }));
-                exportToCsv('team_performance_report.csv', rows);
-              }}
-            >
-              <FiDownload size={14} />
-              Export All
-            </Button>
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           </div>
 
           {loading ? (
@@ -1000,7 +1020,7 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {filtered.length === 0 ? (
+                  {caseworkers.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
                         <div className="flex flex-col items-center gap-2">
@@ -1008,10 +1028,9 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
                           <span>No caseworkers match your filters.</span>
                         </div>
                       </td>
-<<<<<<< HEAD
                     </tr>
                   ) : (
-                    filtered.map((cw) => (
+                    caseworkers.map((cw) => (
                       <motion.tr
                         key={cw.id}
                         initial={{ opacity: 0, y: 4 }}
@@ -1020,8 +1039,15 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
                       >
                         {/* Caseworker */}
                         <td className="px-4 py-3.5">
+                          <p className="text-sm font-bold text-white bg-blue-500 rounded-full w-10 h-10 flex items-center justify-center">
+                            {cw.initials || "N/A"}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3.5">
                           <p className="text-sm font-bold text-secondary whitespace-nowrap">{cw.name || "N/A"}</p>
                         </td>
+                        
+
                         {/* Email */}
                         <td className="px-4 py-3.5">
                           <p className="text-[10px] text-gray-400 whitespace-nowrap">{cw.email || "N/A"}</p>
@@ -1074,95 +1100,11 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
               </table>
             </div>
           )}
-=======
-                      {/* ID */}
-                      <td className="px-4 py-3.5">
-                        <span className="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">{cw.id}</span>
-                      </td>
-                      {/* Dept */}
-                      <td className="px-4 py-3.5">
-                        <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">{cw.department}</span>
-                      </td>
-                      {/* Active */}
-                      <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.activeCases}</td>
-                      {/* Completed */}
-                      <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.completedCases}</td>
-                      {/* SLA */}
-                      <td className="px-4 py-3.5">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getSlaColor(cw.slaMetPct)}`}>
-                          {cw.slaMetPct}%
-                        </span>
-                      </td>
-                      {/* Avg Days */}
-                      <td className="px-4 py-3.5 text-sm font-mono text-gray-700 tabular-nums">{cw.avgCompletionDays}d</td>
-                      {/* Satisfaction */}
-                      <td className="px-4 py-3.5">
-                        <StarRating value={cw.clientSatisfaction} />
-                      </td>
-                      {/* Escalations */}
-                      <td className="px-4 py-3.5">
-                        <span className={`text-sm font-bold tabular-nums ${cw.escalations <= 3 ? "text-green-600" : cw.escalations <= 8 ? "text-amber-600" : "text-red-600"}`}>
-                          {cw.escalations}
-                        </span>
-                      </td>
-                      {/* Trend sparkline */}
-                      <td className="px-4 py-3.5">
-                        <Sparkline
-                          data={cw.monthlyTrend}
-                          color={
-                            cw.monthlyTrend[11] > cw.monthlyTrend[0] ? "#22c55e" : "#ef4444"
-                          }
-                        />
-                      </td>
-                      {/* Actions */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedCW(cw)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-secondary/30 text-secondary bg-secondary/5 hover:bg-secondary/10 transition-colors whitespace-nowrap"
-                          >
-                            <FiEye size={12} />
-                            View
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const reportRows = cw.recentCases.map(c => ({
-                                CaseworkerID: cw.id,
-                                CaseworkerName: cw.name,
-                                CaseID: c.id,
-                                Client: c.client,
-                                VisaType: c.type,
-                                Status: c.status,
-                                Date: c.date,
-                                SLA: c.sla
-                              }));
-                              if (reportRows.length === 0) {
-                                alert("No recent cases available to export for this caseworker.");
-                              } else {
-                                exportToCsv(`${cw.id}_performance_report.csv`, reportRows);
-                              }
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors whitespace-nowrap"
-                          >
-                            <FiDownload size={12} />
-                            Report
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
           {/* Table footer */}
-          {filtered.length > 0 && (
+          {caseworkers .length > 0 && (
             <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
-              <span>{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
+              <span>{caseworkers.length} result{caseworkers.length !== 1 ? "s" : ""}</span>
               <span className="font-mono">
                 Team avg workload: <span className="font-black text-secondary">{avgSla}%</span>
               </span>
@@ -1180,7 +1122,6 @@ export default function AdminReports() {
   const [activeTab, setActiveTab] = useState("cases");
   const [dateRange, setDateRange] = useState({ start: null, end: null });
 
-<<<<<<< HEAD
   // Case Type Data
   const [caseTypes, setCaseTypes] = useState([]);
   const [caseTypesLoading, setCaseTypesLoading] = useState(false);
@@ -1191,6 +1132,7 @@ export default function AdminReports() {
   const [workloadLoading, setWorkloadLoading] = useState(false);
   const [workloadError, setWorkloadError] = useState(null);
   const [workloadSearch, setWorkloadSearch] = useState("");
+  const [apiLoading, setapiLoading] = useState(false);
 
   // Financial Data
   const [revenueByVisa, setRevenueByVisa] = useState([]);
@@ -1212,7 +1154,7 @@ export default function AdminReports() {
       const response = await axios.get(`${API_BASE_URL}/reports/case-types`, {
         headers: getAuthHeaders(),
       });
-      
+
       if (response.data?.data) {
         setCaseTypes(response.data.data.cases || []);
       }
@@ -1232,7 +1174,7 @@ export default function AdminReports() {
       const response = await axios.get(`${API_BASE_URL}/reports/workload`, {
         headers: getAuthHeaders(),
       });
-      
+
       if (response.data?.data?.caseworkers) {
         setWorkload(response.data.data.caseworkers || []);
       }
@@ -1298,77 +1240,10 @@ export default function AdminReports() {
     fetchCaseTypeReport();
   }, []);
 
-=======
-  // ── API Data State ────────────────────────────────────────────────────────
-  const [apiData, setApiData] = useState({
-    summary:     null,
-    cases:       null,
-    workload:    null,
-    financial:   null,
-    performance: null,
-  });
-  const [apiLoading, setApiLoading] = useState(false);
-  const [apiError,   setApiError]   = useState(null);
-  const [deptOptions, setDeptOptions] = useState([{ value: "all", label: "All departments" }]);
-
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const dRes = await getDepartments();
-        if (dRes.data?.departments) {
-          setDeptOptions([
-            { value: "all", label: "All departments" },
-            ...dRes.data.departments.map(d => ({ value: d, label: d }))
-          ]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch departments", err);
-      }
-    };
-    fetchOptions();
-  }, []);
-
-  const buildParams = useCallback(() => {
-    const params = {};
-    if (dateRange.start) params.startDate = dateRange.start.toISOString().split('T')[0];
-    if (dateRange.end)   params.endDate   = dateRange.end.toISOString().split('T')[0];
-    return params;
-  }, [dateRange]);
-
-  const fetchReportData = useCallback(async () => {
-    setApiLoading(true);
-    setApiError(null);
-    const params = buildParams();
-    try {
-      const [summaryRes, casesRes, workloadRes, financialRes, performanceRes] = await Promise.allSettled([
-        getReportingSummary(),
-        getCaseAnalytics(params),
-        getWorkloadReport(params),
-        getFinancialReport(params),
-        getPerformanceReport(params),
-      ]);
-      setApiData({
-        summary:     summaryRes.status     === 'fulfilled' ? summaryRes.value.data?.data     : null,
-        cases:       casesRes.status       === 'fulfilled' ? casesRes.value.data?.data       : null,
-        workload:    workloadRes.status     === 'fulfilled' ? workloadRes.value.data?.data     : null,
-        financial:   financialRes.status    === 'fulfilled' ? financialRes.value.data?.data    : null,
-        performance: performanceRes.status  === 'fulfilled' ? performanceRes.value.data?.data  : null,
-      });
-    } catch {
-      setApiError('Failed to load report data. Showing available data.');
-    } finally {
-      setApiLoading(false);
-    }
-  }, [buildParams]);
-
-  useEffect(() => { fetchReportData(); }, [fetchReportData]);
-
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
   function handleDateRangeChange({ start, end }) {
     setDateRange({ start, end });
   }
 
-<<<<<<< HEAD
   // Handle export combined PDF
   const handleExportPDF = async () => {
     try {
@@ -1377,82 +1252,6 @@ export default function AdminReports() {
         alert("Please select a date range before exporting");
         return;
       }
-=======
-  // ── Derived values from API (with fallback to mock) ───────────────────────
-  const liveKpis = apiData.cases?.summary;
-  const liveCaseKpis = [
-    {
-      id: 'opened',
-      label: 'Cases This Month',
-      value: liveKpis?.thisMonth ?? 0,
-      sub: liveKpis?.momChangePct != null
-        ? `${liveKpis.momChangePct >= 0 ? '↑' : '↓'} ${Math.abs(liveKpis.momChangePct)}% vs last month`
-        : '0% change',
-      bg: 'bg-blue-50', border: 'border-blue-100', valueClass: 'text-blue-600',
-    },
-    {
-      id: 'total',
-      label: 'Total Cases',
-      value: liveKpis?.totalCases ?? 0,
-      sub: `Last month: ${liveKpis?.lastMonth ?? '0'}`,
-      bg: 'bg-green-50', border: 'border-green-100', valueClass: 'text-green-600',
-    },
-    {
-      id: 'sla',
-      label: 'SLA Met Rate',
-      value: liveKpis?.slaMetPct != null ? `${liveKpis.slaMetPct}%` : "0%",
-      sub: 'Based on SLA-tracked cases',
-      bg: 'bg-amber-50', border: 'border-amber-100', valueClass: 'text-amber-700',
-    },
-  ];
-
-
-  // Live visa type breakdown (replaces CASES_BY_VISA when available)
-  const liveCasesByVisa = apiData.cases?.byVisaType?.length
-    ? apiData.cases.byVisaType.map((v, i) => ({
-        id: String(i),
-        name: v.name,
-        cases: v.count,
-        pct: apiData.cases.summary?.totalCases > 0
-          ? Math.round((v.count / apiData.cases.summary.totalCases) * 100)
-          : 0,
-        bar: ['bg-blue-500','bg-purple-500','bg-green-500','bg-amber-400','bg-red-500'][i % 5],
-      }))
-    : [];
-
-
-  const filteredVisaBars = useMemo(() => {
-    if (visaFilter === "all") return liveCasesByVisa;
-    return liveCasesByVisa.filter((v) => v.id === visaFilter || v.name === visaFilter);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visaFilter, apiData.cases]);
-
-  const visaFilterOptions = useMemo(() => [
-    { value: 'all', label: 'All types' },
-    ...liveCasesByVisa.map(v => ({ value: v.id, label: v.name })),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [apiData.cases]);
-
-  // Live workload (replaces WORKLOAD_ROWS when available)
-  const liveWorkload = apiData.workload?.caseworkers?.length
-    ? apiData.workload.caseworkers.map((cw, i) => ({
-        id: String(cw.id),
-        name: cw.name,
-        initials: cw.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
-        avatarBg: ['bg-blue-500','bg-green-500','bg-red-500','bg-purple-500','bg-amber-500'][i % 5],
-        active: cw.activeCases,
-        completed: cw.completedCases,
-        sla: cw.slaMetCount != null ? `${cw.slaMetCount}/${cw.slaTotalCount}` : '—',
-        slaPct: cw.slaMetPct != null ? `${cw.slaMetPct}%` : '—',
-        slaChip: cw.slaMetPct >= 90
-          ? 'bg-green-100 text-green-700'
-          : cw.slaMetPct >= 75
-          ? 'bg-amber-100 text-amber-800'
-          : 'bg-red-100 text-red-700',
-      }))
-    : [];
-
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
       // Format dates as YYYY-MM-DD
       const startDate = dateRange.start.toISOString().split('T')[0];
@@ -1485,27 +1284,13 @@ export default function AdminReports() {
   // Filter workload data
   const filteredWorkload = useMemo(() => {
     const q = workloadSearch.trim().toLowerCase();
-<<<<<<< HEAD
     if (!q) return workload;
     return workload.filter((r) => (r.caseworker_name || "").toLowerCase().includes(q));
   }, [workloadSearch, workload]);
-=======
-    if (!q) return liveWorkload;
-    return liveWorkload.filter((r) => r.name.toLowerCase().includes(q));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workloadSearch, apiData.workload]);
-
-  // Live financial (replaces FINANCE_BY_VISA when available)
-  const liveFinanceSummary = apiData.financial?.summary;
-  const liveFinanceByStatus = apiData.financial?.statusBreakdown || [];
-  const liveFinanceByVisa = apiData.financial?.byVisaType || [];
-  const liveFinanceBySponsor = apiData.financial?.bySponsor || [];
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
   // Filter finance data
   const filteredFinanceVisa = useMemo(() => {
     const q = financeSearch.trim().toLowerCase();
-<<<<<<< HEAD
     if (!q) return revenueByVisa;
     return revenueByVisa.filter((r) => (r.visa_type || "").toLowerCase().includes(q));
   }, [financeSearch, revenueByVisa]);
@@ -1515,18 +1300,6 @@ export default function AdminReports() {
     if (!q) return revenueBySponsor;
     return revenueBySponsor.filter((r) => (r.sponsor_name || "").toLowerCase().includes(q));
   }, [financeSearch, revenueBySponsor]);
-=======
-    if (!q) return liveFinanceByVisa;
-    return liveFinanceByVisa.filter((r) => r.name.toLowerCase().includes(q));
-  }, [financeSearch, liveFinanceByVisa]);
-
-  const filteredFinanceSponsor = useMemo(() => {
-    const q = financeSearch.trim().toLowerCase();
-    if (!q) return liveFinanceBySponsor;
-    return liveFinanceBySponsor.filter((r) => r.name.toLowerCase().includes(q));
-  }, [financeSearch, liveFinanceBySponsor]);
-
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
   return (
     <motion.div
@@ -1542,14 +1315,6 @@ export default function AdminReports() {
             <FiRefreshCw className="animate-spin" size={14} />
             Refreshing data…
           </div>
-        </div>
-      )}
-
-      {/* Error banner */}
-      {apiError && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-semibold">
-          <FiAlertCircle size={15} />
-          {apiError}
         </div>
       )}
 
@@ -1573,7 +1338,6 @@ export default function AdminReports() {
           <DateRangeBadge startDate={dateRange.start} endDate={dateRange.end} />
           <button
             type="button"
-            onClick={fetchReportData}
             disabled={apiLoading}
             className="p-2 rounded-xl border border-gray-200 bg-white text-gray-400 hover:text-primary hover:border-primary/30 transition-colors"
             title="Refresh data"
@@ -1602,21 +1366,6 @@ export default function AdminReports() {
             onChange={handleDateRangeChange}
           />
 
-<<<<<<< HEAD
-=======
-          {activeTab === "cases" && (
-            <div className="w-full sm:w-auto sm:min-w-[220px]">
-              <Input
-                label="Visa type"
-                name="visaFilter"
-                value={visaFilter}
-                onChange={(e) => setVisaFilter(e.target.value)}
-                options={visaFilterOptions}
-              />
-            </div>
-          )}
-
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           {activeTab === "workload" && (
             <div className="w-full sm:flex-1 sm:min-w-[240px] max-w-md">
               <label
@@ -1679,7 +1428,6 @@ export default function AdminReports() {
           transition={{ duration: 0.2 }}
           className="space-y-6"
         >
-<<<<<<< HEAD
           {caseTypesLoading ? (
             <div className="text-center py-12">
               <FiLoader className="animate-spin inline-block text-secondary mb-2" size={28} />
@@ -1703,7 +1451,7 @@ export default function AdminReports() {
                     const total = caseTypes.reduce((sum, c) => sum + (c.count || 0), 0);
                     const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;
                     const colors = ["bg-blue-500", "bg-purple-500", "bg-green-500", "bg-amber-400", "bg-red-500"];
-                    
+
                     return (
                       <div key={row.type || idx}>
                         <div className="flex justify-between text-xs sm:text-sm mb-1.5">
@@ -1725,45 +1473,6 @@ export default function AdminReports() {
               )}
             </div>
           )}
-=======
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {liveCaseKpis.map((k) => (
-              <div key={k.id} className={`rounded-xl border p-4 ${k.bg} ${k.border}`}>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">{k.label}</p>
-                <p className={`text-3xl font-black ${k.valueClass}`}>{k.value}</p>
-                <p className="text-xs text-gray-500 mt-1">{k.sub}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
-            <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
-              Cases by Visa Type
-            </h2>
-            {filteredVisaBars.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">No visa types match this filter.</p>
-            ) : (
-              <div className="space-y-4">
-                {filteredVisaBars.map((row) => (
-                  <div key={row.id}>
-                    <div className="flex justify-between text-xs sm:text-sm mb-1.5">
-                      <span className="font-semibold text-gray-700">{row.name}</span>
-                      <span className="font-mono text-gray-500">{row.cases} cases ({row.pct}%)</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <motion.div
-                        className={`h-full rounded-full ${row.bar}`}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${row.pct}%` }}
-                        transition={{ duration: 0.5, ease: "easeOut" }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
         </motion.div>
       )}
 
@@ -1851,40 +1560,11 @@ export default function AdminReports() {
           transition={{ duration: 0.2 }}
           className="grid grid-cols-1 xl:grid-cols-2 gap-6"
         >
-<<<<<<< HEAD
           {/* Revenue by Visa Type */}
-=======
-          {/* Live Financial KPIs */}
-          {liveFinanceSummary && (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 xl:col-span-2">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <div className="rounded-xl bg-green-50 border border-green-100 p-4">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Revenue</p>
-                  <p className="text-2xl font-black text-green-600">£{liveFinanceSummary.totalRevenue.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500 mt-1">{liveFinanceSummary.totalPaid} payments received</p>
-                </div>
-                <div className="rounded-xl bg-amber-50 border border-amber-100 p-4">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Outstanding</p>
-                  <p className="text-2xl font-black text-amber-600">£{liveFinanceSummary.totalOutstanding.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500 mt-1">Pending &amp; overdue payments</p>
-                </div>
-                {liveFinanceByStatus.map(s => (
-                  <div key={s.status} className="rounded-xl bg-gray-50 border border-gray-100 p-4">
-                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1 capitalize">{s.status}</p>
-                    <p className="text-2xl font-black text-secondary">{s.count}</p>
-                    <p className="text-xs text-gray-500 mt-1">£{s.total.toLocaleString()}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
             <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
               Revenue by Visa Type
             </h2>
-<<<<<<< HEAD
             {financeLoading ? (
               <div className="text-center py-8">
                 <FiLoader className="animate-spin inline-block text-secondary" size={20} />
@@ -1904,16 +1584,6 @@ export default function AdminReports() {
                     <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">
                       £{(row.total_amount || 0).toLocaleString()}
                     </span>
-=======
-            {filteredFinanceVisa.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">No records match your search.</p>
-            ) : (
-              <div className="flex flex-col gap-2.5">
-                {filteredFinanceVisa.map((row, i) => (
-                  <div key={i} className="flex justify-between items-center text-sm gap-4">
-                    <span className="text-gray-700 font-medium">{row.name}</span>
-                    <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">£{row.total.toLocaleString()}</span>
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
                   </div>
                 ))}
               </div>
@@ -1938,30 +1608,16 @@ export default function AdminReports() {
               <p className="text-sm text-gray-400 text-center py-8">No sponsor revenue data available.</p>
             ) : (
               <div className="flex flex-col gap-2.5">
-<<<<<<< HEAD
                 {filteredFinanceSponsor.map((row) => (
                   <div key={row.sponsor_name} className="flex justify-between items-center text-sm gap-4">
                     <span className="text-gray-700 font-medium">{row.sponsor_name || "Unknown"}</span>
                     <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">
                       £{(row.total_amount || 0).toLocaleString()}
                     </span>
-=======
-                {filteredFinanceSponsor.map((row, i) => (
-                  <div key={i} className="flex justify-between items-center text-sm gap-4">
-                    <span className="text-gray-700 font-medium">{row.name}</span>
-                    <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">£{row.total.toLocaleString()}</span>
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
                   </div>
                 ))}
               </div>
             )}
-<<<<<<< HEAD
-=======
-            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center gap-4">
-              <span className="text-sm text-gray-500">Outstanding Payments</span>
-              <span className="font-mono font-bold text-red-600 tabular-nums">£{(apiData.financial?.summary?.totalOutstanding || 0).toLocaleString()}</span>
-            </div>
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           </div>
 
         </motion.div>
@@ -1969,10 +1625,10 @@ export default function AdminReports() {
 
       {/* ── Performance Tab ── */}
       {activeTab === "performance" && (
-        <PerformanceTab 
-          dateRange={dateRange} 
-          performanceData={apiData.performance} 
-          deptOptions={deptOptions}
+        <PerformanceTab
+          dateRange={dateRange}
+          performanceData={[]}
+          deptOptions={[]}
         />
       )}
     </motion.div>

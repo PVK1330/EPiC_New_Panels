@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import { useState, useEffect, useCallback } from "react";
-=======
-import { useState, useMemo, useCallback, useEffect } from "react";
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 import { motion } from "framer-motion";
 import axios from "axios";
 import {
@@ -15,11 +11,10 @@ import {
   FiPlay,
 } from "react-icons/fi";
 import Button from "../../components/Button";
-<<<<<<< HEAD
 
 const API_BASE_URL = "http://localhost:5000";
 
-const getInitials = (name) => {
+ const getInitials = (name) => {
   if (!name) return "N/A";
   return name
     .split(" ")
@@ -39,10 +34,6 @@ const getStatusColor = (status) => {
   if (statusLower === "pending") return "bg-yellow-100 text-yellow-800";
   return "bg-gray-100 text-gray-800";
 };
-=======
-import { getAuditLogs, getAuditActionTypes, exportAuditLogs } from "../../services/auditApi";
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
-
 const TABLE_COLS = [
   "Timestamp",
   "User",
@@ -51,8 +42,7 @@ const TABLE_COLS = [
   "IP Address",
   "Status",
   "Details",
-];
-
+]
 const selectClass =
   "w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-secondary/30";
 
@@ -66,7 +56,6 @@ const DATE_OPTIONS = [
 
 const ACTION_OPTIONS = [
   { value: "all", label: "All actions" },
-<<<<<<< HEAD
   { value: "login", label: "Login / logout" },
   { value: "Case Created", label: "Case created" },
   { value: "Case Updated", label: "Case updated" },
@@ -76,8 +65,6 @@ const ACTION_OPTIONS = [
 
 const USER_OPTIONS = [
   { value: "all", label: "All users" },
-=======
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 ];
 
 const STATUS_OPTIONS = [
@@ -149,7 +136,6 @@ export default function AdminAuditLogs() {
     user: "all",
     status: "all",
   });
-<<<<<<< HEAD
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -222,78 +208,12 @@ const statCards = [
   },
 ];
 
-=======
-  
-  const [logs, setLogs] = useState([]);
-  const [statistics, setStatistics] = useState({
-    total: 0,
-    success: 0,
-    failed: 0,
-    today: 0
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastRunAt, setLastRunAt] = useState(new Date());
-
-  const [dynamicActions, setDynamicActions] = useState([]);
-  const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0, pages: 1 });
-
-  const fetchActions = useCallback(async () => {
-    try {
-      const res = await getAuditActionTypes();
-      if (res.data?.status === 'success') {
-        setDynamicActions(res.data.data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch actions:", err);
-    }
-  }, []);
-
-  const fetchLogs = useCallback(async (targetPage = pagination.page) => {
-    setLoading(true);
-    try {
-      const res = await getAuditLogs({
-        page: targetPage,
-        limit: 15,
-        dateRange: filters.dateRange,
-        actionType: filters.actionType,
-        user: filters.user,
-        status: filters.status
-      });
-      
-      if (res.data?.status === 'success') {
-        setLogs(res.data.data.logs);
-        setStatistics(res.data.data.statistics);
-        setPagination(res.data.data.pagination);
-        setLastRunAt(new Date());
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Failed to fetch audit logs.");
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, pagination.page]);
-
-  useEffect(() => {
-    fetchActions();
-  }, [fetchActions]);
-
-  useEffect(() => {
-    fetchLogs(1); // Reset to page 1 when filters change
-  }, [filters]);
-
-  const handlePageChange = (newPage) => {
-    fetchLogs(newPage);
-  };
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
   const handleFilter = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-<<<<<<< HEAD
 
   const runAudit = useCallback(() => {
     setLastRunAt(new Date());
@@ -311,68 +231,6 @@ const statCards = [
     }
   }, [filters]);
 
-=======
-  const handleStatCardClick = (filterKey, filterValue) => {
-    setFilters((prev) => ({ ...prev, [filterKey]: filterValue }));
-  };
-
-  const exportAudit = async () => {
-    try {
-      const res = await exportAuditLogs({
-        dateRange: filters.dateRange,
-        status: filters.status
-      });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Audit_Report_${new Date().toISOString().slice(0, 10)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (err) {
-      console.error("Export failed:", err);
-    }
-  };
-
-  const statsCards = [
-    {
-      label: "Total activities",
-      value: statistics.total,
-      bg: "bg-blue-100",
-      color: "text-blue-600",
-      Icon: FiClipboard,
-      filterKey: "status",
-      filterValue: "all",
-    },
-    {
-      label: "Successful",
-      value: statistics.success,
-      bg: "bg-green-100",
-      color: "text-green-600",
-      Icon: FiCheckCircle,
-      filterKey: "status",
-      filterValue: "Success",
-    },
-    {
-      label: "Failed",
-      value: statistics.failed,
-      bg: "bg-red-100",
-      color: "text-red-600",
-      Icon: FiXCircle,
-      filterKey: "status",
-      filterValue: "Failed",
-    },
-    {
-      label: "Today",
-      value: statistics.today,
-      bg: "bg-purple-100",
-      color: "text-purple-600",
-      Icon: FiClock,
-      filterKey: "dateRange",
-      filterValue: "last7",
-    },
-  ];
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
   return (
     <div className="space-y-8 pb-10">
@@ -406,7 +264,7 @@ const statCards = [
             <Button
               type="button"
               className="rounded-xl inline-flex items-center gap-2"
-              onClick={fetchLogs}
+              onClick={fetchAuditLogs}
             >
               <FiPlay size={16} aria-hidden />
               Run audit
@@ -433,12 +291,7 @@ const statCards = [
         initial="hidden"
         animate="visible"
       >
-<<<<<<< HEAD
         {statCards.map(({ label, value, bg, color, Icon, filterValue }) => {
-=======
-        {statsCards.map(({ label, value, bg, color, Icon, filterKey, filterValue }) => {
-          const isActive = filters[filterKey] === filterValue;
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           return (
             <motion.div
               key={label}
@@ -516,9 +369,9 @@ const statCards = [
               className={selectClass}
             >
               <option value="all">All actions</option>
-              {dynamicActions.map((action) => (
-                <option key={action} value={action}>
-                  {action}
+              {ACTION_OPTIONS.map((action,index) => (
+                <option key={index} >
+                  {action.label}
                 </option>
               ))}
             </select>
@@ -563,7 +416,6 @@ const statCards = [
           </div>
         </div>
         <p className="text-xs text-gray-500 mt-4">
-<<<<<<< HEAD
           {loading ? (
             <span>Loading audit logs...</span>
           ) : (
@@ -582,20 +434,6 @@ const statCards = [
                 </span>
               )}
             </>
-=======
-          Showing{" "}
-          <span className="font-bold text-secondary">
-            {logs.length}
-          </span>{" "}
-          entries.
-          {lastRunAt && (
-            <span className="ml-2">
-              · Last audit run:{" "}
-              <span className="font-semibold text-gray-600">
-                {lastRunAt.toLocaleString()}
-              </span>
-            </span>
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
           )}
         </p>
       </motion.div>
@@ -625,7 +463,6 @@ const statCards = [
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-<<<<<<< HEAD
               {loading ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
@@ -638,9 +475,6 @@ const statCards = [
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
-=======
-              {logs.length === 0 ? (
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
                 <tr>
                   <td
                     colSpan={7}
@@ -650,33 +484,10 @@ const statCards = [
                   </td>
                 </tr>
               ) : (
-<<<<<<< HEAD
                 logs.map((data, index) => {
                   return (
                     <motion.tr
                       key={index}
-=======
-                logs.map(
-                  (
-                    {
-                      id,
-                      timestamp,
-                      initials,
-                      user,
-                      role,
-                      action,
-                      actionClass,
-                      resource,
-                      ip,
-                      status,
-                      statusClass,
-                      details,
-                    },
-                    index,
-                  ) => (
-                    <motion.tr
-                      key={id || `${timestamp}-${user}-${action}-${index}`}
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
                       className="hover:bg-gray-50 transition-colors"
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -749,13 +560,8 @@ const statCards = [
                           ):""}
                         </span>
                       </td>
-<<<<<<< HEAD
                       <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
                         {data.details}
-=======
-                      <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate" title={details}>
-                        {details}
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
                       </td>
                     </motion.tr>
                   )}) 
@@ -764,55 +570,8 @@ const statCards = [
             </tbody>
           </table>
         </div>
-<<<<<<< HEAD
       </motion.div>
 
       </div>
-=======
-        
-        {/* Pagination */}
-        {pagination.pages > 1 && (
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Showing <span className="font-semibold text-secondary">{(pagination.page - 1) * pagination.limit + 1}</span> to <span className="font-semibold text-secondary">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of <span className="font-semibold text-secondary">{pagination.total}</span> entries
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={pagination.page === 1}
-                className="rounded-lg"
-              >
-                Previous
-              </Button>
-              {[...Array(pagination.pages)].map((_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => handlePageChange(i + 1)}
-                  className={`h-8 w-8 rounded-lg text-xs font-bold transition-all ${
-                    pagination.page === i + 1
-                      ? "bg-primary text-white shadow-sm"
-                      : "text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              )).slice(Math.max(0, pagination.page - 3), Math.min(pagination.pages, pagination.page + 2))}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={pagination.page === pagination.pages}
-                className="rounded-lg"
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        )}
-      </motion.div>
-    </div>
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
   );
 }

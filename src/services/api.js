@@ -9,7 +9,6 @@ const api = axios.create({
   timeout: 10000,
 });
 
-<<<<<<< HEAD
 console.log("🌐 API Instance created with baseURL:", api.defaults.baseURL);
 
 // Attach token from localStorage on every request
@@ -22,16 +21,6 @@ api.interceptors.request.use((config) => {
   console.log("📤 Making request to:", config.baseURL + config.url);
   return config
 })
-=======
-// Attach token from storage on every request
-api.interceptors.request.use((config) => {
-  const token = getToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
 // Global error handling
 api.interceptors.response.use(

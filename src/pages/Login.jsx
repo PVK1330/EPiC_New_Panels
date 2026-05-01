@@ -5,10 +5,6 @@ import { ChevronDown } from "lucide-react";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import eliteLogo from "../assets/elitepic_logo.png";
-<<<<<<< HEAD
-import { ChevronDown } from "lucide-react";
-import authService from "../services/authService";
-=======
 import { setCredentials } from "../store/slices/authSlice";
 import {
   loginUser,
@@ -17,7 +13,6 @@ import {
   verifyTwoFactor,
 } from "../services/auth.service";
 import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
 
 const VIEWS = {
   login: "login",
@@ -84,36 +79,10 @@ const Login = () => {
 
   const [view, setView] = useState(VIEWS.login);
 
-<<<<<<< HEAD
-  const DEMO_CREDENTIALS = {
-    candidate: {
-      email: "candidate@demo.elitepic.com",
-      password: "candidate123",
-    },
-    caseworker: {
-      email: "caseworker@demo.elitepic.com",
-      password: "demo123",
-    },
-    admin: {
-      email: "admin@elitepic.com",
-      password: "admin123",
-    },
-    business: {
-      email: "business@demo.elitepic.com",
-      password: "business123",
-    },
-  };
-
-  const [form, setForm] = useState({
-    email: DEMO_CREDENTIALS.admin.email,
-    password: DEMO_CREDENTIALS.admin.password,
-    role: "admin",
-  });
-=======
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
+
 
   const [registerForm, setRegisterForm] = useState({
     firstName: "",
@@ -196,76 +165,6 @@ const Login = () => {
     if (Object.keys(errs).length) return setErrors(errs);
     setLoading(true);
     try {
-<<<<<<< HEAD
-      const response = await authService.login(form.email, form.password);
-      
-      console.log("📊 Full response object:", response);
-      
-      if (response.status === "success") {
-        // Check if 2FA is required
-        if (response.data?.requires_2fa) {
-          // TODO: Handle 2FA verification flow
-          alert("2FA verification required. Feature coming soon.");
-          return;
-        }
-
-        if (response.data?.user && response.data?.token) {
-          const { user, token } = response.data;
-          
-          // Store token in localStorage
-          localStorage.setItem("token", token);
-          
-          // Get role name from user object and convert to lowercase
-          const roleName = (user.role_name || form.role).toLowerCase();
-          
-          dispatch(
-            setCredentials({
-              user: {
-                id: user.id,
-                name: `${user.first_name} ${user.last_name}`,
-                email: user.email,
-                role: roleName,
-                firstName: user.first_name,
-                lastName: user.last_name,
-                roleId: user.role_id,
-                status: user.status,
-              },
-              token: token,
-            }),
-          );
-
-          // Navigate to dashboard based on role
-          console.log("🚀 Navigating to:", `/${roleName}/dashboard`);
-          navigate(`/${roleName}/dashboard`);
-        } else {
-          console.error("❌ Missing user or token in response:", response.data);
-          setErrors({ password: "Login response incomplete - missing user or token" });
-        }
-      } else {
-        console.warn("⚠️ Response status not success:", response.status);
-        setErrors({ password: response.data?.message || response.message || "Login failed" });
-      }
-    } catch (error) {
-      console.error("🔴 Login error caught:", error);
-      console.error("Error response:", error.response);
-      
-      let errorMessage = "Invalid credentials. Please try again.";
-      
-      if (error.response?.status === 401) {
-        errorMessage = "Invalid email or password";
-      } else if (error.response?.status === 403) {
-        errorMessage = "Account is inactive or suspended";
-      } else if (error.response?.status === 400) {
-        errorMessage = error.response?.data?.message || "Invalid request";
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      console.error("Final error message:", errorMessage);
-      setErrors({ password: errorMessage });
-=======
       const res = await loginUser({
         email: form.email,
         password: form.password,
@@ -283,7 +182,6 @@ const Login = () => {
       }
     } catch (err) {
       setErrors({ password: err.message || "Invalid credentials" });
->>>>>>> 48aee01c18e1def51f2c3d6688e1237b6bc89d06
     } finally {
       setLoading(false);
     }
