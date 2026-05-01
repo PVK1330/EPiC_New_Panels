@@ -23,7 +23,7 @@ export function applicationVisaToCRM(visa) {
     Settlement: "ILR",
     Other: "Other",
   };
-  return map[visa] ?? "Other";
+  return map[visa] ?? visa;
 }
 
 /** Reverse: CRM visa → application form visa type */
@@ -40,7 +40,7 @@ export function crmVisaToApplication(crmVisa) {
     "Youth Mobility": "Other",
     Other: "Other",
   };
-  return map[crmVisa] ?? "Other";
+  return map[crmVisa] ?? crmVisa;
 }
 
 /** Drop answers for custom fields that were removed from the definition list. */

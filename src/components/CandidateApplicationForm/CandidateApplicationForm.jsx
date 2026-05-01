@@ -12,6 +12,7 @@ import {
 } from "./applicationFormMapping";
 import useCandidate from "../../hooks/useCandidate";
 import { getCaseworkers } from "../../services/caseWorker";
+import { getVisaTypesDropdown } from "../../services/settingsService";
 
 const inputClass =
   "mt-1 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow";
@@ -196,7 +197,7 @@ const relationshipOptions = [
   { value: "Other", label: "Other" },
 ];
 
-const visaTypeOptions = [
+const fallbackVisaTypeOptions = [
   { value: "Visitor", label: "Visitor" },
   { value: "Student", label: "Student" },
   { value: "Work", label: "Work" },
@@ -332,6 +333,8 @@ export default function CandidateApplicationForm({
   const [apiError, setApiError] = useState(null);
   const [showSubmitWarning, setShowSubmitWarning] = useState(true);
 
+  const [visaTypeOptions, setVisaTypeOptions] = useState(fallbackVisaTypeOptions);
+
   const isControlled =
     controlledFormData !== undefined && setControlledFormData !== undefined;
   const formData = isControlled ? controlledFormData : internalForm;
@@ -426,6 +429,28 @@ export default function CandidateApplicationForm({
       fetchCaseworkers();
     }
   }, [variant]);
+
+  useEffect(() => {
+    const fetchDynamicVisaTypes = async () => {
+      try {
+        const res = await getVisaTypesDropdown();
+        const types = res.data?.data?.visa_types || [];
+        if (types.length > 0) {
+          const mappedOptions = types.map((t) => ({
+            value: t.name,
+            label: t.name,
+          }));
+          setVisaTypeOptions([
+            ...mappedOptions,
+            { value: "Other", label: "Other" }, // Ensure "Other" is always an option if needed
+          ]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch visa types:", error);
+      }
+    };
+    fetchDynamicVisaTypes();
+  }, []);
 
   const resolvedVisibility =
     fieldVisibilityProp === undefined
