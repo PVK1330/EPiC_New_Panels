@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   APPLICATION_STEP_LABELS,
+  APPLICATION_FIELD_LABELS,
   getInitialApplicationFormData,
   loadFieldVisibilityFromStorage,
   loadCustomFieldDefinitionsFromStorage,
@@ -12,6 +13,10 @@ import {
 } from "./applicationFormMapping";
 import useCandidate from "../../hooks/useCandidate";
 import { getCaseworkers } from "../../services/caseWorker";
+import {
+  getCandidateApplicationFieldSettings,
+  getCandidateApplicationCustomFields,
+} from "../../services/candidateApi";
 
 const inputClass =
   "mt-1 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow";
@@ -297,15 +302,28 @@ function validateStep(stepIndex, data) {
   return errs;
 }
 
+/** Keep only errors for fields that are visible in the current visibility config. */
+function filterValidationErrorsByVisibility(errs, show) {
+  const out = {};
+  for (const [key, msg] of Object.entries(errs)) {
+    if (typeof show === "function" && show(key)) out[key] = msg;
+  }
+  return out;
+}
+
 export default function CandidateApplicationForm({
   variant = "candidate",
   embedded = false,
+  adminShowAllBuiltinFields = false,
   fieldVisibility: fieldVisibilityProp,
   customFieldDefinitions: customFieldDefinitionsProp,
   formData: controlledFormData,
   setFormData: setControlledFormData,
   onAdminSubmit,
+  onAdminSaveDraft,
   onAdminCancel,
+  /** When true, parent is persisting Save client (create/update). */
+  adminSubmitBusy = false,
   containerClassName,
 }) {
   const navigate = useNavigate();
@@ -331,6 +349,9 @@ export default function CandidateApplicationForm({
   // Banner state: null = hidden, string = message to show
   const [apiError, setApiError] = useState(null);
   const [showSubmitWarning, setShowSubmitWarning] = useState(true);
+  const [portalFieldVisibility, setPortalFieldVisibility] = useState(null);
+  const [portalCustomDefs, setPortalCustomDefs] = useState(null);
+  const [adminDraftSaving, setAdminDraftSaving] = useState(false);
 
   const isControlled =
     controlledFormData !== undefined && setControlledFormData !== undefined;
@@ -405,6 +426,43 @@ export default function CandidateApplicationForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (variant !== "candidate" || isControlled) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [fsRes, cfRes] = await Promise.all([
+          getCandidateApplicationFieldSettings(),
+          getCandidateApplicationCustomFields(),
+        ]);
+        if (cancelled) return;
+        const rows = fsRes.data?.data ?? [];
+        const vis = {};
+        for (const row of rows) {
+          vis[row.field_key] = row.is_visible !== false;
+        }
+        for (const k of Object.keys(APPLICATION_FIELD_LABELS)) {
+          if (vis[k] === undefined) vis[k] = true;
+        }
+        setPortalFieldVisibility(vis);
+        const defs = (cfRes.data?.data ?? []).map((cf) => ({
+          id: cf.field_id,
+          label: cf.label,
+          type: cf.field_type,
+        }));
+        setPortalCustomDefs(defs);
+      } catch {
+        if (!cancelled) {
+          setPortalFieldVisibility(null);
+          setPortalCustomDefs(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [variant, isControlled]);
+
   // Initialize showSecondParent based on existing parent2 details (controlled mode)
   if (isControlled && controlledFormData?.parent2Name && !showSecondParent) {
     setShowSecondParent(true);
@@ -428,15 +486,24 @@ export default function CandidateApplicationForm({
   }, [variant]);
 
   const resolvedVisibility =
-    fieldVisibilityProp === undefined
-      ? loadFieldVisibilityFromStorage()
-      : fieldVisibilityProp;
-  const show = (key) => resolvedVisibility[key] !== false;
+    fieldVisibilityProp !== undefined
+      ? fieldVisibilityProp
+      : portalFieldVisibility ?? loadFieldVisibilityFromStorage();
+  const show = (key) => {
+    if (
+      variant === "admin" &&
+      adminShowAllBuiltinFields &&
+      Object.prototype.hasOwnProperty.call(APPLICATION_FIELD_LABELS, key)
+    ) {
+      return true;
+    }
+    return resolvedVisibility[key] !== false;
+  };
 
   const customFieldDefinitions =
-    customFieldDefinitionsProp === undefined
-      ? loadCustomFieldDefinitionsFromStorage()
-      : customFieldDefinitionsProp;
+    customFieldDefinitionsProp !== undefined
+      ? customFieldDefinitionsProp
+      : portalCustomDefs ?? loadCustomFieldDefinitionsFromStorage();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -464,13 +531,11 @@ export default function CandidateApplicationForm({
   const lastStep = APPLICATION_STEP_LABELS.length - 1;
 
   const goNext = () => {
-    // Only validate on candidate-facing form; admin form skips step validation
-    if (variant === "candidate") {
-      const errs = validateStep(step, formData);
-      if (Object.keys(errs).length > 0) {
-        setFormErrors(errs);
-        return; // Block advancement until errors are fixed
-      }
+    const raw = validateStep(step, formData);
+    const errs = filterValidationErrorsByVisibility(raw, show);
+    if (Object.keys(errs).length > 0) {
+      setFormErrors(errs);
+      return;
     }
     setFormErrors({});
     setStep((s) => Math.min(s + 1, lastStep));
@@ -483,20 +548,35 @@ export default function CandidateApplicationForm({
 
   const handleSubmit = async (e) => {
     if (e && typeof e.preventDefault === "function") e.preventDefault();
-    const defs =
-      customFieldDefinitionsProp === undefined
-        ? loadCustomFieldDefinitionsFromStorage()
-        : customFieldDefinitionsProp;
+    const defs = customFieldDefinitions;
     const cleaned = pruneCustomResponsesToDefinitions(formData, defs);
 
     if (variant === "admin" && typeof onAdminSubmit === "function") {
-      onAdminSubmit(cleaned);
+      for (let i = 0; i <= lastStep; i++) {
+        const stepErrs = filterValidationErrorsByVisibility(
+          validateStep(i, cleaned),
+          show,
+        );
+        if (Object.keys(stepErrs).length > 0) {
+          setFormErrors(stepErrs);
+          setStep(i);
+          return;
+        }
+      }
+      setFormErrors({});
+      onAdminSubmit(sanitizeForApi(cleaned));
       return;
     }
 
-    // Candidate variant — validate all required steps before submitting
-    const step0Errs = validateStep(0, cleaned);
-    const step1Errs = validateStep(1, cleaned);
+    // Candidate variant — validate required steps before submitting (portal visibility)
+    const step0Errs = filterValidationErrorsByVisibility(
+      validateStep(0, cleaned),
+      show,
+    );
+    const step1Errs = filterValidationErrorsByVisibility(
+      validateStep(1, cleaned),
+      show,
+    );
     const allErrs = { ...step0Errs, ...step1Errs };
     if (Object.keys(allErrs).length > 0) {
       setFormErrors(allErrs);
@@ -530,39 +610,43 @@ export default function CandidateApplicationForm({
   };
 
   const handleSaveDraft = async () => {
-    if (variant !== "candidate") return;
-    const defs =
-      customFieldDefinitionsProp === undefined
-        ? loadCustomFieldDefinitionsFromStorage()
-        : customFieldDefinitionsProp;
+    const defs = customFieldDefinitions;
     const cleaned = pruneCustomResponsesToDefinitions(formData, defs);
-
-    // Sanitize dates — save-draft never rejects incomplete forms
     const payload = sanitizeForApi(cleaned);
 
-    const result = await saveApplicationDraft(payload);
+    if (variant === "candidate") {
+      const result = await saveApplicationDraft(payload);
 
-    if (result.ok) {
-      try {
-        localStorage.setItem("elitepic_application_draft", JSON.stringify(formData));
-      } catch {
-        /* ignore storage errors */
+      if (result.ok) {
+        try {
+          localStorage.setItem("elitepic_application_draft", JSON.stringify(formData));
+        } catch {
+          /* ignore storage errors */
+        }
+      } else {
+        const status = result.error?.response?.status;
+        if (status === 403) {
+          setApiError(
+            result.error.response.data?.message ||
+            "Your application is locked and cannot be edited. Contact your caseworker.",
+          );
+          return;
+        }
+        try {
+          localStorage.setItem("elitepic_application_draft", JSON.stringify(formData));
+        } catch {
+          /* ignore storage errors */
+        }
       }
-    } else {
-      const status = result.error?.response?.status;
-      if (status === 403) {
-        // Locked application — show backend message, skip localStorage fallback
-        setApiError(
-          result.error.response.data?.message ||
-          "Your application is locked and cannot be edited. Contact your caseworker.",
-        );
-        return;
-      }
-      // Non-403 API failure — fall back to local-only save silently
+      return;
+    }
+
+    if (variant === "admin" && typeof onAdminSaveDraft === "function") {
+      setAdminDraftSaving(true);
       try {
-        localStorage.setItem("elitepic_application_draft", JSON.stringify(formData));
-      } catch {
-        /* ignore storage errors */
+        await Promise.resolve(onAdminSaveDraft(payload));
+      } finally {
+        setAdminDraftSaving(false);
       }
     }
   };
@@ -920,6 +1004,7 @@ export default function CandidateApplicationForm({
                     name="issuingAuthority"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.issuingAuthority}
                   />
                 )}
                 {show("issueDate") && (
@@ -929,6 +1014,7 @@ export default function CandidateApplicationForm({
                     type="date"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.issueDate}
                   />
                 )}
                 {show("expiryDate") && (
@@ -938,6 +1024,7 @@ export default function CandidateApplicationForm({
                     type="date"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.expiryDate}
                   />
                 )}
                 {show("passportAvailable") && (
@@ -1013,6 +1100,7 @@ export default function CandidateApplicationForm({
                     formData={formData}
                     onChange={handleChange}
                     className="md:col-span-2"
+                    error={formErrors.ukStayDuration}
                   />
                 )}
                 {show("contactNumber2") && (
@@ -1053,6 +1141,7 @@ export default function CandidateApplicationForm({
                     type="date"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.endDate}
                   />
                 )}
               </div>
@@ -1079,6 +1168,7 @@ export default function CandidateApplicationForm({
                     formData={formData}
                     onChange={handleChange}
                     className="md:col-span-2"
+                    error={formErrors.parentRelation}
                   />
                 )}
                 {show("parentDob") && (
@@ -1406,6 +1496,7 @@ export default function CandidateApplicationForm({
                     placeholder="BRP permit number"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.brpNumber}
                   />
                 )}
                 {show("visaEndDate") && (
@@ -1415,6 +1506,7 @@ export default function CandidateApplicationForm({
                     type="date"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.visaEndDate}
                   />
                 )}
                 {show("niNumber") && (
@@ -1542,16 +1634,28 @@ export default function CandidateApplicationForm({
 
             <div className="flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="flex flex-col gap-2 sm:flex-row">
-                {variant === "candidate" && (
+                {variant === "candidate" || typeof onAdminSaveDraft === "function" ? (
                   <button
                     type="button"
                     onClick={handleSaveDraft}
-                    disabled={isSubmitting || applicationLoading}
+                    disabled={
+                      variant === "candidate"
+                        ? isSubmitting || applicationLoading
+                        : adminDraftSaving ||
+                          isSubmitting ||
+                          adminSubmitBusy
+                    }
                     className="rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition-colors hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {applicationLoading ? "Saving…" : "Save draft"}
+                    {variant === "candidate"
+                      ? applicationLoading
+                        ? "Saving…"
+                        : "Save draft"
+                      : adminDraftSaving
+                        ? "Saving…"
+                        : "Save draft"}
                   </button>
-                )}
+                ) : null}
                 <button
                   type="button"
                   onClick={handleCancel}
@@ -1584,10 +1688,15 @@ export default function CandidateApplicationForm({
                     key="submit-btn"
                     type="button"
                     onClick={handleSubmit}
-                    disabled={isSubmitting || applicationLoading}
+                    disabled={
+                      isSubmitting ||
+                      applicationLoading ||
+                      (variant === "admin" &&
+                        (adminDraftSaving || adminSubmitBusy))
+                    }
                     className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition-colors hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {isSubmitting && (
+                    {((variant === "admin" && adminSubmitBusy) || isSubmitting) ? (
                       <svg
                         className="h-4 w-4 animate-spin"
                         xmlns="http://www.w3.org/2000/svg"
@@ -1608,12 +1717,14 @@ export default function CandidateApplicationForm({
                           d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
                         />
                       </svg>
-                    )}
-                    {isSubmitting
-                      ? "Submitting…"
-                      : variant === "admin"
-                        ? "Save client"
-                        : "Submit application"}
+                    ) : null}
+                    {variant === "admin" && adminSubmitBusy
+                      ? "Saving…"
+                      : isSubmitting
+                        ? "Submitting…"
+                        : variant === "admin"
+                          ? "Save client"
+                          : "Submit application"}
                   </button>
                 )}
               </div>

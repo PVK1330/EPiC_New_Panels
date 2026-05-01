@@ -31,11 +31,34 @@ export const bulkImportCandidates = (file) => {
 export const exportCandidates = (params = {}) =>
   api.get(`/api/admin/candidates/export`, { params, responseType: 'blob' });
 
+export const updateAdminCandidateApplication = (id, data) =>
+  api.put(`/api/admin/candidates/${id}/application`, data);
+
+export const exportCandidateApplicationsExcel = (params = {}) =>
+  api.get(`/api/admin/candidates/applications/export`, {
+    params,
+    responseType: "blob",
+  });
+
+export const importCandidateApplicationsExcel = (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.post(`/api/admin/candidates/applications/import`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};
+
 // ── Candidate-facing application routes (/api/candidate/application) ────────
 
 /** Fetch the currently logged-in candidate's saved application */
 export const getMyApplication = () =>
   api.get('/api/candidate/application');
+
+export const getCandidateApplicationFieldSettings = () =>
+  api.get('/api/candidate/application/field-settings');
+
+export const getCandidateApplicationCustomFields = () =>
+  api.get('/api/candidate/application/custom-fields');
 
 /** Submit the completed application (creates or overwrites, status → submitted) */
 export const submitApplication = (data) =>
@@ -47,4 +70,4 @@ export const saveApplicationDraft = (data) =>
 
 /** Unlock a submitted application (admin / caseworker only) */
 export const unlockApplication = (candidateId) =>
-  api.patch(`/api/candidate-application/${candidateId}/unlock`);
+  api.patch(`/api/candidate/application/${candidateId}/unlock`);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   FiEdit2,
   FiTrash2,
@@ -18,16 +18,12 @@ import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 import useCandidate from "../../hooks/useCandidate";
+import useAdmin from "../../hooks/useAdmin";
 import { useToast } from "../../context/ToastContext";
 import CandidateApplicationForm from "../../components/CandidateApplicationForm/CandidateApplicationForm";
 import {
   APPLICATION_FIELD_LABELS,
   getInitialApplicationFormData,
-  loadFieldVisibilityFromStorage,
-  saveFieldVisibilityToStorage,
-  loadCustomFieldDefinitionsFromStorage,
-  saveCustomFieldDefinitionsToStorage,
-  createCustomFieldDefinition,
   CUSTOM_FIELD_TYPE_OPTIONS,
 } from "../../components/CandidateApplicationForm/initialFormState";
 import {
@@ -37,15 +33,18 @@ import {
 } from "../../components/CandidateApplicationForm/applicationFormMapping";
 import {
   createCandidate,
-  updateCandidate,
   toggleCandidateStatus,
   deleteCandidate,
-  bulkImportCandidates,
-  exportCandidates,
   getCandidateById,
+  updateAdminCandidateApplication,
+  exportCandidateApplicationsExcel,
+  importCandidateApplicationsExcel,
 } from "../../services/candidateApi";
 
 const PASSWORD_MIN = 6;
+
+/** Session draft for Add client application wizard (partial saves before account creation). */
+const ADMIN_CREATE_APPLICATION_DRAFT_KEY = "elitepic_admin_create_application_draft";
 
 const ROLE_CHIPS = {
   candidate: "bg-blue-100 text-blue-700",
@@ -190,6 +189,16 @@ function formatDate(date) {
 export default function AdminCandidates() {
   const { showToast } = useToast();
   const { candidates, pagination, loading, fetchCandidates } = useCandidate();
+  const {
+    applicationFieldSettings,
+    applicationCustomFields,
+    applicationFieldsLoading,
+    fetchApplicationFieldSettings,
+    toggleBuiltinFieldVisibilityById,
+    fetchApplicationCustomFields,
+    addApplicationCustomField,
+    removeApplicationCustomField,
+  } = useAdmin();
 
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -205,11 +214,30 @@ export default function AdminCandidates() {
   const [errors, setErrors] = useState({});
   const [detailTab, setDetailTab] = useState("overview");
   const [applicationForm, setApplicationForm] = useState(getInitialApplicationFormData);
-  const [fieldVisibility, setFieldVisibility] = useState(loadFieldVisibilityFromStorage);
-  const [customFieldDefinitions, setCustomFieldDefinitions] = useState(
-    loadCustomFieldDefinitionsFromStorage
-  );
   const [fieldPanelOpen, setFieldPanelOpen] = useState(false);
+  const [newCustomLabel, setNewCustomLabel] = useState("");
+  const [newCustomType, setNewCustomType] = useState("text");
+
+  const visibilityForCandidateForm = useMemo(() => {
+    const vis = {};
+    for (const row of applicationFieldSettings) {
+      vis[row.field_key] = row.is_visible !== false;
+    }
+    for (const key of Object.keys(APPLICATION_FIELD_LABELS)) {
+      if (vis[key] === undefined) vis[key] = true;
+    }
+    return vis;
+  }, [applicationFieldSettings]);
+
+  const customDefsForForm = useMemo(
+    () =>
+      applicationCustomFields.map((cf) => ({
+        id: cf.field_id,
+        label: cf.label,
+        type: cf.field_type,
+      })),
+    [applicationCustomFields],
+  );
 
   const [saving, setSaving] = useState(false);
   const [toggleId, setToggleId] = useState(null);
@@ -223,8 +251,10 @@ export default function AdminCandidates() {
     return () => window.clearTimeout(t);
   }, [searchInput]);
 
-  useEffect(() => { saveFieldVisibilityToStorage(fieldVisibility); }, [fieldVisibility]);
-  useEffect(() => { saveCustomFieldDefinitionsToStorage(customFieldDefinitions); }, [customFieldDefinitions]);
+  useEffect(() => {
+    fetchApplicationFieldSettings();
+    fetchApplicationCustomFields();
+  }, [fetchApplicationFieldSettings, fetchApplicationCustomFields]);
 
   useEffect(() => {
     setPage(1);
@@ -266,17 +296,39 @@ export default function AdminCandidates() {
     payParam,
   ]);
 
-  const toggleFieldVisibility = (key) =>
-    setFieldVisibility((prev) => ({ ...prev, [key]: prev[key] === false }));
+  const handleBuiltinToggle = async (row, checked) => {
+    const r = await toggleBuiltinFieldVisibilityById(row.id, checked);
+    if (!r.ok) {
+      showToast({ message: getApiError(r.error), variant: "danger" });
+    }
+  };
 
-  const addCustomFieldRow = () =>
-    setCustomFieldDefinitions((prev) => [...prev, createCustomFieldDefinition()]);
+  const handleAddCustomField = async () => {
+    if (!newCustomLabel.trim()) {
+      showToast({ message: "Enter a question label", variant: "danger" });
+      return;
+    }
+    const r = await addApplicationCustomField({
+      label: newCustomLabel.trim(),
+      field_type: newCustomType,
+    });
+    if (r.ok) {
+      setNewCustomLabel("");
+      setNewCustomType("text");
+      showToast({ message: "Custom field added", variant: "success" });
+    } else {
+      showToast({ message: getApiError(r.error), variant: "danger" });
+    }
+  };
 
-  const updateCustomFieldRow = (id, patch) =>
-    setCustomFieldDefinitions((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
-
-  const removeCustomFieldRow = (id) =>
-    setCustomFieldDefinitions((prev) => prev.filter((d) => d.id !== id));
+  const handleRemoveCustomField = async (id) => {
+    const r = await removeApplicationCustomField(id);
+    if (r.ok) {
+      showToast({ message: "Field removed", variant: "success" });
+    } else {
+      showToast({ message: getApiError(r.error), variant: "danger" });
+    }
+  };
 
   const closeModal = () => {
     setModal({ type: null, data: null });
@@ -287,7 +339,19 @@ export default function AdminCandidates() {
   };
 
   const openCreate = () => {
-    setApplicationForm(getInitialApplicationFormData());
+    let initial = getInitialApplicationFormData();
+    try {
+      const raw = sessionStorage.getItem(ADMIN_CREATE_APPLICATION_DRAFT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          initial = { ...initial, ...parsed };
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    setApplicationForm(initial);
     setErrors({});
     setModal({ type: "create", data: null });
   };
@@ -390,19 +454,7 @@ export default function AdminCandidates() {
     return errs;
   };
 
-  const validateApplication = (payload) => {
-    const errs = [];
-    if (!payload.firstName?.toString().trim()) errs.push("First name is required");
-    if (!payload.lastName?.toString().trim()) errs.push("Last name is required");
-    if (!payload.email?.toString().trim()) errs.push("Email is required");
-    else if (!/\S+@\S+\.\S+/.test(payload.email)) errs.push("Enter a valid email");
-    return errs;
-  };
-
   const handleApplicationSave = (payload) => {
-    const errs = validateApplication(payload);
-    if (errs.length) { alert(errs.join("\n")); return; }
-
     const rowExtras = modal.type === "edit" && modal.data
       ? {
           caseStatus:      modal.data.cases?.[0]?.status || "On Track",
@@ -410,8 +462,8 @@ export default function AdminCandidates() {
         }
       : {};
 
-    const payloadClean = pruneCustomResponsesToDefinitions(payload, customFieldDefinitions);
-    const mapped  = mapApplicationToCandidateRow(payloadClean, { 
+    const payloadClean = pruneCustomResponsesToDefinitions(payload, customDefsForForm);
+    const mapped = mapApplicationToCandidateRow(payloadClean, { 
       ...rowExtras, 
       isNewApplication: modal.type === "create" 
     });
@@ -456,26 +508,40 @@ export default function AdminCandidates() {
     if (modal.type === "create") {
       handleCreateWithApplication(backendData);
     } else if (modal.type === "edit" && modal.data) {
-      handleUpdateWithApplication(modal.data.id, backendData);
+      handleUpdateApplicationOnly(modal.data.id, mapped, payloadClean);
     }
   };
 
-  const handleCreateWithApplication = async (data) => {
-    setSaving(true);
-    try {
-      // Debug: Log the data being sent
-      console.log("Sending to API:", data);
-      
-      const res = await createCandidate(data);
-      showToast({
-        message: res.data?.message || "Candidate created successfully",
-        variant: "success",
+  /** Persist partial progress without closing the modal (edit → API; create → sessionStorage). */
+  const handleApplicationSaveDraft = async (payload) => {
+    const payloadClean = pruneCustomResponsesToDefinitions(payload, customDefsForForm);
+
+    if (modal.type === "edit" && modal.data) {
+      const rowExtras = {
+        caseStatus: modal.data.cases?.[0]?.status || "On Track",
+        paymentStatus: modal.data.cases?.[0]?.paymentStatus || "Outstanding",
+      };
+      const mapped = mapApplicationToCandidateRow(payloadClean, {
+        ...rowExtras,
+        isNewApplication: false,
       });
-      closeModal();
-      if (page !== 1) setPage(1);
-      else {
+      try {
+        const body = {
+          ...mapped.applicationData,
+          first_name: mapped.userData.first_name,
+          last_name: mapped.userData.last_name,
+          email: mapped.userData.email,
+          country_code: mapped.userData.country_code,
+          mobile: mapped.userData.mobile,
+          caseworkerId: payloadClean.caseworkerId,
+        };
+        const res = await updateAdminCandidateApplication(modal.data.id, body);
+        showToast({
+          message: res.data?.message || "Draft saved",
+          variant: "success",
+        });
         const r = await fetchCandidates(
-          1,
+          page,
           limit,
           debouncedSearch.trim(),
           statusParam,
@@ -485,22 +551,48 @@ export default function AdminCandidates() {
         if (!r.ok) {
           showToast({ message: getApiError(r.error), variant: "danger" });
         }
+      } catch (e) {
+        console.error("Save draft error:", e);
+        showToast({ message: getApiError(e), variant: "danger" });
       }
-    } catch (e) {
-      console.error("API Error:", e);
-      showToast({ message: getApiError(e), variant: "danger" });
-    } finally {
-      setSaving(false);
+      return;
+    }
+
+    if (modal.type === "create") {
+      try {
+        sessionStorage.setItem(
+          ADMIN_CREATE_APPLICATION_DRAFT_KEY,
+          JSON.stringify(payload),
+        );
+        showToast({
+          message:
+            "Draft saved on this device. It reloads when you open Add client.",
+          variant: "success",
+        });
+      } catch (e) {
+        showToast({
+          message: getApiError(e) || "Could not save draft",
+          variant: "danger",
+        });
+      }
     }
   };
 
-  const handleUpdateWithApplication = async (id, data) => {
+  const handleUpdateApplicationOnly = async (candidateId, mapped, payloadClean) => {
     setSaving(true);
     try {
-      console.log("Updating candidate with data:", data);
-      const res = await updateCandidate(id, data);
+      const body = {
+        ...mapped.applicationData,
+        first_name: mapped.userData.first_name,
+        last_name: mapped.userData.last_name,
+        email: mapped.userData.email,
+        country_code: mapped.userData.country_code,
+        mobile: mapped.userData.mobile,
+        caseworkerId: payloadClean.caseworkerId,
+      };
+      const res = await updateAdminCandidateApplication(candidateId, body);
       showToast({
-        message: res.data?.message || "Candidate updated successfully",
+        message: res.data?.message || "Application updated successfully",
         variant: "success",
       });
       closeModal();
@@ -516,7 +608,42 @@ export default function AdminCandidates() {
         showToast({ message: getApiError(r.error), variant: "danger" });
       }
     } catch (e) {
-      console.error("Update error:", e);
+      console.error("Update application error:", e);
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateWithApplication = async (data) => {
+    setSaving(true);
+    try {
+      const res = await createCandidate(data);
+      showToast({
+        message: res.data?.message || "Candidate created successfully",
+        variant: "success",
+      });
+      closeModal();
+      try {
+        sessionStorage.removeItem(ADMIN_CREATE_APPLICATION_DRAFT_KEY);
+      } catch {
+        /* ignore */
+      }
+      if (page !== 1) setPage(1);
+      else {
+        const r = await fetchCandidates(
+          1,
+          limit,
+          debouncedSearch.trim(),
+          statusParam,
+          visaParam,
+          payParam,
+        );
+        if (!r.ok) {
+          showToast({ message: getApiError(r.error), variant: "danger" });
+        }
+      }
+    } catch (e) {
       showToast({ message: getApiError(e), variant: "danger" });
     } finally {
       setSaving(false);
@@ -583,31 +710,32 @@ export default function AdminCandidates() {
 
   const handleBulkImport = async () => {
     if (!importFile) {
-      showToast({ message: "Please select a CSV file", variant: "danger" });
+      showToast({ message: "Please select an Excel file", variant: "danger" });
       return;
     }
 
     setImporting(true);
     try {
-      const res = await bulkImportCandidates(importFile);
-      const { successful, failed, total_processed, results } = res.data?.data || {};
-      
+      const res = await importCandidateApplicationsExcel(importFile);
+      const { successful, failed, total_processed } = res.data?.data || {};
+
       showToast({
-        message: `Bulk import completed: ${successful} successful, ${failed} failed out of ${total_processed}`,
-        variant: successful > 0 ? "success" : "danger",
+        message: `Import finished: ${successful ?? 0} successful, ${failed ?? 0} failed (${total_processed ?? 0} rows)`,
+        variant: (successful ?? 0) > 0 ? "success" : "danger",
       });
-      
-      // Refresh the list
+
       const r = await fetchCandidates(
         page,
         limit,
         debouncedSearch.trim(),
         statusParam,
+        visaParam,
+        payParam,
       );
       if (!r.ok) {
         showToast({ message: getApiError(r.error), variant: "danger" });
       }
-      
+
       setImportFile(null);
       closeModal();
     } catch (e) {
@@ -617,48 +745,30 @@ export default function AdminCandidates() {
     }
   };
 
-  const downloadSampleCSV = () => {
-    const csvContent = [
-      'first_name,last_name,email,country_code,mobile',
-      'John,Doe,john.doe@example.com,+1,5551234567',
-      'Jane,Smith,jane.smith@example.com,+1,5559876543',
-      'Michael,Johnson,michael.j@example.com,+44,2079460123',
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'sample_candidates_import.csv';
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-  };
-
   const handleExport = async () => {
     setExporting(true);
     try {
-      const res = await exportCandidates({
+      const res = await exportCandidateApplicationsExcel({
         search: debouncedSearch.trim(),
         status: statusParam,
-        visaType: visaParam,
-        paymentStatus: payParam,
       });
-      
-      // Create a blob from the response
-      const blob = new Blob([res.data], { type: 'text/csv' });
+
+      const blob = new Blob([res.data], {
+        type:
+          res.headers["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `candidates_export_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `candidate-applications_${new Date().toISOString().split("T")[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       showToast({
-        message: "Candidates exported successfully",
+        message: "Applications exported successfully",
         variant: "success",
       });
     } catch (e) {
@@ -729,82 +839,98 @@ export default function AdminCandidates() {
         </div>
       </div>
 
-      {/* Field Visibility Panel */}
       {fieldPanelOpen && (
         <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm space-y-6">
+          {applicationFieldsLoading && (
+            <div className="flex items-center gap-2 text-sm font-bold text-gray-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading field settings…
+            </div>
+          )}
           <div>
             <p className="text-sm font-bold text-gray-700 mb-3">
-              Choose which built-in application inputs are visible to candidates (and in the admin stepper). Preferences are saved in this browser.
+              Built-in fields — toggle visibility for candidates. Changes save immediately on the server.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[min(50vh,28rem)] overflow-y-auto pr-1">
-              {Object.entries(APPLICATION_FIELD_LABELS).map(([key, label]) => (
-                <label
-                  key={key}
-                  className="flex items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
-                >
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 accent-indigo-600 shrink-0"
-                    checked={fieldVisibility[key] !== false}
-                    onChange={() => toggleFieldVisibility(key)}
-                  />
-                  <span>{label}</span>
-                </label>
-              ))}
+              {[...applicationFieldSettings]
+                .sort((a, b) => (a.field_order ?? 0) - (b.field_order ?? 0))
+                .map((row) => (
+                  <label
+                    key={row.id ?? row.field_key}
+                    className="flex items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 accent-indigo-600 shrink-0"
+                      checked={row.is_visible !== false}
+                      onChange={(e) => handleBuiltinToggle(row, e.target.checked)}
+                      disabled={applicationFieldsLoading}
+                    />
+                    <span>{row.field_label}</span>
+                  </label>
+                ))}
             </div>
           </div>
 
           <div className="border-t border-gray-100 pt-5">
             <p className="text-sm font-bold text-gray-800 mb-1">Custom fields</p>
             <p className="text-xs text-gray-500 mb-3">
-              Add extra questions (short text, long text, date, or number). They appear under "Additional information" on the last step.
+              Extra questions on the last step of the application form.
             </p>
             <div className="space-y-2">
-              {customFieldDefinitions.map((def) => (
+              {applicationCustomFields.map((cf) => (
                 <div
-                  key={def.id}
-                  className="flex flex-col sm:flex-row sm:flex-wrap gap-2 items-stretch sm:items-end rounded-xl border border-gray-100 bg-gray-50/80 p-3"
+                  key={cf.id}
+                  className="flex flex-col sm:flex-row sm:flex-wrap gap-2 items-stretch sm:items-center rounded-xl border border-gray-100 bg-gray-50/80 p-3"
                 >
                   <div className="flex-1 min-w-[140px]">
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Question label</label>
-                    <input
-                      type="text"
-                      value={def.label}
-                      onChange={(e) => updateCustomFieldRow(def.id, { label: e.target.value })}
-                      placeholder="e.g. Previous UK employer name"
-                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                    />
-                  </div>
-                  <div className="w-full sm:w-40">
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Input type</label>
-                    <select
-                      value={def.type}
-                      onChange={(e) => updateCustomFieldRow(def.id, { type: e.target.value })}
-                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                    >
-                      {CUSTOM_FIELD_TYPE_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
+                    <p className="text-sm font-semibold text-gray-800">{cf.label}</p>
+                    <p className="text-[10px] font-bold uppercase text-gray-400 mt-0.5">{cf.field_type}</p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => removeCustomFieldRow(def.id)}
-                    className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-600 hover:bg-red-50"
+                    onClick={() => handleRemoveCustomField(cf.id)}
+                    disabled={applicationFieldsLoading}
+                    className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
                     Remove
                   </button>
                 </div>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={addCustomFieldRow}
-              className="mt-3 inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 px-4 py-2.5 text-sm font-black text-indigo-600 hover:bg-indigo-100"
-            >
-              <FiPlus size={16} />
-              Add another field
-            </button>
+            <div className="mt-4 flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
+              <div className="flex-1 min-w-[140px]">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Question label</label>
+                <input
+                  type="text"
+                  value={newCustomLabel}
+                  onChange={(e) => setNewCustomLabel(e.target.value)}
+                  placeholder="e.g. Previous UK employer name"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+              </div>
+              <div className="w-full sm:w-40">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Input type</label>
+                <select
+                  value={newCustomType}
+                  onChange={(e) => setNewCustomType(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                >
+                  {CUSTOM_FIELD_TYPE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddCustomField}
+                disabled={applicationFieldsLoading}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 px-4 py-2.5 text-sm font-black text-indigo-600 hover:bg-indigo-100 disabled:opacity-50"
+              >
+                <FiPlus size={16} />
+                Add field
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -966,12 +1092,15 @@ export default function AdminCandidates() {
             key={modal.type === "create" ? "create" : String(modal.data?.id)}
             variant="admin"
             embedded
-            fieldVisibility={fieldVisibility}
-            customFieldDefinitions={customFieldDefinitions}
+            adminShowAllBuiltinFields
+            fieldVisibility={visibilityForCandidateForm}
+            customFieldDefinitions={customDefsForForm}
             formData={applicationForm}
             setFormData={setApplicationForm}
             onAdminSubmit={handleApplicationSave}
+            onAdminSaveDraft={handleApplicationSaveDraft}
             onAdminCancel={closeModal}
+            adminSubmitBusy={saving}
           />
         )}
       </Modal>
@@ -1122,7 +1251,7 @@ export default function AdminCandidates() {
       <Modal
         open={modal.type === "import"}
         onClose={closeModal}
-        title="Bulk Import Candidates"
+        title="Import applications (Excel)"
         maxWidthClass="max-w-md"
         bodyClassName="px-5 py-5 sm:px-6"
         footer={
@@ -1142,36 +1271,22 @@ export default function AdminCandidates() {
                   Importing…
                 </>
               ) : (
-                "Import Candidates"
+                "Import"
               )}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-              <FiDownload size={18} className="text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-gray-900">Download Sample CSV</p>
-              <p className="text-xs text-gray-500 mt-0.5">Use this template for bulk import</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={downloadSampleCSV}
-              className="rounded-lg text-blue-600 hover:bg-blue-100"
-            >
-              Download
-            </Button>
-          </div>
-          
+          <p className="text-xs text-gray-600 leading-relaxed">
+            Export applications first to obtain the correct column headers. Rows are matched by email (and optionally User ID). New emails create candidates with a temporary password returned in the summary.
+          </p>
+
           <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-gray-300 transition-colors">
             <input
               type="file"
-              accept=".csv"
-              onChange={(e) => setImportFile(e.target.files[0])}
+              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              onChange={(e) => setImportFile(e.target.files?.[0] || null)}
               className="hidden"
               id="import-file-input"
             />
@@ -1184,10 +1299,10 @@ export default function AdminCandidates() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-700">
-                  {importFile ? importFile.name : "Click to upload CSV file"}
+                  {importFile ? importFile.name : "Click to upload Excel file"}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Maximum file size: 5MB
+                  .xlsx or .xls — max 5MB
                 </p>
               </div>
             </label>

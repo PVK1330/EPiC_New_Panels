@@ -19,3 +19,20 @@ export const deleteAdmin = (id) => api.delete(`/api/admin/${id}`);
 
 export const exportAdmins = (params = {}) =>
   api.get(`/api/admin/export`, { params, responseType: 'blob' });
+
+export const getApplicationFieldSettings = () =>
+  api.get(`/api/application-fields/settings`);
+
+export const toggleApplicationFieldVisibilityById = (id, is_visible) =>
+  api.patch(`/api/application-fields/settings/by-id/${id}/visibility`, {
+    is_visible,
+  });
+
+export const getApplicationCustomFields = () =>
+  api.get(`/api/application-fields/custom-fields`);
+
+export const createApplicationCustomField = (body) =>
+  api.post(`/api/application-fields/custom-fields`, body);
+
+export const deleteApplicationCustomField = (id) =>
+  api.delete(`/api/application-fields/custom-fields/${id}`);
