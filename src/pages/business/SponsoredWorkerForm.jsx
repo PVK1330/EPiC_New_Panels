@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -23,12 +23,14 @@ import {
 } from "lucide-react";
 import { addSponsoredWorker } from "../../services/sponsoredWorkerApi";
 import { useToast } from "../../context/ToastContext";
+import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
 
 const SponsoredWorkerForm = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [previousVisa, setPreviousVisa] = useState("no");
+  const [visaTypeOptions, setVisaTypeOptions] = useState([]);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -56,6 +58,18 @@ const SponsoredWorkerForm = () => {
     previousVisa: "no",
     notes: ""
   });
+
+  useEffect(() => {
+    const loadVisaTypes = async () => {
+      try {
+        const options = await fetchVisaTypeOptions();
+        setVisaTypeOptions(options);
+      } catch (error) {
+        console.error("Failed to load visa types:", error);
+      }
+    };
+    loadVisaTypes();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -414,9 +428,11 @@ const SponsoredWorkerForm = () => {
                   required
                 >
                   <option value="">Select Visa Type</option>
-                  <option value="Skilled Worker Visa">Skilled Worker Visa</option>
-                  <option value="Student Visa">Student Visa</option>
-                  <option value="Health Care Visa">Health Care Visa</option>
+                  {visaTypeOptions.map((visa) => (
+                    <option key={visa.id} value={visa.name}>
+                      {visa.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -537,4 +553,4 @@ const SponsoredWorkerForm = () => {
   );
 };
 
-export default SponsoredWorkerForm;
+export default SponsoredWorkerForm;

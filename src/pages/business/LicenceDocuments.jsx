@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -16,7 +15,7 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-import { getLicenceDocuments } from "../../services/licenceApi";
+import { uploadLicenceDocument, getLicenceDocuments, getMyLicenceApplications } from "../../services/licenceApi";
 import { useToast } from "../../context/ToastContext";
 import { API_BASE_URL } from "../../utils/constants";
 
@@ -28,9 +27,17 @@ const LicenceDocuments = () => {
   const [filterType, setFilterType] = useState("all");
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadAppId, setUploadAppId] = useState("");
+  const [uploadDocType, setUploadDocType] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [applications, setApplications] = useState([]);
 
   useEffect(() => {
     fetchDocuments();
+    getMyLicenceApplications()
+      .then((r) => setApplications(r.data?.data || []))
+      .catch(() => {});
   }, []);
 
   const fetchDocuments = async () => {
@@ -38,7 +45,13 @@ const LicenceDocuments = () => {
       setLoading(true);
       const res = await getLicenceDocuments();
       if (res.data.status === "success") {
-        setDocuments(res.data.data);
+        const rows = Array.isArray(res.data.data)
+          ? res.data.data.map((doc) => ({
+              ...doc,
+              uploadDate: doc.uploadDate || doc.upload_date || Date.now(),
+            }))
+          : [];
+        setDocuments(rows);
       }
     } catch (err) {
       showToast({ message: "Failed to fetch documents", variant: "danger" });
@@ -212,13 +225,14 @@ const LicenceDocuments = () => {
               <option value="pending">Pending Review</option>
             </select>
           </div>
-          <Link
-            to="/business/apply-licence"
+          <button
+            type="button"
+            onClick={() => setShowUploadModal(true)}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark"
           >
             <Upload size={16} />
             Upload Document
-          </Link>
+          </button>
         </div>
       </motion.div>
 
@@ -268,11 +282,16 @@ const LicenceDocuments = () => {
                       </td>
                       <td className="px-6 py-6">
                         <p className="text-xs font-black text-secondary">
-                          {new Date(doc.uploadDate).toLocaleDateString('en-GB', { 
-                            day: 'numeric', 
-                            month: 'short', 
-                            year: 'numeric' 
-                          })}
+                          {(() => {
+                            const d = new Date(doc.uploadDate);
+                            return Number.isNaN(d.getTime())
+                              ? "—"
+                              : d.toLocaleDateString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                });
+                          })()}
                         </p>
                       </td>
                       <td className="px-6 py-6">
@@ -355,31 +374,29 @@ const LicenceDocuments = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2">Document Name *</label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                  placeholder="Enter document name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2">Category *</label>
-                <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30">
-                  <option value="">Select category</option>
-                  <option value="company">Company Documents</option>
-                  <option value="financial">Financial Documents</option>
-                  <option value="hr">HR Documents</option>
-                  <option value="insurance">Insurance</option>
-                  <option value="other">Other</option>
+                <label className="block text-xs font-bold text-gray-700 mb-2">Application *</label>
+                <select
+                  value={uploadAppId}
+                  onChange={(e) => setUploadAppId(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary mb-1"
+                >
+                  <option value="">Select Application *</option>
+                  {applications.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      LIC-{a.id} — {a.companyName} ({a.status})
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2">Expiry Date</label>
+                <label className="block text-xs font-bold text-gray-700 mb-2">Document type (optional)</label>
                 <input
-                  type="date"
+                  type="text"
+                  value={uploadDocType}
+                  onChange={(e) => setUploadDocType(e.target.value)}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                  placeholder="e.g. Evidence, Contract"
                 />
               </div>
 
@@ -392,7 +409,13 @@ const LicenceDocuments = () => {
                   <p className="text-xs font-bold text-gray-500 mb-4">
                     Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
                   </p>
-                  <input type="file" className="hidden" id="file-upload-modal" />
+                  <input
+                    type="file"
+                    className="hidden"
+                    id="file-upload-modal"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  />
                   <label
                     htmlFor="file-upload-modal"
                     className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-black text-white transition hover:bg-primary-dark cursor-pointer"
@@ -400,21 +423,61 @@ const LicenceDocuments = () => {
                     <Upload size={16} />
                     Select File
                   </label>
+                  {uploadFile ? (
+                    <p className="text-xs font-bold text-gray-600 mt-3">{uploadFile.name}</p>
+                  ) : null}
                 </div>
               </div>
 
               <div className="flex gap-3 pt-4">
                 <button
-                  onClick={() => setShowUploadModal(false)}
+                  type="button"
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setUploadFile(null);
+                    setUploadAppId("");
+                    setUploadDocType("");
+                  }}
                   className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-6 py-3 transition"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => setShowUploadModal(false)}
-                  className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition"
+                  type="button"
+                  disabled={uploading}
+                  onClick={async () => {
+                    if (!uploadFile || !uploadAppId) {
+                      showToast({
+                        message: "Select file and application",
+                        variant: "danger",
+                      });
+                      return;
+                    }
+                    try {
+                      setUploading(true);
+                      await uploadLicenceDocument({
+                        files: [uploadFile],
+                        applicationId: uploadAppId,
+                        documentType: uploadDocType,
+                      });
+                      showToast({ message: "Document uploaded", variant: "success" });
+                      setShowUploadModal(false);
+                      setUploadFile(null);
+                      setUploadAppId("");
+                      setUploadDocType("");
+                      fetchDocuments();
+                    } catch (err) {
+                      showToast({
+                        message: err.response?.data?.message || "Upload failed",
+                        variant: "danger",
+                      });
+                    } finally {
+                      setUploading(false);
+                    }
+                  }}
+                  className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition disabled:opacity-60"
                 >
-                  Upload
+                  {uploading ? "Uploading…" : "Upload"}
                 </button>
               </div>
             </div>

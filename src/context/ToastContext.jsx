@@ -9,10 +9,12 @@ import {
 const ToastContext = createContext(null);
 
 function getVariantClasses(variant) {
-  if (variant === "danger")
+  if (variant === "danger" || variant === "error")
     return "bg-red-600 text-white border border-red-700 shadow-red-900/20";
   if (variant === "warning")
     return "bg-amber-500 text-white border border-amber-600 shadow-amber-900/20";
+  if (variant === "info")
+    return "bg-blue-600 text-white border border-blue-700 shadow-blue-900/20";
   return "bg-emerald-600 text-white border border-emerald-700 shadow-emerald-900/20";
 }
 
@@ -24,7 +26,23 @@ export function ToastProvider({ children }) {
   }, []);
 
   const showToast = useCallback(
-    ({ message, variant = "success" }) => {
+    (payload, legacyVariant = "success") => {
+      let message = "";
+      let variant = "success";
+
+      // Backward compatible signatures:
+      // 1) showToast({ message, variant })
+      // 2) showToast("message", "error")
+      if (typeof payload === "string") {
+        message = payload;
+        variant = legacyVariant;
+      } else {
+        message = payload?.message ?? "";
+        variant = payload?.variant ?? "success";
+      }
+
+      if (!message) return;
+
       const id =
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()

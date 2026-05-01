@@ -63,7 +63,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
           label: "Compliance Dashboard",
           icon: BarChart3,
         },
-        { to: "/business/compliacedocument", label: "Compliance Documents", icon: FileText },
+        { to: "/business/compliance-documents", label: "Compliance Documents", icon: FileText },
         { to: "/business/reporting-obligations", label: "Reporting Obligations", icon: UserCheck },
       ],
     },

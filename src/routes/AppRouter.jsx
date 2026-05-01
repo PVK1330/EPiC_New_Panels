@@ -2,8 +2,6 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import ProtectedRoute from './ProtectedRoute';
-import RoleRoute from './RoleRoute';
-
 import AdminLayout from '../layouts/AdminLayout';
 import CandidateLayout from '../layouts/CandidateLayout';
 import CaseworkerLayout from '../layouts/CaseworkerLayout';
@@ -87,6 +85,7 @@ import Invoices from '../pages/business/Invoices';
 import Reports from '../pages/business/Reports';
 import ApplyLicence from '../pages/business/ApplyLicence';
 import LicenceDocuments from '../pages/business/LicenceDocuments';
+import NotFoundPage from '../pages/NotFoundPage';
 
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/auth/RegisterPage'));
@@ -250,15 +249,16 @@ const AppRouter = () => {
           <Route path="profile" element={<BussinessProfile />} />
           <Route path="personnel" element={<KeyPersonnel />} />
           <Route path="licence" element={<LicenceStatus />} />
-          <Route path="Businessregistration" element={<BusinessRegistration />} />
-          <Route path="compliacedocument" element={<Compliacedocument />} />
+          <Route path="business-registration" element={<BusinessRegistration />} />
+          <Route path="compliance-documents" element={<Compliacedocument />} />
           <Route path="compliance" element={<BusinessCompliance />} />
           <Route path="cosallocation" element={<CosAllocationpage />} />
           <Route path="account" element={<BusinessAccount />} />
           <Route path="sponsored-workers" element={<SponsoredWorkerForm />} />
           <Route path="cosregistrationform" element={<CosRegistrationForm />} />
-          <Route path="Sponsorworkerdetails" element={<SponsorWorkerDetails />} />
-          <Route path="licenceprocess" element={<LicenceProcess />} />
+          <Route path="worker-details" element={<SponsorWorkerDetails />} />
+          <Route path="licence-process" element={<LicenceProcess />} />
+          <Route path="admin-licence-view" element={<AdminLicenceApplications />} />
           <Route path="documents" element={<BusinessDocuments />} />
           <Route path="messages" element={<BusinessMessages />} />
           <Route path="notifications" element={<BusinessNotifications />} />
@@ -296,7 +296,7 @@ const AppRouter = () => {
           <Route path="dashboard" element={<div className="text-center"><h1 className="text-2xl font-bold">Agent Dashboard</h1><p className="text-gray-500">Portal coming soon</p></div>} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
   );

@@ -25,11 +25,12 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../utils/constants";
-import { 
-  getMyLicenceApplications, 
-  submitLicenceApplication, 
+import {
+  getMyLicenceApplications,
+  getLicenceSummary,
+  submitLicenceApplication,
   updateLicenceApplication,
-  deleteMyLicenceApplication
+  deleteMyLicenceApplication,
 } from "../../services/licenceApi";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
@@ -66,24 +67,50 @@ const LicenceStatus = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await getMyLicenceApplications();
-      const data = res.data.data;
+      const [appsRes, summaryRes] = await Promise.all([
+        getMyLicenceApplications(),
+        getLicenceSummary().catch(() => null),
+      ]);
+      const data = appsRes.data.data;
       setApplications(data);
 
-      // Derive stats from data
-      const latestApproved = data.find(app => app.status === 'Approved');
-      const latestPending = data.find(app => app.status === 'Pending' || app.status === 'Under Review');
-      
-      setSummaryStats({
-        licenceId: latestApproved ? `LIC-2026-${latestApproved.id}` : (latestPending ? `REQ-${latestPending.id}` : "None"),
-        status: latestApproved ? "Active" : (latestPending ? "Pending Review" : "Inactive"),
-        allocation: {
-          total: latestApproved ? parseInt(latestApproved.cosAllocation) || 5 : 0,
-          used: latestApproved ? Math.floor((parseInt(latestApproved.cosAllocation) || 5) * 0.4) : 0,
-          available: latestApproved ? Math.ceil((parseInt(latestApproved.cosAllocation) || 5) * 0.6) : 0
-        },
-        renewalDue: latestApproved?.proposedStartDate ? new Date(latestApproved.proposedStartDate).toLocaleDateString() : "N/A"
-      });
+      if (summaryRes?.data?.data) {
+        const s = summaryRes.data.data;
+        const latestPending = data.find(
+          (app) => app.status === "Pending" || app.status === "Under Review"
+        );
+        setSummaryStats({
+          licenceId: s.licenceId || (latestPending ? `REQ-${latestPending.id}` : "None"),
+          status: typeof s.status === "string" ? s.status : "Inactive",
+          allocation: {
+            total: s.cos?.total ?? s.cosAllocation?.total ?? 0,
+            used: s.cos?.used ?? s.cosAllocation?.used ?? 0,
+            available: s.cos?.available ?? s.cosAllocation?.available ?? 0,
+          },
+          renewalDue: s.expiryDate ? new Date(s.expiryDate).toLocaleDateString("en-GB") : "N/A",
+        });
+      } else {
+        const latestApproved = data.find((app) => app.status === "Approved");
+        const latestPending = data.find(
+          (app) => app.status === "Pending" || app.status === "Under Review"
+        );
+        setSummaryStats({
+          licenceId: latestApproved
+            ? `LIC-2026-${latestApproved.id}`
+            : latestPending
+              ? `REQ-${latestPending.id}`
+              : "None",
+          status: latestApproved ? "Active" : latestPending ? "Pending Review" : "Inactive",
+          allocation: {
+            total: latestApproved ? parseInt(latestApproved.cosAllocation, 10) || 0 : 0,
+            used: 0,
+            available: latestApproved ? parseInt(latestApproved.cosAllocation, 10) || 0 : 0,
+          },
+          renewalDue: latestApproved?.proposedStartDate
+            ? new Date(latestApproved.proposedStartDate).toLocaleDateString("en-GB")
+            : "N/A",
+        });
+      }
     } catch (err) {
       showToast({ message: "Failed to fetch applications", variant: "danger" });
     } finally {
@@ -774,4 +801,4 @@ const LicenceStatus = () => {
   );
 };
 
-export default LicenceStatus;
+export default LicenceStatus;

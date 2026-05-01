@@ -27,3 +27,13 @@ export const updateKeyPersonnel = (data) => api.put("/api/business/account/key-p
  * @param {Object} data - { current_password, new_password }
  */
 export const changeBusinessPassword = (data) => api.post("/api/business/account/change-password", data);
+
+export const getBusinessDashboard = () =>
+  api.get("/api/business/dashboard");
+
+export const getBusinessCases = (params = {}) =>
+  api.get("/api/business/cases", { params });
+
+export const getBusinessPayments = () =>
+  api.get("/api/business/payments");
+

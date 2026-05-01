@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getReportingObligations } from "../../services/licenceApi";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -22,52 +23,34 @@ const ReportingObligations = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
 
-  const [events, setEvents] = useState([
-    {
-      id: 1,
-      worker: "Ahmed Khan",
-      eventType: "Role Change",
-      eventDate: "2024-03-15",
-      reportedDate: "2024-03-16",
-      deadline: "2024-03-25",
-      status: "Reported",
-      daysRemaining: 9,
-      risk: "low",
-    },
-    {
-      id: 2,
-      worker: "Priya Sharma",
-      eventType: "Salary Change",
-      eventDate: "2024-03-10",
-      reportedDate: "-",
-      deadline: "2024-03-20",
-      status: "Pending",
-      daysRemaining: 4,
-      risk: "medium",
-    },
-    {
-      id: 3,
-      worker: "John Smith",
-      eventType: "Absence >10 days",
-      eventDate: "2024-03-01",
-      reportedDate: "-",
-      deadline: "2024-03-11",
-      status: "Overdue",
-      daysRemaining: -4,
-      risk: "high",
-    },
-    {
-      id: 4,
-      worker: "Sarah Johnson",
-      eventType: "Termination",
-      eventDate: "2024-02-28",
-      reportedDate: "2024-03-01",
-      deadline: "2024-03-09",
-      status: "Reported",
-      daysRemaining: 0,
-      risk: "low",
-    },
-  ]);
+  const [events, setEvents] = useState([]);
+  const [workers, setWorkers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    workerId: "",
+    eventType: "",
+    eventDate: "",
+    description: "",
+  });
+
+  useEffect(() => {
+    fetchEvents();
+    // Fetch workers for the dropdown
+    import("../../services/sponsoredWorkerApi").then(m => {
+      m.getSponsoredWorkers().then(res => setWorkers(res.data?.data || []));
+    });
+  }, []);
+
+  const fetchEvents = () => {
+    setLoading(true);
+    getReportingObligations()
+      .then((res) => {
+        setEvents(res.data?.data || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -131,6 +114,28 @@ const ReportingObligations = () => {
 
   const handleAddEvent = () => {
     setShowModal(true);
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.workerId || !formData.eventType || !formData.eventDate) {
+      return alert("Please fill in all required fields.");
+    }
+
+    try {
+      setIsSubmitting(true);
+      const { submitReportingObligation } = await import("../../services/licenceApi");
+      const res = await submitReportingObligation(formData);
+      if (res.data.status === "success") {
+        setShowModal(false);
+        setFormData({ workerId: "", eventType: "", eventDate: "", description: "" });
+        fetchEvents();
+      }
+    } catch (err) {
+      alert("Failed to submit report. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -328,33 +333,48 @@ const ReportingObligations = () => {
               </button>
             </div>
 
-            <div className="space-y-4">
+            <form onSubmit={handleFormSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">Worker *</label>
-                <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30">
+                <select 
+                  required
+                  value={formData.workerId}
+                  onChange={(e) => setFormData({...formData, workerId: e.target.value})}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                >
                   <option value="">Select worker</option>
-                  <option value="1">Ahmed Khan</option>
-                  <option value="2">Priya Sharma</option>
-                  <option value="3">John Smith</option>
-                  <option value="4">Sarah Johnson</option>
+                  {workers.map(w => (
+                    <option key={w.candidateId} value={w.candidateId}>
+                      {w.candidate?.first_name} {w.candidate?.last_name} ({w.caseId})
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">Event Type *</label>
-                <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30">
+                <select 
+                  required
+                  value={formData.eventType}
+                  onChange={(e) => setFormData({...formData, eventType: e.target.value})}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                >
                   <option value="">Select event type</option>
-                  <option value="role">Role Change</option>
-                  <option value="salary">Salary Change</option>
-                  <option value="absence">Absence &gt;10 days</option>
-                  <option value="termination">Termination</option>
+                  <option value="Role Change">Role Change</option>
+                  <option value="Salary Change">Salary Change</option>
+                  <option value="Absence >10 days">Absence &gt;10 days</option>
+                  <option value="Termination">Termination</option>
+                  <option value="Address Change">Address Change</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">Event Date *</label>
                 <input
+                  required
                   type="date"
+                  value={formData.eventDate}
+                  onChange={(e) => setFormData({...formData, eventDate: e.target.value})}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                 />
               </div>
@@ -363,6 +383,8 @@ const ReportingObligations = () => {
                 <label className="block text-xs font-bold text-gray-700 mb-2">Description</label>
                 <textarea
                   rows={3}
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
                   placeholder="Provide details about the event..."
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                 />
@@ -370,19 +392,22 @@ const ReportingObligations = () => {
 
               <div className="flex gap-3 pt-4">
                 <button
+                  type="button"
+                  disabled={isSubmitting}
                   onClick={() => setShowModal(false)}
-                  className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-6 py-3 transition"
+                  className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-6 py-3 transition disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition"
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition disabled:opacity-50"
                 >
-                  Submit Report
+                  {isSubmitting ? "Submitting..." : "Submit Report"}
                 </button>
               </div>
-            </div>
+            </form>
           </motion.div>
         </motion.div>
       )}
