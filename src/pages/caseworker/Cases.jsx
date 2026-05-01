@@ -275,59 +275,6 @@ const CASES_DATA = [
   },
 ];
 
-/** Caseworkers pool for reassignment */
-const CASEWORKERS = [
-  {
-    id: "cw-01",
-    name: "Sarah Mitchell",
-    role: "Senior Caseworker",
-    avatar: "SM",
-    load: 8,
-  },
-  {
-    id: "cw-02",
-    name: "James Holloway",
-    role: "Caseworker",
-    avatar: "JH",
-    load: 12,
-  },
-  {
-    id: "cw-03",
-    name: "Yvonne Clarke",
-    role: "Senior Caseworker",
-    avatar: "YC",
-    load: 5,
-  },
-  {
-    id: "cw-04",
-    name: "Tariq Hussain",
-    role: "Caseworker",
-    avatar: "TH",
-    load: 14,
-  },
-  {
-    id: "cw-05",
-    name: "Beatrice Osei",
-    role: "Lead Caseworker",
-    avatar: "BO",
-    load: 3,
-  },
-  {
-    id: "cw-06",
-    name: "Nikolai Volkov",
-    role: "Caseworker",
-    avatar: "NV",
-    load: 10,
-  },
-  {
-    id: "cw-07",
-    name: "Preethi Anand",
-    role: "Senior Caseworker",
-    avatar: "PA",
-    load: 7,
-  },
-];
-
 const REASSIGN_REASONS = [
   "Caseworker unavailable / on leave",
   "Conflict of interest",
@@ -418,7 +365,9 @@ const caseToEditForm = (c) => ({
   petitionTypeId: c.petitionTypeId || c.petitionType?.id || "",
   lcaNumber: c.lcaNumber || c.additional?.lcaNumber || "",
   receiptNumber: c.receiptNumber || c.additional?.receiptNumber || "",
-  assignedcaseworkerId: c.assignedcaseworkerId || "",
+  assignedCaseworkerIds: c.assignedcaseworkerId 
+    ? (Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId : [c.assignedcaseworkerId])
+    : [],
   salaryOffered: c.salaryOffered || c.financial?.salaryOffered || "",
   totalAmount: c.totalAmount || c.financial?.totalFee || "",
   paidAmount: c.paidAmount || c.financial?.totalPaid || "",
@@ -430,7 +379,7 @@ const caseToEditForm = (c) => ({
 });
 
 const emptyReassignForm = () => ({
-  caseworkerId: "",
+  caseworkerIds: [],
   reasonPreset: "",
   reasonCustom: "",
 });
@@ -503,6 +452,12 @@ function badgeVisa(v) {
   return isPurple
     ? "bg-violet-50 text-violet-800 border-violet-200"
     : "bg-sky-50 text-sky-800 border-sky-200";
+}
+
+function loadColor(load) {
+  if (load >= 10) return "bg-red-50 text-red-700 border-red-200";
+  if (load >= 5) return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-green-50 text-green-700 border-green-200";
 }
 
 const priorityLabel = (p) => {
@@ -845,7 +800,7 @@ const Cases = () => {
         targetSubmissionDate: editCaseForm.target,
         lcaNumber: editCaseForm.lcaNumber,
         receiptNumber: editCaseForm.receiptNumber,
-        assignedcaseworkerId: editCaseForm.assignedcaseworkerId,
+        assignedcaseworkerId: editCaseForm.assignedCaseworkerIds,
         salaryOffered: editCaseForm.salaryOffered,
         totalAmount: editCaseForm.totalAmount,
         paidAmount: editCaseForm.paidAmount,
@@ -1078,8 +1033,8 @@ const Cases = () => {
 
   const submitReassign = useCallback(() => {
     const err = {};
-    if (!reassignForm.caseworkerId)
-      err.caseworkerId = "Please select a caseworker";
+    if (!reassignForm.caseworkerIds || reassignForm.caseworkerIds.length === 0)
+      err.caseworkerIds = "Please select at least one caseworker";
     if (!reassignForm.reasonPreset) err.reasonPreset = "Please select a reason";
     if (
       reassignForm.reasonPreset === "Other" &&
@@ -1089,7 +1044,7 @@ const Cases = () => {
     setReassignErrors(err);
     if (Object.keys(err).length) return;
 
-    const cw = CASEWORKERS.find((w) => w.id === reassignForm.caseworkerId);
+    const caseworkers = reassignForm.caseworkerIds.map(id => caseworkers.find((w) => w.id === id)).filter(Boolean);
     const reason =
       reassignForm.reasonPreset === "Other"
         ? reassignForm.reasonCustom.trim()
@@ -1098,14 +1053,13 @@ const Cases = () => {
     setReassignments((prev) => ({
       ...prev,
       [reassignCaseId]: {
-        caseworker: cw.name,
-        caseworkerRole: cw.role,
+        caseworkers: caseworkers.map(cw => ({ name: `${cw.first_name} ${cw.last_name}`, role: cw.role || "Caseworker" })),
         reason,
         at: new Date(),
       },
     }));
     closeReassign();
-  }, [reassignCaseId, reassignForm, closeReassign]);
+  }, [reassignCaseId, reassignForm, closeReassign, caseworkers]);
   // ───────────────────────────────────────────────────────────────────────────
 
   // Filtering is now handled by the API, so we use cases directly
@@ -2026,69 +1980,340 @@ const Cases = () => {
         maxWidthClass="max-w-4xl"
         bodyClassName="p-4 sm:p-6"
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* <p className="text-sm font-bold text-gray-600">
-            Update case details. Changes apply locally in this demo until the API is connected.
-          </p> */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Candidate name
-            </label>
-            <input
-              type="text"
-              value={editCaseForm.candidate}
-              onChange={(e) =>
-                setEditCaseForm((f) => ({ ...f, candidate: e.target.value }))
-              }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                editCaseErrors.candidate ? "border-red-300" : "border-gray-200"
-              }`}
-            />
-            {editCaseErrors.candidate && (
-              <p className="text-xs font-bold text-red-600 mt-1">
-                {editCaseErrors.candidate}
-              </p>
-            )}
+            <h4 className="text-sm font-black text-secondary mb-4">
+              Candidate Information
+            </h4>
+            <div className="space-y-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Candidate <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={editCaseForm.candidateId}
+                    onChange={(e) => {
+                      const selectedCandidate = candidates.find(
+                        (c) => c.id === parseInt(e.target.value),
+                      );
+                      setEditCaseForm((prev) => ({
+                        ...prev,
+                        candidateId: e.target.value,
+                        candidate: selectedCandidate
+                          ? `${selectedCandidate.first_name} ${selectedCandidate.last_name}`
+                          : "",
+                      }));
+                    }}
+                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary border-gray-300"
+                  >
+                    <option value="">Select candidate</option>
+                    {candidates.map((c, idx) => (
+                      <option key={`${c.id}-${idx}`} value={c.id}>
+                        {c.first_name} {c.last_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Candidate Name
+                </label>
+                <input
+                  type="text"
+                  value={editCaseForm.candidate}
+                  disabled
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-bold outline-none cursor-not-allowed text-gray-600"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Nationality
+                </label>
+                <input
+                  type="text"
+                  value={editCaseForm.nationality}
+                  onChange={(e) =>
+                    setEditCaseForm((f) => ({ ...f, nationality: e.target.value }))
+                  }
+                  placeholder="e.g. Indian"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Job Title
+                </label>
+                <input
+                  type="text"
+                  value={editCaseForm.jobTitle}
+                  onChange={(e) =>
+                    setEditCaseForm((f) => ({ ...f, jobTitle: e.target.value }))
+                  }
+                  placeholder="e.g. Software Engineer"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Department
+                </label>
+                <select
+                  value={editCaseForm.department}
+                  onChange={(e) =>
+                    setEditCaseForm((f) => ({ ...f, department: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                >
+                  <option value="">Select department</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
+
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Business / sponsor name
-            </label>
-            <input
-              type="text"
-              value={editCaseForm.business}
-              onChange={(e) =>
-                setEditCaseForm((f) => ({ ...f, business: e.target.value }))
-              }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                editCaseErrors.business ? "border-red-300" : "border-gray-200"
-              }`}
-            />
-            {editCaseErrors.business && (
-              <p className="text-xs font-bold text-red-600 mt-1">
-                {editCaseErrors.business}
-              </p>
-            )}
+            <h4 className="text-sm font-black text-secondary mb-4">
+              Business Information
+            </h4>
+            <div className="space-y-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Sponsor <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={editCaseForm.sponsorId}
+                    onChange={(e) => {
+                      const selectedSponsor = sponsors.find(
+                        (s) => s.id === parseInt(e.target.value),
+                      );
+                      setEditCaseForm((prev) => ({
+                        ...prev,
+                        sponsorId: e.target.value,
+                        businessName:
+                          selectedSponsor?.sponsorProfile?.companyName ||
+                          selectedSponsor?.sponsorProfile?.tradingName ||
+                          `${selectedSponsor.first_name} ${selectedSponsor.last_name}`,
+                      }));
+                    }}
+                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary border-gray-300"
+                  >
+                    <option value="">Select sponsor</option>
+                    {sponsors.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.first_name} {s.last_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Business Name
+                </label>
+                <input
+                  type="text"
+                  value={editCaseForm.businessName}
+                  disabled
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-bold outline-none cursor-not-allowed text-gray-600"
+                />
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Visa type
+        </div>
+
+        <div>
+          <h4 className="text-sm font-black text-secondary mb-4">
+            Case Details
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">
+                Visa Type <span className="text-red-500">*</span>
               </label>
               <select
-                value={editCaseForm.visa}
+                value={editCaseForm.visaTypeId}
                 onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, visa: e.target.value }))
+                  setEditCaseForm((f) => ({ ...f, visaTypeId: e.target.value }))
                 }
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary border-gray-300"
               >
-                {NEW_CASE_VISA.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
+                <option value="">Select visa type</option>
+                {visaTypes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
                   </option>
                 ))}
               </select>
             </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">
+                Petition Type
+              </label>
+              <select
+                value={editCaseForm.petitionTypeId}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, petitionTypeId: e.target.value }))
+                }
+                className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+              >
+                <option value="">Select type</option>
+                {petitionTypes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">
+                Priority Level <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={editCaseForm.priority}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, priority: e.target.value }))
+                }
+                className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+              >
+                {priorityLevels.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Target Submission Date
+              </label>
+              <input
+                type="date"
+                value={editCaseForm.targetSubmissionDate}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, targetSubmissionDate: e.target.value }))
+                }
+                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.targetSubmissionDate ? "border-red-300" : "border-gray-200"}`}
+              />
+              {editCaseErrors.targetSubmissionDate && (
+                <p className="text-xs font-bold text-red-600 mt-1">
+                  {editCaseErrors.targetSubmissionDate}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                LCA Number
+              </label>
+              <input
+                type="text"
+                value={editCaseForm.lcaNumber}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, lcaNumber: e.target.value }))
+                }
+                placeholder="e.g. I-200-24001"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Receipt Number
+              </label>
+              <input
+                type="text"
+                value={editCaseForm.receiptNumber}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, receiptNumber: e.target.value }))
+                }
+                placeholder="e.g. EAC240..."
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-black text-secondary mb-4">
+            Caseworker Assignment
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CaseworkerMultiSelect
+              options={
+                caseworkers.length > 0
+                  ? caseworkers.map((c) => ({
+                      id: c.id,
+                      name: `${c.first_name} ${c.last_name}`,
+                    }))
+                  : []
+              }
+              value={editCaseForm.assignedCaseworkerIds || []}
+              onChange={(ids) => setEditCaseForm((f) => ({ ...f, assignedCaseworkerIds: ids }))}
+              error={editCaseErrors.assignedCaseworkers}
+            />
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-black text-secondary mb-4">
+            Financial Information
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Salary Offered ($)
+              </label>
+              <input
+                type="number"
+                value={editCaseForm.salaryOffered}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, salaryOffered: e.target.value }))
+                }
+                placeholder="Annual salary"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Total Amount ($)
+              </label>
+              <input
+                type="number"
+                value={editCaseForm.totalAmount}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, totalAmount: e.target.value }))
+                }
+                placeholder="Total fee"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Paid Amount ($)
+              </label>
+              <input
+                type="number"
+                value={editCaseForm.paidAmount}
+                onChange={(e) =>
+                  setEditCaseForm((f) => ({ ...f, paidAmount: e.target.value }))
+                }
+                placeholder="Amount paid so far"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-black text-secondary mb-4">
+            Additional Information
+          </h4>
+          <div className="space-y-4">
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
                 Status
@@ -2107,81 +2332,38 @@ const Cases = () => {
                 ))}
               </select>
             </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Target submission date
+                Internal Notes
               </label>
-              <input
-                type="date"
-                value={editCaseForm.target}
+              <textarea
+                value={editCaseForm.notes}
                 onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, target: e.target.value }))
+                  setEditCaseForm((f) => ({ ...f, notes: e.target.value }))
                 }
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                  editCaseErrors.target ? "border-red-300" : "border-gray-200"
-                }`}
+                rows={3}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary resize-y"
+                placeholder="Anything the team should know…"
               />
-              {editCaseErrors.target && (
-                <p className="text-xs font-bold text-red-600 mt-1">
-                  {editCaseErrors.target}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Priority
-              </label>
-              <select
-                value={editCaseForm.priority}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, priority: e.target.value }))
-                }
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              >
-                {["low", "medium", "high", "urgent"].map((p) => (
-                  <option key={p} value={p}>
-                    {priorityLabel(p)}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Payment
-            </label>
-            <select
-              value={editCaseForm.payment}
-              onChange={(e) =>
-                setEditCaseForm((f) => ({ ...f, payment: e.target.value }))
-              }
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-            >
-              {CASE_PAYMENT_EDIT.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={closeCaseEdit}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={submitCaseEdit}
-              className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
-            >
-              Save changes
-            </button>
-          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={closeCaseEdit}
+            className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={submitCaseEdit}
+            className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
+          >
+            Save changes
+          </button>
         </div>
       </Modal>
 
@@ -2218,69 +2400,19 @@ const Cases = () => {
             </div>
 
             {/* Caseworker list */}
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
-                Select new caseworker
-              </label>
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {CASEWORKERS.map((cw) => {
-                  const selected = reassignForm.caseworkerId === cw.id;
-                  return (
-                    <button
-                      key={cw.id}
-                      type="button"
-                      onClick={() =>
-                        setReassignForm((f) => ({ ...f, caseworkerId: cw.id }))
-                      }
-                      className={`w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${
-                        selected
-                          ? "border-violet-400 bg-violet-50 ring-2 ring-violet-200"
-                          : "border-gray-200 bg-white hover:border-violet-200 hover:bg-violet-50/40"
-                      }`}
-                    >
-                      {/* Avatar */}
-                      <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
-                          selected
-                            ? "bg-violet-600 text-white"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {cw.avatar}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={`text-sm font-black ${selected ? "text-violet-900" : "text-gray-900"}`}
-                        >
-                          {cw.name}
-                        </p>
-                        <p className="text-[11px] font-bold text-gray-500">
-                          {cw.role}
-                        </p>
-                      </div>
-                      {/* Current load badge */}
-                      <span
-                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black ${loadColor(cw.load)}`}
-                      >
-                        {cw.load} active
-                      </span>
-                      {selected && (
-                        <Check
-                          size={16}
-                          className="shrink-0 text-violet-600"
-                          strokeWidth={3}
-                        />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              {reassignErrors.caseworkerId && (
-                <p className="text-xs font-bold text-red-600 mt-1.5">
-                  {reassignErrors.caseworkerId}
-                </p>
-              )}
-            </div>
+            <CaseworkerMultiSelect
+              options={
+                caseworkers.length > 0
+                  ? caseworkers.map((c) => ({
+                      id: c.id,
+                      name: `${c.first_name} ${c.last_name}`,
+                    }))
+                  : []
+              }
+              value={reassignForm.caseworkerIds}
+              onChange={(ids) => setReassignForm((f) => ({ ...f, caseworkerIds: ids }))}
+              error={reassignErrors.caseworkerIds}
+            />
 
             {/* Reason preset */}
             <div>
@@ -2401,7 +2533,7 @@ const Cases = () => {
                   {reassignments[detailCase.caseId] && (
                     <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[11px] font-black text-violet-700">
                       <ArrowRightLeft size={11} />
-                      Reassigned → {reassignments[detailCase.caseId].caseworker}
+                      Reassigned → {reassignments[detailCase.caseId].caseworkers.map(c => c.name).join(" · ")}
                     </span>
                   )}
                 </div>
@@ -2885,271 +3017,6 @@ const Cases = () => {
         </div>
       </Modal>
 
-      {/* ─────────────────────── EDIT CASE MODAL ─────────────────────── */}
-      <Modal
-        open={!!editCaseId}
-        onClose={closeCaseEdit}
-        title={editCaseId ? `Edit case ${editCaseId}` : ""}
-        titleId="case-edit-modal-title"
-        maxWidthClass="max-w-lg"
-        bodyClassName="p-4 sm:p-6"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Candidate name
-            </label>
-            <input
-              type="text"
-              value={editCaseForm.candidate}
-              onChange={(e) =>
-                setEditCaseForm((f) => ({ ...f, candidate: e.target.value }))
-              }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                editCaseErrors.candidate ? "border-red-300" : "border-gray-200"
-              }`}
-            />
-            {editCaseErrors.candidate && (
-              <p className="text-xs font-bold text-red-600 mt-1">
-                {editCaseErrors.candidate}
-              </p>
-            )}
-          </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Business / sponsor name
-            </label>
-            <input
-              type="text"
-              value={editCaseForm.business}
-              onChange={(e) =>
-                setEditCaseForm((f) => ({ ...f, business: e.target.value }))
-              }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                editCaseErrors.business ? "border-red-300" : "border-gray-200"
-              }`}
-            />
-            {editCaseErrors.business && (
-              <p className="text-xs font-bold text-red-600 mt-1">
-                {editCaseErrors.business}
-              </p>
-            )}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Visa type
-              </label>
-              <select
-                value={editCaseForm.visaTypeId}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, visaTypeId: e.target.value }))
-                }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              >
-                <option value="">Select visa type</option>
-                {visaTypes.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Priority
-              </label>
-              <select
-                value={editCaseForm.priority}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, priority: e.target.value }))
-                }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              >
-                {["low", "medium", "high", "urgent"].map((p) => (
-                  <option key={p} value={p}>
-                    {priorityLabel(p)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Target submission date
-            </label>
-            <input
-              type="date"
-              value={editCaseForm.target}
-              onChange={(e) =>
-                setEditCaseForm((f) => ({ ...f, target: e.target.value }))
-              }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                editCaseErrors.target ? "border-red-300" : "border-gray-200"
-              }`}
-            />
-            {editCaseErrors.target && (
-              <p className="text-xs font-bold text-red-600 mt-1">
-                {editCaseErrors.target}
-              </p>
-            )}
-          </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Internal notes{" "}
-              <span className="font-bold normal-case text-gray-400">
-                (optional)
-              </span>
-            </label>
-            <textarea
-              value={editCaseForm.notes}
-              onChange={(e) =>
-                setEditCaseForm((f) => ({ ...f, notes: e.target.value }))
-              }
-              rows={3}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary resize-y"
-              placeholder="Anything the team should know…"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={closeCaseEdit}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={submitCaseEdit}
-              className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
-            >
-              Save changes
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* ─────────────────────── REASSIGN MODAL ─────────────────────── */}
-      <Modal
-        open={!!reassignCaseId}
-        onClose={() => setReassignCaseId(null)}
-        title="Reassign case"
-        titleId="reassign-modal-title"
-        maxWidthClass="max-w-lg"
-        bodyClassName="p-4 sm:p-6"
-      >
-        <div className="space-y-4">
-          <p className="text-sm font-bold text-gray-600">
-            Reassign {reassignCase?.caseId} to another caseworker. This action
-            will be logged.
-          </p>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              New caseworker
-            </label>
-            <select
-              value={reassignForm.caseworkerId}
-              onChange={(e) =>
-                setReassignForm((f) => ({ ...f, caseworkerId: e.target.value }))
-              }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${
-                reassignErrors.caseworkerId
-                  ? "border-red-300"
-                  : "border-gray-200"
-              }`}
-            >
-              <option value="">Select caseworker</option>
-              {caseworkers.map((cw) => (
-                <option key={cw.id} value={cw.id}>
-                  {cw.first_name} {cw.last_name} — Caseworker
-                </option>
-              ))}
-            </select>
-            {reassignErrors.caseworkerId && (
-              <p className="text-xs font-bold text-red-600 mt-1">
-                {reassignErrors.caseworkerId}
-              </p>
-            )}
-          </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Reason for reassignment
-            </label>
-            <select
-              value={reassignForm.reasonPreset}
-              onChange={(e) =>
-                setReassignForm((f) => ({
-                  ...f,
-                  reasonPreset: e.target.value,
-                  reasonCustom: "",
-                }))
-              }
-              className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 bg-white ${
-                reassignErrors.reasonPreset
-                  ? "border-red-300"
-                  : "border-gray-200"
-              }`}
-            >
-              <option value="">Select a reason…</option>
-              {REASSIGN_REASONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-            {reassignErrors.reasonPreset && (
-              <p className="text-xs font-bold text-red-600 mt-1">
-                {reassignErrors.reasonPreset}
-              </p>
-            )}
-          </div>
-          {reassignForm.reasonPreset === "Other" && (
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Custom reason
-              </label>
-              <textarea
-                value={reassignForm.reasonCustom}
-                onChange={(e) =>
-                  setReassignForm((f) => ({
-                    ...f,
-                    reasonCustom: e.target.value,
-                  }))
-                }
-                rows={2}
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y ${
-                  reassignErrors.reasonCustom
-                    ? "border-red-300"
-                    : "border-gray-200"
-                }`}
-                placeholder="Explain the reason…"
-              />
-              {reassignErrors.reasonCustom && (
-                <p className="text-xs font-bold text-red-600 mt-1">
-                  {reassignErrors.reasonCustom}
-                </p>
-              )}
-            </div>
-          )}
-          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={() => setReassignCaseId(null)}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={submitReassign}
-              className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-md shadow-violet-600/20 hover:bg-violet-700"
-            >
-              Reassign
-            </button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };
@@ -3334,12 +3201,6 @@ function DocumentsTab({ caseId, candidateId }) {
       default:
         return "bg-gray-50 text-gray-800 border-gray-200";
     }
-  };
-
-  const loadColor = (load) => {
-    if (load >= 10) return "bg-red-50 text-red-700 border-red-200";
-    if (load >= 5) return "bg-amber-50 text-amber-700 border-amber-200";
-    return "bg-green-50 text-green-700 border-green-200";
   };
 
   const openUploadModal = useCallback((item = null) => {
