@@ -36,6 +36,7 @@ import CaseworkerClients from "../pages/caseworker/CaseworkerClients";
 import CaseworkerPerformance from "../pages/caseworker/CaseworkerPerformance";
 import CaseworkerMessages from "../pages/caseworker/CaseworkerMessages";
 import CaseworkerFinance from "../pages/caseworker/CaseworkerFinance";
+import CaseworkerLicenceApplications from "../pages/caseworker/CaseworkerLicenceApplications";
 
 // Admin Pages
 import AdminDashboard from "../pages/admin/AdminDashboard";
@@ -57,6 +58,7 @@ import AdminEscalations from "../pages/admin/AdminEscalations";
 import AdminWorkload from "../pages/admin/AdminWorkload";
 import AdminDocuments from "../pages/admin/AdminDocuments";
 import AdminMessages from "../pages/admin/AdminMessages";
+import AdminLicenceApplications from "../pages/admin/AdminLicenceApplications";
 import BusinessLayout from "../layouts/BusinessLayout";
 
 // Business Pages
@@ -82,7 +84,6 @@ import BusinessSettings from "../pages/business/BusinessSettings";
 import ReportingObligations from "../pages/business/ReportingObligations";
 import EmployeeRecords from "../pages/business/EmployeeRecords";
 import Invoices from "../pages/business/Invoices";
-import MyCandidates from "../pages/business/MyCandidates";
 import Reports from "../pages/business/Reports";
 import ApplyLicence from "../pages/business/ApplyLicence";
 import LicenceDocuments from "../pages/business/LicenceDocuments";
@@ -177,6 +178,7 @@ const AppRoutes = () => {
         <Route path="workload" element={<AdminWorkload />} />
         <Route path="documents" element={<AdminDocuments />} />
         <Route path="messages" element={<AdminMessages />} />
+        <Route path="licence-requests" element={<AdminLicenceApplications />} />
       </Route>
 
       {/* Candidate Routes */}
@@ -290,6 +292,7 @@ const AppRoutes = () => {
           element={<CaseworkerFinance />}
         />
         <Route path="performance" element={<CaseworkerPerformance />} />
+        <Route path="licence-reviews" element={<CaseworkerLicenceApplications />} />
       </Route>
 
       {/* Business Routes */}
@@ -324,7 +327,6 @@ const AppRoutes = () => {
         <Route path="reporting-obligations" element={<ReportingObligations />} />
         <Route path="employee-records" element={<EmployeeRecords />} />
         <Route path="invoices" element={<Invoices />} />
-        <Route path="my-candidates" element={<MyCandidates />} />
         <Route path="reports" element={<Reports />} />
         <Route path="apply-licence" element={<ApplyLicence />} />
         <Route path="licence-documents" element={<LicenceDocuments />} />

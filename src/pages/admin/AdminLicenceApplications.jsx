@@ -41,6 +41,7 @@ const AdminLicenceApplications = () => {
   const [loading, setLoading] = useState(true);
   const [applications, setApplications] = useState([]);
   const [filter, setFilter] = useState("All");
+  const [typeFilter, setTypeFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedApp, setSelectedApp] = useState(null);
   const [caseworkers, setCaseworkers] = useState([]);
@@ -157,9 +158,17 @@ const AdminLicenceApplications = () => {
 
   const filteredApps = applications.filter(app => {
     const matchesFilter = filter === "All" || app.status === filter;
+    
+    let matchesType = true;
+    if (typeFilter === "CoS Requests") {
+      matchesType = String(app.reason || "").startsWith("CoS Request:");
+    } else if (typeFilter !== "All") {
+      matchesType = app.type === typeFilter;
+    }
+
     const matchesSearch = app.companyName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           app.contactName.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
+    return matchesFilter && matchesType && matchesSearch;
   });
 
   const getStatusColor = (status) => {
@@ -227,6 +236,23 @@ const AdminLicenceApplications = () => {
             </button>
           ))}
         </div>
+        
+        <div className="flex items-center gap-2 border-l border-gray-100 pl-4">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">Category:</p>
+          {["All", "Initial", "Renewal", "CoS Requests"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setTypeFilter(t)}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all whitespace-nowrap ${
+                typeFilter === t 
+                ? "bg-secondary text-white" 
+                : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Applications List */}
@@ -257,9 +283,13 @@ const AdminLicenceApplications = () => {
                       <p className="text-sm font-black text-secondary">{app.companyName}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className={`text-[10px] font-black px-2 py-0.5 rounded ${app.type === 'Renewal' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
-                          {app.type}
+                          {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type}
                         </span>
-                        <span className="text-[10px] font-bold text-gray-400">CoS: {app.cosAllocation}</span>
+                        {app.cosAllocation && (
+                          <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded">
+                            Alloc: {app.cosAllocation}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>

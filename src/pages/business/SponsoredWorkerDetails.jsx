@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { getSponsoredWorkerDetails, updateSponsoredWorker, updateWorkerStatus } from "../../services/sponsoredWorkerApi";
 import { toast } from "react-hot-toast";
+import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
 
 const SponsoredWorkerDetails = () => {
   const [activeTab, setActiveTab] = useState("details");
@@ -28,6 +29,7 @@ const SponsoredWorkerDetails = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusToUpdate, setStatusToUpdate] = useState("");
   const [statusNote, setStatusNote] = useState("");
+  const [visaTypeOptions, setVisaTypeOptions] = useState([]);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -40,6 +42,18 @@ const SponsoredWorkerDetails = () => {
       fetchWorkerDetails();
     }
   }, [candidateId]);
+
+  useEffect(() => {
+    const loadVisaTypes = async () => {
+      try {
+        const options = await fetchVisaTypeOptions();
+        setVisaTypeOptions(options);
+      } catch (error) {
+        console.error("Failed to load visa types:", error);
+      }
+    };
+    loadVisaTypes();
+  }, []);
 
   const fetchWorkerDetails = async () => {
     try {
@@ -85,6 +99,17 @@ const SponsoredWorkerDetails = () => {
       console.error("Error updating worker:", error);
       toast.error("Failed to update worker");
     }
+  };
+
+  const handleDownload = (path, name) => {
+    if (!path) return;
+    const link = document.createElement("a");
+    link.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${path}`;
+    link.setAttribute("download", name || "document");
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleStatusUpdate = async () => {
@@ -431,11 +456,18 @@ const SponsoredWorkerDetails = () => {
                 <div>
                   <label className={labelStyle}>Visa Type</label>
                   {isEditing ? (
-                    <input 
+                    <select
                       className={editInputStyle} 
                       value={editForm.visaType} 
                       onChange={(e) => setEditForm({...editForm, visaType: e.target.value})}
-                    />
+                    >
+                      <option value="">Select Visa Type</option>
+                      {visaTypeOptions.map((visa) => (
+                        <option key={visa.id} value={visa.name}>
+                          {visa.name}
+                        </option>
+                      ))}
+                    </select>
                   ) : (
                     <div className={inputStyle}>{application?.visaType || "N/A"}</div>
                   )}
@@ -500,15 +532,49 @@ const SponsoredWorkerDetails = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-20"
+            className="space-y-6"
           >
-            <div className="h-20 w-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-6">
-              <FileText size={40} className="text-gray-300" />
-            </div>
-            <p className="text-lg font-black text-secondary">Document Repository</p>
-            <p className="text-sm font-bold text-gray-500 max-w-sm mx-auto mt-2">
-              All documents uploaded by the worker will appear here for verification.
-            </p>
+            {workerData.documentFiles && workerData.documentFiles.length > 0 ? (
+              <div className="grid md:grid-cols-2 gap-4">
+                {workerData.documentFiles.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 bg-gray-50 hover:bg-gray-100 transition shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <FileText size={20} />
+                      </div>
+                      <div className="max-w-[200px]">
+                        <p className="text-sm font-black text-secondary truncate">{doc.name}</p>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase">{doc.type}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${
+                        doc.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 
+                        doc.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {doc.status}
+                      </span>
+                      <button 
+                        onClick={() => handleDownload(doc.path, doc.name)}
+                        className="p-2 bg-white rounded-lg border border-gray-200 text-gray-500 hover:text-primary transition shadow-sm"
+                      >
+                        <Save size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20">
+                <div className="h-20 w-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-6">
+                  <FileText size={40} className="text-gray-300" />
+                </div>
+                <p className="text-lg font-black text-secondary">No documents found</p>
+                <p className="text-sm font-bold text-gray-500 max-w-sm mx-auto mt-2">
+                  The worker hasn't uploaded any documents yet.
+                </p>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -521,20 +587,43 @@ const SponsoredWorkerDetails = () => {
           >
              <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50/50 p-6">
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                  <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${
+                    Object.values(workerData.documents).every(s => s === 'complete') ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
+                  }`}>
                     <ShieldCheck size={28} />
                   </div>
                   <div>
                     <p className="text-lg font-black text-secondary">Right to Work Verification</p>
-                    <p className="text-sm font-bold text-gray-500 italic">Automated Compliance Check</p>
+                    <p className="text-sm font-bold text-gray-500 italic">Automated Compliance Status</p>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <span className="inline-flex items-center px-4 py-1.5 text-xs font-black rounded-full bg-emerald-100 text-emerald-700 uppercase tracking-wider">
-                    Compliant
+                  <span className={`inline-flex items-center px-4 py-1.5 text-xs font-black rounded-full uppercase tracking-wider ${
+                    Object.values(workerData.documents).every(s => s === 'complete') ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {Object.values(workerData.documents).every(s => s === 'complete') ? 'Compliant' : 'Review Required'}
                   </span>
-                  <p className="text-[10px] font-bold text-gray-400">Verified on {new Date().toLocaleDateString()}</p>
+                  <p className="text-[10px] font-bold text-gray-400">Last Checked: {new Date().toLocaleDateString()}</p>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {Object.entries(workerData.documents).map(([doc, status]) => (
+                  <div key={doc} className={`p-4 rounded-2xl border ${
+                    status === 'complete' ? 'border-emerald-100 bg-emerald-50/30' : 
+                    status === 'partial' ? 'border-amber-100 bg-amber-50/30' : 'border-red-100 bg-red-50/30'
+                  }`}>
+                    <p className="text-[10px] font-black text-gray-500 uppercase mb-2">{doc.replace(/([A-Z])/g, ' $1')}</p>
+                    <div className="flex items-center gap-1">
+                      {status === 'complete' ? <Check size={14} className="text-emerald-600" /> : <AlertCircle size={14} className={status === 'partial' ? 'text-amber-600' : 'text-red-600'} />}
+                      <span className={`text-[10px] font-black capitalize ${
+                        status === 'complete' ? 'text-emerald-700' : status === 'partial' ? 'text-amber-700' : 'text-red-700'
+                      }`}>
+                        {status === 'risk' ? 'Missing' : status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
           </motion.div>
         )}

@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { User, FileText, Hash, Calendar, Save } from "lucide-react";
+import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
 
 const CosRegistrationForm = () => {
+  const [visaTypeOptions, setVisaTypeOptions] = useState([]);
   const [formData, setFormData] = useState({
     visaType: "",
     applicantName: "",
@@ -12,6 +14,18 @@ const CosRegistrationForm = () => {
     expiryDate: "",
     allocated: "",
   });
+
+  useEffect(() => {
+    const loadVisaTypes = async () => {
+      try {
+        const options = await fetchVisaTypeOptions();
+        setVisaTypeOptions(options);
+      } catch (error) {
+        console.error("Failed to load visa types:", error);
+      }
+    };
+    loadVisaTypes();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -52,9 +66,11 @@ const CosRegistrationForm = () => {
               required
             >
               <option value="">Select Visa Type</option>
-              <option>Skilled Worker Visa</option>
-              <option>Student Visa</option>
-              <option>Health Care Visa</option>
+              {visaTypeOptions.map((visa) => (
+                <option key={visa.id} value={visa.name}>
+                  {visa.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>

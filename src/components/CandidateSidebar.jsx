@@ -12,6 +12,8 @@ function resolveAccountNavMatch(pathname, search) {
   const t = p.get("tab");
   if (t === "feedback") return "feedback";
   if (t === "profile") return "profile";
+  if (t === "report") return "report";
+  if (t === "downloads") return "downloads-pack";
   if (p.get("section") === "final") return "downloads-final";
   return "downloads-pack";
 }

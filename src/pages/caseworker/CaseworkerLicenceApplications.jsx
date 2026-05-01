@@ -156,9 +156,13 @@ const CaseworkerLicenceApplications = () => {
                       <p className="text-sm font-black text-secondary">{app.companyName}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className={`text-[10px] font-black px-2 py-0.5 rounded ${app.type === 'Renewal' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
-                          {app.type}
+                          {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type}
                         </span>
-                        <span className="text-[10px] font-bold text-gray-400">CoS: {app.cosAllocation}</span>
+                        {app.cosAllocation && (
+                          <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded">
+                            Alloc: {app.cosAllocation}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -264,6 +268,14 @@ const CaseworkerLicenceApplications = () => {
                         </p>
                       </div>
                     </div>
+                    {selectedApp.reason && (
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Justification / Reason</label>
+                        <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
+                          <p className="text-xs font-bold text-amber-900 leading-relaxed italic">"{selectedApp.reason}"</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
