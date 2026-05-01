@@ -13,10 +13,7 @@ import {
 } from "./applicationFormMapping";
 import useCandidate from "../../hooks/useCandidate";
 import { getCaseworkers } from "../../services/caseWorker";
-import {
-  getCandidateApplicationFieldSettings,
-  getCandidateApplicationCustomFields,
-} from "../../services/candidateApi";
+import { getVisaTypesDropdown } from "../../services/settingsService";
 
 const inputClass =
   "mt-1 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow";
@@ -160,16 +157,18 @@ function FormProgress({ step, labels }) {
             className="flex min-w-[4.5rem] flex-1 flex-col items-center sm:min-w-0"
           >
             <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm ${idx <= step
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm ${
+                idx <= step
                   ? "bg-secondary text-white shadow-md shadow-secondary/20"
                   : "bg-gray-200 text-gray-600"
-                }`}
+              }`}
             >
               {idx + 1}
             </div>
             <span
-              className={`mt-1.5 text-center text-xs font-bold leading-snug tracking-normal sm:text-sm ${idx <= step ? "text-secondary" : "text-gray-400"
-                }`}
+              className={`mt-1.5 text-center text-xs font-bold leading-snug tracking-normal sm:text-sm ${
+                idx <= step ? "text-secondary" : "text-gray-400"
+              }`}
             >
               {lbl}
             </span>
@@ -201,7 +200,7 @@ const relationshipOptions = [
   { value: "Other", label: "Other" },
 ];
 
-const visaTypeOptions = [
+const fallbackVisaTypeOptions = [
   { value: "Visitor", label: "Visitor" },
   { value: "Student", label: "Student" },
   { value: "Work", label: "Work" },
@@ -212,10 +211,15 @@ const visaTypeOptions = [
 
 /** All DATE-type fields — empty strings must be converted to null before the API call. */
 const DATE_FIELDS = [
-  "dob", "issueDate", "expiryDate",
-  "startDate", "endDate",
-  "parentDob", "parent2Dob",
-  "entryDate", "leaveDate",
+  "dob",
+  "issueDate",
+  "expiryDate",
+  "startDate",
+  "endDate",
+  "parentDob",
+  "parent2Dob",
+  "entryDate",
+  "leaveDate",
   "visaEndDate",
 ];
 
@@ -237,7 +241,11 @@ function formatDate(dateStr) {
   if (!dateStr) return "N/A";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "N/A";
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 /** Per-step required-field validation. Returns { fieldName: "error message" }. */
@@ -256,17 +264,18 @@ function validateStep(stepIndex, data) {
     }
     if (!data.contactNumber?.toString().trim())
       errs.contactNumber = "Contact number is required";
-    if (!data.gender)
-      errs.gender = "Please select a gender";
+    if (!data.gender) errs.gender = "Please select a gender";
   }
 
   if (stepIndex === 1) {
-    if (!data.nationality?.toString().trim()) errs.nationality = "Nationality is required";
+    if (!data.nationality?.toString().trim())
+      errs.nationality = "Nationality is required";
     if (!data.dob) errs.dob = "Date of birth is required";
 
     // If passport number is provided, require details
     if (data.passportNumber?.toString().trim()) {
-      if (!data.issuingAuthority?.toString().trim()) errs.issuingAuthority = "Issuing authority is required";
+      if (!data.issuingAuthority?.toString().trim())
+        errs.issuingAuthority = "Issuing authority is required";
       if (!data.issueDate) errs.issueDate = "Issue date is required";
       if (!data.expiryDate) errs.expiryDate = "Expiry date is required";
     }
@@ -285,13 +294,20 @@ function validateStep(stepIndex, data) {
   }
 
   if (stepIndex === 3) {
-    if (data.parentName?.toString().trim() && !data.parentRelation?.toString().trim()) {
+    if (
+      data.parentName?.toString().trim() &&
+      !data.parentRelation?.toString().trim()
+    ) {
       errs.parentRelation = "Relationship is required if name is provided";
     }
   }
 
   if (stepIndex === 5) {
-    if (data.visaType && data.visaType !== "Other" && !data.brpNumber?.toString().trim()) {
+    if (
+      data.visaType &&
+      data.visaType !== "Other" &&
+      !data.brpNumber?.toString().trim()
+    ) {
       errs.brpNumber = "BRP number is required for your visa type";
     }
     if (data.brpNumber?.toString().trim() && !data.visaEndDate) {
@@ -334,7 +350,9 @@ export default function CandidateApplicationForm({
     applicationLoading,
   } = useCandidate();
 
-  const [internalForm, setInternalForm] = useState(getInitialApplicationFormData);
+  const [internalForm, setInternalForm] = useState(
+    getInitialApplicationFormData,
+  );
   const [step, setStep] = useState(0);
   const [showSecondParent, setShowSecondParent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -352,6 +370,10 @@ export default function CandidateApplicationForm({
   const [portalFieldVisibility, setPortalFieldVisibility] = useState(null);
   const [portalCustomDefs, setPortalCustomDefs] = useState(null);
   const [adminDraftSaving, setAdminDraftSaving] = useState(false);
+
+  const [visaTypeOptions, setVisaTypeOptions] = useState(
+    fallbackVisaTypeOptions,
+  );
 
   const isControlled =
     controlledFormData !== undefined && setControlledFormData !== undefined;
@@ -422,7 +444,9 @@ export default function CandidateApplicationForm({
     }
 
     loadDraft();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -485,10 +509,32 @@ export default function CandidateApplicationForm({
     }
   }, [variant]);
 
+  useEffect(() => {
+    const fetchDynamicVisaTypes = async () => {
+      try {
+        const res = await getVisaTypesDropdown();
+        const types = res.data?.data?.visa_types || [];
+        if (types.length > 0) {
+          const mappedOptions = types.map((t) => ({
+            value: t.name,
+            label: t.name,
+          }));
+          setVisaTypeOptions([
+            ...mappedOptions,
+            { value: "Other", label: "Other" }, // Ensure "Other" is always an option if needed
+          ]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch visa types:", error);
+      }
+    };
+    fetchDynamicVisaTypes();
+  }, []);
+
   const resolvedVisibility =
     fieldVisibilityProp !== undefined
       ? fieldVisibilityProp
-      : portalFieldVisibility ?? loadFieldVisibilityFromStorage();
+      : (portalFieldVisibility ?? loadFieldVisibilityFromStorage());
   const show = (key) => {
     if (
       variant === "admin" &&
@@ -503,14 +549,18 @@ export default function CandidateApplicationForm({
   const customFieldDefinitions =
     customFieldDefinitionsProp !== undefined
       ? customFieldDefinitionsProp
-      : portalCustomDefs ?? loadCustomFieldDefinitionsFromStorage();
+      : (portalCustomDefs ?? loadCustomFieldDefinitionsFromStorage());
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear field error and any API-level banner as soon as the user types
     if (formErrors[name]) {
-      setFormErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
+      setFormErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
     }
     if (apiError) setApiError(null);
   };
@@ -601,7 +651,7 @@ export default function CandidateApplicationForm({
       if (status === 409) {
         setApiError(
           result.error.response.data?.message ||
-          "Your application has already been submitted and is currently under review.",
+            "Your application has already been submitted and is currently under review.",
         );
       } else {
         setApiError("Something went wrong. Please try again.");
@@ -619,7 +669,10 @@ export default function CandidateApplicationForm({
 
       if (result.ok) {
         try {
-          localStorage.setItem("elitepic_application_draft", JSON.stringify(formData));
+          localStorage.setItem(
+            "elitepic_application_draft",
+            JSON.stringify(formData),
+          );
         } catch {
           /* ignore storage errors */
         }
@@ -628,12 +681,15 @@ export default function CandidateApplicationForm({
         if (status === 403) {
           setApiError(
             result.error.response.data?.message ||
-            "Your application is locked and cannot be edited. Contact your caseworker.",
+              "Your application is locked and cannot be edited. Contact your caseworker.",
           );
           return;
         }
         try {
-          localStorage.setItem("elitepic_application_draft", JSON.stringify(formData));
+          localStorage.setItem(
+            "elitepic_application_draft",
+            JSON.stringify(formData),
+          );
         } catch {
           /* ignore storage errors */
         }
@@ -742,8 +798,11 @@ export default function CandidateApplicationForm({
           >
             <circle
               className="opacity-25"
-              cx="12" cy="12" r="10"
-              stroke="currentColor" strokeWidth="4"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
             />
             <path
               className="opacity-75"
@@ -760,13 +819,26 @@ export default function CandidateApplicationForm({
           {/* Draft-restored banner */}
           {draftRestored && variant === "candidate" && (
             <div className="mb-4 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-              <svg className="mt-0.5 h-4 w-4 shrink-0 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              <svg
+                className="mt-0.5 h-4 w-4 shrink-0 text-green-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
               <div>
-                <p className="text-sm font-black text-green-800">Draft restored</p>
+                <p className="text-sm font-black text-green-800">
+                  Draft restored
+                </p>
                 <p className="text-xs font-bold text-green-700 mt-0.5">
-                  Your previously saved progress has been loaded. You can continue from where you left off.
+                  Your previously saved progress has been loaded. You can
+                  continue from where you left off.
                 </p>
               </div>
               <button
@@ -775,8 +847,18 @@ export default function CandidateApplicationForm({
                 className="ml-auto shrink-0 text-green-500 hover:text-green-700"
                 aria-label="Dismiss"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -798,15 +880,27 @@ export default function CandidateApplicationForm({
                   d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <p className="flex-1 text-sm font-bold text-red-800">{apiError}</p>
+              <p className="flex-1 text-sm font-bold text-red-800">
+                {apiError}
+              </p>
               <button
                 type="button"
                 onClick={() => setApiError(null)}
                 className="ml-auto shrink-0 text-red-400 hover:text-red-600"
                 aria-label="Dismiss"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -924,7 +1018,10 @@ export default function CandidateApplicationForm({
                     <SectionTitle>Case Assignment (Admin only)</SectionTitle>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="md:col-span-2">
-                        <label htmlFor="caseworkerId" className={fieldLabelClass}>
+                        <label
+                          htmlFor="caseworkerId"
+                          className={fieldLabelClass}
+                        >
                           Assign Caseworker
                         </label>
                         <select
@@ -943,7 +1040,8 @@ export default function CandidateApplicationForm({
                           ))}
                         </select>
                         <p className="mt-1 text-[10px] text-gray-400 font-bold">
-                          This caseworker will be notified and assigned to handle this candidate&apos;s case.
+                          This caseworker will be notified and assigned to
+                          handle this candidate&apos;s case.
                         </p>
                       </div>
                     </div>
@@ -1565,7 +1663,10 @@ export default function CandidateApplicationForm({
                               id={id}
                               value={val}
                               onChange={(e) =>
-                                handleCustomResponseChange(def.id, e.target.value)
+                                handleCustomResponseChange(
+                                  def.id,
+                                  e.target.value,
+                                )
                               }
                             />
                           </div>
@@ -1600,50 +1701,62 @@ export default function CandidateApplicationForm({
             )}
 
             {/* Amber warning banner — only on final step, candidate form, before submit */}
-            {step >= lastStep && variant === "candidate" && showSubmitWarning && (
-              <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                <svg
-                  className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-                <p className="flex-1 text-sm font-bold text-amber-800">
-                  Once submitted, your application cannot be edited until your caseworker requests
-                  changes. Please review all details carefully.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowSubmitWarning(false)}
-                  className="ml-auto shrink-0 text-amber-500 hover:text-amber-700"
-                  aria-label="Dismiss"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            {step >= lastStep &&
+              variant === "candidate" &&
+              showSubmitWarning && (
+                <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <svg
+                    className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
                   </svg>
-                </button>
-              </div>
-            )}
+                  <p className="flex-1 text-sm font-bold text-amber-800">
+                    Once submitted, your application cannot be edited until your
+                    caseworker requests changes. Please review all details
+                    carefully.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowSubmitWarning(false)}
+                    className="ml-auto shrink-0 text-amber-500 hover:text-amber-700"
+                    aria-label="Dismiss"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
 
             <div className="flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="flex flex-col gap-2 sm:flex-row">
-                {variant === "candidate" || typeof onAdminSaveDraft === "function" ? (
+                {variant === "candidate" ||
+                typeof onAdminSaveDraft === "function" ? (
                   <button
                     type="button"
                     onClick={handleSaveDraft}
                     disabled={
                       variant === "candidate"
                         ? isSubmitting || applicationLoading
-                        : adminDraftSaving ||
-                          isSubmitting ||
-                          adminSubmitBusy
+                        : adminDraftSaving || isSubmitting || adminSubmitBusy
                     }
                     className="rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition-colors hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
@@ -1696,7 +1809,8 @@ export default function CandidateApplicationForm({
                     }
                     className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition-colors hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {((variant === "admin" && adminSubmitBusy) || isSubmitting) ? (
+                    {(variant === "admin" && adminSubmitBusy) ||
+                    isSubmitting ? (
                       <svg
                         className="h-4 w-4 animate-spin"
                         xmlns="http://www.w3.org/2000/svg"
