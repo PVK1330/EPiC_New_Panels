@@ -106,11 +106,11 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
 
   const summaryText = value.length
     ? value
-        .map((id) => {
-          const o = options.find((x) => x.id === id);
-          return o ? `${o.name} (${o.id})` : id;
-        })
-        .join(" · ")
+      .map((id) => {
+        const o = options.find((x) => x.id === id);
+        return o ? `${o.name} (${o.id})` : id;
+      })
+      .join(" · ")
     : "";
 
   return (
@@ -122,9 +122,8 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-left text-sm bg-white border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary ${
-          error ? "border-red-400" : ""
-        }`}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-left text-sm bg-white border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary ${error ? "border-red-400" : ""
+          }`}
       >
         <span
           className={
@@ -152,11 +151,10 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
               return (
                 <label
                   key={o.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${
-                    disabled
+                  className={`flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${disabled
                       ? "opacity-40 cursor-not-allowed"
                       : "cursor-pointer hover:bg-secondary/5"
-                  }`}
+                    }`}
                 >
                   <input
                     type="checkbox"
@@ -205,6 +203,7 @@ function CaseFormModal({
   subtitle,
   formData,
   errors,
+  setErrors,
   isLoading,
   onChange,
   onSubmit,
@@ -215,6 +214,7 @@ function CaseFormModal({
   visaTypes = [],
   petitionTypes = [],
   caseworkers = [],
+  departments = [],
   setFormData,
 }) {
   return (
@@ -484,9 +484,9 @@ function CaseFormModal({
                 options={
                   caseworkers.length > 0
                     ? caseworkers.map((c) => ({
-                        id: c.id,
-                        name: `${c.first_name} ${c.last_name}`,
-                      }))
+                      id: c.id,
+                      name: `${c.first_name} ${c.last_name}`,
+                    }))
                     : CASE_WORKERS
                 }
                 value={formData.assignedCaseworkerIds || []}
@@ -683,8 +683,8 @@ export default function AdminCases() {
           caseworker:
             c.caseworkers && c.caseworkers.length > 0
               ? c.caseworkers
-                  .map((cw) => `${cw.first_name} ${cw.last_name}`)
-                  .join(", ")
+                .map((cw) => `${cw.first_name} ${cw.last_name}`)
+                .join(", ")
               : "Unassigned",
           caseworkerId: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId.join(', ') : c.assignedcaseworkerId,
           visaType: c.visaType?.name || "Unknown",
@@ -1439,6 +1439,7 @@ export default function AdminCases() {
             subtitle="Create a new visa case application"
             formData={formData}
             errors={errors}
+            setErrors={setErrors}
             isLoading={isLoading}
             onChange={handleInputChange}
             onSubmit={handleAdd}
@@ -1453,6 +1454,7 @@ export default function AdminCases() {
             visaTypes={visaTypes}
             petitionTypes={petitionTypes}
             caseworkers={caseworkers}
+            departments={departments}
             setFormData={setFormData}
           />
         )}
@@ -1465,6 +1467,7 @@ export default function AdminCases() {
             subtitle={`Editing ${selectedCase?.caseId}`}
             formData={formData}
             errors={errors}
+            setErrors={setErrors}
             isLoading={isLoading}
             onChange={handleInputChange}
             onSubmit={handleEdit}
@@ -1480,6 +1483,7 @@ export default function AdminCases() {
             visaTypes={visaTypes}
             petitionTypes={petitionTypes}
             caseworkers={caseworkers}
+            departments={departments}
             setFormData={setFormData}
           />
         )}
@@ -1535,11 +1539,10 @@ export default function AdminCases() {
                 <button
                   onClick={handleApproveRejectSubmit}
                   disabled={isLoading}
-                  className={`px-4 py-2 text-white text-sm font-bold rounded-lg transition-colors ${
-                    approveRejectAction === "approve"
+                  className={`px-4 py-2 text-white text-sm font-bold rounded-lg transition-colors ${approveRejectAction === "approve"
                       ? "bg-green-600 hover:bg-green-700"
                       : "bg-red-600 hover:bg-red-700"
-                  } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   {isLoading
                     ? "Processing..."
