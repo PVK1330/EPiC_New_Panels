@@ -15,6 +15,7 @@ import {
   FileText,
   Search,
   Filter,
+  UserPlus,
 } from "lucide-react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
@@ -216,6 +217,7 @@ function CaseFormModal({
   caseworkers = [],
   departments = [],
   setFormData,
+  setErrors,
 }) {
   return (
     <motion.div
@@ -1218,6 +1220,14 @@ export default function AdminCases() {
             Export
           </Button>
           <Button
+            variant="ghost"
+            onClick={() => navigate("/admin/assign")}
+            title="Choose any case and assign up to two caseworkers (with audit reason)"
+          >
+            <UserPlus size={15} className="mr-1.5 inline" />
+            Assign caseworkers
+          </Button>
+          <Button
             onClick={() => {
               setFormData(emptyForm);
               setErrors({});
@@ -1410,6 +1420,24 @@ export default function AdminCases() {
                         <XCircle size={14} />
                       </button>
                       <button
+                        type="button"
+                        onClick={() =>
+                          navigate(
+                            `/admin/assign?caseId=${encodeURIComponent(c.caseId)}`,
+                          )
+                        }
+                        className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
+                        title={
+                          (c.caseworkerIds?.length ?? 0) > 0 ||
+                          (typeof c.caseworker === "string" &&
+                            !c.caseworker.includes("Unassigned"))
+                            ? "Reassign caseworkers"
+                            : "Assign caseworkers"
+                        }
+                      >
+                        <UserPlus size={14} />
+                      </button>
+                      <button
                         onClick={() => openEdit(c)}
                         className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-yellow-50 hover:text-yellow-600 hover:border-yellow-200 transition-colors"
                         title="Edit"
@@ -1456,6 +1484,7 @@ export default function AdminCases() {
             caseworkers={caseworkers}
             departments={departments}
             setFormData={setFormData}
+            setErrors={setErrors}
           />
         )}
       </AnimatePresence>
@@ -1485,6 +1514,7 @@ export default function AdminCases() {
             caseworkers={caseworkers}
             departments={departments}
             setFormData={setFormData}
+            setErrors={setErrors}
           />
         )}
       </AnimatePresence>

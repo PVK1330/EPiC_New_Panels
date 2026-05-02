@@ -10,12 +10,15 @@ import { RiBarChartLine } from "react-icons/ri";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
+import { useToast } from "../../context/ToastContext";
+import { Loader2 } from "lucide-react";
 import {
   getReportingSummary,
   getCaseAnalytics,
   getWorkloadReport,
   getFinancialReport,
   getPerformanceReport,
+  exportReportingExcel,
 } from "../../services/reportingApi";
 import { getVisaTypes } from "../../services/settingsService";
 import { getDepartments } from "../../services/caseWorker";
@@ -446,8 +449,14 @@ function DateRangeBadge({ startDate, endDate }) {
 
 // ─── Export Utility ────────────────────────────────────────────────────────────
 
-const exportToCsv = (filename, rows) => {
-  if (!rows || !rows.length) return;
+const exportToCsv = (filename, rows, notify) => {
+  if (!rows || !rows.length) {
+    notify?.({
+      message: "Nothing to export for the current selection.",
+      variant: "warning",
+    });
+    return;
+  }
   const separator = ',';
   const keys = Object.keys(rows[0]);
   const csvContent =
@@ -456,7 +465,7 @@ const exportToCsv = (filename, rows) => {
     rows.map(row => {
       return keys.map(k => {
         let cell = row[k] === null || row[k] === undefined ? '' : row[k];
-        cell = cell instanceof Date ? cell.toLocaleString() : cell.toString().replace(/"/g, '""');
+        cell = cell instanceof Date ? cell.toLocaleString() : String(cell).replace(/"/g, '""');
         if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
         return cell;
       }).join(separator);
@@ -471,11 +480,12 @@ const exportToCsv = (filename, rows) => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 // ─── Performance Detail Modal ─────────────────────────────────────────────────
 
-function PerformanceDetailModal({ caseworker, onClose }) {
+function PerformanceDetailModal({ caseworker, onClose, showToast }) {
   if (!caseworker) return null;
 
   return (
@@ -636,9 +646,12 @@ function PerformanceDetailModal({ caseworker, onClose }) {
                   SLA: c.sla
                 }));
                 if (reportRows.length === 0) {
-                  alert("No recent cases available to export for this caseworker.");
+                  showToast?.({
+                    message: "No recent cases available to export for this caseworker.",
+                    variant: "warning",
+                  });
                 } else {
-                  exportToCsv(`${caseworker.id}_performance_report.csv`, reportRows);
+                  exportToCsv(`${caseworker.id}_performance_report.csv`, reportRows, showToast);
                 }
               }}
             >
@@ -654,7 +667,7 @@ function PerformanceDetailModal({ caseworker, onClose }) {
 
 // ─── Performance Tab ──────────────────────────────────────────────────────────
 
-function PerformanceTab({ dateRange, performanceData, deptOptions }) {
+function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [slaFilter, setSlaFilter] = useState("all");
@@ -700,6 +713,7 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
         <PerformanceDetailModal
           caseworker={selectedCW}
           onClose={() => setSelectedCW(null)}
+          showToast={showToast}
         />
       )}
 
@@ -829,7 +843,7 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
                   ClientSatisfaction: cw.clientSatisfaction,
                   Escalations: cw.escalations
                 }));
-                exportToCsv('team_performance_report.csv', rows);
+                exportToCsv('team_performance_report.csv', rows, showToast);
               }}
             >
               <FiDownload size={14} />
@@ -952,9 +966,12 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
                                 SLA: c.sla
                               }));
                               if (reportRows.length === 0) {
-                                alert("No recent cases available to export for this caseworker.");
+                                showToast?.({
+                                  message: "No recent cases available to export for this caseworker.",
+                                  variant: "warning",
+                                });
                               } else {
-                                exportToCsv(`${cw.id}_performance_report.csv`, reportRows);
+                                exportToCsv(`${cw.id}_performance_report.csv`, reportRows, showToast);
                               }
                             }}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors whitespace-nowrap"
@@ -989,6 +1006,7 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminReports() {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("cases");
   const [visaFilter, setVisaFilter] = useState("all");
   const [workloadSearch, setWorkloadSearch] = useState("");
@@ -1005,6 +1023,7 @@ export default function AdminReports() {
   });
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError,   setApiError]   = useState(null);
+  const [reportExporting, setReportExporting] = useState(false);
   const [deptOptions, setDeptOptions] = useState([{ value: "all", label: "All departments" }]);
 
   useEffect(() => {
@@ -1058,6 +1077,39 @@ export default function AdminReports() {
   }, [buildParams]);
 
   useEffect(() => { fetchReportData(); }, [fetchReportData]);
+
+  const handleExportWorkbook = async () => {
+    setReportExporting(true);
+    try {
+      const params = buildParams();
+      const res = await exportReportingExcel(params);
+      const blob = new Blob([res.data], {
+        type:
+          res.headers["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `reports_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast({
+        message: "Report workbook downloaded successfully.",
+        variant: "success",
+      });
+    } catch (e) {
+      console.error("Report export failed:", e);
+      showToast({
+        message: "Failed to export report workbook.",
+        variant: "danger",
+      });
+    } finally {
+      setReportExporting(false);
+    }
+  };
 
   function handleDateRangeChange({ start, end }) {
     setDateRange({ start, end });
@@ -1220,9 +1272,15 @@ export default function AdminReports() {
             type="button"
             variant="primary"
             className="rounded-xl shadow-sm inline-flex items-center gap-2"
+            onClick={handleExportWorkbook}
+            disabled={apiLoading || reportExporting}
           >
-            <FiDownload size={14} />
-            Export PDF
+            {reportExporting ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <FiDownload size={14} />
+            )}
+            Export Excel
           </Button>
         </div>
       </div>
@@ -1491,9 +1549,10 @@ export default function AdminReports() {
       {/* ── Performance Tab ── */}
       {activeTab === "performance" && (
         <PerformanceTab 
-          dateRange={dateRange} 
-          performanceData={apiData.performance} 
+          dateRange={dateRange}
+          performanceData={apiData.performance}
           deptOptions={deptOptions}
+          showToast={showToast}
         />
       )}
     </motion.div>

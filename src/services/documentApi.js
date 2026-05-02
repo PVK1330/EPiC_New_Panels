@@ -71,3 +71,7 @@ export const triggerDownload = (blob, filename) => {
   a.remove();
   URL.revokeObjectURL(url);
 };
+
+/** Get checklist by visa type */
+export const getChecklistByVisaType = (visaTypeId) =>
+  api.get(`${BASE}/checklist/visa/${visaTypeId}`);

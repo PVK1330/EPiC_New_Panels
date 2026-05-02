@@ -16,7 +16,7 @@ import CaseDetailNotes from "../../components/caseDetail/CaseDetailNotes";
 import CaseDetailAuditLog from "../../components/caseDetail/CaseDetailAuditLog";
 import { CASE_DETAIL_TABS, TAB_IDS, DEFAULT_CASE_DETAIL } from "../../components/caseDetail/caseDetailData";
 import { 
-  getCaseById, 
+  getCaseDetails,
   getDocumentsByCaseId, 
   uploadCaseDocument, 
   updateCaseDocumentStatus, 
@@ -80,7 +80,7 @@ const AdminCaseDetail = () => {
   const fetchCaseDetail = useCallback(async (id) => {
     setCaseLoading(true);
     try {
-      const res = await getCaseById(id);
+      const res = await getCaseDetails(id);
       if (res.data?.status === "success") {
         setCaseData(res.data.data);
       }
@@ -276,6 +276,7 @@ const AdminCaseDetail = () => {
     }
 
     const {
+      internalId,
       overview,
       candidate,
       business,
@@ -323,6 +324,7 @@ const AdminCaseDetail = () => {
 
     return {
       ...DEFAULT_CASE_DETAIL,
+      internalCaseId: internalId,
       caseId: overview?.caseId,
       candidateName: candidate
         ? `${candidate.first_name} ${candidate.last_name}`
@@ -338,11 +340,17 @@ const AdminCaseDetail = () => {
         fullName: candidate
           ? `${candidate.first_name} ${candidate.last_name}`
           : "Unknown",
-        dob: "N/A",
-        nationality: "N/A",
-        passport: "N/A",
+        dob: candidate?.dob
+          ? new Date(candidate.dob).toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })
+          : "N/A",
+        nationality: candidate?.nationality || "N/A",
+        passport: candidate?.passport_number || candidate?.passportNumber || "N/A",
         email: candidate?.email || "N/A",
-        phone: candidate?.mobile || "N/A",
+        phone: candidate?.mobile || candidate?.phone || "N/A",
       },
       sponsor: {
         company: business?.businessId || "N/A",
@@ -454,7 +462,8 @@ const AdminCaseDetail = () => {
   const handleAddNote = async (content) => {
     if (!caseId || !content?.trim()) return;
     const cleanId = caseId.replace(/^#/, "");
-    await addNoteHandler({ caseId: Number(cleanId), content });
+    const noteCaseId = caseData?.internalId ?? cleanId;
+    await addNoteHandler({ caseId: noteCaseId, content });
     await fetchNotes(cleanId);
   };
 
@@ -467,7 +476,12 @@ const AdminCaseDetail = () => {
   // ── Task handlers (passed as props so CaseDetailTasks can wire them up) ───
   const handleAddTask = async (taskData) => {
     const cleanId = caseId.replace(/^#/, "");
-    await addTaskHandler({ ...taskData, case_id: cleanId });
+    const numericCaseId = caseData?.internalId;
+    if (numericCaseId == null) {
+      console.error("Cannot add task: missing internal case id");
+      return;
+    }
+    await addTaskHandler({ ...taskData, case_id: numericCaseId });
     await fetchTasks(cleanId);
   };
 

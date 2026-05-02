@@ -20,6 +20,7 @@ import {
   getUserDocuments,
   downloadDocument,
   triggerDownload,
+  getChecklistByVisaType,
 } from "../../services/documentApi";
 import useCandidate from "../../hooks/useCandidate";
 import { useToast } from "../../context/ToastContext";
@@ -55,7 +56,8 @@ const UploadDocuments = () => {
   const user = useSelector((state) => state.auth.user);
   const userId = user?.id || user?.userId;
 
-  const [docType, setDocType]         = useState(DOC_TYPES[0]);
+  const [docType, setDocType]         = useState(DOC_TYPE_PLACEHOLDER);
+  const [dynamicDocTypes, setDynamicDocTypes] = useState(DOC_TYPES);
   const [description, setDescription] = useState("");
   const [file, setFile]               = useState(null);
   const [dragOver, setDragOver]       = useState(false);
@@ -82,11 +84,11 @@ const UploadDocuments = () => {
     if (!prefillDocumentType) return null;
     const normalizedPrefill = prefillDocumentType.trim().toLowerCase();
     return (
-      DOC_TYPES.find((type) => type.toLowerCase() === normalizedPrefill) ||
-      DOC_TYPES.find((type) => type.toLowerCase().includes(normalizedPrefill)) ||
+      dynamicDocTypes.find((type) => type.toLowerCase() === normalizedPrefill) ||
+      dynamicDocTypes.find((type) => type.toLowerCase().includes(normalizedPrefill)) ||
       null
     );
-  }, [prefillDocumentType]);
+  }, [prefillDocumentType, dynamicDocTypes]);
 
   useEffect(() => {
     if (resolvedPrefillType) {
@@ -116,6 +118,39 @@ const UploadDocuments = () => {
   useEffect(() => {
     loadDocuments();
   }, [loadDocuments]);
+
+  // ── Fetch dynamic checklist based on visa type ───────────────────────────
+  useEffect(() => {
+    const fetchChecklist = async () => {
+      const activeCase = myApplication?._relatedData?.cases?.[0];
+      const visaTypeId = activeCase?.visaTypeId;
+      
+      if (visaTypeId) {
+        try {
+          const res = await getChecklistByVisaType(visaTypeId);
+          const checklistGroups = res.data?.data?.checklist || {};
+          const checklistTypes = [];
+          
+          Object.values(checklistGroups).forEach(group => {
+            group.forEach(item => {
+              // Add documentName if you want human-readable, or documentType
+              checklistTypes.push(item.documentName || item.documentType);
+            });
+          });
+          
+          if (checklistTypes.length > 0) {
+            setDynamicDocTypes([DOC_TYPE_PLACEHOLDER, ...new Set(checklistTypes)]);
+          }
+        } catch (error) {
+          console.error("Failed to fetch document checklist:", error);
+        }
+      }
+    };
+    
+    if (myApplication) {
+      fetchChecklist();
+    }
+  }, [myApplication]);
 
   // ── File selection ─────────────────────────────────────────────────────────
   const clearFile = () => {
@@ -269,7 +304,7 @@ const UploadDocuments = () => {
               onChange={(e) => setDocType(e.target.value)}
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none"
             >
-              {DOC_TYPES.map((t) => (
+              {dynamicDocTypes.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>

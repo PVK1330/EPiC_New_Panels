@@ -8,6 +8,7 @@ export const updateMePreferences = (data) => api.patch("/api/settings/me/prefere
 export const changePassword = (data) => api.post("/api/settings/change-password", data);
 
 export const getVisaTypes = () => api.get("/api/settings/visa-types");
+export const getVisaTypesDropdown = () => api.get("/api/settings/visa-types/dropdown");
 export const createVisaType = (data) => api.post("/api/settings/visa-types", data);
 export const updateVisaType = (id, data) => api.patch(`/api/settings/visa-types/${id}`, data);
 export const deleteVisaType = (id) => api.delete(`/api/settings/visa-types/${id}`);
