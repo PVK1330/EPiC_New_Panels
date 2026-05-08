@@ -6,7 +6,8 @@ import {
   RiGlobalLine, 
   RiShieldUserLine, 
   RiCheckLine,
-  RiInformationLine
+  RiInformationLine,
+  RiArrowDownSLine
 } from 'react-icons/ri';
 import Input from '../Input';
 import Button from '../Button';
@@ -87,7 +88,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
                     className="w-full pl-4 pr-24 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-secondary outline-none focus:ring-2 focus:ring-primary/10 transition-all"
                     placeholder="elite-visa"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-300 uppercase tracking-widest">.epic-crm.com</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-400 uppercase tracking-widest">.epic-crm.com</span>
                 </div>
               </div>
             </div>
@@ -100,14 +101,32 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
               onChange={handleChange}
               required
             />
-            <Input
-              label="Country"
-              name="country"
-              placeholder="United Kingdom"
-              value={formData.country}
-              onChange={handleChange}
-              required
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <Input
+                 label="Country"
+                 name="country"
+                 placeholder="United Kingdom"
+                 value={formData.country}
+                 onChange={handleChange}
+                 required
+               />
+               <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Subscription Plan</label>
+                  <div className="relative">
+                     <select
+                       name="plan"
+                       value={formData.plan}
+                       onChange={handleChange}
+                       className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold text-secondary outline-none focus:ring-2 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
+                     >
+                        <option value="starter">Starter Plan (£99/mo)</option>
+                        <option value="pro">Professional Plan (£299/mo)</option>
+                        <option value="enterprise">Enterprise Plan (£599/mo)</option>
+                     </select>
+                     <RiArrowDownSLine className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+                  </div>
+               </div>
+            </div>
           </motion.div>
         )}
 
