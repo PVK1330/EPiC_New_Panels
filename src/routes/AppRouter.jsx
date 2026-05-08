@@ -3,9 +3,7 @@ import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import ProtectedRoute from './ProtectedRoute';
 import AdminLayout from '../layouts/AdminLayout';
-import CandidateLayout from '../layouts/CandidateLayout';
-import CaseworkerLayout from '../layouts/CaseworkerLayout';
-import BusinessLayout from '../layouts/BusinessLayout';
+import SuperadminLayout from '../layouts/SuperadminLayout';
 
 import CandidateDashboard from '../pages/candidate/CandidateDashboard';
 import Documents from '../pages/candidate/Documents';
@@ -85,6 +83,18 @@ import Invoices from '../pages/business/Invoices';
 import Reports from '../pages/business/Reports';
 import ApplyLicence from '../pages/business/ApplyLicence';
 import LicenceDocuments from '../pages/business/LicenceDocuments';
+
+// Superadmin Pages
+const SuperadminDashboard = lazy(() => import('../pages/superadmin/SuperadminDashboard'));
+const SuperadminOrganisations = lazy(() => import('../pages/superadmin/SuperadminOrganisations'));
+const SuperadminPlans = lazy(() => import('../pages/superadmin/SuperadminPlans'));
+const SuperadminBilling = lazy(() => import('../pages/superadmin/SuperadminBilling'));
+const SuperadminAuditLog = lazy(() => import('../pages/superadmin/SuperadminAuditLog'));
+const SuperadminSettings = lazy(() => import('../pages/superadmin/SuperadminSettings'));
+const SuperadminPayments = lazy(() => import('../pages/superadmin/SuperadminPayments'));
+const SuperadminTeam = lazy(() => import('../pages/superadmin/SuperadminTeam'));
+const SuperadminFrontend = lazy(() => import('../pages/superadmin/SuperadminFrontend'));
+
 import NotFoundPage from '../pages/NotFoundPage';
 
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
@@ -177,7 +187,7 @@ const AppRouter = () => {
           path="/candidate"
           element={
             <ProtectedRoute allowedRoles={['candidate']}>
-              <CandidateLayout />
+              <AdminLayout />
             </ProtectedRoute>
           }
         >
@@ -212,7 +222,7 @@ const AppRouter = () => {
           path="/caseworker"
           element={
             <ProtectedRoute allowedRoles={['caseworker']}>
-              <CaseworkerLayout />
+              <AdminLayout />
             </ProtectedRoute>
           }
         >
@@ -238,7 +248,7 @@ const AppRouter = () => {
           path="/business"
           element={
             <ProtectedRoute allowedRoles={['business']}>
-              <BusinessLayout />
+              <AdminLayout />
             </ProtectedRoute>
           }
         >
@@ -270,6 +280,26 @@ const AppRouter = () => {
           <Route path="employee-records" element={<EmployeeRecords />} />
           <Route path="invoices" element={<Invoices />} />
           <Route path="reports" element={<Reports />} />
+        </Route>
+
+        <Route
+          path="/superadmin"
+          element={
+            <ProtectedRoute allowedRoles={['superadmin']}>
+              <SuperadminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<SuperadminDashboard />} />
+          <Route path="organisations" element={<SuperadminOrganisations />} />
+          <Route path="plans" element={<SuperadminPlans />} />
+          <Route path="billing" element={<SuperadminBilling />} />
+          <Route path="audit-log" element={<SuperadminAuditLog />} />
+          <Route path="settings" element={<SuperadminSettings />} />
+          <Route path="payments" element={<SuperadminPayments />} />
+          <Route path="team" element={<SuperadminTeam />} />
+          <Route path="frontend" element={<SuperadminFrontend />} />
         </Route>
 
         <Route

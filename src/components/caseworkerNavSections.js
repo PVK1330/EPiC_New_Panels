@@ -78,7 +78,7 @@ export const caseworkerNavSections = (taskCount = 0) => [
       },
       {
         to: "/caseworker/people/sponsors",
-        label: "Sponsor profiles",
+        label: "Sponsor / Business profiles",
         icon: Users,
       },
       {

@@ -42,7 +42,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
     {
       label: "Organisation",
       items: [
-        { to: "/business/profile", label: "Business Profile", icon: Building2 },
+        { to: "/business/profile", label: "Sponsor / Business Profile", icon: Building2 },
         { to: "/business/personnel", label: "Key Personnel", icon: Users },
       ],
     },
@@ -138,7 +138,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
                 ElitePic
               </h2>
               <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1.5 opacity-80">
-                Business
+                Sponsors / Businesses
               </p>
             </div>
           </div>
@@ -208,7 +208,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
                 {user?.name || "Business Account"}
               </p>
               <p className="text-[10px] font-bold text-gray-400 truncate uppercase tracking-wider">
-                Business Portal
+                Sponsor Portal
               </p>
             </div>
             <button

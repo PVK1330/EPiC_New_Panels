@@ -2,17 +2,19 @@
 export const API_BASE_URL = "http://localhost:5000";
 
 export const ROLE_NAMES = {
-  1: "admin",
+  1: "candidate",
   2: "caseworker",
-  3: "candidate",
+  3: "admin",
   4: "business",
+  5: "superadmin",
 };
 
 export const ROLE_ROUTES = {
-  1: "/admin/dashboard",
+  1: "/candidate/dashboard",
   2: "/caseworker/dashboard",
-  3: "/candidate/dashboard",
+  3: "/admin/dashboard",
   4: "/business/dashboard",
+  5: "/superadmin/dashboard",
 };
 
 export const DOCUMENT_TYPE_OPTIONS = [

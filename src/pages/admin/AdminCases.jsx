@@ -153,8 +153,8 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
                 <label
                   key={o.id}
                   className={`flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${disabled
-                      ? "opacity-40 cursor-not-allowed"
-                      : "cursor-pointer hover:bg-secondary/5"
+                    ? "opacity-40 cursor-not-allowed"
+                    : "cursor-pointer hover:bg-secondary/5"
                     }`}
                 >
                   <input
@@ -217,7 +217,6 @@ function CaseFormModal({
   caseworkers = [],
   departments = [],
   setFormData,
-  setErrors,
 }) {
   return (
     <motion.div
@@ -1429,8 +1428,8 @@ export default function AdminCases() {
                         className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
                         title={
                           (c.caseworkerIds?.length ?? 0) > 0 ||
-                          (typeof c.caseworker === "string" &&
-                            !c.caseworker.includes("Unassigned"))
+                            (typeof c.caseworker === "string" &&
+                              !c.caseworker.includes("Unassigned"))
                             ? "Reassign caseworkers"
                             : "Assign caseworkers"
                         }
@@ -1570,8 +1569,8 @@ export default function AdminCases() {
                   onClick={handleApproveRejectSubmit}
                   disabled={isLoading}
                   className={`px-4 py-2 text-white text-sm font-bold rounded-lg transition-colors ${approveRejectAction === "approve"
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "bg-red-600 hover:bg-red-700"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-red-600 hover:bg-red-700"
                     } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   {isLoading
