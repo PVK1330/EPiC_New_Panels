@@ -23,6 +23,7 @@ const SuperadminOrganisations = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [orgs, setOrgs] = useState([
     { id: 1, name: 'Elite Visa Solutions', slug: 'elite-visa', plan: 'Enterprise', users: 45, cases: 1240, storage: '4.2 GB', status: 'Active', country: 'United Kingdom' },
@@ -36,12 +37,15 @@ const SuperadminOrganisations = () => {
 
   const tabs = ['All', 'Active', 'Trial', 'Suspended'];
 
-  const filteredOrgs = activeTab === 'All' ? orgs : orgs.filter(org => org.status === activeTab);
+  const filteredOrgs = orgs.filter(org => {
+    const matchesTab = activeTab === 'All' || org.status === activeTab;
+    const matchesSearch = org.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         org.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         org.country.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
 
   const handleCreateOrg = (data) => {
-    console.log('Creating Org:', data);
-    setIsCreateModalOpen(false);
-    // In a real app, you'd call an API and then update state
     const newOrg = {
       id: orgs.length + 1,
       name: data.name,
@@ -54,28 +58,25 @@ const SuperadminOrganisations = () => {
       country: data.country
     };
     setOrgs([...orgs, newOrg]);
+    setIsCreateModalOpen(false);
   };
 
   const handleEditOrg = (data) => {
-    console.log('Editing Org:', data);
     setOrgs(orgs.map(org => org.id === selectedOrg.id ? { ...org, ...data } : org));
     setIsEditModalOpen(false);
   };
 
   const handleDeleteOrg = () => {
-    console.log('Deleting Org:', selectedOrg.id);
     setOrgs(orgs.filter(org => org.id !== selectedOrg.id));
     setIsDeleteModalOpen(false);
   };
 
   const handleLoginAs = (org) => {
-    console.log('Impersonating:', org.name);
-    // Logic to redirect or set token for the org
     alert(`Impersonating ${org.name}. Redirecting to organization dashboard...`);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 pb-6">
       <CreateOrganizationModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
@@ -87,43 +88,46 @@ const SuperadminOrganisations = () => {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         title="Edit Organization"
-        subtitle="Modify organization details and plan."
+        subtitle="Update organization details."
+        maxWidth="max-w-md"
         footer={
-          <div className="flex justify-end gap-3 w-full">
-            <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-            <Button onClick={() => handleEditOrg(selectedOrg)}>Save Changes</Button>
+          <div className="flex justify-end gap-2 w-full">
+            <Button variant="secondary" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2 text-[10px] font-bold uppercase tracking-widest">Cancel</Button>
+            <Button onClick={() => handleEditOrg(selectedOrg)} className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest shadow-sm">Save Changes</Button>
           </div>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-4 py-1">
            <Input 
-            label="Organization Name" 
+            label="Name" 
             value={selectedOrg?.name || ''} 
             onChange={(e) => setSelectedOrg({ ...selectedOrg, name: e.target.value })}
           />
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Subscription Plan</label>
-            <select 
-              value={selectedOrg?.plan?.toLowerCase() || 'starter'} 
-              onChange={(e) => setSelectedOrg({ ...selectedOrg, plan: e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1) })}
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-secondary focus:ring-2 focus:ring-primary/10 outline-none appearance-none"
-            >
-              <option value="starter">Starter</option>
-              <option value="pro">Professional</option>
-              <option value="enterprise">Enterprise</option>
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Status</label>
-            <select 
-              value={selectedOrg?.status || 'Active'} 
-              onChange={(e) => setSelectedOrg({ ...selectedOrg, status: e.target.value })}
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-secondary focus:ring-2 focus:ring-primary/10 outline-none appearance-none"
-            >
-              <option>Active</option>
-              <option>Trial</option>
-              <option>Suspended</option>
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Plan</label>
+              <select 
+                value={selectedOrg?.plan?.toLowerCase() || 'starter'} 
+                onChange={(e) => setSelectedOrg({ ...selectedOrg, plan: e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1) })}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-secondary outline-none appearance-none"
+              >
+                <option value="starter">Starter</option>
+                <option value="pro">Pro</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Status</label>
+              <select 
+                value={selectedOrg?.status || 'Active'} 
+                onChange={(e) => setSelectedOrg({ ...selectedOrg, status: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-secondary outline-none appearance-none"
+              >
+                <option>Active</option>
+                <option>Trial</option>
+                <option>Suspended</option>
+              </select>
+            </div>
           </div>
         </div>
       </Modal>
@@ -133,43 +137,44 @@ const SuperadminOrganisations = () => {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         title="Delete Organization"
-        subtitle="This action is permanent and will delete all organization data."
+        subtitle="This action cannot be undone."
+        maxWidth="max-w-md"
         footer={
-          <div className="flex justify-end gap-3 w-full">
-            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-            <Button className="bg-red-500 hover:bg-red-600 border-red-600" onClick={handleDeleteOrg}>Delete Permanently</Button>
+          <div className="flex justify-end gap-2 w-full">
+            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)} className="px-5 py-2 text-[10px] font-bold uppercase tracking-widest">Cancel</Button>
+            <Button className="bg-red-500 hover:bg-red-600 border-red-600 px-6 py-2 text-[10px] font-bold uppercase tracking-widest" onClick={handleDeleteOrg}>Delete</Button>
           </div>
         }
       >
-        <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex gap-4">
-           <RiErrorWarningLine className="text-red-500 shrink-0" size={24} />
-           <p className="text-xs text-red-800 font-medium leading-relaxed">
-              Are you sure you want to delete <span className="font-bold">{selectedOrg?.name}</span>? This will immediately terminate all access and delete all associated data across the platform.
+        <div className="p-4 bg-red-50 border border-red-100 rounded-lg flex gap-3">
+           <RiErrorWarningLine className="text-red-500 shrink-0" size={20} />
+           <p className="text-[10px] text-red-800 font-bold uppercase leading-tight">
+              Delete {selectedOrg?.name}? All data will be permanently removed.
            </p>
         </div>
       </Modal>
       
       <div className="flex items-center justify-between">
         <div>
-           <h1 className="text-xl font-semibold text-gray-900 tracking-tight uppercase tracking-wider">Organizations</h1>
-           <p className="text-xs text-gray-500 mt-0.5 font-medium uppercase tracking-tight">Client organization nodes and status control.</p>
+           <h1 className="text-xl font-bold text-secondary uppercase tracking-tight">Organizations</h1>
+           <p className="text-[11px] text-gray-500 font-medium uppercase tracking-tight">Manage all client organizations and their statuses.</p>
         </div>
         <Button 
           onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20"
+          className="flex items-center gap-2 px-6 py-2 text-[10px] font-bold uppercase tracking-widest shadow-sm"
         >
-          <Plus size={16} /> New Organization
+          <Plus size={16} /> Create Organization
         </Button>
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex bg-gray-50 p-1 rounded-xl w-fit border border-gray-100 no-scrollbar overflow-x-auto">
+      <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex bg-gray-50 p-1 rounded-lg w-fit border border-gray-100">
           {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+              className={`px-4 py-1.5 rounded text-[9px] font-bold uppercase tracking-widest transition-all ${
                 activeTab === tab
                   ? 'bg-white text-primary shadow-sm border border-gray-100'
                   : 'text-gray-400 hover:text-secondary'
@@ -181,95 +186,91 @@ const SuperadminOrganisations = () => {
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
             <input
               type="text"
-              placeholder="Search nodes..."
-              className="pl-9 pr-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-secondary w-full md:w-56 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-gray-300 uppercase tracking-tight"
+              placeholder="Search organizations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-4 py-1.5 bg-white border border-gray-100 rounded-lg text-[10px] font-bold text-secondary w-full md:w-48 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-gray-300 uppercase"
             />
           </div>
-          <button className="p-2 bg-white border border-gray-100 text-gray-400 hover:text-secondary rounded-xl transition-all shadow-sm">
-            <RiFilter3Line size={18} />
+          <button className="p-1.5 bg-white border border-gray-100 text-gray-400 hover:text-secondary rounded-lg transition-all shadow-sm">
+            <RiFilter3Line size={16} />
           </button>
         </div>
       </div>
 
       {/* Organizations Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto no-scrollbar">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-[10px] uppercase text-gray-400 tracking-widest font-black">
+            <thead className="bg-gray-50/50 text-[9px] uppercase text-gray-400 tracking-widest font-bold border-b border-gray-50">
               <tr>
-                <th className="px-5 py-3.5 text-left">Organization</th>
-                <th className="px-5 py-3.5 text-left">Plan</th>
-                <th className="px-5 py-3.5 text-center">Users</th>
-                <th className="px-5 py-3.5 text-center">Cases</th>
-                <th className="px-5 py-3.5 text-center">Storage</th>
-                <th className="px-5 py-3.5 text-left">Status</th>
-                <th className="px-5 py-3.5 text-right">Actions</th>
+                <th className="px-5 py-3 text-left">Organization</th>
+                <th className="px-5 py-3 text-left">Tier</th>
+                <th className="px-5 py-3 text-center">Users</th>
+                <th className="px-5 py-3 text-center">Cases</th>
+                <th className="px-5 py-3 text-center">Storage</th>
+                <th className="px-5 py-3 text-left">Status</th>
+                <th className="px-5 py-3 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50/50">
               {filteredOrgs.map((org) => (
                 <tr key={org.id} className="hover:bg-gray-50/50 transition-colors group">
-                  <td className="px-5 py-3.5">
+                  <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center text-gray-400 font-black text-sm group-hover:bg-primary group-hover:text-white transition-all">
+                      <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded flex items-center justify-center text-gray-400 font-black text-[9px] group-hover:bg-primary group-hover:text-white transition-all">
                         {org.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-black text-secondary uppercase tracking-tight text-xs leading-none">{org.name}</p>
-                        <p className="text-[9px] text-gray-300 mt-1.5 font-bold uppercase tracking-widest">
-                          {org.slug} • {org.country}
-                        </p>
+                        <p className="font-bold text-secondary text-xs">{org.name}</p>
+                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">{org.country}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-3.5">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                  <td className="px-5 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
                       org.plan === 'Enterprise' ? 'bg-primary/5 text-primary border-primary/10' :
                       org.plan === 'Pro' ? 'bg-secondary/5 text-secondary border-secondary/10' : 'bg-gray-50 text-gray-400 border-gray-100'
                     }`}>
                       {org.plan}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-center font-black text-secondary text-xs">{org.users}</td>
-                  <td className="px-5 py-3.5 text-center font-black text-secondary text-xs">{org.cases}</td>
-                  <td className="px-5 py-3.5 text-center text-[9px] font-black text-gray-300 uppercase tracking-tighter">{org.storage}</td>
-                  <td className="px-5 py-3.5">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                  <td className="px-5 py-3 text-center font-bold text-secondary text-xs">{org.users}</td>
+                  <td className="px-5 py-3 text-center font-bold text-secondary text-xs">{org.cases}</td>
+                  <td className="px-5 py-3 text-center text-[9px] font-bold text-gray-300 uppercase">{org.storage}</td>
+                  <td className="px-5 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
                       org.status === 'Active' ? 'bg-green-50 text-green-700 border-green-100' :
                       org.status === 'Trial' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-red-50 text-red-700 border-red-100'
                     }`}>
-                      <span className={`w-1 h-1 rounded-full mr-1.5 ${
-                        org.status === 'Active' ? 'bg-green-500' :
-                        org.status === 'Trial' ? 'bg-blue-500' : 'bg-red-500'
-                      }`} />
                       {org.status}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <td className="px-5 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
                       <button 
-                        title="Login As" 
                         onClick={() => handleLoginAs(org)}
-                        className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                        title="Impersonate"
+                        className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
                       >
-                        <RiLoginBoxLine size={18} />
+                        <RiLoginBoxLine size={17} />
                       </button>
                       <button 
-                        title="Edit" 
-                        onClick={() => { setSelectedOrg(org); setIsEditModalOpen(true); }}
-                        className="p-1.5 text-gray-400 hover:text-secondary hover:bg-gray-100 rounded-lg transition-all"
+                        onClick={() => { setSelectedOrg({ ...org }); setIsEditModalOpen(true); }}
+                        title="Edit"
+                        className="p-1.5 text-gray-500 hover:text-secondary hover:bg-gray-100 rounded-lg transition-all"
                       >
-                        <RiEditLine size={18} />
+                        <RiEditLine size={17} />
                       </button>
                       <button 
-                        title="Delete" 
                         onClick={() => { setSelectedOrg(org); setIsDeleteModalOpen(true); }}
-                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                        title="Delete"
+                        className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                       >
-                        <RiDeleteBin6Line size={18} />
+                        <RiDeleteBin6Line size={17} />
                       </button>
                     </div>
                   </td>
@@ -278,12 +279,11 @@ const SuperadminOrganisations = () => {
             </tbody>
           </table>
         </div>
-        {/* Pagination */}
-        <div className="px-6 py-4 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Showing {filteredOrgs.length} results</p>
+        <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
+          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{filteredOrgs.length} results</p>
           <div className="flex gap-2">
-            <button disabled className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-300 transition-all">Previous</button>
-            <button className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all shadow-sm">Next</button>
+            <button disabled className="px-3 py-1 rounded-lg text-[9px] font-bold uppercase bg-white border border-gray-200 text-gray-300">Prev</button>
+            <button className="px-3 py-1 rounded-lg text-[9px] font-bold uppercase bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm">Next</button>
           </div>
         </div>
       </div>

@@ -29,7 +29,7 @@ const navSections = [
     ],
   },
   {
-    label: "Billing",
+    label: "Management",
     items: [
       { name: "Plans", path: "/superadmin/plans", icon: RiFileSettingsLine },
       { name: "Subscriptions", path: "/superadmin/billing", icon: RiBillLine },
@@ -37,16 +37,17 @@ const navSections = [
     ],
   },
   {
-    label: "Audit",
+    label: "Security",
     items: [
-      { name: "Logs", path: "/superadmin/audit-log", icon: RiHistoryLine },
+      { name: "Activity", path: "/superadmin/audit-log", icon: RiHistoryLine },
       { name: "Team", path: "/superadmin/team", icon: RiShieldUserLine },
     ],
   },
   {
-    label: "System",
+    label: "Platform",
     items: [
-      { name: "Settings", path: "/superadmin/settings", icon: RiSettings4Line },
+      { name: "Global Settings", path: "/superadmin/settings", icon: RiSettings4Line },
+      { name: "My Account", path: "/superadmin/profile", icon: RiShieldKeyholeLine },
     ],
   },
 ];
@@ -55,11 +56,11 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-white border-r border-gray-100 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+    <div className="flex flex-col h-full bg-white border-r border-gray-100 shadow-sm">
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 border-b border-gray-50/50 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-20">
-        <div className="flex items-center gap-4">
-          <div className="w-9 h-9 bg-primary/5 rounded-2xl border border-primary/10 shadow-inner flex items-center justify-center p-1.5 transition-transform hover:rotate-3 group cursor-pointer">
+      <div className="h-14 flex items-center px-5 border-b border-gray-50 shrink-0 bg-white sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-primary/5 rounded-lg border border-primary/10 flex items-center justify-center p-1">
             <img
               src={eliteLogo}
               alt="ElitePic"
@@ -67,15 +68,14 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
             />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-xs font-black text-secondary uppercase tracking-widest leading-none">
+            <h1 className="text-[11px] font-black text-secondary uppercase tracking-widest leading-none">
               ElitePic
             </h1>
-            <p className="text-[7px] font-black text-primary uppercase tracking-[0.3em] mt-1 opacity-60">
-              Super Engine
+            <p className="text-[7px] font-bold text-primary uppercase tracking-[0.2em] mt-1 opacity-60">
+              Admin Portal
             </p>
           </div>
         </div>
-        {/* Mobile close button */}
         <button
           onClick={onClose}
           className="lg:hidden ml-auto p-2 text-gray-400 hover:text-primary transition-colors"
@@ -85,11 +85,11 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-5 px-4 custom-scrollbar">
+      <nav className="flex-1 overflow-y-auto py-4 px-3 custom-scrollbar">
         {navSections.map((section, idx) => (
-          <div key={idx} className={idx !== 0 ? "mt-5" : ""}>
+          <div key={idx} className={idx !== 0 ? "mt-4" : ""}>
             {section.label && (
-              <p className="px-3 mb-2 text-[9px] font-black uppercase tracking-[0.18em] text-gray-400">
+              <p className="px-3 mb-1.5 text-[8px] font-bold uppercase tracking-widest text-gray-400">
                 {section.label}
               </p>
             )}
@@ -100,20 +100,17 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
                   to={item.path}
                   onClick={() => window.innerWidth < 1024 && onClose()}
                   className={({ isActive }) =>
-                    `flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-[10.5px] font-black uppercase tracking-widest transition-all group relative ${isActive
-                      ? "bg-secondary text-white shadow-xl shadow-secondary/20"
+                    `flex items-center gap-3 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all group relative ${isActive
+                      ? "bg-secondary text-white shadow-md shadow-secondary/10"
                       : "text-gray-400 hover:text-primary hover:bg-primary/5"
                     }`
                   }
                 >
                   <item.icon
-                    size={18}
-                    className={`transition-transform group-hover:scale-110 ${location.pathname === item.path ? "text-primary" : ""}`}
+                    size={16}
+                    className={`shrink-0 ${location.pathname === item.path ? "text-primary" : ""}`}
                   />
                   <span className="truncate">{item.name}</span>
-                  {location.pathname === item.path && (
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-white/25 rounded-l-full" />
-                  )}
                 </NavLink>
               ))}
             </div>
@@ -121,26 +118,23 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
         ))}
       </nav>
 
-      {/* Footer / User Profile */}
-      <div className="p-3 border-t border-gray-50/50 bg-gray-50/20">
-        <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white border border-gray-100 transition-all hover:shadow-xl hover:border-transparent group cursor-pointer relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-2 opacity-5">
-             <RiShieldKeyholeLine size={36} className="-rotate-12" />
-          </div>
-          <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-xs group-hover:bg-primary group-hover:text-white transition-all shrink-0 shadow-inner">
+      <NavLink to="/superadmin/profile" className="p-3 border-t border-gray-50 bg-gray-50/10 block group">
+        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white border border-gray-100 transition-all group-hover:border-primary/20 group-hover:shadow-sm relative overflow-hidden">
+          <div className="w-8 h-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-black text-[10px] shrink-0">
             SA
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black text-secondary truncate uppercase tracking-widest">Super Admin</p>
-            <p className="text-[8px] font-bold text-gray-400 truncate uppercase tracking-[0.2em] mt-0.5 flex items-center gap-1.5">
-               <div className="w-1 h-1 rounded-full bg-green-500" /> System Root
-            </p>
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-[10px] font-bold text-secondary truncate uppercase tracking-widest">Administrator</p>
+            <div className="flex items-center gap-1.5 mt-1">
+               <div className="w-1 h-1 rounded-full bg-green-500" />
+               <p className="text-[7px] font-bold text-gray-400 truncate uppercase tracking-widest">Active Session</p>
+            </div>
           </div>
-          <button className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all relative z-10">
-            <RiLogoutBoxRLine size={18} />
+          <button onClick={(e) => { e.preventDefault(); /* Handle logout */ }} className="p-1.5 text-gray-500 hover:text-red-500 rounded-md transition-all">
+            <RiLogoutBoxRLine size={16} />
           </button>
         </div>
-      </div>
+      </NavLink>
     </div>
   );
 
@@ -154,13 +148,13 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/30 z-40 lg:hidden"
           />
         )}
       </AnimatePresence>
 
       {/* Sidebar Desktop */}
-      <aside className="hidden lg:block w-72 h-full shrink-0">
+      <aside className="hidden lg:block w-64 h-full shrink-0">
         <SidebarContent />
       </aside>
 
@@ -169,7 +163,7 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
         variants={sidebarVariants}
         initial="closed"
         animate={isOpen ? "open" : "closed"}
-        className="fixed inset-y-0 left-0 w-72 z-50 lg:hidden shadow-2xl"
+        className="fixed inset-y-0 left-0 w-64 z-50 lg:hidden shadow-xl"
       >
         <SidebarContent />
       </motion.aside>

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  RiBuilding2Line, 
-  RiMailLine, 
-  RiGlobalLine, 
-  RiShieldUserLine, 
+import {
+  RiBuilding2Line,
+  RiMailLine,
+  RiGlobalLine,
+  RiShieldUserLine,
   RiCheckLine,
   RiInformationLine,
   RiArrowDownSLine
@@ -29,7 +29,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     // Auto-generate slug from name
     if (name === 'name') {
       const generatedSlug = value.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -41,9 +41,9 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
   const handlePrev = () => setStep(prev => prev - 1);
 
   const steps = [
-    { title: 'Company Details', subtitle: 'Basic information about the organization' },
-    { title: 'Subscription Plan', subtitle: 'Select a plan and module access' },
-    { title: 'Primary Admin', subtitle: 'Create the first administrative account' },
+    { title: 'Organization Details', subtitle: 'Basic company information' },
+    { title: 'Subscription Plan', subtitle: 'Select service tier' },
+    { title: 'Primary Administrator', subtitle: 'Initial account configuration' },
   ];
 
   return (
@@ -61,7 +61,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
             </Button>
           ) : <div />}
           <Button onClick={step < 3 ? handleNext : () => onSubmit(formData)}>
-            {step < 3 ? 'Continue' : 'Finalize & Create'}
+            {step < 3 ? 'Continue' : 'Create Organization'}
           </Button>
         </div>
       }
@@ -79,7 +79,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
                 required
               />
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Subdomain / Slug</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Subdomain</label>
                 <div className="relative">
                   <input
                     name="slug"
@@ -102,15 +102,15 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
               required
             />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <Input
-                 label="Country"
-                 name="country"
-                 placeholder="United Kingdom"
-                 value={formData.country}
-                 onChange={handleChange}
-                 required
-               />
-               <div className="space-y-1.5">
+              <Input
+                label="Country"
+                name="country"
+                placeholder="United Kingdom"
+                value={formData.country}
+                onChange={handleChange}
+                required
+              />
+              {/* <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Subscription Plan</label>
                   <div className="relative">
                      <select
@@ -125,7 +125,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
                      </select>
                      <RiArrowDownSLine className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
                   </div>
-               </div>
+               </div> */}
             </div>
           </motion.div>
         )}
@@ -138,23 +138,22 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
                 { id: 'pro', name: 'Professional', price: 299, modules: ['Dashboard', 'Cases', 'Docs', 'Team'] },
                 { id: 'enterprise', name: 'Enterprise', price: 599, modules: ['All Modules'] },
               ].map((plan) => (
-                <div 
+                <div
                   key={plan.id}
                   onClick={() => setFormData(prev => ({ ...prev, plan: plan.id }))}
-                  className={`relative p-5 rounded-xl border-2 cursor-pointer transition-all ${
-                    formData.plan === plan.id 
-                      ? 'border-primary bg-primary/10 shadow-sm' 
+                  className={`relative p-5 rounded-xl border-2 cursor-pointer transition-all ${formData.plan === plan.id
+                      ? 'border-primary bg-primary/10 shadow-sm'
                       : 'border-gray-50 hover:border-gray-100 bg-white'
-                  }`}
+                    }`}
                 >
                   {formData.plan === plan.id && (
                     <div className="absolute -top-2 -right-2 w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center shadow-lg border border-primary-dark">
                       <RiCheckLine size={12} />
                     </div>
                   )}
-                  <h4 className="font-black text-secondary text-[10px] uppercase tracking-widest mb-1">{plan.name}</h4>
-                  <p className="text-xl font-black text-primary tracking-tight">£{plan.price}<span className="text-[10px] text-gray-400 font-bold tracking-widest">/mo</span></p>
-                  
+                  <h4 className="font-bold text-secondary text-[10px] uppercase tracking-widest mb-1">{plan.name}</h4>
+                  <p className="text-xl font-bold text-primary tracking-tight">£{plan.price}<span className="text-[10px] text-gray-400 font-bold tracking-widest">/mo</span></p>
+
                   <div className="mt-4 pt-4 border-t border-gray-50">
                     <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Modules</p>
                     <div className="flex flex-wrap gap-1">
@@ -205,8 +204,8 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
               required
             />
             <div className="p-6 bg-gray-50 rounded-xl border border-gray-100 text-center">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Temporary Access Key</p>
-              <p className="font-black text-secondary tracking-[0.3em] text-lg">EPIC-TEMP-2024</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">Initial Password</p>
+              <p className="font-bold text-secondary tracking-[0.3em] text-lg">EPIC-ADMIN-2024</p>
             </div>
           </motion.div>
         )}

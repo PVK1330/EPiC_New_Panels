@@ -94,6 +94,8 @@ const SuperadminSettings = lazy(() => import('../pages/superadmin/SuperadminSett
 const SuperadminPayments = lazy(() => import('../pages/superadmin/SuperadminPayments'));
 const SuperadminTeam = lazy(() => import('../pages/superadmin/SuperadminTeam'));
 const SuperadminFrontend = lazy(() => import('../pages/superadmin/SuperadminFrontend'));
+const SuperadminProfile = lazy(() => import('../pages/superadmin/SuperadminProfile'));
+
 
 import NotFoundPage from '../pages/NotFoundPage';
 
@@ -300,6 +302,8 @@ const AppRouter = () => {
           <Route path="payments" element={<SuperadminPayments />} />
           <Route path="team" element={<SuperadminTeam />} />
           <Route path="frontend" element={<SuperadminFrontend />} />
+          <Route path="profile" element={<SuperadminProfile />} />
+
         </Route>
 
         <Route
