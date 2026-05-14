@@ -49,7 +49,11 @@ const ModuleMatrixPanel = () => {
     setPending({});
     try {
       const res = await getRbacMatrix();
-      if (res.data?.status === "success") setMatrixData(res.data.data);
+      if (res.data?.status === "success") {
+        const data = res.data.data || {};
+        if (data.roles) data.roles = data.roles.filter(r => r.roleName?.toLowerCase() !== "superadmin");
+        setMatrixData(data);
+      }
       else setError("Unexpected response from server.");
     } catch {
       setError("Failed to load permission matrix.");

@@ -88,23 +88,37 @@ export default function PaymentSettings({
                 
                 <div className="pt-2">
                   <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">Offline Payment Methods</p>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {[
                       { id: "pay_bank", label: "Bank Transfer", desc: "Allow wire and local transfers" },
-                      { id: "pay_card", label: "Direct Card Payment", desc: "Process cards via office terminal" },
-                      { id: "pay_cheque", label: "Cheque Deposit", desc: "Manual cheque processing" },
                     ].map((method) => (
-                      <div 
-                        key={method.id}
-                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                          config[method.id] ? "bg-primary/5 border-primary/20" : "bg-gray-50/50 border-gray-100"
-                        }`}
-                      >
-                        <div>
-                          <p className="text-sm font-bold text-secondary">{method.label}</p>
-                          <p className="text-[10px] text-gray-500 font-medium">{method.desc}</p>
+                      <div key={method.id} className="space-y-3">
+                        <div 
+                          className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                            config[method.id] ? "bg-primary/5 border-primary/20" : "bg-gray-50/50 border-gray-100"
+                          }`}
+                        >
+                          <div>
+                            <p className="text-sm font-bold text-secondary">{method.label}</p>
+                            <p className="text-[10px] text-gray-500 font-medium">{method.desc}</p>
+                          </div>
+                          <Toggle on={config[method.id]} onToggle={() => onToggle(method.id)} />
                         </div>
-                        <Toggle on={config[method.id]} onToggle={() => onToggle(method.id)} />
+
+                        {method.id === "pay_bank" && config.pay_bank && (
+                          <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-2 animate-in fade-in duration-300">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 block">
+                              Corporate Bank Details (Displayed to Candidates)
+                            </label>
+                            <textarea
+                              className="w-full border border-gray-200 rounded-xl p-3 bg-white text-xs font-bold text-gray-700 outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+                              rows={4}
+                              value={config.bank_details || ""}
+                              onChange={(e) => onConfigChange('bank_details', e.target.value)}
+                              placeholder="Account Name: ElitePic Ltd&#10;Sort Code: 20-04-15&#10;Account No: 88291044&#10;Bank: Barclays Bank PLC"
+                            />
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -132,8 +146,8 @@ export default function PaymentSettings({
                     onChange={(e) => onConfigChange('active_gateway', e.target.value)}
                   >
                     <option value="stripe">Stripe (Recommended)</option>
-                    <option value="paypal">PayPal</option>
-                    <option value="razorpay">Razorpay</option>
+                    {/* <option value="paypal">PayPal</option>
+                    <option value="razorpay">Razorpay</option> */}
                   </select>
                 </div>
 
@@ -148,7 +162,7 @@ export default function PaymentSettings({
                     </div>
                   )}
 
-                  {config.active_gateway === "paypal" && (
+                  {/* {config.active_gateway === "paypal" && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                       <div className="flex items-center gap-2 text-blue-600 mb-2">
                         <FiCheckCircle /> <span className="text-[10px] font-black uppercase tracking-widest">PayPal is Active</span>
@@ -156,9 +170,9 @@ export default function PaymentSettings({
                       <Input label="PayPal Client ID" name="paypal_client_id" value={config.paypal_client_id} onChange={(e) => onConfigChange('paypal_client_id', e.target.value)} placeholder="AfH..." />
                       <Input label="PayPal Secret" name="paypal_secret" type="password" value={config.paypal_secret} onChange={(e) => onConfigChange('paypal_secret', e.target.value)} placeholder="ELa..." />
                     </div>
-                  )}
+                  )} */}
 
-                  {config.active_gateway === "razorpay" && (
+                  {/* {config.active_gateway === "razorpay" && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                       <div className="flex items-center gap-2 text-primary mb-2">
                         <FiCheckCircle /> <span className="text-[10px] font-black uppercase tracking-widest">Razorpay is Active</span>
@@ -166,7 +180,7 @@ export default function PaymentSettings({
                       <Input label="Razorpay Key ID" name="razorpay_key_id" value={config.razorpay_key_id} onChange={(e) => onConfigChange('razorpay_key_id', e.target.value)} placeholder="rzp_test_..." />
                       <Input label="Razorpay Key Secret" name="razorpay_key_secret" type="password" value={config.razorpay_key_secret} onChange={(e) => onConfigChange('razorpay_key_secret', e.target.value)} placeholder="..." />
                     </div>
-                  )}
+                  )} */}
                 </div>
                 
                 <p className="text-[10px] text-gray-400 italic text-center">

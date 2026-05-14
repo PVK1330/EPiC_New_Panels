@@ -29,13 +29,13 @@ const SuperadminAuditLog = () => {
     { id: 5, category: 'Authentication', action: 'Multi-Factor Auth Enabled', user: 'admin@westminster.com', org: 'Westminster Agency', time: '2026-05-06 14:20', status: 'Success', description: 'User enabled 2FA authentication' },
     { id: 6, category: 'Authentication', action: 'Unauthorized Access Attempt', user: 'unknown@external.com', org: 'External', time: '2026-05-05 22:10', status: 'Failed', description: 'Access denied - invalid credentials' },
 
-    // Organization & Company Management
-    { id: 7, category: 'Organization', action: 'Organization Created', user: 'superadmin', org: 'New Tech Solutions', time: '2026-05-08 13:00', status: 'Success', description: 'New organization registered in system' },
-    { id: 8, category: 'Organization', action: 'Organization Deleted', user: 'superadmin', org: 'Test Corp', time: '2026-05-07 11:00', status: 'Success', description: 'Organization removed from system' },
-    { id: 9, category: 'Organization', action: 'User Added to Organization', user: 'admin@elitevisa.com', org: 'Elite Visa', time: '2026-05-07 09:15', status: 'Success', description: 'New team member added to organization' },
-    { id: 10, category: 'Organization', action: 'Organization Settings Updated', user: 'superadmin', org: 'Global Migrate', time: '2026-05-06 16:30', status: 'Success', description: 'Updated organization configuration' },
-    { id: 11, category: 'Organization', action: 'User Removed from Organization', user: 'admin@westminster.com', org: 'Westminster Agency', time: '2026-05-06 12:45', status: 'Success', description: 'User access revoked from organization' },
-    { id: 12, category: 'Organization', action: 'Organization Plan Changed', user: 'superadmin', org: 'London Legal', time: '2026-05-05 10:00', status: 'Success', description: 'Organization tier upgraded' },
+    // Organisation & Company Management
+    { id: 7, category: 'Organisation', action: 'Organisation Created', user: 'superadmin', org: 'New Tech Solutions', time: '2026-05-08 13:00', status: 'Success', description: 'New organisation registered in system' },
+    { id: 8, category: 'Organisation', action: 'Organisation Deleted', user: 'superadmin', org: 'Test Corp', time: '2026-05-07 11:00', status: 'Success', description: 'Organisation removed from system' },
+    { id: 9, category: 'Organisation', action: 'User Added to Organisation', user: 'admin@elitevisa.com', org: 'Elite Visa', time: '2026-05-07 09:15', status: 'Success', description: 'New team member added to organisation' },
+    { id: 10, category: 'Organisation', action: 'Organisation Settings Updated', user: 'superadmin', org: 'Global Migrate', time: '2026-05-06 16:30', status: 'Success', description: 'Updated organisation configuration' },
+    { id: 11, category: 'Organisation', action: 'User Removed from Organisation', user: 'admin@westminster.com', org: 'Westminster Agency', time: '2026-05-06 12:45', status: 'Success', description: 'User access revoked from organisation' },
+    { id: 12, category: 'Organisation', action: 'Organisation Plan Changed', user: 'superadmin', org: 'London Legal', time: '2026-05-05 10:00', status: 'Success', description: 'Organisation tier upgraded' },
 
     // Billing & Payments
     { id: 13, category: 'Billing', action: 'Payment Processed', user: 'System', org: 'Westminster Agency', time: '2026-05-08 00:05', status: 'Success', description: 'Monthly subscription charge $499.00' },
@@ -43,7 +43,7 @@ const SuperadminAuditLog = () => {
     { id: 15, category: 'Billing', action: 'Invoice Generated', user: 'System', org: 'London Legal', time: '2026-05-07 00:00', status: 'Success', description: 'Monthly invoice INV-2026-05-001' },
     { id: 16, category: 'Billing', action: 'Payment Failed', user: 'System', org: 'Bridge UK', time: '2026-05-05 02:30', status: 'Failed', description: 'Card declined - insufficient funds' },
     { id: 17, category: 'Billing', action: 'Refund Processed', user: 'superadmin', org: 'Global Migrate', time: '2026-05-05 10:15', status: 'Success', description: 'Partial refund of $250.00 issued' },
-    { id: 18, category: 'Billing', action: 'Subscription Cancelled', user: 'admin@globalm.com', org: 'Global Migrate', time: '2026-05-04 15:45', status: 'Success', description: 'Organization subscription cancelled' },
+    { id: 18, category: 'Billing', action: 'Subscription Cancelled', user: 'admin@globalm.com', org: 'Global Migrate', time: '2026-05-04 15:45', status: 'Success', description: 'Organisation subscription cancelled' },
 
     // System & Backend Operations
     { id: 19, category: 'System', action: 'Database Backup', user: 'System', org: 'Global System', time: '2026-05-08 02:00', status: 'Success', description: 'Automatic database backup completed' },
@@ -54,7 +54,7 @@ const SuperadminAuditLog = () => {
     { id: 24, category: 'System', action: 'Data Export Completed', user: 'admin@elitevisa.com', org: 'Elite Visa', time: '2026-05-05 14:00', status: 'Success', description: 'Exported 500 records in CSV format' },
   ];
 
-  const categories = ['All', 'Authentication', 'Organization', 'Billing', 'System'];
+  const categories = ['All', 'Authentication', 'Organisation', 'Billing', 'System'];
 
   // Filter logs based on active tab and search term
   const filteredLogs = useMemo(() => {
@@ -83,7 +83,7 @@ const SuperadminAuditLog = () => {
   const getCategoryIcon = (category) => {
     const icons = {
       'Authentication': <RiShieldLine size={14} />,
-      'Organization': <RiOrganizationChart size={14} />,
+      'Organisation': <RiOrganizationChart size={14} />,
       'Billing': <RiMoneyPoundCircleLine size={14} />,
       'System': <RiHistoryLine size={14} />,
     };
@@ -94,7 +94,7 @@ const SuperadminAuditLog = () => {
   const getCategoryColor = (category) => {
     const colors = {
       'Authentication': 'bg-blue-50 text-blue-700 border-blue-100',
-      'Organization': 'bg-purple-50 text-purple-700 border-purple-100',
+      'Organisation': 'bg-purple-50 text-purple-700 border-purple-100',
       'Billing': 'bg-amber-50 text-amber-700 border-amber-100',
       'System': 'bg-slate-50 text-slate-700 border-slate-100',
     };
@@ -189,7 +189,7 @@ const SuperadminAuditLog = () => {
                     <span className="text-xs font-black text-gray-600 uppercase tracking-widest">Initiated By</span>
                   </th>
                   <th className="px-6 py-4 text-left">
-                    <span className="text-xs font-black text-gray-600 uppercase tracking-widest">Organization</span>
+                    <span className="text-xs font-black text-gray-600 uppercase tracking-widest">Organisation</span>
                   </th>
                   <th className="px-6 py-4 text-left">
                     <span className="text-xs font-black text-gray-600 uppercase tracking-widest">Timestamp</span>

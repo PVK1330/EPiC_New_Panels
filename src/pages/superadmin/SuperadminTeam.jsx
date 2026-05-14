@@ -26,7 +26,7 @@ import Input from '../../components/Input';
 
 const modules = [
   { id: 'dashboard', label: 'Dashboard', description: 'Business intelligence and KPIs' },
-  { id: 'organizations', label: 'Organizations', description: 'Tenant and user management' },
+  { id: 'organizations', label: 'Organisations', description: 'Tenant and user management' },
   { id: 'plans', label: 'Subscription Plans', description: 'Pricing and tier configuration' },
   { id: 'payments', label: 'Financial Hub', description: 'Stripe and revenue tracking' },
   { id: 'billing', label: 'Invoicing', description: 'Invoices and usage credits' },

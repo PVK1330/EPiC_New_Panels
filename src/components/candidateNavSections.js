@@ -1,69 +1,51 @@
 import {
   LayoutDashboard,
-  Files,
-  CreditCard,
-  MessageSquare,
   ClipboardList,
   FileCheck,
   Upload,
-  Handshake,
   BarChart3,
+  MessageSquare,
   BellRing,
-  DollarSign,
-  Receipt,
-  Package,
-  Star,
-  Settings,
   Calendar,
-  AlertTriangle,
+  DollarSign,
+  Package,
 } from "lucide-react";
 
-/** Candidate portal sidebar: sections, routes, and icons */
+/** Simplified layman-friendly Candidate portal sidebar navigation */
 export const candidateNavSections = [
   {
-    title: "Dashboard",
+    title: "Home",
     standalone: true,
     items: [
       { to: "/candidate/dashboard", label: "Dashboard", icon: LayoutDashboard },
     ],
   },
   {
-    title: "My Application",
-    standalone: true,
+    title: "Application & Files",
     items: [
       {
         to: "/candidate/application",
         label: "Application form",
         icon: ClipboardList,
       },
-    ],
-  },
-  {
-    title: "Documents",
-    items: [
       {
         to: "/candidate/document-checklist",
-        label: "Document Checklist",
+        label: "Document checklist",
         icon: FileCheck,
       },
       {
         to: "/candidate/upload-documents",
-        label: "Upload Documents",
+        label: "Upload documents",
         icon: Upload,
       },
-      // {
-      //   to: "/candidate/third-party-docs",
-      //   label: "Third-Party Documents",
-      //   icon: Handshake,
-      // },
     ],
   },
   {
-    title: "Case Tracking",
+    title: "Progress Tracking",
     items: [
       {
         to: "/candidate/application-status",
-        label: "Application Status",
+        label: "Live tracking",
         icon: BarChart3,
       },
     ],
@@ -81,71 +63,25 @@ export const candidateNavSections = [
         label: "Notifications",
         icon: BellRing,
       },
-    ],
-  },
-  {
-    title: "Appointments",
-    items: [
       {
         to: "/candidate/calendar",
-        label: "Calendar",
+        label: "Appointments",
         icon: Calendar,
-      },
-      {
-        to: "/candidate/appointments",
-        label: "My Appointments",
-        icon: ClipboardList,
       },
     ],
   },
   {
-    title: "Payments",
+    title: "Billing & Downloads",
     items: [
       {
         to: "/candidate/payments",
-        label: "Payment Summary",
+        label: "Payments",
         icon: DollarSign,
-        paymentTab: "summary",
       },
-      {
-        to: "/candidate/payments?tab=history",
-        label: "Payment History",
-        icon: Receipt,
-        paymentTab: "history",
-      },
-    ],
-  },
-  {
-    title: "Downloads",
-    items: [
       {
         to: "/candidate/account",
-        label: "Application Pack",
+        label: "Downloads & Profile",
         icon: Package,
-        accountTab: "downloads-pack",
-      },
-    ],
-  },
-  {
-    title: "Account",
-    items: [
-      {
-        to: "/candidate/account?tab=report",
-        label: "Report an issue",
-        icon: AlertTriangle,
-        accountTab: "report",
-      },
-      {
-        to: "/candidate/account?tab=feedback",
-        label: "Feedback",
-        icon: Star,
-        accountTab: "feedback",
-      },
-      {
-        to: "/candidate/account?tab=profile",
-        label: "Profile & Settings",
-        icon: Settings,
-        accountTab: "profile",
       },
     ],
   },

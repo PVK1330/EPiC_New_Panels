@@ -210,7 +210,7 @@ const AdminLicenceApplications = () => {
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-4 shadow-sm flex flex-col md:flex-row gap-4">
+      <div className="bg-white rounded-3xl border border-gray-100 p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-3.5 text-gray-300" size={18} />
           <input
@@ -221,37 +221,33 @@ const AdminLicenceApplications = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
-          {["All", "Pending", "Approved", "Rejected", "Under Review", "Information Requested"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
-                filter === f 
-                ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-              }`}
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+          <div className="flex items-center justify-between sm:justify-start gap-2 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-2 focus-within:bg-white focus-within:border-primary/20 transition-all">
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0">Status:</span>
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="bg-transparent border-none text-xs font-black text-secondary outline-none cursor-pointer py-1 w-full sm:w-auto"
             >
-              {f}
-            </button>
-          ))}
-        </div>
-        
-        <div className="flex items-center gap-2 border-l border-gray-100 pl-4">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">Category:</p>
-          {["All", "Initial", "Renewal", "CoS Requests"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setTypeFilter(t)}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all whitespace-nowrap ${
-                typeFilter === t 
-                ? "bg-secondary text-white" 
-                : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-              }`}
+              {["All", "Pending", "Approved", "Rejected", "Under Review", "Information Requested"].map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex items-center justify-between sm:justify-start gap-2 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-2 focus-within:bg-white focus-within:border-primary/20 transition-all">
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0">Category:</span>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="bg-transparent border-none text-xs font-black text-secondary outline-none cursor-pointer py-1 w-full sm:w-auto"
             >
-              {t}
-            </button>
-          ))}
+              {["All", "Initial", "Renewal", "CoS Requests"].map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

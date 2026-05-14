@@ -49,10 +49,10 @@ const UserRolePanel = () => {
       ]);
       
       if (usersRes.data?.status === "success") {
-        setUsers(usersRes.data.data.users);
+        setUsers((usersRes.data.data.users || []).filter(u => u.role?.name?.toLowerCase() !== "superadmin"));
       }
       if (rolesRes.data?.status === "success") {
-        setRoles(rolesRes.data.data);
+        setRoles((rolesRes.data.data || []).filter(r => r.name?.toLowerCase() !== "superadmin"));
       }
     } catch {
       setError("Failed to load users and roles data.");

@@ -25,17 +25,6 @@ import { getVisaTypes } from "../../services/settingsService";
 import { getDepartments } from "../../services/caseWorker";
 import { getToken } from "../../utils/storage";
 
-// ─── API Configuration ───────────────────────────────────────────────────────
-const API_BASE_URL = "http://localhost:5000/api/workload";
-
-const getAuthHeaders = () => {
-  const token = getToken() || localStorage.getItem("token");
-  return {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-};
-
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const TABS = [
@@ -129,7 +118,7 @@ function Sparkline({ data, color = "#6366f1" }) {
   if (!data || data.length === 0) {
     return <svg width={80} height={30} className="overflow-visible"><text x={5} y={20} fontSize={10} fill="#999">No data</text></svg>;
   }
-  
+
   const max = Math.max(...data);
   const min = Math.min(...data);
   const range = max - min || 1;
@@ -665,7 +654,7 @@ function PerformanceDetailModal({ caseworker, onClose, showToast }) {
 
 // ─── Performance Tab ──────────────────────────────────────────────────────────
 
-function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) {
+function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, refreshTrigger }) {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [slaFilter, setSlaFilter] = useState("all");
@@ -674,6 +663,7 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchTimeout, setSearchTimeout] = useState(null);
+
   const DEPT_OPTIONS = [
     { value: "all", label: "All departments" },
   ];
@@ -685,88 +675,83 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
     { value: "low", label: "Low (<75%)" },
   ];
 
-  async function fetchcaseworkersdata() {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/caseworkers`, {
-        headers: getAuthHeaders(),
-      })
-      console.log("Fetched caseworkers data:", response.data.data);
-      setCaseworkers(response.data.data || []);
-
-    } catch (error) {
-      console.log(error.message)
-    }
-  }
-
-
-  // API-based fetch with query parameters
+  // API-based fetch using standard reporting wrapper
   const fetchFilteredCaseworkers = useCallback(async (searchTerm = "", dept = "all", sla = "all") => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-
-      if (searchTerm.trim()) {
-        params.append("search", searchTerm.trim());
+      const params = {};
+      if (dateRange?.start) {
+        params.startDate = dateRange.start.toISOString().split('T')[0];
+      }
+      if (dateRange?.end) {
+        params.endDate = dateRange.end.toISOString().split('T')[0];
       }
 
-      if (dept !== "all") {
-        params.append("department", dept);
+      const response = await getPerformanceReport(params);
+      let rawList = response.data?.data || [];
+
+      // Client-side filtering to mimic local search/sla filtering
+      if (searchTerm.trim()) {
+        const q = searchTerm.trim().toLowerCase();
+        rawList = rawList.filter(cw =>
+          (cw.name || '').toLowerCase().includes(q) ||
+          (cw.id || '').toLowerCase().includes(q) ||
+          (cw.email || '').toLowerCase().includes(q)
+        );
       }
 
       if (sla !== "all") {
-        // Map UI filter values to API values
-        const slaMap = { high: "high", mid: "medium", low: "low" };
-        params.append("sla_level", slaMap[sla] || sla);
+        rawList = rawList.filter(cw => {
+          const pct = cw.slaMetPct || 0;
+          if (sla === "high") return pct >= 90;
+          if (sla === "mid") return pct >= 75 && pct < 90;
+          if (sla === "low") return pct < 75;
+          return true;
+        });
       }
 
-      const queryString = params.toString();
-      const url = `${API_BASE_URL}/caseworkers/filter?${queryString}`;
-      const response = await axios.get(url, {
-        headers: getAuthHeaders(),
-      });
-      
-      // Normalize data from filter endpoint
-      const normalizedData = (response.data.data || []).map(cw => {
-        const user = cw.User || {};
+      // Normalize data to fit component UI expectations perfectly
+      const normalizedData = rawList.map(cw => {
+        const pct = cw.slaMetPct || 0;
         return {
-          id: cw.user_id || cw.id,
-          caseworker_id: cw.user_id || cw.id,
-          name: `${user.first_name || cw.first_name || ''} ${user.last_name || cw.last_name || ''}`.trim(),
-          email: user.email || cw.email || 'N/A',
-          department: cw.department || 'General',
-          active_cases: cw.active_cases || 0,
-          completed_cases: cw.completed_cases || 0,
-          workload_percentage: cw.sla_percentage || cw.workload_percentage || 0,
-          health_status: cw.health_status || (cw.sla_percentage >= 80 ? 'healthy' : cw.sla_percentage >= 60 ? 'moderate' : 'stressed'),
-          initials: `${(user.first_name || cw.first_name || 'N').charAt(0)}${(user.last_name || cw.last_name || 'A').charAt(0)}`.toUpperCase(),
+          ...cw,
+          id: cw.id,
+          caseworker_id: cw.id,
+          name: cw.name || 'N/A',
+          email: cw.email || 'N/A',
+          department: cw.department || 'Immigration',
+          active_cases: cw.activeCases || 0,
+          completed_cases: cw.completedCases || 0,
+          workload_percentage: pct,
+          health_status: pct >= 80 ? 'healthy' : pct >= 60 ? 'moderate' : 'stressed',
+          initials: cw.initials || 'CW',
+          avatarBg: cw.avatarBg || 'bg-blue-500',
         };
       });
-      
+
       setCaseworkers(normalizedData);
     } catch (err) {
-      console.error("Error fetching caseworkers:", err);
-      setError("Failed to load caseworker data");
+      console.error("Error fetching caseworkers performance report:", err);
+      setError("Failed to load caseworker performance data");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dateRange]);
 
-  // Fetch on component mount
+  // Fetch on component mount or global refresh trigger
   useEffect(() => {
     fetchFilteredCaseworkers();
-  }, [fetchFilteredCaseworkers]);
+  }, [fetchFilteredCaseworkers, refreshTrigger]);
 
   // Handle search input with debouncing
   const handleSearchChange = useCallback((value) => {
     setSearch(value);
 
-    // Clear previous timeout
     if (searchTimeout) {
       clearTimeout(searchTimeout);
     }
 
-    // Set new debounced timeout (300ms)
     const timeout = setTimeout(() => {
       fetchFilteredCaseworkers(value, deptFilter, slaFilter);
     }, 300);
@@ -795,9 +780,8 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
     };
   }, [searchTimeout]);
 
-
   // Summary KPIs
-  const data =  caseworkers || [];
+  const data = caseworkers || [];
   const avgSla = data.length > 0
     ? (data.reduce((s, c) => s + (c.workload_percentage || 0), 0) / data.length).toFixed(1)
     : 0;
@@ -808,101 +792,46 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
     ? data.reduce((max, c) => (c.workload_percentage || 0) > (max.workload_percentage || 0) ? c : max)
     : null;
 
-  // Handle download report
+  // Handle download report triggers general export workbook
   const handleDownloadReport = async (caseworkerId) => {
-    if (!caseworkerId) {
-      alert("Invalid caseworker ID");
-      return;
-    }
-    
+    showToast?.({
+      message: "Generating combined performance workbook export...",
+      variant: "info",
+    });
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/caseworkers/${caseworkerId}/report/pdf`,
-        {
-          headers: getAuthHeaders(),
-          responseType: "blob",
-        }
-      );
+      const params = {};
+      if (dateRange?.start) params.startDate = dateRange.start.toISOString().split('T')[0];
+      if (dateRange?.end) params.endDate = dateRange.end.toISOString().split('T')[0];
 
-      // Get filename from response header if available
-      const contentDisposition = response.headers['content-disposition'];
-      let filename = `caseworker_report_${caseworkerId}_${Date.now()}.pdf`;
-      
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="(.+)"/);
-        if (match) filename = match[1];
-      }
-
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", filename);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
+      const res = await exportReportingExcel(params);
+      const blob = new Blob([res.data], {
+        type: res.headers["content-type"] || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `performance_metrics_${caseworkerId}_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
       window.URL.revokeObjectURL(url);
-      
-      console.log("Report downloaded successfully:", filename);
-    } catch (err) {
-      console.error("Error downloading report:", err);
-      alert("Failed to download report. Please try again.");
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error("Performance report download failed:", e);
+      showToast?.({ message: "Failed to export metrics workbook.", variant: "danger" });
     }
   };
 
   // Handle view performance details
-  const handleViewPerformance = async (caseworkerId) => {
-    if (!caseworkerId) {
-      alert("Invalid caseworker ID");
-      return;
-    }
-
-    try {
-      const response = await axios.get(
-        `${API_BASE_URL}/caseworkers/${caseworkerId}/report`,
-        {
-          headers: getAuthHeaders(),
-        }
-      );
-      
-      console.log("Fetched performance details:", response.data);
-
-      if (response.data?.data) {
-        // Ensure all required fields exist with defaults
-        const data = response.data.data;
-        const normalizedData = {
-          id: data.id,
-          name: data.name || "N/A",
-          email: data.email || "N/A",
-          department: data.department || "General",
-          joinDate: data.joinDate || new Date().toLocaleDateString("en-GB"),
-          initials: data.initials || "N/A",
-          avatarBg: data.avatarBg || "bg-blue-500",
-          
-          // Performance metrics
-          totalCases: data.totalCases || 0,
-          completedCases: data.completedCases || 0,
-          slaMetPct: data.slaMetPct || 0,
-          avgCompletionDays: data.avgCompletionDays || 0,
-          escalations: data.escalations || 0,
-          clientSatisfaction: data.clientSatisfaction || 3,
-          
-          // Breakdowns and trends
-          visaBreakdown: data.visaBreakdown || [],
-          recentCases: data.recentCases || [],
-          monthlyTrend: data.monthlyTrend || Array(12).fill(0),
-        };
-        
-        setSelectedCW(normalizedData);
-      } else {
-        alert("Failed to load performance details");
-      }
-    } catch (err) {
-      console.error("Error fetching caseworker performance:", err);
-      alert("Failed to load performance details. Please try again.");
+  const handleViewPerformance = (caseworkerId) => {
+    if (!caseworkerId) return;
+    const target = caseworkers.find(c => c.id === caseworkerId || c.caseworker_id === caseworkerId);
+    if (target) {
+      setSelectedCW(target);
+    } else {
+      showToast?.({ message: "Performance details not found in current view.", variant: "warning" });
     }
   };
-    
+
   return (
     <>
       {selectedCW && (
@@ -1051,14 +980,14 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
                       >
                         {/* Caseworker */}
                         <td className="px-4 py-3.5">
-                          <p className="text-sm font-bold text-white bg-blue-500 rounded-full w-10 h-10 flex items-center justify-center">
-                            {cw.initials || "N/A"}
-                          </p>
+                          <div className="flex items-center gap-2.5">
+                            <p className={`text-xs font-bold text-white ${cw.avatarBg || "bg-blue-500"} rounded-full w-8 h-8 flex items-center justify-center shrink-0`}>
+                              {cw.initials || "N/A"}
+                            </p>
+                            <p className="text-sm font-bold text-secondary whitespace-nowrap">{cw.name || "N/A"}</p>
+                          </div>
                         </td>
-                        <td className="px-4 py-3.5">
-                          <p className="text-sm font-bold text-secondary whitespace-nowrap">{cw.name || "N/A"}</p>
-                        </td>
-                        
+
 
                         {/* Email */}
                         <td className="px-4 py-3.5">
@@ -1111,6 +1040,15 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
               </table>
             </div>
           )}
+          {/* Table footer */}
+          {caseworkers.length > 0 && (
+            <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
+              <span>{caseworkers.length} result{caseworkers.length !== 1 ? "s" : ""}</span>
+              <span className="font-mono">
+                Team avg workload: <span className="font-black text-secondary">{avgSla}%</span>
+              </span>
+            </div>
+          )}
         </div>
         </motion.div>
       </>
@@ -1122,6 +1060,7 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
   export default function AdminReports() {
     const { showToast } = useToast();
     const [activeTab, setActiveTab] = useState("cases");
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [reportExporting, setReportExporting] = useState(false);
     const [performanceData, setPerformanceData] = useState(null);
     const [deptOptions, setDeptOptions] = useState([]);
@@ -1138,7 +1077,6 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
     const [workloadLoading, setWorkloadLoading] = useState(false);
     const [workloadError, setWorkloadError] = useState(null);
     const [workloadSearch, setWorkloadSearch] = useState("");
-    const [apiLoading, setapiLoading] = useState(false);
 
   // Financial Data
   const [revenueByVisa, setRevenueByVisa] = useState([]);
@@ -1146,23 +1084,34 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
   const [financeLoading, setFinanceLoading] = useState(false);
   const [financeError, setFinanceError] = useState(null);   
   const [financeSearch, setFinanceSearch] = useState("");
+  const apiLoading = caseTypesLoading || workloadLoading || financeLoading;
 
   // Tab visibility tracking for lazy loading
   const [loadedTabs, setLoadedTabs] = useState(new Set(["cases"])); // Default to cases tab
 
   // ─── API Fetch Functions ──────────────────────────────────────
 
+  const buildParams = useCallback(() => {
+    const params = {};
+    if (dateRange?.start) {
+      params.startDate = dateRange.start.toISOString().split('T')[0];
+    }
+    if (dateRange?.end) {
+      params.endDate = dateRange.end.toISOString().split('T')[0];
+    }
+    return params;
+  }, [dateRange]);
+
   // Fetch case type report
-  const fetchCaseTypeReport = async () => {
+  const fetchCaseTypeReport = useCallback(async () => {
     setCaseTypesLoading(true);
     setCaseTypesError(null);
     try {
-      const response = await axios.get(`${API_BASE_URL}/reports/case-types`, {
-        headers: getAuthHeaders(),
-      });
-
-      if (response.data?.data) {
-        setCaseTypes(response.data.data.cases || []);
+      const response = await getCaseAnalytics(buildParams());
+      if (response.data?.data?.byVisaType) {
+        setCaseTypes(response.data.data.byVisaType.map(v => ({ type: v.name, count: v.count })));
+      } else {
+        setCaseTypes([]);
       }
     } catch (err) {
       console.error("Error fetching case type report:", err);
@@ -1170,19 +1119,29 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
     } finally {
       setCaseTypesLoading(false);
     }
-  };
+  }, [buildParams]);
 
   // Fetch workload report
-  const fetchWorkloadReport = async () => {
+  const fetchWorkloadReport = useCallback(async () => {
     setWorkloadLoading(true);
     setWorkloadError(null);
     try {
-      const response = await axios.get(`${API_BASE_URL}/reports/workload`, {
-        headers: getAuthHeaders(),
-      });
-
+      const response = await getWorkloadReport(buildParams());
       if (response.data?.data?.caseworkers) {
-        setWorkload(response.data.data.caseworkers || []);
+        const mapped = response.data.data.caseworkers.map(c => ({
+          caseworker_id: c.id,
+          caseworker_name: c.name,
+          email: c.email,
+          active_cases: c.activeCases || 0,
+          overdue: Math.max(0, (c.totalCases || 0) - (c.completedCases || 0) - (c.activeCases || 0)),
+          tasks_pending: 0,
+          workload_percentage: c.slaMetPct || 0,
+          health_status: (c.slaMetPct || 0) >= 80 ? 'healthy' : (c.slaMetPct || 0) >= 60 ? 'moderate' : 'stressed',
+          health_color: (c.slaMetPct || 0) >= 80 ? 'green' : (c.slaMetPct || 0) >= 60 ? 'amber' : 'red',
+        }));
+        setWorkload(mapped);
+      } else {
+        setWorkload([]);
       }
     } catch (err) {
       console.error("Error fetching workload report:", err);
@@ -1190,28 +1149,18 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
     } finally {
       setWorkloadLoading(false);
     }
-  };
+  }, [buildParams]);
 
   // Fetch financial reports
-  const fetchFinancialReports = async () => {
+  const fetchFinancialReports = useCallback(async () => {
     setFinanceLoading(true);
     setFinanceError(null);
     try {
-      const [visaResponse, sponsorResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}/reports/revenue-by-visa-type`, {
-          headers: getAuthHeaders(),
-        }),
-        axios.get(`${API_BASE_URL}/reports/revenue-by-sponsor`, {
-          headers: getAuthHeaders(),
-        }),
-      ]);
-
-      if (visaResponse.data?.data) {
-        setRevenueByVisa(visaResponse.data.data.revenue || []);
-      }
-
-      if (sponsorResponse.data?.data) {
-        setRevenueBySponsor(sponsorResponse.data.data.revenue || []);
+      const response = await getFinancialReport(buildParams());
+      if (response.data?.data) {
+        const { byVisaType, bySponsor } = response.data.data;
+        setRevenueByVisa((byVisaType || []).map(v => ({ visa_type: v.name, total_amount: v.total })));
+        setRevenueBySponsor((bySponsor || []).map(s => ({ sponsor_name: s.name, total_amount: s.total })));
       }
     } catch (err) {
       console.error("Error fetching financial reports:", err);
@@ -1219,32 +1168,30 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
     } finally {
       setFinanceLoading(false);
     }
-  };
+  }, [buildParams]);
+
+  // Trigger data updates when tab changes or dateRange filters update
+  const refreshActiveView = useCallback(() => {
+    if (activeTab === "cases") fetchCaseTypeReport();
+    if (activeTab === "workload") fetchWorkloadReport();
+    if (activeTab === "finance") fetchFinancialReports();
+  }, [activeTab, fetchCaseTypeReport, fetchWorkloadReport, fetchFinancialReports]);
 
   // Handle tab change - lazy load data when tab is clicked
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
 
-    // Load data only if not already loaded
     if (!loadedTabs.has(tabId)) {
       const newLoadedTabs = new Set(loadedTabs);
       newLoadedTabs.add(tabId);
       setLoadedTabs(newLoadedTabs);
-
-      if (tabId === "cases") {
-        fetchCaseTypeReport();
-      } else if (tabId === "workload") {
-        fetchWorkloadReport();
-      } else if (tabId === "finance") {
-        fetchFinancialReports();
-      }
     }
   };
 
-  // Load case types report on mount
+  // Keep view synchronized when switching tabs or date filters change
   useEffect(() => {
-    fetchCaseTypeReport();
-  }, []);
+    refreshActiveView();
+  }, [refreshActiveView]);
 
   const handleExportWorkbook = async () => {
     setReportExporting(true);
@@ -1281,43 +1228,6 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
   function handleDateRangeChange({ start, end }) {
     setDateRange({ start, end });
   }
-
-  // Handle export combined PDF
-  const handleExportPDF = async () => {
-    try {
-      // Check if date range is selected
-      if (!dateRange.start || !dateRange.end) {
-        alert("Please select a date range before exporting");
-        return;
-      }
-
-      // Format dates as YYYY-MM-DD
-      const startDate = dateRange.start.toISOString().split('T')[0];
-      const endDate = dateRange.end.toISOString().split('T')[0];
-
-      const response = await axios.get(`${API_BASE_URL}/reports/export-pdf`, {
-        headers: getAuthHeaders(),
-        responseType: "blob",
-        params: {
-          startDate,
-          endDate,
-        },
-      });
-
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `combined-reports-${startDate}_to_${endDate}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Error exporting PDF:", err);
-      alert("Failed to export PDF report");
-    }
-  };
 
   // Filter workload data
   const filteredWorkload = useMemo(() => {
@@ -1377,6 +1287,10 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
           <button
             type="button"
             disabled={apiLoading}
+            onClick={() => {
+              refreshActiveView();
+              setRefreshTrigger(t => t + 1);
+            }}
             className="p-2 rounded-xl border border-gray-200 bg-white text-gray-400 hover:text-primary hover:border-primary/30 transition-colors"
             title="Refresh data"
           >
@@ -1673,6 +1587,7 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
           performanceData={performanceData || []}
           deptOptions={deptOptions || []}
           showToast={showToast}
+          refreshTrigger={refreshTrigger}
         />
       )}
     </motion.div>

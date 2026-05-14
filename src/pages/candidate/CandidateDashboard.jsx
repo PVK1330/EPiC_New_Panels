@@ -12,10 +12,15 @@ import {
   Send,
   ArrowRight,
   Loader2,
+  Bell,
+  MessageSquare,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import useCandidate from "../../hooks/useCandidate";
+import { getNotifications } from "../../services/notificationApi";
+import messagingApi from "../../services/messagingApi";
 
 const STAGES = [
   { name: "Started", key: "started" },
@@ -39,11 +44,23 @@ const getStatusColor = (status) => {
 };
 
 const CandidateDashboard = () => {
+  const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const { myApplication, applicationLoading, getMyApplication } = useCandidate();
+  const [notifications, setNotifications] = useState([]);
+  const [messages, setMessages] = useState([]);
 
   useEffect(() => {
     getMyApplication();
+    getNotifications({ limit: 4 })
+      .then(res => setNotifications(res?.data?.data?.notifications || res?.data?.data || []))
+      .catch(() => {});
+    messagingApi.getConversations()
+      .then(res => {
+        const mData = res?.data?.conversations || res?.data?.data?.conversations || res?.data || [];
+        setMessages(Array.isArray(mData) ? mData.slice(0, 4) : []);
+      })
+      .catch(() => {});
   }, [getMyApplication]);
 
   if (applicationLoading && !myApplication) {
@@ -233,9 +250,83 @@ const CandidateDashboard = () => {
             <p className="text-xs font-bold text-gray-500 mt-1 mb-4">
               Our caseworkers are here to guide you through the process.
             </p>
-            <button className="bg-secondary text-white text-[11px] font-black px-4 py-2 rounded-xl shadow-lg shadow-secondary/15 hover:bg-secondary-dark transition-all">
+            <button type="button" onClick={() => navigate('/candidate/messages')} className="bg-secondary text-white text-[11px] font-black px-4 py-2 rounded-xl shadow-lg shadow-secondary/15 hover:bg-secondary-dark transition-all">
               Chat with Support
             </button>
+          </div>
+        </article>
+      </section>
+
+      {/* Messages & Notifications Overview */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-black text-secondary flex items-center gap-2">
+              <MessageSquare size={18} className="text-primary" /> Recent Messages
+            </h2>
+            <button
+              type="button"
+              onClick={() => navigate('/candidate/messages')}
+              className="text-xs font-bold text-primary hover:underline"
+            >
+              View all
+            </button>
+          </div>
+          <div className="space-y-3 flex-1">
+            {messages.map((item) => {
+              const otherUser = item.user || {};
+              const lastMsg = item.lastMessage || {};
+              const name = `${otherUser.first_name || ""} ${otherUser.last_name || ""}`.trim() || "Caseworker";
+              const preview = typeof lastMsg === "object" ? lastMsg?.content : lastMsg;
+              const time = String(lastMsg.createdAt || item.lastMessageTime || "").split("T")[0];
+              return (
+                <div
+                  key={item.id || Math.random()}
+                  onClick={() => navigate('/candidate/messages')}
+                  className="p-3 rounded-xl bg-gray-50/70 border border-gray-100 hover:bg-gray-50 cursor-pointer transition"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xs font-black text-secondary truncate">{name}</h4>
+                    {time && <span className="text-[9px] font-bold text-gray-400 shrink-0">{time}</span>}
+                  </div>
+                  <p className="text-xs text-gray-600 truncate mt-0.5">{preview || "Open conversation"}</p>
+                </div>
+              );
+            })}
+            {messages.length === 0 && (
+              <p className="text-xs font-bold text-gray-400 text-center py-6">No recent messages.</p>
+            )}
+          </div>
+        </article>
+
+        <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-black text-secondary flex items-center gap-2">
+              <Bell size={18} className="text-primary" /> Notifications
+            </h2>
+            <button
+              type="button"
+              onClick={() => navigate('/candidate/notifications')}
+              className="text-xs font-bold text-primary hover:underline"
+            >
+              View all
+            </button>
+          </div>
+          <div className="space-y-3 flex-1">
+            {notifications.slice(0, 4).map((item) => (
+              <div key={item.id} className="p-3 rounded-xl bg-gray-50/70 border border-gray-100 hover:bg-gray-50 transition">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-black text-secondary truncate">{item.title}</h4>
+                    <p className="text-xs text-gray-600 line-clamp-1 mt-0.5">{item.message}</p>
+                    <p className="text-[9px] font-bold text-gray-400 mt-1">
+                      {item.createdAt ? new Date(item.createdAt).toLocaleString("en-GB", { dateStyle: 'short', timeStyle: 'short' }) : "Recent"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {notifications.length === 0 && <p className="text-xs font-bold text-gray-400 text-center py-6">No notifications yet.</p>}
           </div>
         </article>
       </section>
@@ -243,7 +334,7 @@ const CandidateDashboard = () => {
       <div className="flex justify-end">
         <button
           type="button"
-          onClick={() => window.location.href = '/candidate/application'}
+          onClick={() => navigate('/candidate/application')}
           className="inline-flex items-center gap-1 text-primary text-sm font-black hover:gap-2 transition-all"
         >
           {appStatus === 'draft' ? "Continue your application" : "View submitted application"} <ArrowRight size={15} />

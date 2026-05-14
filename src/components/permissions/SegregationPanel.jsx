@@ -124,9 +124,14 @@ const SegregationPanel = () => {
         getOrphanPermissions(),
         getRolesWithoutPermissions(),
       ]);
-      if (ovRes.data?.status === "success")   setOverview(ovRes.data.data);
+      if (ovRes.data?.status === "success") {
+        const oData = ovRes.data.data || {};
+        if (oData.usersByRole) oData.usersByRole = oData.usersByRole.filter(r => r.roleName?.toLowerCase() !== "superadmin");
+        if (oData.rolePermissions) oData.rolePermissions = oData.rolePermissions.filter(r => r.roleName?.toLowerCase() !== "superadmin");
+        setOverview(oData);
+      }
       if (orphRes.data?.status === "success") setOrphans(orphRes.data.data.permissions || []);
-      if (roleRes.data?.status === "success") setRolesNoPerms(roleRes.data.data.roles || []);
+      if (roleRes.data?.status === "success") setRolesNoPerms((roleRes.data.data.roles || []).filter(r => r.name?.toLowerCase() !== "superadmin"));
     } catch {
       setError("Failed to load RBAC overview data.");
     } finally {

@@ -47,7 +47,7 @@ const navSections = [
         iconActive: RiDashboardFill,
       },
       {
-        name: "Organizations",
+        name: "Organisations",
         path: "/superadmin/organisations",
         icon: RiBuilding4Line,
         iconActive: RiBuilding4Fill,

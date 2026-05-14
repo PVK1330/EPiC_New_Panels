@@ -214,7 +214,7 @@ const Login = () => {
         password: registerForm.password,
         country_code: selectedCountry.code,
         mobile: registerForm.phone.trim(),
-        role_id: 3,
+        role_id: 1,
       });
       sessionStorage.setItem("pending_otp_email", registerForm.email.trim());
       navigate("/verify-otp");

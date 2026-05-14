@@ -361,19 +361,19 @@ export default function CandidateCalendar() {
             <Plus size={16} />
             New Event
           </button>
-          <button
+          {/* <button
             type="button"
             onClick={() => setShowTeamsModal(true)}
             className="flex items-center gap-2 px-4 py-2 border border-secondary text-secondary rounded-xl hover:bg-secondary/5 transition-colors"
           >
             <Video size={16} />
             Teams meeting
-          </button>
+          </button> */}
         </div>
       </div>
 
       {/* Microsoft Teams Connection */}
-      <MicrosoftConnect />
+      {/* <MicrosoftConnect /> */}
 
       {/* Controls Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200">
@@ -963,14 +963,14 @@ export default function CandidateCalendar() {
       )}
 
       {/* Create Teams Meeting Modal */}
-      <CreateMeetingModal
+      {/* <CreateMeetingModal
         isOpen={showTeamsModal}
         onClose={() => setShowTeamsModal(false)}
         onSuccess={() => {
           fetchTeamsMeetings();
           setShowTeamsModal(false);
         }}
-      />
+      /> */}
     </div>
   );
 };

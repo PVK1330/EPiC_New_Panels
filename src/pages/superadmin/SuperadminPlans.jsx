@@ -280,7 +280,7 @@ const SuperadminPlans = () => {
                   </label>
                </div>
                <p className="text-[8px] text-gray-400 font-bold uppercase tracking-tight leading-relaxed">
-                  Featured plans are highlighted with a badge and subtle glow to encourage selection by organizations.
+                  Featured plans are highlighted with a badge and subtle glow to encourage selection by organisations.
                </p>
             </div>
           </div>

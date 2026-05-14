@@ -223,7 +223,7 @@ const SuperadminFrontend = () => {
                   <div className="space-y-1">
                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Audience</label>
                      <select className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-secondary outline-none appearance-none">
-                        <option>All Organizations</option>
+                        <option>All Organisations</option>
                         <option>Enterprise Only</option>
                      </select>
                   </div>

@@ -79,7 +79,7 @@ const SuperadminDashboard = () => {
               <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                    <h1 className="text-2xl font-black text-red-800 mb-2">Platform Overview</h1>
-                   <p className="text-sm text-gray-500  tracking-widest">Consolidated business intelligence and organizational performance metrics.</p>
+                   <p className="text-sm text-gray-500  tracking-widest">Consolidated business intelligence and organisational performance metrics.</p>
                 </div>
                 <div className="flex items-center gap-3">
                    <motion.div
@@ -102,7 +102,7 @@ const SuperadminDashboard = () => {
                      
                         className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-blue-950 border border-white/30 text-white shadow-lg backdrop-blur-sm"
                      >
-                        <RiAddLine size={18} /> Add Organization
+                        <RiAddLine size={18} /> Add Organisation
                      </Button>
                    </motion.div>
                 </div>
@@ -270,17 +270,17 @@ const SuperadminDashboard = () => {
         </div>
       </div>
 
-      {/* Top Organizations Ledger */}
+      {/* Top Organisations Ledger */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
-          <h3 className="text-[10px] font-black text-secondary uppercase tracking-widest">Top Performing Organizations</h3>
-          <button className="text-[9px] font-bold text-primary hover:underline uppercase tracking-widest">View All Organizations</button>
+          <h3 className="text-[10px] font-black text-secondary uppercase tracking-widest">Top Performing Organisations</h3>
+          <button className="text-[9px] font-bold text-primary hover:underline uppercase tracking-widest">View All Organisations</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-white text-[9px] uppercase text-gray-400 tracking-widest font-black border-b border-gray-50">
               <tr>
-                <th className="px-6 py-4 text-left">Organization</th>
+                <th className="px-6 py-4 text-left">Organisation</th>
                 <th className="px-6 py-4 text-left">Subscription Tier</th>
                 <th className="px-6 py-4 text-center">User Quota</th>
                 <th className="px-6 py-4 text-right">Monthly Revenue</th>
@@ -313,7 +313,7 @@ const SuperadminDashboard = () => {
                     <span className="text-xs font-black text-secondary tracking-tight">{org.revenue}</span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                     <button className="p-1.5 text-gray-400 hover:text-secondary hover:bg-gray-100 rounded-lg transition-all" title="Manage Organization">
+                     <button className="p-1.5 text-gray-400 hover:text-secondary hover:bg-gray-100 rounded-lg transition-all" title="Manage Organisation">
                         <RiArrowRightSLine size={20} />
                      </button>
                   </td>

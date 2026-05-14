@@ -73,20 +73,21 @@ const ApplyLicence = () => {
     { id: 1, title: "Company", icon: Building2 },
     { id: 2, title: "Contact", icon: User },
     { id: 3, title: "Licence", icon: FileText },
-    { id: 4, title: "Financial", icon: DollarSign },
     { id: 5, title: "Documents", icon: Upload },
   ];
 
   const handleNext = () => {
-    if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
+    const currentIndex = steps.findIndex((s) => s.id === currentStep);
+    if (currentIndex !== -1 && currentIndex < steps.length - 1) {
+      setCurrentStep(steps[currentIndex + 1].id);
       window.scrollTo(0, 0);
     }
   };
 
   const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+    const currentIndex = steps.findIndex((s) => s.id === currentStep);
+    if (currentIndex > 0) {
+      setCurrentStep(steps[currentIndex - 1].id);
       window.scrollTo(0, 0);
     }
   };
@@ -203,7 +204,7 @@ const ApplyLicence = () => {
                       {step.title}
                     </p>
                     <p className="text-[10px] font-bold text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Go to Step {step.id}
+                      Go to Step {index + 1}
                     </p>
                   </div>
                 </button>
@@ -562,7 +563,7 @@ const ApplyLicence = () => {
                 Back
               </button>
 
-              {currentStep < steps.length ? (
+              {currentStep !== steps[steps.length - 1].id ? (
                 <button
                   onClick={handleNext}
                   className="inline-flex items-center gap-3 rounded-2xl bg-secondary px-8 py-4 text-sm font-black text-white transition hover:bg-secondary-dark shadow-md active:scale-95"

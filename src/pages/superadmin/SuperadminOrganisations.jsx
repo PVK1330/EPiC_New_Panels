@@ -74,7 +74,7 @@ const SuperadminOrganisations = () => {
   };
 
   const handleLoginAs = (org) => {
-    alert(`Impersonating ${org.name}. Redirecting to organization dashboard...`);
+    alert(`Impersonating ${org.name}. Redirecting to organisation dashboard...`);
   };
 
   return (
@@ -89,8 +89,8 @@ const SuperadminOrganisations = () => {
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title="Edit Organization"
-        subtitle="Update organization details."
+        title="Edit Organisation"
+        subtitle="Update organisation details."
         maxWidth="max-w-md"
         footer={
           <div className="flex justify-end gap-2 w-full">
@@ -138,7 +138,7 @@ const SuperadminOrganisations = () => {
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title="Delete Organization"
+        title="Delete Organisation"
         subtitle="This action cannot be undone."
         maxWidth="max-w-md"
         footer={
@@ -168,8 +168,8 @@ const SuperadminOrganisations = () => {
         </div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-             <h1 className="text-3xl font-black text-red-800 mb-2">Organizations</h1>
-             <p className="text-sm text-gray-500 font-medium">Manage all client organizations and their statuses.</p>
+             <h1 className="text-3xl font-black text-red-800 mb-2">Organisations</h1>
+             <p className="text-sm text-gray-500 font-medium">Manage all client organisations and their statuses.</p>
           </div>
           <div className="flex items-center gap-3">
              <motion.div
@@ -187,7 +187,7 @@ const SuperadminOrganisations = () => {
                   onClick={() => setIsCreateModalOpen(true)}
                   className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-blue-950 border border-white/30 text-gray-500shadow-lg backdrop-blur-sm"
                >
-                  <RiAddLine size={18} /> Create Organization
+                  <RiAddLine size={18} /> Create Organisation
                </Button>
              </motion.div>
           </div>
@@ -216,7 +216,7 @@ const SuperadminOrganisations = () => {
             <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
             <input
               type="text"
-              placeholder="Search organizations..."
+              placeholder="Search organisations..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 pr-4 py-1.5 bg-white border border-gray-100 rounded-lg text-[10px] font-bold text-secondary w-full md:w-48 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-gray-300 uppercase"
@@ -228,13 +228,13 @@ const SuperadminOrganisations = () => {
         </div>
       </div>
 
-      {/* Organizations Table */}
+      {/* Organisations Table */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto no-scrollbar">
           <table className="w-full text-sm">
             <thead className="bg-gray-50/50 text-[9px] uppercase text-gray-400 tracking-widest font-bold border-b border-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left">Organization</th>
+                <th className="px-5 py-3 text-left">Organisation</th>
                 <th className="px-5 py-3 text-left">Tier</th>
                 <th className="px-5 py-3 text-center">Users</th>
                 <th className="px-5 py-3 text-center">Cases</th>

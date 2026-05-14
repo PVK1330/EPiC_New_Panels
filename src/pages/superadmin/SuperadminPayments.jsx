@@ -415,7 +415,7 @@ const SuperadminPayments = () => {
               <thead className="bg-gradient-to-r from-gray-50 to-gray-50 text-[10px] uppercase text-gray-600 tracking-widest font-bold border-b-2 border-gray-200">
                 <tr>
                   <th className="px-6 py-4 text-left font-bold">Reference</th>
-                  <th className="px-6 py-4 text-left font-bold">Organization</th>
+                  <th className="px-6 py-4 text-left font-bold">Organisation</th>
                   <th className="px-6 py-4 text-center font-bold">Amount</th>
                   <th className="px-6 py-4 text-left font-bold">Method</th>
                   <th className="px-6 py-4 text-center font-bold">Status</th>
@@ -683,7 +683,7 @@ const SuperadminPayments = () => {
                 className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-md transition-all group"
                 whileHover={{ y: -3, scale: 1.02 }}
               >
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-tight mb-2">🏢 Organization Name</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-tight mb-2">🏢 Organisation Name</p>
                 <p className="text-base font-black text-secondary">{selectedTransaction.org}</p>
               </motion.div>
               <motion.div 

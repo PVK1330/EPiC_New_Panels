@@ -146,7 +146,7 @@ function YesNo({ label, name, formData, onChange, error = "" }) {
   );
 }
 
-function FormProgress({ step, labels }) {
+function FormProgress({ step, labels, onStepClick }) {
   const last = Math.max(labels.length - 1, 1);
   return (
     <div className="mb-8">
@@ -154,20 +154,21 @@ function FormProgress({ step, labels }) {
         {labels.map((lbl, idx) => (
           <div
             key={lbl}
-            className="flex min-w-[4.5rem] flex-1 flex-col items-center sm:min-w-0"
+            onClick={() => onStepClick?.(idx)}
+            className="flex min-w-[4.5rem] flex-1 flex-col items-center sm:min-w-0 cursor-pointer group"
           >
             <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm ${
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm transition-all ${
                 idx <= step
                   ? "bg-secondary text-white shadow-md shadow-secondary/20"
-                  : "bg-gray-200 text-gray-600"
+                  : "bg-gray-200 text-gray-600 group-hover:bg-gray-300"
               }`}
             >
               {idx + 1}
             </div>
             <span
-              className={`mt-1.5 text-center text-xs font-bold leading-snug tracking-normal sm:text-sm ${
-                idx <= step ? "text-secondary" : "text-gray-400"
+              className={`mt-1.5 text-center text-xs font-bold leading-snug tracking-normal sm:text-sm transition-colors ${
+                idx <= step ? "text-secondary" : "text-gray-400 group-hover:text-gray-600"
               }`}
             >
               {lbl}
@@ -581,11 +582,13 @@ export default function CandidateApplicationForm({
   const lastStep = APPLICATION_STEP_LABELS.length - 1;
 
   const goNext = () => {
-    const raw = validateStep(step, formData);
-    const errs = filterValidationErrorsByVisibility(raw, show);
-    if (Object.keys(errs).length > 0) {
-      setFormErrors(errs);
-      return;
+    if (variant === "admin") {
+      const raw = validateStep(step, formData);
+      const errs = filterValidationErrorsByVisibility(raw, show);
+      if (Object.keys(errs).length > 0) {
+        setFormErrors(errs);
+        return;
+      }
     }
     setFormErrors({});
     setStep((s) => Math.min(s + 1, lastStep));
@@ -618,23 +621,8 @@ export default function CandidateApplicationForm({
       return;
     }
 
-    // Candidate variant — validate required steps before submitting (portal visibility)
-    const step0Errs = filterValidationErrorsByVisibility(
-      validateStep(0, cleaned),
-      show,
-    );
-    const step1Errs = filterValidationErrorsByVisibility(
-      validateStep(1, cleaned),
-      show,
-    );
-    const allErrs = { ...step0Errs, ...step1Errs };
-    if (Object.keys(allErrs).length > 0) {
-      setFormErrors(allErrs);
-      // Jump back to the first step that has errors
-      if (Object.keys(step0Errs).length > 0) setStep(0);
-      else if (Object.keys(step1Errs).length > 0) setStep(1);
-      return;
-    }
+    // Candidate variant — required fields relaxed to allow fluid navigation and submission
+    setFormErrors({});
 
     // Sanitize date fields — convert empty strings to null
     const payload = sanitizeForApi(cleaned);
@@ -906,7 +894,7 @@ export default function CandidateApplicationForm({
             </div>
           )}
 
-          <FormProgress step={step} labels={APPLICATION_STEP_LABELS} />
+          <FormProgress step={step} labels={APPLICATION_STEP_LABELS} onStepClick={setStep} />
 
           {/* Validation error banner */}
           {Object.keys(formErrors).length > 0 && (

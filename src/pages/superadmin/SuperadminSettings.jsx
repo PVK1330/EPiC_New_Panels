@@ -270,7 +270,7 @@ const SuperadminSettings = () => {
                                        <div>
                                           <h5 className="text-white text-[11px] font-black uppercase tracking-widest mb-2">Mandatory MFA Strategy</h5>
                                           <p className="text-white/50 text-[9px] font-bold uppercase tracking-tight max-w-sm leading-relaxed">
-                                             Require all SuperAdmin and Organizational Admin accounts to complete biometric or token verification on every login.
+                                             Require all SuperAdmin and Organisational Admin accounts to complete biometric or token verification on every login.
                                           </p>
                                        </div>
                                        <button className="px-6 py-2.5 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg hover:scale-105 transition-all">

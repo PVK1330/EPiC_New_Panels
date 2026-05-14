@@ -10,7 +10,7 @@ export const TABS = [
   { id: TAB_IDS.overview,    label: "RBAC Overview",    icon: "chart" },
   { id: TAB_IDS.matrix,      label: "Permission Matrix", icon: "grid" },
   { id: TAB_IDS.roles,       label: "Role Management",  icon: "shield" },
-  { id: TAB_IDS.permissions, label: "Permissions",      icon: "lock" },
+  // { id: TAB_IDS.permissions, label: "Permissions",      icon: "lock" },
   { id: TAB_IDS.userRoles,   label: "User Roles",       icon: "users" },
 ];
 

@@ -113,7 +113,7 @@ export default function AdminSettings() {
   const [categories, setCategories] = useState([]);
   const [emailTemplates, setEmailTemplates] = useState([]);
   const [slaRules, setSlaRules] = useState([]);
-  const [paymentConfig, setPaymentConfig] = useState({ currency: "GBP", pay_bank: true, pay_card: true, pay_cheque: false, invoice_prefix: "INV-", stripe_public_key: "", stripe_secret_key: "", paypal_client_id: "", paypal_secret: "", razorpay_key_id: "", razorpay_key_secret: "", active_gateway: "stripe" });
+  const [paymentConfig, setPaymentConfig] = useState({ currency: "GBP", pay_bank: true, pay_card: true, pay_cheque: false, bank_details: "Account Name: ElitePic Global Ltd\nSort Code: 20-04-15\nAccount No: 88291044\nBank: Barclays Bank PLC", invoice_prefix: "INV-", stripe_public_key: "", stripe_secret_key: "", paypal_client_id: "", paypal_secret: "", razorpay_key_id: "", razorpay_key_secret: "", active_gateway: "stripe" });
 
   // Modal States
   const [visaModalOpen, setVisaModalOpen] = useState(false);

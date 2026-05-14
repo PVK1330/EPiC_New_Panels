@@ -989,7 +989,6 @@ export default function AdminBusinesses() {
               value={createForm.sponsorLicenceNumber}
               onChange={handleCreateChange}
               placeholder="ABC123456"
-              required
               error={errors.sponsorLicenceNumber}
             />
             <Input
@@ -1010,7 +1009,6 @@ export default function AdminBusinesses() {
               type="date"
               value={createForm.licenceExpiry}
               onChange={handleCreateChange}
-              required
               error={errors.licenceExpiry}
             />
 

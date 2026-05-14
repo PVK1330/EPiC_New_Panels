@@ -267,7 +267,7 @@ const SuperadminBilling = () => {
             <thead className="bg-white text-[9px] uppercase text-gray-400 tracking-widest font-bold border-b border-gray-50">
               <tr>
                 <th className="px-5 py-3 text-left">Invoice ID</th>
-                <th className="px-5 py-3 text-left">Organization</th>
+                <th className="px-5 py-3 text-left">Organisation</th>
                 <th className="px-5 py-3 text-left">Tier</th>
                 <th className="px-5 py-3 text-center">Amount</th>
                 <th className="px-5 py-3 text-center">Renewal</th>

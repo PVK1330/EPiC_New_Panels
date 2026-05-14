@@ -73,7 +73,7 @@ const RoleAssignmentPanel = () => {
         getAllPermissions()
       ]);
       
-      if (roleRes.data?.status === "success") setRoles(roleRes.data.data);
+      if (roleRes.data?.status === "success") setRoles((roleRes.data.data || []).filter(r => r.name?.toLowerCase() !== "superadmin"));
       if (permRes.data?.status === "success") {
         // Flatten permissions from grouped object if necessary
         const grouped = permRes.data.data.permissions || {};

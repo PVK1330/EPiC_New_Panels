@@ -398,6 +398,9 @@ const AdminCaseDetail = () => {
         balance: `$${outstanding.toLocaleString()}`,
         history: paymentHistory,
         invoiceId: financial?.payments?.[0]?.invoiceNumber || "N/A",
+        amountStatus: financial?.amountStatus || "Not Submitted",
+        amountNotes: financial?.amountNotes || "",
+        caseId: cleanId,
       },
       timeline: timelineList,
       threads: threadsList,
@@ -546,7 +549,7 @@ const AdminCaseDetail = () => {
         onDelete={handleDeleteTask}
       />
     ),
-    [TAB_IDS.payments]: <CaseDetailPayments payments={data.payments} />,
+    [TAB_IDS.payments]: <CaseDetailPayments payments={data.payments} onReload={() => fetchCaseDetail(cleanId)} />,
     [TAB_IDS.timeline]: <CaseDetailTimeline items={data.timeline} />,
     [TAB_IDS.communication]: (
       <CaseDetailCommunication threads={data.threads} messages={data.messages} />

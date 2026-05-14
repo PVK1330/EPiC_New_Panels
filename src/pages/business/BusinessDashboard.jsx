@@ -11,10 +11,12 @@ import {
   Briefcase,
   ShieldCheck,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 import { getBusinessDashboard, getBusinessCases } from "../../services/businessProfileApi";
 import { getSponsoredWorkers } from "../../services/sponsoredWorkerApi";
 import { getNotifications } from "../../services/notificationApi";
+import messagingApi from "../../services/messagingApi";
 
 const getStatusIcon = (status) => {
   if (status === "Completed") return <CheckCircle size={16} className="text-green-600" />;
@@ -34,21 +36,25 @@ export default function BusinessDashboard() {
   const [cases, setCases] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [messages, setMessages] = useState([]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [dRes, cRes, wRes, nRes] = await Promise.all([
+        const [dRes, cRes, wRes, nRes, mRes] = await Promise.all([
           getBusinessDashboard().catch(() => null),
           getBusinessCases({ limit: 5 }).catch(() => null),
           getSponsoredWorkers().catch(() => null),
           getNotifications({ limit: 6 }).catch(() => null),
+          messagingApi.getConversations().catch(() => null),
         ]);
         setDashboard(dRes?.data?.data || null);
         setCases(cRes?.data?.data?.cases || []);
         setWorkers(wRes?.data?.data || []);
         setNotifications(nRes?.data?.data?.notifications || nRes?.data?.data || []);
+        const mData = mRes?.data?.conversations || mRes?.data?.data?.conversations || mRes?.data || [];
+        setMessages(Array.isArray(mData) ? mData.slice(0, 5) : []);
       } finally {
         setLoading(false);
       }
@@ -291,32 +297,81 @@ export default function BusinessDashboard() {
         </div>
       </motion.div>
 
-      <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-black text-secondary flex items-center gap-2">
-            <Bell size={25} className="text-primary" /> New Updates and Notifications
-          </h3>
-        </div>
-        <div className="space-y-4">
-          {notifications.map((item) => (
-            <div key={item.id} className="p-4 hover:bg-gray-50 transition">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="text-sm font-black text-secondary">{item.title}</h4>
-                  <p className="text-xs font-bold text-gray-500">{item.message}</p>
-                  <p className="text-[10px] font-bold text-gray-400 mt-1">
-                    {item.createdAt ? new Date(item.createdAt).toLocaleString("en-GB") : "Recent update"}
-                  </p>
+      <div className="grid md:grid-cols-2 gap-6">
+        <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pb-5 pt-5 flex flex-col" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-black text-secondary flex items-center gap-2">
+              <MessageSquare size={22} className="text-primary" /> Recent Messages
+            </h3>
+            <button
+              type="button"
+              onClick={() => window.location.href = '/business/messages'}
+              className="text-xs font-bold text-primary hover:underline"
+            >
+              View all
+            </button>
+          </div>
+          <div className="space-y-3 flex-1">
+            {messages.map((item) => {
+              const otherUser = item.user || {};
+              const lastMsg = item.lastMessage || {};
+              const name = `${otherUser.first_name || ""} ${otherUser.last_name || ""}`.trim() || "User";
+              const preview = typeof lastMsg === "object" ? lastMsg?.content : lastMsg;
+              const time = String(lastMsg.createdAt || item.lastMessageTime || "").split("T")[0];
+              return (
+                <div
+                  key={item.id || Math.random()}
+                  onClick={() => window.location.href = '/business/messages'}
+                  className="p-3 rounded-xl bg-gray-50/70 border border-gray-100 hover:bg-gray-50 cursor-pointer transition"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xs font-black text-secondary truncate">{name}</h4>
+                    {time && <span className="text-[9px] font-bold text-gray-400 shrink-0">{time}</span>}
+                  </div>
+                  <p className="text-xs text-gray-600 truncate mt-0.5">{preview || "Open conversation"}</p>
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(item.priority === "high" ? "High" : item.priority === "medium" ? "Medium" : "Low")}`}>
-                  {item.priority === "high" ? "High" : item.priority === "medium" ? "Medium" : "Low"}
-                </span>
+              );
+            })}
+            {messages.length === 0 && (
+              <p className="text-xs font-bold text-gray-400 text-center py-8">No recent messages.</p>
+            )}
+          </div>
+        </motion.div>
+
+        <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pb-5 pt-5 flex flex-col" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-black text-secondary flex items-center gap-2">
+              <Bell size={22} className="text-primary" /> Updates & Notifications
+            </h3>
+            <button
+              type="button"
+              onClick={() => window.location.href = '/business/notifications'}
+              className="text-xs font-bold text-primary hover:underline"
+            >
+              View all
+            </button>
+          </div>
+          <div className="space-y-3 flex-1">
+            {notifications.slice(0, 4).map((item) => (
+              <div key={item.id} className="p-3 rounded-xl bg-gray-50/70 border border-gray-100 hover:bg-gray-50 transition">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-black text-secondary truncate">{item.title}</h4>
+                    <p className="text-xs text-gray-600 line-clamp-1 mt-0.5">{item.message}</p>
+                    <p className="text-[9px] font-bold text-gray-400 mt-1">
+                      {item.createdAt ? new Date(item.createdAt).toLocaleString("en-GB", { dateStyle: 'short', timeStyle: 'short' }) : "Recent"}
+                    </p>
+                  </div>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${getPriorityColor(item.priority === "high" ? "High" : item.priority === "medium" ? "Medium" : "Low")}`}>
+                    {item.priority === "high" ? "High" : item.priority === "medium" ? "Medium" : "Low"}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
-          {notifications.length === 0 && <p className="text-xs font-bold text-gray-500 px-4 py-6">No notifications yet.</p>}
-        </div>
-      </motion.div>
+            ))}
+            {notifications.length === 0 && <p className="text-xs font-bold text-gray-400 text-center py-8">No notifications yet.</p>}
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }

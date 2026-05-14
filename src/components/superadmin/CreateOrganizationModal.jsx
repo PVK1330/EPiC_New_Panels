@@ -41,7 +41,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
   const handlePrev = () => setStep(prev => prev - 1);
 
   const steps = [
-    { title: 'Organization Details', subtitle: 'Basic company information' },
+    { title: 'Organisation Details', subtitle: 'Basic company information' },
     { title: 'Subscription Plan', subtitle: 'Select service tier' },
     { title: 'Primary Administrator', subtitle: 'Initial account configuration' },
   ];
@@ -61,7 +61,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
             </Button>
           ) : <div />}
           <Button onClick={step < 3 ? handleNext : () => onSubmit(formData)}>
-            {step < 3 ? 'Continue' : 'Create Organization'}
+            {step < 3 ? 'Continue' : 'Create Organisation'}
           </Button>
         </div>
       }
@@ -71,7 +71,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
           <motion.div initial={{ x: 10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Organization Name"
+                label="Organisation Name"
                 name="name"
                 placeholder="e.g. Elite Visa Solutions"
                 value={formData.name}
@@ -96,7 +96,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
               label="Business Email"
               name="primaryEmail"
               type="email"
-              placeholder="contact@organization.com"
+              placeholder="contact@organisation.com"
               value={formData.primaryEmail}
               onChange={handleChange}
               required
@@ -198,7 +198,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
               label="Admin Login Email"
               name="adminEmail"
               type="email"
-              placeholder="admin@organization.com"
+              placeholder="admin@organisation.com"
               value={formData.adminEmail}
               onChange={handleChange}
               required

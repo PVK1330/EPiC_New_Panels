@@ -27,6 +27,7 @@ import { getCaseworkerCases, getVisaTypes, getPetitionTypes, getAllUsers, create
 import { getCaseAuditLogs } from "../../services/auditApi";
 import { getCaseChecklist } from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
+import { updateCaseFinance } from "../../services/caseDetailApi";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 
 const PAGE_SIZE = 7;
@@ -411,6 +412,10 @@ const Cases = () => {
           target: c.targetSubmissionDate || c.created_at,
           priority: c.priority?.toLowerCase() || "medium",
           payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
+          totalAmount: c.totalAmount || 0,
+          paidAmount: c.paidAmount || 0,
+          amountStatus: c.amountStatus || 'Not Submitted',
+          amountNotes: c.amountNotes || '',
           id: c.id,
           candidateId: c.candidateId,
           sponsorId: c.sponsorId,
@@ -2351,7 +2356,17 @@ const Cases = () => {
                 />
               )}
               {detailTab === "tasks" && <TasksTab caseId={detailCase?.id} />}
-              {detailTab === "payments" && <PaymentsTab />}
+              {detailTab === "payments" && (
+                <PaymentsTab
+                  caseDetail={detailCase}
+                  onUpdate={(updated) => {
+                    setDetailCase((prev) => prev ? { ...prev, ...updated } : null);
+                    setCases((prev) =>
+                      prev.map((item) => (item.id === detailCase?.id ? { ...item, ...updated } : item))
+                    );
+                  }}
+                />
+              )}
               {detailTab === "comms" && (
                 <CommsTab candidate={detailCase.candidate} caseId={detailCase.caseId} />
               )}
@@ -3670,65 +3685,203 @@ function TasksTab({ caseId }) {
   );
 }
 
-function PaymentsTab() {
+function PaymentsTab({ caseDetail, onUpdate }) {
+  const toast = useToast();
+  const [totalAmount, setTotalAmount] = useState(caseDetail?.totalAmount || 0);
+  const [amountNotes, setAmountNotes] = useState(caseDetail?.amountNotes || "");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setTotalAmount(caseDetail?.totalAmount || 0);
+    setAmountNotes(caseDetail?.amountNotes || "");
+  }, [caseDetail]);
+
+  const handleSave = async (submitForApproval = false) => {
+    if (!caseDetail?.id) return;
+    setLoading(true);
+    const newStatus = submitForApproval ? "Pending Approval" : caseDetail?.amountStatus;
+    try {
+      const payload = {
+        totalAmount: parseFloat(totalAmount) || 0,
+        amountNotes,
+        ...(submitForApproval ? { amountStatus: "Pending Approval" } : {}),
+      };
+      await updateCaseFinance(caseDetail.id, payload);
+      onUpdate?.(payload);
+      toast?.showSuccess?.(
+        submitForApproval
+          ? "Proposed amount submitted to Admin for approval."
+          : "Financial details saved successfully."
+      );
+    } catch (err) {
+      console.error("Finance update error:", err);
+      toast?.showError?.("Failed to update financial details.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statusColors = {
+    "Not Submitted": "bg-gray-100 text-gray-700 border-gray-200",
+    "Pending Approval": "bg-amber-50 text-amber-800 border-amber-200",
+    "Approved": "bg-emerald-50 text-emerald-800 border-emerald-200",
+    "Rejected": "bg-red-50 text-red-800 border-red-200",
+  };
+
+  const currentStatus = caseDetail?.amountStatus || "Not Submitted";
+  const paid = parseFloat(caseDetail?.paidAmount) || 0;
+  const total = parseFloat(caseDetail?.totalAmount) || 0;
+  const outstanding = Math.max(0, total - paid);
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-start gap-2 rounded-xl border border-secondary/20 bg-secondary/5 px-3 py-2.5 text-xs font-bold text-gray-600">
-        <Lock size={16} className="text-secondary shrink-0 mt-0.5" />
-        Finance data is read-only. Contact Finance to make changes.
+    <div className="space-y-6">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-secondary/10 bg-gradient-to-r from-secondary/[0.03] to-secondary/[0.08] p-5 shadow-sm">
+        <div>
+          <h3 className="text-base font-black text-secondary tracking-tight">
+            Financial Request & Approval
+          </h3>
+          <p className="text-xs font-bold text-gray-500 mt-0.5">
+            Propose case amounts to be authorized by Admin before requesting payment from Candidate.
+          </p>
+        </div>
+        <div className="shrink-0">
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black border shadow-xs ${statusColors[currentStatus] || statusColors["Not Submitted"]}`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-75 mr-1.5 animate-pulse" />
+            {currentStatus}
+          </span>
+        </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+      {/* Editable Form */}
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm space-y-4">
+        <h4 className="text-xs font-black uppercase tracking-wider text-gray-400">
+          Caseworker Proposal Form
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-black text-gray-600 mb-1.5">
+              Proposed Total Amount (£)
+            </label>
+            <input
+              type="number"
+              value={totalAmount}
+              onChange={(e) => setTotalAmount(e.target.value)}
+              disabled={currentStatus === "Approved" || loading}
+              placeholder="e.g. 2400"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-secondary focus:bg-white transition-all disabled:opacity-60"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-black text-gray-600 mb-1.5">
+              Paid Amount (£)
+            </label>
+            <input
+              type="number"
+              value={paid}
+              disabled
+              className="w-full rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-sm font-bold text-gray-500 outline-none cursor-not-allowed"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-black text-gray-600 mb-1.5">
+            Notes / Pricing Breakdown
+          </label>
+          <textarea
+            rows={3}
+            value={amountNotes}
+            onChange={(e) => setAmountNotes(e.target.value)}
+            disabled={currentStatus === "Approved" || loading}
+            placeholder="Itemize application fees, legal assistance, or IHS surcharge coverage..."
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm font-bold text-gray-800 outline-none focus:border-secondary focus:bg-white transition-all resize-none disabled:opacity-60"
+          />
+        </div>
+
+        {currentStatus !== "Approved" && (
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-gray-50">
+            <button
+              type="button"
+              onClick={() => handleSave(false)}
+              disabled={loading}
+              className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-black text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Save Draft
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSave(true)}
+              disabled={loading || !totalAmount}
+              className="rounded-xl bg-secondary px-4 py-2 text-xs font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90 transition-all disabled:opacity-50"
+            >
+              Submit for Approval
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Summary Grid */}
+      <div className="grid grid-cols-3 gap-3">
         {[
-          // { label: "Total fee", value: "£3,500", color: "text-gray-900" },
-          // { label: "Paid", value: "£3,500", color: "text-emerald-600" },
-          { label: "Outstanding", value: "£0", color: "text-gray-500" },
+          { label: "Total fee", value: `£${total.toLocaleString()}`, color: "text-secondary" },
+          { label: "Paid", value: `£${paid.toLocaleString()}`, color: "text-emerald-600" },
+          { label: "Outstanding", value: `£${outstanding.toLocaleString()}`, color: "text-amber-600" },
         ].map((b) => (
           <div
             key={b.label}
-            className="rounded-xl border border-gray-100 bg-gray-50/80 p-4 text-center"
+            className="rounded-xl border border-gray-100 bg-gray-50/80 p-3 text-center"
           >
-            <p className="text-[10px] font-black uppercase text-gray-500">
+            <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">
               {b.label}
             </p>
-            <p className={`text-xl font-black mt-1 ${b.color}`}>{b.value}</p>
+            <p className={`text-base sm:text-lg font-black mt-0.5 tabular-nums ${b.color}`}>
+              {b.value}
+            </p>
           </div>
         ))}
       </div>
-      <p className="text-[10px] font-black uppercase text-gray-500">
-        Payment history
-      </p>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-gray-200 text-left text-[10px] font-black uppercase text-gray-500">
-            <th className="py-2 pr-2">Date</th>
-            <th className="py-2 pr-2">Description</th>
-            <th className="py-2 text-right">Amount</th>
-            <th className="py-2 pl-2">Status</th>
-          </tr>
-        </thead>
-        <tbody className="font-bold text-gray-800">
-          <tr className="border-b border-gray-100">
-            <td className="py-2 pr-2">1 Mar 2026</td>
-            <td className="py-2 pr-2">Initial deposit</td>
-            <td className="py-2 text-right tabular-nums">£1,750</td>
-            <td className="py-2 pl-2">
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-800">
-                Paid
-              </span>
-            </td>
-          </tr>
-          <tr>
-            <td className="py-2 pr-2">15 Mar 2026</td>
-            <td className="py-2 pr-2">Final payment</td>
-            <td className="py-2 text-right tabular-nums">£1,750</td>
-            <td className="py-2 pl-2">
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-800">
-                Paid
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+
+      {/* Payment History Listing */}
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm overflow-x-auto">
+        <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">
+          Recorded Client Payments
+        </p>
+        <table className="w-full text-xs text-left">
+          <thead>
+            <tr className="border-b border-gray-100 text-gray-400 uppercase tracking-wider font-black">
+              <th className="py-2 pr-2">Date</th>
+              <th className="py-2 pr-2">Description</th>
+              <th className="py-2 text-right">Amount</th>
+              <th className="py-2 pl-3">Status</th>
+            </tr>
+          </thead>
+          <tbody className="font-bold text-gray-700 divide-y divide-gray-50">
+            {paid > 0 ? (
+              <tr>
+                <td className="py-2.5 pr-2 whitespace-nowrap">
+                  {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                </td>
+                <td className="py-2.5 pr-2 text-gray-600">Initial retainer coverage</td>
+                <td className="py-2.5 text-right tabular-nums text-emerald-600 font-black">
+                  £{paid.toLocaleString()}
+                </td>
+                <td className="py-2.5 pl-3">
+                  <span className="rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 text-[10px] font-black">
+                    Completed
+                  </span>
+                </td>
+              </tr>
+            ) : (
+              <tr>
+                <td colSpan={4} className="py-5 text-center text-gray-400 font-medium">
+                  No successful payments recorded yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
