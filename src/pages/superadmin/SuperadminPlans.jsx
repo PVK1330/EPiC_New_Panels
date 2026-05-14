@@ -113,19 +113,35 @@ const SuperadminPlans = () => {
 
   return (
     <div className="space-y-5 pb-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-secondary uppercase tracking-tight">Subscription Plans</h1>
-          <p className="text-[11px] text-gray-500 font-medium uppercase tracking-tight">Manage subscription tiers and resource limits.</p>
+      {/* Modern Header with Gradient Background */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-linear-to-r from-secondary via-primary to-blue-600 rounded-2xl p-8 text-white shadow-lg border border-white/10 overflow-hidden relative"
+      >
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl" />
         </div>
-        <Button 
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 px-6 py-2 text-[10px] font-bold uppercase tracking-widest shadow-sm"
-        >
-          <Plus size={16} /> Create Plan
-        </Button>
-      </div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+             <h1 className="text-2xl font-black text-white mb-2">Subscription Plans</h1>
+             <p className="text-sm text-white/80 font-medium">Manage subscription tiers and resource limits.</p>
+          </div>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Button 
+            variant='secondory'
+              onClick={() => handleOpenModal()}
+                className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white/20 border border-white/30 text-white hover:bg-white/30 shadow-lg backdrop-blur-sm"
+            >
+              <RiSettings4Line size={18} /> Create Plan
+            </Button>
+          </motion.div>
+        </div>
+      </motion.div>
 
       {/* Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -137,7 +153,7 @@ const SuperadminPlans = () => {
             className={`bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col group hover:border-primary/20 transition-all relative overflow-hidden ${plan.isFeatured ? 'ring-1 ring-primary/20' : ''}`}
           >
             {plan.isFeatured && (
-              <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-[8px] font-black uppercase rounded-full border border-primary/20 tracking-widest animate-pulse">
+              <div className="absolute top-2 right-3 flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-[8px] font-black uppercase rounded-full border border-primary/20 tracking-widest animate-pulse">
                 <RiStarFill size={10} /> Popular
               </div>
             )}

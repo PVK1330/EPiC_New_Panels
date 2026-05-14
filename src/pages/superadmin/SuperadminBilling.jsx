@@ -19,6 +19,7 @@ import {
   RiFilter3Line,
   RiSecurePaymentLine,
   RiCloseLine,
+  RiAddLine,
 } from 'react-icons/ri';
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
@@ -70,54 +71,93 @@ const SuperadminBilling = () => {
 
   return (
     <div className="space-y-5 pb-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-           <h1 className="text-xl font-bold text-secondary uppercase tracking-tight">Billing & Revenue</h1>
-           <p className="text-[11px] text-gray-500 font-medium uppercase tracking-tight">Monitor platform monetization, subscription health, and revenue analytics.</p>
+      {/* Modern Header with Gradient Background */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-linear-to-r from-secondary via-primary to-blue-600 rounded-2xl p-8 text-white shadow-lg border border-white/10 overflow-hidden relative"
+      >
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl" />
         </div>
-        <div className="flex items-center gap-2">
-           <Button 
-             variant="secondary" 
-             onClick={() => handleGlobalAction('Export')}
-             className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest px-5 py-2 bg-white border-gray-100 shadow-sm"
-           >
-              <RiFileDownloadLine size={16} /> Export Financials
-           </Button>
-           <Button 
-             onClick={() => handleGlobalAction('Audit')}
-             className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest px-6 py-2 shadow-sm"
-           >
-              <RiHistoryLine size={16} /> Audit Billing
-           </Button>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+             <h1 className="text-3xl font-black text-white  mb-2">Billing & Revenue</h1>
+             <p className="text-sm text-white/80 font-medium">Monitor platform monetization, subscription health, and revenue analytics.</p>
+          </div>
+          <div className="flex items-center gap-3">
+             <motion.div
+               whileHover={{ scale: 1.05 }}
+               whileTap={{ scale: 0.95 }}
+             >
+               <Button 
+                  variant="secondary"
+                  onClick={() => handleGlobalAction('Export')}
+                  className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white/20 border border-white/30 text-white hover:bg-white/30 shadow-lg backdrop-blur-sm"
+               >
+                  <RiFileDownloadLine size={16} className="inline mr-2" />Export Financials
+               </Button>
+             </motion.div>
+             <motion.div
+               whileHover={{ scale: 1.05 }}
+               whileTap={{ scale: 0.95 }}
+             >
+               <Button 
+                variant="secondary"
+                  onClick={() => handleGlobalAction('Audit')}
+                   className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white/20 border border-white/30 text-white hover:bg-white/30 shadow-lg backdrop-blur-sm" >
+                  <RiHistoryLine size={18} /> Audit Billing
+               </Button>
+             </motion.div>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Primary KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, idx) => (
-          <motion.div
-            key={idx}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm transition-all hover:border-primary/20 group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className={`p-2.5 rounded-lg bg-${stat.color === 'primary' ? 'primary/5 text-primary border-primary/10' : stat.color === 'secondary' ? 'secondary/5 text-secondary border-secondary/10' : stat.color === 'green' ? 'green-50 text-green-600 border-green-100' : 'amber-50 text-amber-600 border-amber-100'} border`}>
-                <stat.icon size={20} />
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ staggerChildren: 0.1 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        {stats.map((stat, idx) => {
+          const colorMap = {
+            'primary': { bg: 'from-blue-50 to-blue-100/50', border: 'border-blue-200/50', icon: 'from-blue-500 to-blue-600', label: 'text-blue-600', value: 'text-blue-900' },
+            'secondary': { bg: 'from-green-50 to-green-100/50', border: 'border-green-200/50', icon: 'from-green-500 to-green-600', label: 'text-green-600', value: 'text-green-900' },
+            'amber': { bg: 'from-amber-50 to-amber-100/50', border: 'border-amber-200/50', icon: 'from-amber-500 to-amber-600', label: 'text-amber-600', value: 'text-amber-900' },
+            'green': { bg: 'from-purple-50 to-purple-100/50', border: 'border-purple-200/50', icon: 'from-purple-500 to-purple-600', label: 'text-purple-600', value: 'text-purple-900' },
+          };
+          const colors = colorMap[stat.color] || colorMap.primary;
+          
+          return (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ y: -6, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}
+              transition={{ duration: 0.3, delay: idx * 0.1 }}
+              className={`p-6 bg-linear-to-br ${colors.bg} rounded-2xl border ${colors.border} shadow-sm flex items-start gap-4 hover:border-opacity-80 cursor-pointer group overflow-hidden relative`}
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white/30 rounded-full blur-2xl" />
+              <div className="relative z-10 flex flex-col flex-1">
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`w-12 h-12 bg-linear-to-br ${colors.icon} rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-all duration-200`}>
+                    <stat.icon size={24} />
+                  </div>
+                  <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${
+                    stat.trend.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {stat.trend}
+                  </span>
+                </div>
+                <p className={`text-[9px] font-black ${colors.label} uppercase tracking-widest`}>{stat.title}</p>
+                <h3 className={`text-3xl font-black ${colors.value} mt-2 tracking-tight`}>{stat.value}</h3>
               </div>
-              <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-widest ${
-                stat.trend.startsWith('+') ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'
-              }`}>
-                {stat.trend}
-              </span>
-            </div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stat.title}</p>
-            <h3 className="text-2xl font-black text-secondary mt-1 tracking-tight">{stat.value}</h3>
-          </motion.div>
-        ))}
-      </div>
+            </motion.div>
+          );
+        })}
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* MRR Growth Chart */}

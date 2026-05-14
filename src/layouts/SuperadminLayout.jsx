@@ -53,7 +53,7 @@ const SuperadminLayout = () => {
   }, []);
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 overflow-hidden ">
       <SuperadminSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -73,7 +73,7 @@ const SuperadminLayout = () => {
               <RiMenuLine size={20} />
             </button>
 
-            <nav className="flex items-center text-sm font-medium text-gray-500 overflow-hidden">
+            <nav className="flex items-center text-sm text-gray-500 overflow-hidden">
               <Link
                 to="/superadmin/dashboard"
                 className="hover:text-primary transition-colors flex items-center shrink-0"

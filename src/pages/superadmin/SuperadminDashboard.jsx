@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   RiOrganizationChart,
+  RiShieldUserLine,
+  RiAddLine,
   RiGroupLine,
   RiBriefcaseLine,
   RiMoneyPoundCircleLine,
@@ -65,28 +67,128 @@ const SuperadminDashboard = () => {
   return (
     <div className="space-y-6 pb-6">
       {/* Platform Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-           <h1 className="text-xl font-bold text-secondary uppercase tracking-tight mb-1">Platform Overview</h1>
-           <p className="text-[11px] text-gray-500 font-medium uppercase tracking-tight">Consolidated business intelligence and organizational performance metrics.</p>
-        </div>
-        <div className="flex items-center gap-2">
-           <Button variant="secondary" className="text-[10px] font-bold uppercase tracking-widest px-6 py-2 bg-white border-gray-100 shadow-sm hover:border-primary/20">
-              Generate Report
-           </Button>
-           <Button className="text-[10px] font-bold uppercase tracking-widest px-8 py-2 shadow-sm transition-all hover:scale-[1.02]">
-              Add Organization
-           </Button>
-        </div>
-      </div>
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-r from-secondary via-primary to-blue-600 rounded-2xl p-8 text-white shadow-lg border border-white/10 overflow-hidden relative"
+            >
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+              </div>
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                   <h1 className="text-2xl font-black text-white mb-2">Platform Overview</h1>
+                   <p className="text-sm text-white/80  tracking-widest">Consolidated business intelligence and organizational performance metrics.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                   <motion.div
+                     whileHover={{ scale: 1.05 }}
+                     whileTap={{ scale: 0.95 }}
+                   >
+                     <Button 
+                        variant="secondary"
+  
+                        className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white/20 border border-white/30 text-white hover:bg-white/30 shadow-lg backdrop-blur-sm"
+                     >
+                        <RiShieldUserLine size={16} className="inline mr-2" />Generate Report
+                     </Button>
+                   </motion.div>
+                   <motion.div
+                     whileHover={{ scale: 1.05 }}
+                     whileTap={{ scale: 0.95 }}
+                   >
+                     <Button 
+                     variant="secondary"
+                        className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white/20 border border-white/30 text-white hover:bg-white/30 shadow-lg backdrop-blur-sm"
+                     >
+                        <RiAddLine size={18} /> Add Organization
+                     </Button>
+                   </motion.div>
+                </div>
+              </div>
+            </motion.div>
 
       {/* Core Business KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total MRR" value="£84,250" icon={RiMoneyPoundCircleLine} trend="+12.5%" color="primary" delay={0.1} />
-        <StatCard title="Active Tenants" value="124" icon={RiOrganizationChart} trend="+5.2%" color="primary" delay={0.2} />
-        <StatCard title="Platform Users" value="4.2k" icon={RiGroupLine} trend="+8.4%" color="primary" delay={0.3} />
-        <StatCard title="Net Retention" value="104.2%" icon={RiBarChartLine} trend="+2.1%" color="primary" delay={0.4} />
-      </div>
+        <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ staggerChildren: 0.1 }}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+                >
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ y: -6, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}
+                    transition={{ duration: 0.3 }}
+                    className="p-6 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl border border-blue-200/50 shadow-sm flex items-center gap-4 hover:border-blue-300/80 cursor-pointer group overflow-hidden relative"
+                  >
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200/30 rounded-full blur-2xl" />
+                      <div className="relative z-10 w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all duration-200">
+                        <RiMoneyPoundCircleLine size={24} />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Total MRR</p>
+                        <h4 className="text-m font-black text-blue-900 tracking-tight">£84,250</h4>
+                        <h4 className="text-m font-black text-blue-900 tracking-tight">+12.5%</h4>
+
+                      </div>
+                  </motion.div>
+      
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ y: -6, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                    className="p-6 bg-gradient-to-br from-green-50 to-green-100/50 rounded-2xl border border-green-200/50 shadow-sm flex items-center gap-4 hover:border-green-300/80 cursor-pointer group overflow-hidden relative"
+                  >
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-green-200/30 rounded-full blur-2xl" />
+                      <div className="relative z-10 w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all duration-200">
+                        <RiOrganizationChart size={24} />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-green-600 uppercase tracking-widest">Active Tenants</p>
+                        <h4 className="text-m font-black text-green-900 tracking-tight">124</h4>
+                        <h4 className="text-m font-black text-green-900 tracking-tight">+5.2%</h4>
+                      </div>
+                  </motion.div>
+      
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ y: -6, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}
+                    transition={{ duration: 0.3, delay: 0.2 }}
+                    className="p-6 bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-2xl border border-purple-200/50 shadow-sm flex items-center gap-4 hover:border-purple-300/80 cursor-pointer group overflow-hidden relative"
+                  >
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-purple-200/30 rounded-full blur-2xl" />
+                      <div className="relative z-10 w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all duration-200">
+                        <RiGroupLine size={24} />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-purple-600 uppercase tracking-widest">Platform Users</p>
+                        <h4 className="text-m font-black text-purple-900 tracking-tight">4.2k</h4>
+                        <h4 className="text-m font-black text-purple-900 tracking-tight">+8.4%</h4>
+                      </div>
+                  </motion.div>
+      
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ y: -6, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}
+                    transition={{ duration: 0.3, delay: 0.3 }}
+                    className="p-6 bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-2xl border border-amber-200/50 shadow-sm flex items-center gap-4 hover:border-amber-300/80 cursor-pointer group overflow-hidden relative"
+                  >
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-amber-200/30 rounded-full blur-2xl" />
+                      <div className="relative z-10 w-14 h-14 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all duration-200">
+                        <RiBarChartLine size={24} />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest">Net Retention</p>
+                        <h4 className="text-m font-black text-amber-900 tracking-tight">104.2%</h4>
+                        <h4 className="text-m font-black text-amber-900 tracking-tight">+2.1%</h4>
+                      </div>
+                  </motion.div>
+                </motion.div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Growth Analytics */}

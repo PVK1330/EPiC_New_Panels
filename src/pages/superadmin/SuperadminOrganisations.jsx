@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   RiSearchLine,
   RiFilter3Line,
@@ -10,6 +11,7 @@ import {
   RiEditLine,
   RiDeleteBin6Line,
   RiLoginBoxLine,
+  RiAddLine,
 } from 'react-icons/ri';
 import { Plus } from 'lucide-react';
 import CreateOrganizationModal from '../../components/superadmin/CreateOrganizationModal';
@@ -153,20 +155,45 @@ const SuperadminOrganisations = () => {
            </p>
         </div>
       </Modal>
-      
-      <div className="flex items-center justify-between">
-        <div>
-           <h1 className="text-xl font-bold text-secondary uppercase tracking-tight">Organizations</h1>
-           <p className="text-[11px] text-gray-500 font-medium uppercase tracking-tight">Manage all client organizations and their statuses.</p>
-        </div>
-        <Button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-2 text-[10px] font-bold uppercase tracking-widest shadow-sm"
-        >
-          <Plus size={16} /> Create Organization
-        </Button>
-      </div>
 
+      {/* Modern Header with Gradient Background */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-linear-to-r from-secondary via-primary to-blue-600 rounded-2xl p-8 text-white shadow-lg border border-white/10 overflow-hidden relative"
+      >
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+        </div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+             <h1 className="text-3xl font-black text-white mb-2">Organizations</h1>
+             <p className="text-sm text-white/80 font-medium">Manage all client organizations and their statuses.</p>
+          </div>
+          <div className="flex items-center gap-3">
+             <motion.div
+               whileHover={{ scale: 1.05 }}
+               whileTap={{ scale: 0.95 }}
+             >
+               
+             </motion.div>
+             <motion.div
+               whileHover={{ scale: 1.05 }}
+               whileTap={{ scale: 0.95 }}
+             >
+               <Button 
+               variant="secondary"
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white/20 border border-white/30 text-white hover:bg-white/30 shadow-lg backdrop-blur-sm"
+               >
+                  <RiAddLine size={18} /> Create Organization
+               </Button>
+             </motion.div>
+          </div>
+        </div>
+      </motion.div>
+      
       {/* Filters & Search */}
       <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex bg-gray-50 p-1 rounded-lg w-fit border border-gray-100">

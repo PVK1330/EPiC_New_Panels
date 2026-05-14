@@ -38,16 +38,26 @@ const SuperadminProfile = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-5 pb-8 px-2">
-      {/* Header Section */}
-      <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-        <div>
-          <h1 className="text-lg font-bold text-secondary uppercase tracking-tight">Account Management</h1>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Manage your identity and security settings.</p>
+      {/* Modern Header with Gradient Background */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-linear-to-r from-secondary via-primary to-blue-600 rounded-2xl p-8 text-white shadow-lg border border-white/10 overflow-hidden relative"
+      >
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl" />
         </div>
-        <div className="flex items-center gap-2">
-           <span className="px-2.5 py-1 bg-secondary text-white text-[9px] font-black uppercase tracking-widest rounded-md">Global Admin</span>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+             <h1 className="text-2xl font-black text-white mb-2">Account Management</h1>
+             <p className="text-sm text-white/80 font-medium">Manage your identity and security settings.</p>
+          </div>
+          <div className="flex items-center gap-3">
+             <span className="px-3.5 py-1.5 bg-white/20 border border-white/30 text-white text-[9px] font-black uppercase tracking-widest rounded-lg backdrop-blur-sm">Global Admin</span>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Navigation Sidebar */}
