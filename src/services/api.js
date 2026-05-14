@@ -13,7 +13,7 @@ console.log("🌐 API Instance created with baseURL:", api.defaults.baseURL);
 
 // Attach token from localStorage on every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+  const token = getToken() || localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
     console.log("🔐 Token attached to request");

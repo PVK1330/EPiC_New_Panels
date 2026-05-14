@@ -23,12 +23,13 @@ import {
 } from "../../services/reportingApi";
 import { getVisaTypes } from "../../services/settingsService";
 import { getDepartments } from "../../services/caseWorker";
+import { getToken } from "../../utils/storage";
 
 // ─── API Configuration ───────────────────────────────────────────────────────
 const API_BASE_URL = "http://localhost:5000/api/workload";
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
+  const token = getToken() || localStorage.getItem("token");
   return {
     Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
