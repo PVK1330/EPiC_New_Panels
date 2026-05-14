@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   APPLICATION_STEP_LABELS,
+  APPLICATION_FIELD_LABELS,
   getInitialApplicationFormData,
   loadFieldVisibilityFromStorage,
   loadCustomFieldDefinitionsFromStorage,
@@ -12,6 +13,7 @@ import {
 } from "./applicationFormMapping";
 import useCandidate from "../../hooks/useCandidate";
 import { getCaseworkers } from "../../services/caseWorker";
+import { getVisaTypesDropdown } from "../../services/settingsService";
 
 const inputClass =
   "mt-1 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow";
@@ -155,16 +157,18 @@ function FormProgress({ step, labels }) {
             className="flex min-w-[4.5rem] flex-1 flex-col items-center sm:min-w-0"
           >
             <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm ${idx <= step
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm ${
+                idx <= step
                   ? "bg-secondary text-white shadow-md shadow-secondary/20"
                   : "bg-gray-200 text-gray-600"
-                }`}
+              }`}
             >
               {idx + 1}
             </div>
             <span
-              className={`mt-1.5 text-center text-xs font-bold leading-snug tracking-normal sm:text-sm ${idx <= step ? "text-secondary" : "text-gray-400"
-                }`}
+              className={`mt-1.5 text-center text-xs font-bold leading-snug tracking-normal sm:text-sm ${
+                idx <= step ? "text-secondary" : "text-gray-400"
+              }`}
             >
               {lbl}
             </span>
@@ -196,7 +200,7 @@ const relationshipOptions = [
   { value: "Other", label: "Other" },
 ];
 
-const visaTypeOptions = [
+const fallbackVisaTypeOptions = [
   { value: "Visitor", label: "Visitor" },
   { value: "Student", label: "Student" },
   { value: "Work", label: "Work" },
@@ -207,10 +211,15 @@ const visaTypeOptions = [
 
 /** All DATE-type fields — empty strings must be converted to null before the API call. */
 const DATE_FIELDS = [
-  "dob", "issueDate", "expiryDate",
-  "startDate", "endDate",
-  "parentDob", "parent2Dob",
-  "entryDate", "leaveDate",
+  "dob",
+  "issueDate",
+  "expiryDate",
+  "startDate",
+  "endDate",
+  "parentDob",
+  "parent2Dob",
+  "entryDate",
+  "leaveDate",
   "visaEndDate",
 ];
 
@@ -225,6 +234,18 @@ function sanitizeForApi(payload) {
     }
   }
   return out;
+}
+
+/** Format a date string as "DD MMM YYYY" for display, or "N/A" on failure. */
+function formatDate(dateStr) {
+  if (!dateStr) return "N/A";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "N/A";
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 /** Per-step required-field validation. Returns { fieldName: "error message" }. */
@@ -243,17 +264,18 @@ function validateStep(stepIndex, data) {
     }
     if (!data.contactNumber?.toString().trim())
       errs.contactNumber = "Contact number is required";
-    if (!data.gender)
-      errs.gender = "Please select a gender";
+    if (!data.gender) errs.gender = "Please select a gender";
   }
 
   if (stepIndex === 1) {
-    if (!data.nationality?.toString().trim()) errs.nationality = "Nationality is required";
+    if (!data.nationality?.toString().trim())
+      errs.nationality = "Nationality is required";
     if (!data.dob) errs.dob = "Date of birth is required";
 
     // If passport number is provided, require details
     if (data.passportNumber?.toString().trim()) {
-      if (!data.issuingAuthority?.toString().trim()) errs.issuingAuthority = "Issuing authority is required";
+      if (!data.issuingAuthority?.toString().trim())
+        errs.issuingAuthority = "Issuing authority is required";
       if (!data.issueDate) errs.issueDate = "Issue date is required";
       if (!data.expiryDate) errs.expiryDate = "Expiry date is required";
     }
@@ -272,13 +294,20 @@ function validateStep(stepIndex, data) {
   }
 
   if (stepIndex === 3) {
-    if (data.parentName?.toString().trim() && !data.parentRelation?.toString().trim()) {
+    if (
+      data.parentName?.toString().trim() &&
+      !data.parentRelation?.toString().trim()
+    ) {
       errs.parentRelation = "Relationship is required if name is provided";
     }
   }
 
   if (stepIndex === 5) {
-    if (data.visaType && data.visaType !== "Other" && !data.brpNumber?.toString().trim()) {
+    if (
+      data.visaType &&
+      data.visaType !== "Other" &&
+      !data.brpNumber?.toString().trim()
+    ) {
       errs.brpNumber = "BRP number is required for your visa type";
     }
     if (data.brpNumber?.toString().trim() && !data.visaEndDate) {
@@ -289,15 +318,28 @@ function validateStep(stepIndex, data) {
   return errs;
 }
 
+/** Keep only errors for fields that are visible in the current visibility config. */
+function filterValidationErrorsByVisibility(errs, show) {
+  const out = {};
+  for (const [key, msg] of Object.entries(errs)) {
+    if (typeof show === "function" && show(key)) out[key] = msg;
+  }
+  return out;
+}
+
 export default function CandidateApplicationForm({
   variant = "candidate",
   embedded = false,
+  adminShowAllBuiltinFields = false,
   fieldVisibility: fieldVisibilityProp,
   customFieldDefinitions: customFieldDefinitionsProp,
   formData: controlledFormData,
   setFormData: setControlledFormData,
   onAdminSubmit,
+  onAdminSaveDraft,
   onAdminCancel,
+  /** When true, parent is persisting Save client (create/update). */
+  adminSubmitBusy = false,
   containerClassName,
 }) {
   const navigate = useNavigate();
@@ -308,15 +350,30 @@ export default function CandidateApplicationForm({
     applicationLoading,
   } = useCandidate();
 
-  const [internalForm, setInternalForm] = useState(getInitialApplicationFormData);
+  const [internalForm, setInternalForm] = useState(
+    getInitialApplicationFormData,
+  );
   const [step, setStep] = useState(0);
   const [showSecondParent, setShowSecondParent] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [draftLoading, setDraftLoading] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
   const [caseworkers, setCaseworkers] = useState([]);
   const [caseworkersLoading, setCaseworkersLoading] = useState(false);
+  // Locked application state
+  const [isLocked, setIsLocked] = useState(false);
+  const [submittedAt, setSubmittedAt] = useState(null);
+  // Banner state: null = hidden, string = message to show
+  const [apiError, setApiError] = useState(null);
+  const [showSubmitWarning, setShowSubmitWarning] = useState(true);
+  const [portalFieldVisibility, setPortalFieldVisibility] = useState(null);
+  const [portalCustomDefs, setPortalCustomDefs] = useState(null);
+  const [adminDraftSaving, setAdminDraftSaving] = useState(false);
+
+  const [visaTypeOptions, setVisaTypeOptions] = useState(
+    fallbackVisaTypeOptions,
+  );
 
   const isControlled =
     controlledFormData !== undefined && setControlledFormData !== undefined;
@@ -337,19 +394,28 @@ export default function CandidateApplicationForm({
         if (cancelled) return;
 
         if (result.ok && result.application) {
+          const app = result.application;
+
+          // If already submitted and locked, show the locked screen instead
+          if (app.status === "submitted" && app.isLocked === true) {
+            setIsLocked(true);
+            setSubmittedAt(app.submittedAt ?? null);
+            return; // finally block clears draftLoading
+          }
+
           // Use the existing mapper: it normalises null→"", ISO dates→YYYY-MM-DD
           const restored = candidateRowToApplicationForm({
-            first_name: result.application.firstName ?? "",
-            last_name: result.application.lastName ?? "",
-            email: result.application.email ?? "",
+            first_name: app.firstName ?? "",
+            last_name: app.lastName ?? "",
+            email: app.email ?? "",
             country_code: "",
-            mobile: result.application.contactNumber ?? "",
-            application: result.application,
+            mobile: app.contactNumber ?? "",
+            application: app,
           });
           setInternalForm(restored);
           if (restored.parent2Name) setShowSecondParent(true);
           // Only show "Draft restored" banner if it's NOT already submitted
-          if (result.application.status !== "submitted") {
+          if (app.status !== "submitted") {
             setDraftRestored(true);
           }
         } else {
@@ -378,9 +444,48 @@ export default function CandidateApplicationForm({
     }
 
     loadDraft();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (variant !== "candidate" || isControlled) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [fsRes, cfRes] = await Promise.all([
+          getCandidateApplicationFieldSettings(),
+          getCandidateApplicationCustomFields(),
+        ]);
+        if (cancelled) return;
+        const rows = fsRes.data?.data ?? [];
+        const vis = {};
+        for (const row of rows) {
+          vis[row.field_key] = row.is_visible !== false;
+        }
+        for (const k of Object.keys(APPLICATION_FIELD_LABELS)) {
+          if (vis[k] === undefined) vis[k] = true;
+        }
+        setPortalFieldVisibility(vis);
+        const defs = (cfRes.data?.data ?? []).map((cf) => ({
+          id: cf.field_id,
+          label: cf.label,
+          type: cf.field_type,
+        }));
+        setPortalCustomDefs(defs);
+      } catch {
+        if (!cancelled) {
+          setPortalFieldVisibility(null);
+          setPortalCustomDefs(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [variant, isControlled]);
 
   // Initialize showSecondParent based on existing parent2 details (controlled mode)
   if (isControlled && controlledFormData?.parent2Name && !showSecondParent) {
@@ -404,24 +509,60 @@ export default function CandidateApplicationForm({
     }
   }, [variant]);
 
+  useEffect(() => {
+    const fetchDynamicVisaTypes = async () => {
+      try {
+        const res = await getVisaTypesDropdown();
+        const types = res.data?.data?.visa_types || [];
+        if (types.length > 0) {
+          const mappedOptions = types.map((t) => ({
+            value: t.name,
+            label: t.name,
+          }));
+          setVisaTypeOptions([
+            ...mappedOptions,
+            { value: "Other", label: "Other" }, // Ensure "Other" is always an option if needed
+          ]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch visa types:", error);
+      }
+    };
+    fetchDynamicVisaTypes();
+  }, []);
+
   const resolvedVisibility =
-    fieldVisibilityProp === undefined
-      ? loadFieldVisibilityFromStorage()
-      : fieldVisibilityProp;
-  const show = (key) => resolvedVisibility[key] !== false;
+    fieldVisibilityProp !== undefined
+      ? fieldVisibilityProp
+      : (portalFieldVisibility ?? loadFieldVisibilityFromStorage());
+  const show = (key) => {
+    if (
+      variant === "admin" &&
+      adminShowAllBuiltinFields &&
+      Object.prototype.hasOwnProperty.call(APPLICATION_FIELD_LABELS, key)
+    ) {
+      return true;
+    }
+    return resolvedVisibility[key] !== false;
+  };
 
   const customFieldDefinitions =
-    customFieldDefinitionsProp === undefined
-      ? loadCustomFieldDefinitionsFromStorage()
-      : customFieldDefinitionsProp;
+    customFieldDefinitionsProp !== undefined
+      ? customFieldDefinitionsProp
+      : (portalCustomDefs ?? loadCustomFieldDefinitionsFromStorage());
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear the error for this field as soon as the user edits it
+    // Clear field error and any API-level banner as soon as the user types
     if (formErrors[name]) {
-      setFormErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
+      setFormErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
     }
+    if (apiError) setApiError(null);
   };
 
   const handleCustomResponseChange = (fieldId, value) => {
@@ -440,13 +581,11 @@ export default function CandidateApplicationForm({
   const lastStep = APPLICATION_STEP_LABELS.length - 1;
 
   const goNext = () => {
-    // Only validate on candidate-facing form; admin form skips step validation
-    if (variant === "candidate") {
-      const errs = validateStep(step, formData);
-      if (Object.keys(errs).length > 0) {
-        setFormErrors(errs);
-        return; // Block advancement until errors are fixed
-      }
+    const raw = validateStep(step, formData);
+    const errs = filterValidationErrorsByVisibility(raw, show);
+    if (Object.keys(errs).length > 0) {
+      setFormErrors(errs);
+      return;
     }
     setFormErrors({});
     setStep((s) => Math.min(s + 1, lastStep));
@@ -459,20 +598,35 @@ export default function CandidateApplicationForm({
 
   const handleSubmit = async (e) => {
     if (e && typeof e.preventDefault === "function") e.preventDefault();
-    const defs =
-      customFieldDefinitionsProp === undefined
-        ? loadCustomFieldDefinitionsFromStorage()
-        : customFieldDefinitionsProp;
+    const defs = customFieldDefinitions;
     const cleaned = pruneCustomResponsesToDefinitions(formData, defs);
 
     if (variant === "admin" && typeof onAdminSubmit === "function") {
-      onAdminSubmit(cleaned);
+      for (let i = 0; i <= lastStep; i++) {
+        const stepErrs = filterValidationErrorsByVisibility(
+          validateStep(i, cleaned),
+          show,
+        );
+        if (Object.keys(stepErrs).length > 0) {
+          setFormErrors(stepErrs);
+          setStep(i);
+          return;
+        }
+      }
+      setFormErrors({});
+      onAdminSubmit(sanitizeForApi(cleaned));
       return;
     }
 
-    // Candidate variant — validate all required steps before submitting
-    const step0Errs = validateStep(0, cleaned);
-    const step1Errs = validateStep(1, cleaned);
+    // Candidate variant — validate required steps before submitting (portal visibility)
+    const step0Errs = filterValidationErrorsByVisibility(
+      validateStep(0, cleaned),
+      show,
+    );
+    const step1Errs = filterValidationErrorsByVisibility(
+      validateStep(1, cleaned),
+      show,
+    );
     const allErrs = { ...step0Errs, ...step1Errs };
     if (Object.keys(allErrs).length > 0) {
       setFormErrors(allErrs);
@@ -485,55 +639,70 @@ export default function CandidateApplicationForm({
     // Sanitize date fields — convert empty strings to null
     const payload = sanitizeForApi(cleaned);
 
-    setSubmitting(true);
+    setIsSubmitting(true);
+    setApiError(null);
     const result = await submitApplication(payload);
-    setSubmitting(false);
+    setIsSubmitting(false);
 
     if (result.ok) {
-      alert("Application submitted successfully!");
       navigate("/candidate/dashboard");
     } else {
-      const msg =
-        result.error?.response?.data?.message ||
-        result.error?.message ||
-        "Submission failed. Please try again.";
-      alert(msg);
+      const status = result.error?.response?.status;
+      if (status === 409) {
+        setApiError(
+          result.error.response.data?.message ||
+            "Your application has already been submitted and is currently under review.",
+        );
+      } else {
+        setApiError("Something went wrong. Please try again.");
+      }
     }
   };
 
   const handleSaveDraft = async () => {
-    if (variant !== "candidate") return;
-    const defs =
-      customFieldDefinitionsProp === undefined
-        ? loadCustomFieldDefinitionsFromStorage()
-        : customFieldDefinitionsProp;
+    const defs = customFieldDefinitions;
     const cleaned = pruneCustomResponsesToDefinitions(formData, defs);
-
-    // Sanitize dates — save-draft never rejects incomplete forms
     const payload = sanitizeForApi(cleaned);
 
-    const result = await saveApplicationDraft(payload);
+    if (variant === "candidate") {
+      const result = await saveApplicationDraft(payload);
 
-    if (result.ok) {
-      try {
-        localStorage.setItem(
-          "elitepic_application_draft",
-          JSON.stringify(formData),
-        );
-      } catch {
-        /* ignore storage errors */
+      if (result.ok) {
+        try {
+          localStorage.setItem(
+            "elitepic_application_draft",
+            JSON.stringify(formData),
+          );
+        } catch {
+          /* ignore storage errors */
+        }
+      } else {
+        const status = result.error?.response?.status;
+        if (status === 403) {
+          setApiError(
+            result.error.response.data?.message ||
+              "Your application is locked and cannot be edited. Contact your caseworker.",
+          );
+          return;
+        }
+        try {
+          localStorage.setItem(
+            "elitepic_application_draft",
+            JSON.stringify(formData),
+          );
+        } catch {
+          /* ignore storage errors */
+        }
       }
-      alert("Draft saved successfully.");
-    } else {
-      // Fall back to local-only save if API fails
+      return;
+    }
+
+    if (variant === "admin" && typeof onAdminSaveDraft === "function") {
+      setAdminDraftSaving(true);
       try {
-        localStorage.setItem(
-          "elitepic_application_draft",
-          JSON.stringify(formData),
-        );
-        alert("Saved locally on this device (server unavailable).");
-      } catch {
-        alert("Could not save draft.");
+        await Promise.resolve(onAdminSaveDraft(payload));
+      } finally {
+        setAdminDraftSaving(false);
       }
     }
   };
@@ -551,6 +720,51 @@ export default function CandidateApplicationForm({
   const outerClass =
     containerClassName ??
     "mx-auto max-w-5xl rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6 md:p-8";
+
+  // ── Locked / submitted screen ────────────────────────────────────────────
+  if (isLocked && variant === "candidate") {
+    return (
+      <div className={embedded ? "w-full" : outerClass}>
+        <div className="flex flex-col items-center gap-6 py-16 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary/10">
+            <svg
+              className="h-8 w-8 text-secondary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-2xl font-black tracking-tight text-gray-900">
+              Application Submitted
+            </h2>
+            <p className="mt-1 text-sm font-bold text-gray-400">
+              Submitted on: {formatDate(submittedAt)}
+            </p>
+          </div>
+          <p className="max-w-md text-sm font-bold leading-relaxed text-gray-600">
+            Your application is currently under review. This process takes up to
+            7 working days. You will be notified by your caseworker if any
+            changes are required.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate("/candidate/dashboard")}
+            className="rounded-xl bg-secondary px-8 py-3 text-sm font-black text-white shadow-md shadow-secondary/20 transition-colors hover:bg-secondary-dark"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={embedded ? "w-full" : outerClass}>
@@ -584,8 +798,11 @@ export default function CandidateApplicationForm({
           >
             <circle
               className="opacity-25"
-              cx="12" cy="12" r="10"
-              stroke="currentColor" strokeWidth="4"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
             />
             <path
               className="opacity-75"
@@ -602,13 +819,26 @@ export default function CandidateApplicationForm({
           {/* Draft-restored banner */}
           {draftRestored && variant === "candidate" && (
             <div className="mb-4 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-              <svg className="mt-0.5 h-4 w-4 shrink-0 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              <svg
+                className="mt-0.5 h-4 w-4 shrink-0 text-green-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
               <div>
-                <p className="text-sm font-black text-green-800">Draft restored</p>
+                <p className="text-sm font-black text-green-800">
+                  Draft restored
+                </p>
                 <p className="text-xs font-bold text-green-700 mt-0.5">
-                  Your previously saved progress has been loaded. You can continue from where you left off.
+                  Your previously saved progress has been loaded. You can
+                  continue from where you left off.
                 </p>
               </div>
               <button
@@ -617,8 +847,60 @@ export default function CandidateApplicationForm({
                 className="ml-auto shrink-0 text-green-500 hover:text-green-700"
                 aria-label="Dismiss"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+
+          {/* API error banner (409 duplicate, 403 locked, other failures) */}
+          {apiError && (
+            <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+              <svg
+                className="mt-0.5 h-4 w-4 shrink-0 text-red-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p className="flex-1 text-sm font-bold text-red-800">
+                {apiError}
+              </p>
+              <button
+                type="button"
+                onClick={() => setApiError(null)}
+                className="ml-auto shrink-0 text-red-400 hover:text-red-600"
+                aria-label="Dismiss"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -736,7 +1018,10 @@ export default function CandidateApplicationForm({
                     <SectionTitle>Case Assignment (Admin only)</SectionTitle>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="md:col-span-2">
-                        <label htmlFor="caseworkerId" className={fieldLabelClass}>
+                        <label
+                          htmlFor="caseworkerId"
+                          className={fieldLabelClass}
+                        >
                           Assign Caseworker
                         </label>
                         <select
@@ -755,7 +1040,8 @@ export default function CandidateApplicationForm({
                           ))}
                         </select>
                         <p className="mt-1 text-[10px] text-gray-400 font-bold">
-                          This caseworker will be notified and assigned to handle this candidate&apos;s case.
+                          This caseworker will be notified and assigned to
+                          handle this candidate&apos;s case.
                         </p>
                       </div>
                     </div>
@@ -816,6 +1102,7 @@ export default function CandidateApplicationForm({
                     name="issuingAuthority"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.issuingAuthority}
                   />
                 )}
                 {show("issueDate") && (
@@ -825,6 +1112,7 @@ export default function CandidateApplicationForm({
                     type="date"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.issueDate}
                   />
                 )}
                 {show("expiryDate") && (
@@ -834,6 +1122,7 @@ export default function CandidateApplicationForm({
                     type="date"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.expiryDate}
                   />
                 )}
                 {show("passportAvailable") && (
@@ -909,6 +1198,7 @@ export default function CandidateApplicationForm({
                     formData={formData}
                     onChange={handleChange}
                     className="md:col-span-2"
+                    error={formErrors.ukStayDuration}
                   />
                 )}
                 {show("contactNumber2") && (
@@ -949,6 +1239,7 @@ export default function CandidateApplicationForm({
                     type="date"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.endDate}
                   />
                 )}
               </div>
@@ -975,6 +1266,7 @@ export default function CandidateApplicationForm({
                     formData={formData}
                     onChange={handleChange}
                     className="md:col-span-2"
+                    error={formErrors.parentRelation}
                   />
                 )}
                 {show("parentDob") && (
@@ -1302,6 +1594,7 @@ export default function CandidateApplicationForm({
                     placeholder="BRP permit number"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.brpNumber}
                   />
                 )}
                 {show("visaEndDate") && (
@@ -1311,6 +1604,7 @@ export default function CandidateApplicationForm({
                     type="date"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.visaEndDate}
                   />
                 )}
                 {show("niNumber") && (
@@ -1369,7 +1663,10 @@ export default function CandidateApplicationForm({
                               id={id}
                               value={val}
                               onChange={(e) =>
-                                handleCustomResponseChange(def.id, e.target.value)
+                                handleCustomResponseChange(
+                                  def.id,
+                                  e.target.value,
+                                )
                               }
                             />
                           </div>
@@ -1403,18 +1700,75 @@ export default function CandidateApplicationForm({
               </div>
             )}
 
+            {/* Amber warning banner — only on final step, candidate form, before submit */}
+            {step >= lastStep &&
+              variant === "candidate" &&
+              showSubmitWarning && (
+                <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <svg
+                    className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <p className="flex-1 text-sm font-bold text-amber-800">
+                    Once submitted, your application cannot be edited until your
+                    caseworker requests changes. Please review all details
+                    carefully.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowSubmitWarning(false)}
+                    className="ml-auto shrink-0 text-amber-500 hover:text-amber-700"
+                    aria-label="Dismiss"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
             <div className="flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="flex flex-col gap-2 sm:flex-row">
-                {variant === "candidate" && (
+                {variant === "candidate" ||
+                typeof onAdminSaveDraft === "function" ? (
                   <button
                     type="button"
                     onClick={handleSaveDraft}
-                    disabled={submitting || applicationLoading}
+                    disabled={
+                      variant === "candidate"
+                        ? isSubmitting || applicationLoading
+                        : adminDraftSaving || isSubmitting || adminSubmitBusy
+                    }
                     className="rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition-colors hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {applicationLoading ? "Saving…" : "Save draft"}
+                    {variant === "candidate"
+                      ? applicationLoading
+                        ? "Saving…"
+                        : "Save draft"
+                      : adminDraftSaving
+                        ? "Saving…"
+                        : "Save draft"}
                   </button>
-                )}
+                ) : null}
                 <button
                   type="button"
                   onClick={handleCancel}
@@ -1447,14 +1801,44 @@ export default function CandidateApplicationForm({
                     key="submit-btn"
                     type="button"
                     onClick={handleSubmit}
-                    disabled={submitting || applicationLoading}
-                    className="rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition-colors hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
+                    disabled={
+                      isSubmitting ||
+                      applicationLoading ||
+                      (variant === "admin" &&
+                        (adminDraftSaving || adminSubmitBusy))
+                    }
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition-colors hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {submitting
-                      ? "Submitting…"
-                      : variant === "admin"
-                        ? "Save client"
-                        : "Submit application"}
+                    {(variant === "admin" && adminSubmitBusy) ||
+                    isSubmitting ? (
+                      <svg
+                        className="h-4 w-4 animate-spin"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                        />
+                      </svg>
+                    ) : null}
+                    {variant === "admin" && adminSubmitBusy
+                      ? "Saving…"
+                      : isSubmitting
+                        ? "Submitting…"
+                        : variant === "admin"
+                          ? "Save client"
+                          : "Submit application"}
                   </button>
                 )}
               </div>

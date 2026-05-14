@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { RiUserAddLine } from "react-icons/ri";
 import { Search, Check } from "lucide-react";
@@ -7,7 +8,12 @@ import Button from "../../components/Button";
 import { getCaseworkers, assignCase, getTeamCapacity, getAllCasesForDropdown } from "../../services/caseApi";
 import { useToast } from "../../context/ToastContext";
 
+function normalizeCaseId(id) {
+  return String(id ?? "").trim().replace(/^#/, "");
+}
+
 const AdminAssign = () => {
+  const [searchParams] = useSearchParams();
   const { showToast } = useToast();
   const [caseId, setCaseId] = useState("");
   const [caseSearch, setCaseSearch] = useState("");
@@ -56,6 +62,20 @@ const AdminAssign = () => {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (fetchLoading || cases.length === 0) return;
+    const raw = searchParams.get("caseId");
+    if (!raw) return;
+    const wanted = normalizeCaseId(decodeURIComponent(raw));
+    const match = cases.find(
+      (c) =>
+        normalizeCaseId(c.caseId) === wanted ||
+        c.caseId === raw ||
+        c.caseId === decodeURIComponent(raw),
+    );
+    if (match) setCaseId(match.caseId);
+  }, [fetchLoading, cases, searchParams]);
 
   const CASE_OPTIONS = useMemo(() => {
     return cases.map((c) => ({
@@ -172,10 +192,9 @@ const AdminAssign = () => {
         variant: "success"
       });
       
-      // Refresh data
       const [casesRes, capacityRes] = await Promise.all([
-        getCases(),
-        getTeamCapacity()
+        getAllCasesForDropdown(),
+        getTeamCapacity(),
       ]);
       
       if (casesRes?.data?.data?.cases) {

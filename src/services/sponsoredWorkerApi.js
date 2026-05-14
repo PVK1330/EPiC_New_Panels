@@ -1,43 +1,19 @@
-import axios from "axios";
+import api from "./api";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+export const addSponsoredWorker = (workerData) =>
+  api.post("/api/business/workers", workerData);
 
-const getAuthHeader = () => {
-  const token = localStorage.getItem("epic_token");
-  return { Authorization: `Bearer ${token}` };
-};
+export const getSponsoredWorkers = () =>
+  api.get("/api/business/workers");
 
-export const addSponsoredWorker = async (workerData) => {
-  return await axios.post(`${API_URL}/api/business/workers`, workerData, {
-    headers: getAuthHeader(),
-  });
-};
+export const getSponsoredWorkerDetails = (id) =>
+  api.get(`/api/business/workers/${id}`);
 
-export const getSponsoredWorkers = async () => {
-  return await axios.get(`${API_URL}/api/business/workers`, {
-    headers: getAuthHeader(),
-  });
-};
+export const updateSponsoredWorker = (id, workerData) =>
+  api.put(`/api/business/workers/${id}`, workerData);
 
-export const getSponsoredWorkerDetails = async (id) => {
-  return await axios.get(`${API_URL}/api/business/workers/${id}`, {
-    headers: getAuthHeader(),
-  });
-};
-export const updateSponsoredWorker = async (id, workerData) => {
-  return await axios.put(`${API_URL}/api/business/workers/${id}`, workerData, {
-    headers: getAuthHeader(),
-  });
-};
+export const deleteSponsoredWorker = (id) =>
+  api.delete(`/api/business/workers/${id}`);
 
-export const deleteSponsoredWorker = async (id) => {
-  return await axios.delete(`${API_URL}/api/business/workers/${id}`, {
-    headers: getAuthHeader(),
-  });
-};
-
-export const updateWorkerStatus = async (id, statusData) => {
-  return await axios.patch(`${API_URL}/api/business/workers/${id}/status`, statusData, {
-    headers: getAuthHeader(),
-  });
-};
+export const updateWorkerStatus = (id, statusData) =>
+  api.patch(`/api/business/workers/${id}/status`, statusData);

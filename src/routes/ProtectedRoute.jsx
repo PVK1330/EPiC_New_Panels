@@ -6,6 +6,7 @@ const DASHBOARD_MAP = {
   caseworker: '/caseworker/dashboard',
   candidate: '/candidate/dashboard',
   business: '/business/dashboard',
+  superadmin: '/superadmin/dashboard',
 };
 
 const ProtectedRoute = ({ children, allowedRoles }) => {

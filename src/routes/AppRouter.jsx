@@ -2,12 +2,8 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import ProtectedRoute from './ProtectedRoute';
-import RoleRoute from './RoleRoute';
-
 import AdminLayout from '../layouts/AdminLayout';
-import CandidateLayout from '../layouts/CandidateLayout';
-import CaseworkerLayout from '../layouts/CaseworkerLayout';
-import BusinessLayout from '../layouts/BusinessLayout';
+import SuperadminLayout from '../layouts/SuperadminLayout';
 
 import CandidateDashboard from '../pages/candidate/CandidateDashboard';
 import Documents from '../pages/candidate/Documents';
@@ -84,10 +80,24 @@ import BusinessSettings from '../pages/business/BusinessSettings';
 import ReportingObligations from '../pages/business/ReportingObligations';
 import EmployeeRecords from '../pages/business/EmployeeRecords';
 import Invoices from '../pages/business/Invoices';
-import MyCandidates from '../pages/business/MyCandidates';
 import Reports from '../pages/business/Reports';
 import ApplyLicence from '../pages/business/ApplyLicence';
 import LicenceDocuments from '../pages/business/LicenceDocuments';
+
+// Superadmin Pages
+const SuperadminDashboard = lazy(() => import('../pages/superadmin/SuperadminDashboard'));
+const SuperadminOrganisations = lazy(() => import('../pages/superadmin/SuperadminOrganisations'));
+const SuperadminPlans = lazy(() => import('../pages/superadmin/SuperadminPlans'));
+const SuperadminBilling = lazy(() => import('../pages/superadmin/SuperadminBilling'));
+const SuperadminAuditLog = lazy(() => import('../pages/superadmin/SuperadminAuditLog'));
+const SuperadminSettings = lazy(() => import('../pages/superadmin/SuperadminSettings'));
+const SuperadminPayments = lazy(() => import('../pages/superadmin/SuperadminPayments'));
+const SuperadminTeam = lazy(() => import('../pages/superadmin/SuperadminTeam'));
+const SuperadminFrontend = lazy(() => import('../pages/superadmin/SuperadminFrontend'));
+const SuperadminProfile = lazy(() => import('../pages/superadmin/SuperadminProfile'));
+
+
+import NotFoundPage from '../pages/NotFoundPage';
 
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/auth/RegisterPage'));
@@ -179,7 +189,7 @@ const AppRouter = () => {
           path="/candidate"
           element={
             <ProtectedRoute allowedRoles={['candidate']}>
-              <CandidateLayout />
+              <AdminLayout />
             </ProtectedRoute>
           }
         >
@@ -214,7 +224,7 @@ const AppRouter = () => {
           path="/caseworker"
           element={
             <ProtectedRoute allowedRoles={['caseworker']}>
-              <CaseworkerLayout />
+              <AdminLayout />
             </ProtectedRoute>
           }
         >
@@ -240,7 +250,7 @@ const AppRouter = () => {
           path="/business"
           element={
             <ProtectedRoute allowedRoles={['business']}>
-              <BusinessLayout />
+              <AdminLayout />
             </ProtectedRoute>
           }
         >
@@ -251,15 +261,16 @@ const AppRouter = () => {
           <Route path="profile" element={<BussinessProfile />} />
           <Route path="personnel" element={<KeyPersonnel />} />
           <Route path="licence" element={<LicenceStatus />} />
-          <Route path="Businessregistration" element={<BusinessRegistration />} />
-          <Route path="compliacedocument" element={<Compliacedocument />} />
+          <Route path="business-registration" element={<BusinessRegistration />} />
+          <Route path="compliance-documents" element={<Compliacedocument />} />
           <Route path="compliance" element={<BusinessCompliance />} />
           <Route path="cosallocation" element={<CosAllocationpage />} />
           <Route path="account" element={<BusinessAccount />} />
           <Route path="sponsored-workers" element={<SponsoredWorkerForm />} />
           <Route path="cosregistrationform" element={<CosRegistrationForm />} />
-          <Route path="Sponsorworkerdetails" element={<SponsorWorkerDetails />} />
-          <Route path="licenceprocess" element={<LicenceProcess />} />
+          <Route path="worker-details" element={<SponsorWorkerDetails />} />
+          <Route path="licence-process" element={<LicenceProcess />} />
+          <Route path="admin-licence-view" element={<AdminLicenceApplications />} />
           <Route path="documents" element={<BusinessDocuments />} />
           <Route path="messages" element={<BusinessMessages />} />
           <Route path="notifications" element={<BusinessNotifications />} />
@@ -270,8 +281,29 @@ const AppRouter = () => {
           <Route path="reporting-obligations" element={<ReportingObligations />} />
           <Route path="employee-records" element={<EmployeeRecords />} />
           <Route path="invoices" element={<Invoices />} />
-          <Route path="my-candidates" element={<MyCandidates />} />
           <Route path="reports" element={<Reports />} />
+        </Route>
+
+        <Route
+          path="/superadmin"
+          element={
+            <ProtectedRoute allowedRoles={['superadmin']}>
+              <SuperadminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<SuperadminDashboard />} />
+          <Route path="organisations" element={<SuperadminOrganisations />} />
+          <Route path="plans" element={<SuperadminPlans />} />
+          <Route path="billing" element={<SuperadminBilling />} />
+          <Route path="audit-log" element={<SuperadminAuditLog />} />
+          <Route path="settings" element={<SuperadminSettings />} />
+          <Route path="payments" element={<SuperadminPayments />} />
+          <Route path="team" element={<SuperadminTeam />} />
+          <Route path="frontend" element={<SuperadminFrontend />} />
+          <Route path="profile" element={<SuperadminProfile />} />
+
         </Route>
 
         <Route
@@ -298,7 +330,7 @@ const AppRouter = () => {
           <Route path="dashboard" element={<div className="text-center"><h1 className="text-2xl font-bold">Agent Dashboard</h1><p className="text-gray-500">Portal coming soon</p></div>} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
   );

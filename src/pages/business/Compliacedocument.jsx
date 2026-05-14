@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getComplianceDocuments } from "../../services/licenceApi";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -16,68 +17,7 @@ import {
   X,
 } from "lucide-react";
 
-const documentsData = [
-  {
-    id: 1,
-    name: "Sponsor Licence Letter",
-    type: "Licence",
-    uploadDate: "1 Apr 2026",
-    expiry: "Jun 2028",
-    status: "Approved",
-    reviewedBy: "Ahmed Al-Rashid",
-    fileSize: "2.5 MB",
-  },
-  {
-    id: 2,
-    name: "HR Policies",
-    type: "Policy",
-    uploadDate: "3 Apr 2026",
-    expiry: "-",
-    status: "Under Review",
-    reviewedBy: "Ahmed Al-Rashid",
-    fileSize: "1.2 MB",
-  },
-  {
-    id: 3,
-    name: "Employer Liability Insurance",
-    type: "Insurance",
-    uploadDate: "28 Mar 2026",
-    expiry: "Apr 2027",
-    status: "Approved",
-    reviewedBy: "TechCorp HR",
-    fileSize: "3.8 MB",
-  },
-  {
-    id: 4,
-    name: "Employment Contracts Template",
-    type: "Template",
-    uploadDate: "25 Mar 2026",
-    expiry: "Sep 2030",
-    status: "Approved",
-    reviewedBy: "Priya Sharma",
-    fileSize: "0.8 MB",
-  },
-  {
-    id: 5,
-    name: "Right to Work Policy",
-    type: "Policy",
-    uploadDate: "25 Mar 2026",
-    expiry: "Sep 2030",
-    status: "Approved",
-    reviewedBy: "Priya Sharma",
-    fileSize: "1.5 MB",
-  },
-  {
-    id: 6,
-    name: "CoS Allocation Report",
-    type: "Report",
-    uploadDate: "15 Mar 2026",
-    expiry: "Mar 2027",
-    status: "Expiring",
-    reviewedBy: "John Smith",
-    fileSize: "2.1 MB",
-  },
-];
+// Mock data removed for dynamic implementation
 
 const DocumentList = () => {
   const [filter, setFilter] = useState("All");
@@ -88,6 +28,22 @@ const DocumentList = () => {
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadName, setUploadName] = useState("");
   const [uploadType, setUploadType] = useState("");
+  const [documentRows, setDocumentRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [filter]);
+
+  const fetchDocuments = () => {
+    setLoading(true);
+    getComplianceDocuments({ status: filter })
+      .then((res) => {
+        setDocumentRows(res.data?.data || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -120,7 +76,7 @@ const DocumentList = () => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
   };
 
-  const filteredDocs = documentsData.filter((doc) => {
+  const filteredDocs = documentRows.filter((doc) => {
     const matchesSearch =
       doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.type.toLowerCase().includes(searchQuery.toLowerCase());
@@ -132,9 +88,9 @@ const DocumentList = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const totalDocs = documentsData.length;
-  const approvedDocs = documentsData.filter((d) => d.status === "Approved").length;
-  const pendingDocs = documentsData.filter((d) => d.status !== "Approved").length;
+  const totalDocs = documentRows.length;
+  const approvedDocs = documentRows.filter((d) => d.status === "Approved").length;
+  const pendingDocs = documentRows.filter((d) => d.status !== "Approved").length;
 
   const handleView = (doc) => {
     setSelectedDoc(doc);
@@ -142,25 +98,56 @@ const DocumentList = () => {
   };
 
   const handleDownload = (doc) => {
-    // Simulate download
-    alert(`Downloading: ${doc.name}`);
+    if (!doc.path) return alert("No file path available for this document.");
+    const link = document.createElement("a");
+    link.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${doc.path}`;
+    link.setAttribute("download", doc.name);
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const handleDelete = (docId) => {
-    if (confirm("Are you sure you want to delete this document?")) {
-      alert(`Document deleted: ${docId}`);
+  const handleDelete = async (docId, source) => {
+    if (source !== 'compliance') {
+      return alert("This document is linked to your profile or a licence application. Please manage it from the respective section.");
+    }
+
+    if (confirm("Are you sure you want to delete this compliance document?")) {
+      try {
+        const { deleteComplianceDocument } = await import("../../services/licenceApi");
+        const res = await deleteComplianceDocument(docId);
+        if (res.data.status === "success") {
+          fetchDocuments();
+        }
+      } catch (err) {
+        alert("Failed to delete document.");
+      }
     }
   };
 
-  const handleUpload = () => {
-    if (uploadName && uploadType) {
-      alert(`Uploading: ${uploadName} (${uploadType})`);
-      setShowUploadModal(false);
-      setUploadName("");
-      setUploadType("");
-      setUploadFile(null);
-    } else {
-      alert("Please fill in all fields");
+  const handleUpload = async () => {
+    if (!uploadName || !uploadType || !uploadFile) {
+      return alert("Please fill in all fields and select a file.");
+    }
+
+    try {
+      const { uploadComplianceDocument } = await import("../../services/licenceApi");
+      const res = await uploadComplianceDocument({
+        documentName: uploadName,
+        documentType: uploadType,
+        file: uploadFile
+      });
+
+      if (res.data.status === "success") {
+        setShowUploadModal(false);
+        setUploadName("");
+        setUploadType("");
+        setUploadFile(null);
+        fetchDocuments();
+      }
+    } catch (err) {
+      alert("Failed to upload document.");
     }
   };
 
@@ -317,8 +304,9 @@ const DocumentList = () => {
                         Download
                       </button>
                       <button
-                        onClick={() => handleDelete(doc.id)}
-                        className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-red-600 transition"
+                        onClick={() => handleDelete(doc.id, doc.source)}
+                        className={`p-2 rounded-lg transition ${doc.source === 'compliance' ? 'hover:bg-gray-100 text-gray-500 hover:text-red-600' : 'opacity-20 cursor-not-allowed text-gray-300'}`}
+                        title={doc.source !== 'compliance' ? "Integrated document cannot be deleted here" : "Delete document"}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -386,11 +374,19 @@ const DocumentList = () => {
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-2">File *</label>
-                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-primary/50 transition cursor-pointer">
+                  <label className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-primary/50 transition cursor-pointer block">
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      onChange={(e) => setUploadFile(e.target.files[0])}
+                      accept=".pdf,.doc,.docx"
+                    />
                     <Upload size={32} className="mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm font-bold text-gray-600">Click to upload or drag and drop</p>
+                    <p className="text-sm font-bold text-gray-600">
+                      {uploadFile ? uploadFile.name : "Click to upload or drag and drop"}
+                    </p>
                     <p className="text-xs font-bold text-gray-400 mt-1">PDF, DOC, DOCX up to 10MB</p>
-                  </div>
+                  </label>
                 </div>
 
                 <div className="flex gap-3 pt-4">

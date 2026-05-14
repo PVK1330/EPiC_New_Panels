@@ -10,7 +10,7 @@ export const getBusinessProfile = () => api.get("/api/business/account/profile")
  * @param {FormData|Object} data - Profile data (use FormData if uploading a file)
  */
 export const updateBusinessProfile = (data) => {
-  const config = data instanceof FormData 
+  const config = data instanceof FormData
     ? { headers: { 'Content-Type': 'multipart/form-data' } }
     : {};
   return api.put("/api/business/account/profile", data, config);
@@ -27,3 +27,13 @@ export const updateKeyPersonnel = (data) => api.put("/api/business/account/key-p
  * @param {Object} data - { current_password, new_password }
  */
 export const changeBusinessPassword = (data) => api.post("/api/business/account/change-password", data);
+
+export const getBusinessDashboard = () =>
+  api.get("/api/business/dashboard");
+
+export const getBusinessCases = (params = {}) =>
+  api.get("/api/business/cases", { params });
+
+export const getBusinessPayments = () =>
+  api.get("/api/business/payments");
+

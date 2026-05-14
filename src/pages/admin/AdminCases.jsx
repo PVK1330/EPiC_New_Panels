@@ -15,6 +15,7 @@ import {
   FileText,
   Search,
   Filter,
+  UserPlus,
 } from "lucide-react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
@@ -106,11 +107,11 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
 
   const summaryText = value.length
     ? value
-        .map((id) => {
-          const o = options.find((x) => x.id === id);
-          return o ? `${o.name} (${o.id})` : id;
-        })
-        .join(" · ")
+      .map((id) => {
+        const o = options.find((x) => x.id === id);
+        return o ? `${o.name} (${o.id})` : id;
+      })
+      .join(" · ")
     : "";
 
   return (
@@ -122,9 +123,8 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-left text-sm bg-white border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary ${
-          error ? "border-red-400" : ""
-        }`}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-left text-sm bg-white border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary ${error ? "border-red-400" : ""
+          }`}
       >
         <span
           className={
@@ -152,11 +152,10 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
               return (
                 <label
                   key={o.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${
-                    disabled
-                      ? "opacity-40 cursor-not-allowed"
-                      : "cursor-pointer hover:bg-secondary/5"
-                  }`}
+                  className={`flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${disabled
+                    ? "opacity-40 cursor-not-allowed"
+                    : "cursor-pointer hover:bg-secondary/5"
+                    }`}
                 >
                   <input
                     type="checkbox"
@@ -205,6 +204,7 @@ function CaseFormModal({
   subtitle,
   formData,
   errors,
+  setErrors,
   isLoading,
   onChange,
   onSubmit,
@@ -215,6 +215,7 @@ function CaseFormModal({
   visaTypes = [],
   petitionTypes = [],
   caseworkers = [],
+  departments = [],
   setFormData,
 }) {
   return (
@@ -484,9 +485,9 @@ function CaseFormModal({
                 options={
                   caseworkers.length > 0
                     ? caseworkers.map((c) => ({
-                        id: c.id,
-                        name: `${c.first_name} ${c.last_name}`,
-                      }))
+                      id: c.id,
+                      name: `${c.first_name} ${c.last_name}`,
+                    }))
                     : CASE_WORKERS
                 }
                 value={formData.assignedCaseworkerIds || []}
@@ -683,8 +684,8 @@ export default function AdminCases() {
           caseworker:
             c.caseworkers && c.caseworkers.length > 0
               ? c.caseworkers
-                  .map((cw) => `${cw.first_name} ${cw.last_name}`)
-                  .join(", ")
+                .map((cw) => `${cw.first_name} ${cw.last_name}`)
+                .join(", ")
               : "Unassigned",
           caseworkerId: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId.join(', ') : c.assignedcaseworkerId,
           visaType: c.visaType?.name || "Unknown",
@@ -1218,6 +1219,14 @@ export default function AdminCases() {
             Export
           </Button>
           <Button
+            variant="ghost"
+            onClick={() => navigate("/admin/assign")}
+            title="Choose any case and assign up to two caseworkers (with audit reason)"
+          >
+            <UserPlus size={15} className="mr-1.5 inline" />
+            Assign caseworkers
+          </Button>
+          <Button
             onClick={() => {
               setFormData(emptyForm);
               setErrors({});
@@ -1410,6 +1419,24 @@ export default function AdminCases() {
                         <XCircle size={14} />
                       </button>
                       <button
+                        type="button"
+                        onClick={() =>
+                          navigate(
+                            `/admin/assign?caseId=${encodeURIComponent(c.caseId)}`,
+                          )
+                        }
+                        className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
+                        title={
+                          (c.caseworkerIds?.length ?? 0) > 0 ||
+                            (typeof c.caseworker === "string" &&
+                              !c.caseworker.includes("Unassigned"))
+                            ? "Reassign caseworkers"
+                            : "Assign caseworkers"
+                        }
+                      >
+                        <UserPlus size={14} />
+                      </button>
+                      <button
                         onClick={() => openEdit(c)}
                         className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-yellow-50 hover:text-yellow-600 hover:border-yellow-200 transition-colors"
                         title="Edit"
@@ -1439,6 +1466,7 @@ export default function AdminCases() {
             subtitle="Create a new visa case application"
             formData={formData}
             errors={errors}
+            setErrors={setErrors}
             isLoading={isLoading}
             onChange={handleInputChange}
             onSubmit={handleAdd}
@@ -1453,7 +1481,9 @@ export default function AdminCases() {
             visaTypes={visaTypes}
             petitionTypes={petitionTypes}
             caseworkers={caseworkers}
+            departments={departments}
             setFormData={setFormData}
+            setErrors={setErrors}
           />
         )}
       </AnimatePresence>
@@ -1465,6 +1495,7 @@ export default function AdminCases() {
             subtitle={`Editing ${selectedCase?.caseId}`}
             formData={formData}
             errors={errors}
+            setErrors={setErrors}
             isLoading={isLoading}
             onChange={handleInputChange}
             onSubmit={handleEdit}
@@ -1480,7 +1511,9 @@ export default function AdminCases() {
             visaTypes={visaTypes}
             petitionTypes={petitionTypes}
             caseworkers={caseworkers}
+            departments={departments}
             setFormData={setFormData}
+            setErrors={setErrors}
           />
         )}
       </AnimatePresence>
@@ -1535,11 +1568,10 @@ export default function AdminCases() {
                 <button
                   onClick={handleApproveRejectSubmit}
                   disabled={isLoading}
-                  className={`px-4 py-2 text-white text-sm font-bold rounded-lg transition-colors ${
-                    approveRejectAction === "approve"
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "bg-red-600 hover:bg-red-700"
-                  } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className={`px-4 py-2 text-white text-sm font-bold rounded-lg transition-colors ${approveRejectAction === "approve"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-red-600 hover:bg-red-700"
+                    } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   {isLoading
                     ? "Processing..."

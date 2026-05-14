@@ -290,7 +290,7 @@ const MyCandidates = () => {
                   <td className="px-4 py-4">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => navigate(`/business/Sponsorworkerdetails?candidateId=${item.candidateId}`)}
+                        onClick={() => navigate(`/business/worker-details?candidateId=${item.candidateId}`)}
                         className="p-2 hover:bg-primary/10 rounded-lg transition-colors text-primary"
                         title="View Details"
                       >

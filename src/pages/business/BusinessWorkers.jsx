@@ -270,7 +270,7 @@ const BusinessWorkers = () => {
                   <td className="px-4 py-4">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => navigate(`/business/Sponsorworkerdetails?candidateId=${worker.candidateId}`)}
+                        onClick={() => navigate(`/business/worker-details?candidateId=${worker.candidateId}`)}
                         className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-white transition hover:bg-primary-dark"
                         title="View details"
                       >

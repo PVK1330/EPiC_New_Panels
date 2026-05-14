@@ -23,3 +23,7 @@ export const getFinancialTransactions = (params = {}) =>
 // Performance & KPI report
 export const getPerformanceReport = (params = {}) =>
   api.get("/api/reports/performance", { params });
+
+/** Multi-sheet workbook (cases, workload, finance, performance). */
+export const exportReportingExcel = (params = {}) =>
+  api.get("/api/reports/export/excel", { params, responseType: "blob" });

@@ -4,6 +4,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { logout } from "../../store/slices/authSlice";
 import AdminSidebar from "./AdminSidebar";
+import CaseworkerSidebar from "../CaseworkerSidebar";
+import BusinessSidebar from "../business/BusinessSidebar";
+import CandidateSidebar from "../CandidateSidebar";
 import {
   RiMenuLine,
   RiHome5Line,
@@ -43,6 +46,26 @@ const AdminLayout = () => {
     setProfileOpen(false);
   };
 
+  const renderSidebar = () => {
+    const props = {
+      isOpen: sidebarOpen,
+      onClose: () => setSidebarOpen(false),
+    };
+
+    switch (user?.role) {
+      case "admin":
+        return <AdminSidebar {...props} />;
+      case "caseworker":
+        return <CaseworkerSidebar {...props} />;
+      case "business":
+        return <BusinessSidebar {...props} />;
+      case "candidate":
+        return <CandidateSidebar {...props} />;
+      default:
+        return <AdminSidebar {...props} />;
+    }
+  };
+
   const pathnames = location.pathname.split("/").filter((x) => x);
 
   useEffect(() => {
@@ -57,10 +80,7 @@ const AdminLayout = () => {
 
   return (
     <div className="flex h-screen bg-surface overflow-hidden">
-      <AdminSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      {renderSidebar()}
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* ── Top Bar ── */}
@@ -78,7 +98,7 @@ const AdminLayout = () => {
 
             <nav className="flex items-center text-sm font-medium text-gray-500 overflow-hidden">
               <Link
-                to="/admin/dashboard"
+                to={`/${user?.role || 'admin'}/dashboard`}
                 className="hover:text-primary transition-colors flex items-center shrink-0"
                 aria-label="Home"
               >
@@ -140,7 +160,7 @@ const AdminLayout = () => {
                     {user?.name || "Admin"}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">
-                    Admin
+                    {user?.role || "Admin"}
                   </p>
                 </div>
               </button>

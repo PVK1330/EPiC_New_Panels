@@ -1,13 +1,37 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FiEye, FiDownload, FiPlus, FiEdit2, FiTrash2, FiUserCheck } from "react-icons/fi";
 import { RiAlarmWarningLine } from "react-icons/ri";
 import { Loader2, X } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
-import { getEscalations, createEscalation, updateEscalation, assignEscalation, deleteEscalation } from "../../services/escalationApi";
+import { getEscalations, createEscalation, updateEscalation, assignEscalation, deleteEscalation, exportEscalationsExcel } from "../../services/escalationApi";
 import { getCases } from "../../services/caseApi";
 import { getAdmins } from "../../services/adminApi";
+
+const OTHER_CATEGORY_MARKER = /\n\n\(Other category:\s([\s\S]+?)\)\s*$/;
+
+const parseTriggerStoredWithOtherCategory = (triggerText, triggerType) => {
+  if (triggerType !== "Other" || typeof triggerText !== "string") {
+    return { triggerBody: triggerText || "", otherCategory: "" };
+  }
+  const m = triggerText.match(OTHER_CATEGORY_MARKER);
+  if (m) {
+    return { triggerBody: triggerText.slice(0, m.index), otherCategory: m[1].trim() };
+  }
+  return { triggerBody: triggerText || "", otherCategory: "" };
+};
+
+const buildTriggerForApi = (trigger, triggerType, otherCategory) => {
+  const trimmed = (trigger || "").trim();
+  const other = (otherCategory || "").trim();
+  if (triggerType === "Other" && other) {
+    return trimmed ? `${trimmed}\n\n(Other category: ${other})` : `(Other category: ${other})`;
+  }
+  return trimmed;
+};
+
+const omitTriggerTypeOther = ({ triggerTypeOther, ...rest }) => rest;
 
 const SEVERITY_FILTER = ["All", "Critical", "High", "Medium", "Low"];
 const TYPE_FILTER = ["All", "Deadline Breach", "Missing Docs", "Stuck Case"];
@@ -34,12 +58,14 @@ const AdminEscalations = () => {
   const [creating, setCreating] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [formData, setFormData] = useState({
     caseId: "",
     candidate: "",
     severity: "Medium",
     trigger: "",
-    triggerType: "Other",
+    triggerType: "Deadline Breach",
+    triggerTypeOther: "",
     assignedAdminId: null,
     relatedCaseId: null,
     notes: "",
@@ -49,7 +75,6 @@ const AdminEscalations = () => {
   });
 
   useEffect(() => {
-    fetchEscalations();
     fetchCases();
     fetchAdmins();
   }, []);
@@ -76,11 +101,17 @@ const AdminEscalations = () => {
     }
   };
 
-  const fetchEscalations = async () => {
+  const listQueryParams = useCallback(() => {
+    const params = {};
+    if (sev !== "All") params.severity = sev;
+    if (typ !== "All") params.quickTypeFilter = typ;
+    return params;
+  }, [sev, typ]);
+
+  const fetchEscalations = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getEscalations();
-      console.log("Escalations API response:", res);
+      const res = await getEscalations(listQueryParams());
       if (res.data?.status === "success") {
         const data = res.data.data;
         setEscalations(data.escalations || []);
@@ -91,13 +122,54 @@ const AdminEscalations = () => {
     } finally {
       setLoading(false);
     }
+  }, [listQueryParams]);
+
+  useEffect(() => {
+    fetchEscalations();
+  }, [fetchEscalations]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await exportEscalationsExcel(listQueryParams());
+      const blob = new Blob([res.data], {
+        type:
+          res.headers["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `escalations_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast({ message: "Escalations exported successfully", variant: "success" });
+    } catch (e) {
+      console.error("Failed to export escalations:", e);
+      showToast({ message: "Failed to export escalations", variant: "danger" });
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleCreateEscalation = async (e) => {
     e.preventDefault();
+    if (formData.triggerType === "Other" && !formData.triggerTypeOther?.trim()) {
+      showToast({
+        message: 'Please specify what "Other" means (e.g. a short category or label).',
+        variant: "danger",
+      });
+      return;
+    }
     setCreating(true);
     try {
-      const res = await createEscalation(formData);
+      const payload = {
+        ...omitTriggerTypeOther(formData),
+        trigger: buildTriggerForApi(formData.trigger, formData.triggerType, formData.triggerTypeOther),
+      };
+      const res = await createEscalation(payload);
       if (res.data?.status === "success") {
         showToast({
           message: "Escalation created successfully",
@@ -109,7 +181,8 @@ const AdminEscalations = () => {
           candidate: "",
           severity: "Medium",
           trigger: "",
-          triggerType: "Other",
+          triggerType: "Deadline Breach",
+          triggerTypeOther: "",
           assignedAdminId: null,
           relatedCaseId: null,
           notes: "",
@@ -129,9 +202,20 @@ const AdminEscalations = () => {
 
   const handleUpdateEscalation = async (e) => {
     e.preventDefault();
+    if (formData.triggerType === "Other" && !formData.triggerTypeOther?.trim()) {
+      showToast({
+        message: 'Please specify what "Other" means (e.g. a short category or label).',
+        variant: "danger",
+      });
+      return;
+    }
     setUpdating(true);
     try {
-      const res = await updateEscalation(editingEscalation.id, formData);
+      const payload = {
+        ...omitTriggerTypeOther(formData),
+        trigger: buildTriggerForApi(formData.trigger, formData.triggerType, formData.triggerTypeOther),
+      };
+      const res = await updateEscalation(editingEscalation.id, payload);
       if (res.data?.status === "success") {
         showToast({
           message: "Escalation updated successfully",
@@ -144,7 +228,8 @@ const AdminEscalations = () => {
           candidate: "",
           severity: "Medium",
           trigger: "",
-          triggerType: "Other",
+          triggerType: "Deadline Breach",
+          triggerTypeOther: "",
           assignedAdminId: null,
           relatedCaseId: null,
           notes: "",
@@ -210,12 +295,15 @@ const AdminEscalations = () => {
 
   const openEditModal = (esc) => {
     setEditingEscalation(esc);
+    const tt = esc.triggerType || "Other";
+    const { triggerBody, otherCategory } = parseTriggerStoredWithOtherCategory(esc.trigger, tt);
     setFormData({
       caseId: esc.caseId || "",
       candidate: esc.candidate || "",
       severity: esc.severity || "Medium",
-      trigger: esc.trigger || "",
-      triggerType: esc.triggerType || "Other",
+      trigger: triggerBody,
+      triggerType: tt,
+      triggerTypeOther: otherCategory,
       assignedAdminId: esc.assignedAdminId || null,
       relatedCaseId: esc.relatedCaseId || null,
       notes: esc.notes || "",
@@ -267,18 +355,6 @@ const AdminEscalations = () => {
     };
   });
 
-  const filtered = useMemo(() => {
-    return mappedRows.filter((r) => {
-      const matchSev = sev === "All" || r.severity === sev || (sev === "Critical" && r.severity === "Critical");
-      const matchType =
-        typ === "All" ||
-        (typ === "Deadline Breach" && r.trigger.includes("Deadline")) ||
-        (typ === "Missing Docs" && r.trigger.includes("BRP")) ||
-        (typ === "Stuck Case" && r.trigger.includes("stuck"));
-      return matchSev && matchType;
-    });
-  }, [sev, typ, mappedRows]);
-
   return (
     <motion.div
       className="space-y-6 pb-10"
@@ -305,9 +381,11 @@ const AdminEscalations = () => {
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm shrink-0 self-start"
+            onClick={handleExport}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm shrink-0 self-start disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FiDownload size={14} />
+            {exporting ? <Loader2 size={14} className="animate-spin" /> : <FiDownload size={14} />}
             Export
           </button>
         </div>
@@ -366,14 +444,14 @@ const AdminEscalations = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {!loading && filtered.length === 0 ? (
+              {!loading && mappedRows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-5 py-12 text-center text-sm text-gray-400">
                     No escalations match your filters.
                   </td>
                 </tr>
               ) : (
-                filtered.map((r) => (
+                mappedRows.map((r) => (
                   <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
                     <td className="px-4 py-3 font-mono text-sm font-bold text-primary whitespace-nowrap">#{r.caseId}</td>
                     <td className="px-4 py-3 text-sm font-semibold text-secondary whitespace-nowrap">{r.candidate}</td>
@@ -494,7 +572,14 @@ const AdminEscalations = () => {
                 <label className="block text-sm font-bold text-gray-700 mb-1">Trigger Type</label>
                 <select
                   value={formData.triggerType}
-                  onChange={(e) => setFormData({ ...formData, triggerType: e.target.value })}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setFormData({
+                      ...formData,
+                      triggerType: next,
+                      triggerTypeOther: next === "Other" ? formData.triggerTypeOther : "",
+                    });
+                  }}
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
                 >
                   <option value="Deadline Breach">Deadline Breach</option>
@@ -504,6 +589,22 @@ const AdminEscalations = () => {
                   <option value="Other">Other</option>
                 </select>
               </div>
+              {formData.triggerType === "Other" && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">
+                    Specify {'"Other"'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.triggerTypeOther}
+                    onChange={(e) => setFormData({ ...formData, triggerTypeOther: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
+                    placeholder="e.g. Communication breakdown, Partner delay, Wrong visa type..."
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Short label so the team knows which kind of escalation this is.</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Related Case ID</label>
                 <input
@@ -619,7 +720,14 @@ const AdminEscalations = () => {
                 <label className="block text-sm font-bold text-gray-700 mb-1">Trigger Type</label>
                 <select
                   value={formData.triggerType}
-                  onChange={(e) => setFormData({ ...formData, triggerType: e.target.value })}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setFormData({
+                      ...formData,
+                      triggerType: next,
+                      triggerTypeOther: next === "Other" ? formData.triggerTypeOther : "",
+                    });
+                  }}
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
                 >
                   <option value="Deadline Breach">Deadline Breach</option>
@@ -629,6 +737,22 @@ const AdminEscalations = () => {
                   <option value="Other">Other</option>
                 </select>
               </div>
+              {formData.triggerType === "Other" && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">
+                    Specify {'"Other"'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.triggerTypeOther}
+                    onChange={(e) => setFormData({ ...formData, triggerTypeOther: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
+                    placeholder="e.g. Communication breakdown, Partner delay, Wrong visa type..."
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Short label so the team knows which kind of escalation this is.</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Related Case ID</label>
                 <input

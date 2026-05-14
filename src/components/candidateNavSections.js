@@ -15,6 +15,7 @@ import {
   Star,
   Settings,
   Calendar,
+  AlertTriangle,
 } from "lucide-react";
 
 /** Candidate portal sidebar: sections, routes, and icons */
@@ -128,6 +129,12 @@ export const candidateNavSections = [
   {
     title: "Account",
     items: [
+      {
+        to: "/candidate/account?tab=report",
+        label: "Report an issue",
+        icon: AlertTriangle,
+        accountTab: "report",
+      },
       {
         to: "/candidate/account?tab=feedback",
         label: "Feedback",

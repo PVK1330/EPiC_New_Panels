@@ -11,12 +11,15 @@ import { RiBarChartLine } from "react-icons/ri";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
+import { useToast } from "../../context/ToastContext";
+import { Loader2 } from "lucide-react";
 import {
   getReportingSummary,
   getCaseAnalytics,
   getWorkloadReport,
   getFinancialReport,
   getPerformanceReport,
+  exportReportingExcel,
 } from "../../services/reportingApi";
 import { getVisaTypes } from "../../services/settingsService";
 import { getDepartments } from "../../services/caseWorker";
@@ -457,8 +460,14 @@ function DateRangeBadge({ startDate, endDate }) {
 
 // ─── Export Utility ────────────────────────────────────────────────────────────
 
-const exportToCsv = (filename, rows) => {
-  if (!rows || !rows.length) return;
+const exportToCsv = (filename, rows, notify) => {
+  if (!rows || !rows.length) {
+    notify?.({
+      message: "Nothing to export for the current selection.",
+      variant: "warning",
+    });
+    return;
+  }
   const separator = ',';
   const keys = Object.keys(rows[0]);
   const csvContent =
@@ -467,7 +476,7 @@ const exportToCsv = (filename, rows) => {
     rows.map(row => {
       return keys.map(k => {
         let cell = row[k] === null || row[k] === undefined ? '' : row[k];
-        cell = cell instanceof Date ? cell.toLocaleString() : cell.toString().replace(/"/g, '""');
+        cell = cell instanceof Date ? cell.toLocaleString() : String(cell).replace(/"/g, '""');
         if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
         return cell;
       }).join(separator);
@@ -482,11 +491,12 @@ const exportToCsv = (filename, rows) => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 // ─── Performance Detail Modal ─────────────────────────────────────────────────
 
-function PerformanceDetailModal({ caseworker, onClose }) {
+function PerformanceDetailModal({ caseworker, onClose, showToast }) {
   if (!caseworker) return null;
 
   return (
@@ -645,6 +655,37 @@ function PerformanceDetailModal({ caseworker, onClose }) {
             >
               Close
             </Button>
+<<<<<<< HEAD
+=======
+            <Button
+              type="button"
+              variant="primary"
+              className="rounded-xl inline-flex items-center gap-2"
+              onClick={() => {
+                const reportRows = caseworker.recentCases.map(c => ({
+                  CaseworkerID: caseworker.id,
+                  CaseworkerName: caseworker.name,
+                  CaseID: c.id,
+                  Client: c.client,
+                  VisaType: c.type,
+                  Status: c.status,
+                  Date: c.date,
+                  SLA: c.sla
+                }));
+                if (reportRows.length === 0) {
+                  showToast?.({
+                    message: "No recent cases available to export for this caseworker.",
+                    variant: "warning",
+                  });
+                } else {
+                  exportToCsv(`${caseworker.id}_performance_report.csv`, reportRows, showToast);
+                }
+              }}
+            >
+              <FiDownload size={14} />
+              Download Report
+            </Button>
+>>>>>>> dev
           </div>
         </motion.div>
       </motion.div>
@@ -654,7 +695,7 @@ function PerformanceDetailModal({ caseworker, onClose }) {
 
 // ─── Performance Tab ──────────────────────────────────────────────────────────
 
-function PerformanceTab({ dateRange, performanceData, deptOptions }) {
+function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [slaFilter, setSlaFilter] = useState("all");
@@ -898,6 +939,7 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
         <PerformanceDetailModal
           caseworker={selectedCW}
           onClose={() => setSelectedCW(null)}
+          showToast={showToast}
         />
       )}
 
@@ -997,6 +1039,33 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
                 Showing {caseworkers.length} caseworker{caseworkers.length !== 1 ? "s" : ""}
               </p>
             </div>
+<<<<<<< HEAD
+=======
+            <Button
+              type="button"
+              variant="primary"
+              className="rounded-xl inline-flex items-center gap-2 self-start sm:self-auto"
+              onClick={() => {
+                const rows = filtered.map(cw => ({
+                  ID: cw.id,
+                  Name: cw.name,
+                  Email: cw.email,
+                  Department: cw.department,
+                  ActiveCases: cw.activeCases,
+                  CompletedCases: cw.completedCases,
+                  TotalCases: cw.totalCases,
+                  SLAMetPct: `${cw.slaMetPct}%`,
+                  AvgCompletionDays: cw.avgCompletionDays,
+                  ClientSatisfaction: cw.clientSatisfaction,
+                  Escalations: cw.escalations
+                }));
+                exportToCsv('team_performance_report.csv', rows, showToast);
+              }}
+            >
+              <FiDownload size={14} />
+              Export All
+            </Button>
+>>>>>>> dev
           </div>
 
           {loading ? (
@@ -1028,6 +1097,7 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
                           <span>No caseworkers match your filters.</span>
                         </div>
                       </td>
+<<<<<<< HEAD
                     </tr>
                   ) : (
                     caseworkers.map((cw) => (
@@ -1100,6 +1170,93 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
               </table>
             </div>
           )}
+=======
+                      {/* ID */}
+                      <td className="px-4 py-3.5">
+                        <span className="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">{cw.id}</span>
+                      </td>
+                      {/* Dept */}
+                      <td className="px-4 py-3.5">
+                        <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">{cw.department}</span>
+                      </td>
+                      {/* Active */}
+                      <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.activeCases}</td>
+                      {/* Completed */}
+                      <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.completedCases}</td>
+                      {/* SLA */}
+                      <td className="px-4 py-3.5">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getSlaColor(cw.slaMetPct)}`}>
+                          {cw.slaMetPct}%
+                        </span>
+                      </td>
+                      {/* Avg Days */}
+                      <td className="px-4 py-3.5 text-sm font-mono text-gray-700 tabular-nums">{cw.avgCompletionDays}d</td>
+                      {/* Satisfaction */}
+                      <td className="px-4 py-3.5">
+                        <StarRating value={cw.clientSatisfaction} />
+                      </td>
+                      {/* Escalations */}
+                      <td className="px-4 py-3.5">
+                        <span className={`text-sm font-bold tabular-nums ${cw.escalations <= 3 ? "text-green-600" : cw.escalations <= 8 ? "text-amber-600" : "text-red-600"}`}>
+                          {cw.escalations}
+                        </span>
+                      </td>
+                      {/* Trend sparkline */}
+                      <td className="px-4 py-3.5">
+                        <Sparkline
+                          data={cw.monthlyTrend}
+                          color={
+                            cw.monthlyTrend[11] > cw.monthlyTrend[0] ? "#22c55e" : "#ef4444"
+                          }
+                        />
+                      </td>
+                      {/* Actions */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCW(cw)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-secondary/30 text-secondary bg-secondary/5 hover:bg-secondary/10 transition-colors whitespace-nowrap"
+                          >
+                            <FiEye size={12} />
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const reportRows = cw.recentCases.map(c => ({
+                                CaseworkerID: cw.id,
+                                CaseworkerName: cw.name,
+                                CaseID: c.id,
+                                Client: c.client,
+                                VisaType: c.type,
+                                Status: c.status,
+                                Date: c.date,
+                                SLA: c.sla
+                              }));
+                              if (reportRows.length === 0) {
+                                showToast?.({
+                                  message: "No recent cases available to export for this caseworker.",
+                                  variant: "warning",
+                                });
+                              } else {
+                                exportToCsv(`${cw.id}_performance_report.csv`, reportRows, showToast);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors whitespace-nowrap"
+                          >
+                            <FiDownload size={12} />
+                            Report
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+>>>>>>> dev
 
           {/* Table footer */}
           {caseworkers .length > 0 && (
@@ -1119,13 +1276,29 @@ function PerformanceTab({ dateRange, performanceData, deptOptions }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminReports() {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("cases");
   const [dateRange, setDateRange] = useState({ start: null, end: null });
 
+<<<<<<< HEAD
   // Case Type Data
   const [caseTypes, setCaseTypes] = useState([]);
   const [caseTypesLoading, setCaseTypesLoading] = useState(false);
   const [caseTypesError, setCaseTypesError] = useState(null);
+=======
+  // ── API Data State ────────────────────────────────────────────────────────
+  const [apiData, setApiData] = useState({
+    summary:     null,
+    cases:       null,
+    workload:    null,
+    financial:   null,
+    performance: null,
+  });
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError,   setApiError]   = useState(null);
+  const [reportExporting, setReportExporting] = useState(false);
+  const [deptOptions, setDeptOptions] = useState([{ value: "all", label: "All departments" }]);
+>>>>>>> dev
 
   // Workload Data
   const [workload, setWorkload] = useState([]);
@@ -1240,6 +1413,39 @@ export default function AdminReports() {
     fetchCaseTypeReport();
   }, []);
 
+  const handleExportWorkbook = async () => {
+    setReportExporting(true);
+    try {
+      const params = buildParams();
+      const res = await exportReportingExcel(params);
+      const blob = new Blob([res.data], {
+        type:
+          res.headers["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `reports_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast({
+        message: "Report workbook downloaded successfully.",
+        variant: "success",
+      });
+    } catch (e) {
+      console.error("Report export failed:", e);
+      showToast({
+        message: "Failed to export report workbook.",
+        variant: "danger",
+      });
+    } finally {
+      setReportExporting(false);
+    }
+  };
+
   function handleDateRangeChange({ start, end }) {
     setDateRange({ start, end });
   }
@@ -1348,10 +1554,19 @@ export default function AdminReports() {
             type="button"
             variant="primary"
             className="rounded-xl shadow-sm inline-flex items-center gap-2"
+<<<<<<< HEAD
             onClick={handleExportPDF}
+=======
+            onClick={handleExportWorkbook}
+            disabled={apiLoading || reportExporting}
+>>>>>>> dev
           >
-            <FiDownload size={14} />
-            Export PDF
+            {reportExporting ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <FiDownload size={14} />
+            )}
+            Export Excel
           </Button>
         </div>
       </div>
@@ -1625,10 +1840,18 @@ export default function AdminReports() {
 
       {/* ── Performance Tab ── */}
       {activeTab === "performance" && (
+<<<<<<< HEAD
         <PerformanceTab
           dateRange={dateRange}
           performanceData={[]}
           deptOptions={[]}
+=======
+        <PerformanceTab 
+          dateRange={dateRange}
+          performanceData={apiData.performance}
+          deptOptions={deptOptions}
+          showToast={showToast}
+>>>>>>> dev
         />
       )}
     </motion.div>

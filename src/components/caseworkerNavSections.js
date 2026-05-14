@@ -9,7 +9,7 @@ import {
   User,
   Users,
   MessageSquare,
-  // DollarSign,
+  DollarSign,
   Activity,
   UserCircle,
   CalendarClock,
@@ -71,14 +71,14 @@ export const caseworkerNavSections = (taskCount = 0) => [
   {
     title: "People",
     items: [
-      // {
-      //   to: "/caseworker/people/candidates",
-      //   label: "Candidate profiles",
-      //   icon: User,
-      // },
+      {
+        to: "/caseworker/people/candidates",
+        label: "Candidate profiles",
+        icon: User,
+      },
       {
         to: "/caseworker/people/sponsors",
-        label: "Sponsor profiles",
+        label: "Sponsor / Business profiles",
         icon: Users,
       },
       {
@@ -89,22 +89,32 @@ export const caseworkerNavSections = (taskCount = 0) => [
     ],
   },
   {
-    title: "Other",
+    title: "Outputs",
+    items: [
+      {
+        to: "/caseworker/pipeline",
+        label: "Pipeline",
+        icon: BarChart3,
+      },
+      {
+        to: "/caseworker/finance",
+        label: "Finance",
+        icon: DollarSign,
+      },
+      {
+        to: "/caseworker/performance",
+        label: "Performance",
+        icon: Activity,
+      },
+    ],
+  },
+  {
+    title: "Communication",
     items: [
       {
         to: "/caseworker/messages",
         label: "Messages",
         icon: MessageSquare,
-      },
-      // {
-      //   to: "/caseworker/finance",
-      //   label: "Finance",
-      //   icon: DollarSign,
-      // },
-      {
-        to: "/caseworker/performance",
-        label: "Performance",
-        icon: Activity,
       },
     ],
   },
