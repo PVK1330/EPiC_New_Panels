@@ -51,7 +51,7 @@ const SuperadminSettings = () => {
          <motion.div 
            initial={{ opacity: 0, y: -20 }}
            animate={{ opacity: 1, y: 0 }}
-           className="bg-linear-to-r from-secondary via-primary to-blue-600 rounded-2xl p-8 text-white shadow-lg border border-white/10 overflow-hidden relative"
+           className="bg-gray-100 rounded-2xl p-8 text-white shadow-lg border border-white/10 overflow-hidden relative"
          >
            <div className="absolute inset-0 opacity-10">
              <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
@@ -59,15 +59,15 @@ const SuperadminSettings = () => {
            </div>
            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
              <div>
-                <h1 className="text-3xl font-black text-white mb-2">System Governance</h1>
-                <p className="text-sm text-white/80 font-medium">Configure global platform parameters, brand identity, and security protocols.</p>
+                <h1 className="text-3xl font-black text-red-700 mb-2">System Governance</h1>
+                <p className="text-sm text-gray-500 font-medium">Configure global platform parameters, brand identity, and security protocols.</p>
              </div>
              <div className="flex items-center gap-3">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Button variant="secondary" className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white/20 border border-white/30 text-white hover:bg-white/30 shadow-lg backdrop-blur-sm flex items-center gap-2">
+                  <Button  className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-blue-950 border border-white/30 text-white shadow-lg backdrop-blur-sm flex items-center gap-2">
                      <RiExternalLinkLine size={16} /> Preview Platform
                   </Button>
                 </motion.div>
@@ -75,7 +75,7 @@ const SuperadminSettings = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Button variant="secondary" className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white/20 border border-white/30 text-white hover:bg-white/30 shadow-lg backdrop-blur-sm">
+                  <Button  className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-blue-950 border border-white/30 text-white shadow-lg backdrop-blur-sm">
                      <RiSettings4Line size={16} /> Deploy Configuration
                   </Button>
                 </motion.div>

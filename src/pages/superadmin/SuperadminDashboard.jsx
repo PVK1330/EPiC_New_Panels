@@ -70,7 +70,7 @@ const SuperadminDashboard = () => {
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-r from-secondary via-primary to-blue-600 rounded-2xl p-8 text-white shadow-lg border border-white/10 overflow-hidden relative"
+              className="bg-gray-100 rounded-2xl p-8 text-white shadow-lg border border-white/10 overflow-hidden relative"
             >
               <div className="absolute inset-0 opacity-10">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
@@ -78,8 +78,8 @@ const SuperadminDashboard = () => {
               </div>
               <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                   <h1 className="text-2xl font-black text-white mb-2">Platform Overview</h1>
-                   <p className="text-sm text-white/80  tracking-widest">Consolidated business intelligence and organizational performance metrics.</p>
+                   <h1 className="text-2xl font-black text-red-800 mb-2">Platform Overview</h1>
+                   <p className="text-sm text-gray-500  tracking-widest">Consolidated business intelligence and organizational performance metrics.</p>
                 </div>
                 <div className="flex items-center gap-3">
                    <motion.div
@@ -87,9 +87,9 @@ const SuperadminDashboard = () => {
                      whileTap={{ scale: 0.95 }}
                    >
                      <Button 
-                        variant="secondary"
+                       
   
-                        className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white/20 border border-white/30 text-white hover:bg-white/30 shadow-lg backdrop-blur-sm"
+                        className="px-6 py-3 text-[11px] font-black uppercase tracking-widest border bg-blue-950 border-white/30 text-gray-600 shadow-lg backdrop-blur-sm"
                      >
                         <RiShieldUserLine size={16} className="inline mr-2" />Generate Report
                      </Button>
@@ -99,8 +99,8 @@ const SuperadminDashboard = () => {
                      whileTap={{ scale: 0.95 }}
                    >
                      <Button 
-                     variant="secondary"
-                        className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white/20 border border-white/30 text-white hover:bg-white/30 shadow-lg backdrop-blur-sm"
+                     
+                        className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-blue-950 border border-white/30 text-white shadow-lg backdrop-blur-sm"
                      >
                         <RiAddLine size={18} /> Add Organization
                      </Button>

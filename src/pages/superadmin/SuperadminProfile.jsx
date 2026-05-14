@@ -42,7 +42,7 @@ const SuperadminProfile = () => {
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-linear-to-r from-secondary via-primary to-blue-600 rounded-2xl p-8 text-white shadow-lg border border-white/10 overflow-hidden relative"
+        className="bg-gray-100 rounded-2xl p-8 text-white shadow-lg border border-white/10 overflow-hidden relative"
       >
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
@@ -50,8 +50,8 @@ const SuperadminProfile = () => {
         </div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-             <h1 className="text-2xl font-black text-white mb-2">Account Management</h1>
-             <p className="text-sm text-white/80 font-medium">Manage your identity and security settings.</p>
+             <h1 className="text-2xl font-black text-red-700 mb-2">Account Management</h1>
+             <p className="text-sm text-gray-500 font-medium">Manage your identity and security settings.</p>
           </div>
           <div className="flex items-center gap-3">
              <span className="px-3.5 py-1.5 bg-white/20 border border-white/30 text-white text-[9px] font-black uppercase tracking-widest rounded-lg backdrop-blur-sm">Global Admin</span>

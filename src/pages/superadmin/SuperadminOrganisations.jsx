@@ -160,7 +160,7 @@ const SuperadminOrganisations = () => {
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-linear-to-r from-secondary via-primary to-blue-600 rounded-2xl p-8 text-white shadow-lg border border-white/10 overflow-hidden relative"
+        className="bg-gray-100 rounded-2xl p-8  shadow-lg border border-white/10 overflow-hidden relative"
       >
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
@@ -168,8 +168,8 @@ const SuperadminOrganisations = () => {
         </div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-             <h1 className="text-3xl font-black text-white mb-2">Organizations</h1>
-             <p className="text-sm text-white/80 font-medium">Manage all client organizations and their statuses.</p>
+             <h1 className="text-3xl font-black text-red-800 mb-2">Organizations</h1>
+             <p className="text-sm text-gray-500 font-medium">Manage all client organizations and their statuses.</p>
           </div>
           <div className="flex items-center gap-3">
              <motion.div
@@ -183,9 +183,9 @@ const SuperadminOrganisations = () => {
                whileTap={{ scale: 0.95 }}
              >
                <Button 
-               variant="secondary"
+               
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-white/20 border border-white/30 text-white hover:bg-white/30 shadow-lg backdrop-blur-sm"
+                  className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-blue-950 border border-white/30 text-gray-500shadow-lg backdrop-blur-sm"
                >
                   <RiAddLine size={18} /> Create Organization
                </Button>

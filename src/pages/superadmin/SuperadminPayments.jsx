@@ -329,7 +329,7 @@ const SuperadminPayments = () => {
         <div>
            <div className="flex items-center gap-3 mb-2">
               <motion.h1 
-                className="text-2xl font-black text-secondary uppercase tracking-tight"
+                className="text-2xl font-black text-red-700 uppercase tracking-tight"
                 whileHover={{ scale: 1.05 }}
               >
                 💰 Financial Hub

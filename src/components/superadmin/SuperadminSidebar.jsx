@@ -126,37 +126,37 @@ const NavItem = ({ item, onClose }) => {
       className="block"
     >
       <motion.div
-        whileHover={{ x: 3 }}
+        whileHover={{ x: 4, scale: 1.02 }}
         whileTap={{ scale: 0.97 }}
         transition={{ type: "spring", stiffness: 400, damping: 25 }}
         className={`
-          relative flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all duration-200 group
+          relative flex items-center gap-4 px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all duration-300 group
           ${isActive
-            ? "bg-blue-500 text-white shadow-lg shadow-secondary/20"
-            : "text-gray-600 hover:text-primary hover:bg-primary/8"
+            ? "bg-gradient-to-r from-red-700 to-red-800 text-white "
+            : "text-gray-700"
           }
         `}
-      >
+      > 
         {/* Active indicator bar */}
         {isActive && (
           <motion.div
             layoutId="activeBar"
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full"
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-white rounded-r-full shadow-lg"
             transition={{ type: "spring", stiffness: 380, damping: 30 }}
           />
         )}
 
         {/* Icon */}
-        <span className={`shrink-0 transition-transform duration-200 ${!isActive ? "group-hover:scale-110" : ""}`}>
-          {isActive ? <IconActive size={17} className="text-primary" /> : <IconDefault size={17} />}
+        <span className={`shrink-0 transition-transform duration-300 text-xl ${!isActive ? "group-hover:scale-125 group-hover:rotate-6" : ""}`}>
+          {isActive ? <IconActive size={22} className="text-white" /> : <IconDefault size={22} className="text-red-500 group-hover:text-red-600" />}
         </span>
 
         {/* Label */}
-        <span className="text-gray-900">{item.name}</span>
+        <span className={`transition-colors duration-300 ${isActive ? "text-white" : "text-gray-800 group-hover:text-red-700"}`}>{item.name}</span>
 
         {/* Hover glow */}
         {!isActive && (
-          <span className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-r from-primary/5 to-transparent pointer-events-none" />
+          <span className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-blue-400/10 via-blue-300/5 to-transparent pointer-events-none" />
         )}
       </motion.div>
     </NavLink>
@@ -165,23 +165,27 @@ const NavItem = ({ item, onClose }) => {
 
 const SuperadminSidebar = ({ isOpen, onClose }) => {
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-white border-r border-gray-100/80 shadow-[2px_0_24px_rgba(0,0,0,0.04)]">
+    <div className="flex flex-col h-full bg-gradient-to-b from-white via-blue-50/30 to-white border-r border-blue-100/50 shadow-[2px_0_24px_rgba(59,130,246,0.08)]">
 
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-5 border-b border-gray-100/80 shrink-0 bg-white sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-primary/6 rounded-xl border border-primary/12 flex items-center justify-center p-1.5 shadow-sm">
+      <div className="h-20 flex items-center px-6 border-b border-blue-100/50 shrink-0 bg-gradient-to-r from-white to-blue-50/50 sticky top-0 z-20 shadow-sm">
+        <div className="flex items-center gap-3.5">
+          <motion.div 
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            className="w-18 h-13  rounded-xl border-2 border-blue-300/50 flex items-center justify-center p-2 shadow-lg shadow-blue-500/25 cursor-pointer"
+          >
             <img
               src={eliteLogo}
               alt="ElitePic"
               className="w-full h-full object-contain"
             />
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <h1 className="text-[13px] font-black text-secondary uppercase tracking-widest leading-none">
+          </motion.div>
+          <div className="flex flex-col gap-1">
+            <h1 className="text-[15px] font-black text-primary uppercase tracking-widest leading-none">
               ElitePic
             </h1>
-            <p className="text-[8px] font-bold text-primary uppercase tracking-[0.18em] opacity-55">
+            <p className="text-[9px] font-bold text-secondary uppercase tracking-[0.18em] opacity-75 font-semibold">
               Admin Portal
             </p>
           </div>
@@ -196,15 +200,15 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5 custom-scrollbar">
+      <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-6 custom-scrollbar">
         {navSections.map((section, idx) => (
           <div key={idx}>
             {section.label && (
-              <div className="flex items-center gap-2.5 px-3 mb-2">
-                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-gray-300">
+              <div className="flex items-center gap-2.5 px-4 mb-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-blue-400/80">
                   {section.label}
                 </p>
-                <div className="flex-1 h-px bg-gray-100" />
+                <div className="flex-1 h-px bg-gradient-to-r from-blue-200 to-transparent" />
               </div>
             )}
             <div className="space-y-0.5">
@@ -217,29 +221,32 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
       </nav>
 
       {/* User Footer */}
-      <div className="p-3 border-t border-gray-100/80 bg-gray-50/30">
+      <div className="p-4 border-t border-blue-100/50 bg-gradient-to-r from-blue-50/50 to-white">
         <NavLink to="/superadmin/profile" className="block group">
           <motion.div
-            whileHover={{ y: -1 }}
+            whileHover={{ y: -2, scale: 1.02 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-100 transition-all duration-200 group-hover:border-primary/20 group-hover:shadow-md group-hover:shadow-primary/5 relative overflow-hidden"
+            className="flex items-center gap-3.5 p-3.5 rounded-xl bg-gradient-to-r from-white to-blue-50 border border-blue-200 transition-all duration-300 group-hover:border-blue-400 group-hover:shadow-lg group-hover:shadow-blue-500/15 relative overflow-hidden"
           >
             {/* Avatar */}
-            <div className="w-9 h-9 bg-secondary text-white rounded-xl flex items-center justify-center font-black text-[11px] shrink-0 shadow-sm shadow-secondary/20">
+            <motion.div 
+              whileHover={{ scale: 1.15 }}
+              className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl flex items-center justify-center font-black text-[12px] shrink-0 shadow-lg shadow-blue-500/30"
+            >
               SA
-            </div>
+            </motion.div>
 
             {/* Info */}
             <div className="flex-1 min-w-0 text-left">
-              <p className="text-[11px] font-bold text-secondary truncate uppercase tracking-widest">
+              <p className="text-[11px] font-bold text-blue-700 truncate uppercase tracking-widest">
                 Administrator
               </p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 shadow-lg shadow-green-500/40" />
                 </span>
-                <p className="text-[8px] font-bold text-gray-400 truncate uppercase tracking-widest">
+                <p className="text-[8px] font-bold text-blue-500 truncate uppercase tracking-widest">
                   Active Session
                 </p>
               </div>
@@ -247,19 +254,19 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
 
             {/* Logout */}
             <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.93 }}
+              whileHover={{ scale: 1.15, rotate: 10 }}
+              whileTap={{ scale: 0.9 }}
               onClick={(e) => {
                 e.preventDefault();
                 /* Handle logout */
               }}
-              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200"
+              className="p-2 text-blue-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-300 shadow-md shadow-blue-500/10 group-hover:shadow-red-500/20"
             >
-              <RiLogoutBoxRLine size={16} />
+              <RiLogoutBoxRLine size={18} />
             </motion.button>
 
             {/* Subtle hover shimmer */}
-            <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-primary/3 to-transparent pointer-events-none rounded-xl" />
+            <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-blue-400/10 via-blue-300/5 to-transparent pointer-events-none rounded-xl" />
           </motion.div>
         </NavLink>
       </div>

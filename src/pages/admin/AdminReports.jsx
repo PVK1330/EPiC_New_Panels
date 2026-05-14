@@ -655,37 +655,6 @@ function PerformanceDetailModal({ caseworker, onClose, showToast }) {
             >
               Close
             </Button>
-<<<<<<< HEAD
-=======
-            <Button
-              type="button"
-              variant="primary"
-              className="rounded-xl inline-flex items-center gap-2"
-              onClick={() => {
-                const reportRows = caseworker.recentCases.map(c => ({
-                  CaseworkerID: caseworker.id,
-                  CaseworkerName: caseworker.name,
-                  CaseID: c.id,
-                  Client: c.client,
-                  VisaType: c.type,
-                  Status: c.status,
-                  Date: c.date,
-                  SLA: c.sla
-                }));
-                if (reportRows.length === 0) {
-                  showToast?.({
-                    message: "No recent cases available to export for this caseworker.",
-                    variant: "warning",
-                  });
-                } else {
-                  exportToCsv(`${caseworker.id}_performance_report.csv`, reportRows, showToast);
-                }
-              }}
-            >
-              <FiDownload size={14} />
-              Download Report
-            </Button>
->>>>>>> dev
           </div>
         </motion.div>
       </motion.div>
@@ -1039,33 +1008,6 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
                 Showing {caseworkers.length} caseworker{caseworkers.length !== 1 ? "s" : ""}
               </p>
             </div>
-<<<<<<< HEAD
-=======
-            <Button
-              type="button"
-              variant="primary"
-              className="rounded-xl inline-flex items-center gap-2 self-start sm:self-auto"
-              onClick={() => {
-                const rows = filtered.map(cw => ({
-                  ID: cw.id,
-                  Name: cw.name,
-                  Email: cw.email,
-                  Department: cw.department,
-                  ActiveCases: cw.activeCases,
-                  CompletedCases: cw.completedCases,
-                  TotalCases: cw.totalCases,
-                  SLAMetPct: `${cw.slaMetPct}%`,
-                  AvgCompletionDays: cw.avgCompletionDays,
-                  ClientSatisfaction: cw.clientSatisfaction,
-                  Escalations: cw.escalations
-                }));
-                exportToCsv('team_performance_report.csv', rows, showToast);
-              }}
-            >
-              <FiDownload size={14} />
-              Export All
-            </Button>
->>>>>>> dev
           </div>
 
           {loading ? (
@@ -1097,7 +1039,6 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
                           <span>No caseworkers match your filters.</span>
                         </div>
                       </td>
-<<<<<<< HEAD
                     </tr>
                   ) : (
                     caseworkers.map((cw) => (
@@ -1124,7 +1065,6 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
                         </td>
                         {/* Dept */}
                         <td className="px-4 py-3.5">
-                          <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">{cw.department || "N/A"}</span>
                         </td>
                         {/* Active */}
                         <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.active_cases || 0}</td>
@@ -1170,148 +1110,40 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast }) 
               </table>
             </div>
           )}
-=======
-                      {/* ID */}
-                      <td className="px-4 py-3.5">
-                        <span className="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">{cw.id}</span>
-                      </td>
-                      {/* Dept */}
-                      <td className="px-4 py-3.5">
-                        <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">{cw.department}</span>
-                      </td>
-                      {/* Active */}
-                      <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.activeCases}</td>
-                      {/* Completed */}
-                      <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.completedCases}</td>
-                      {/* SLA */}
-                      <td className="px-4 py-3.5">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getSlaColor(cw.slaMetPct)}`}>
-                          {cw.slaMetPct}%
-                        </span>
-                      </td>
-                      {/* Avg Days */}
-                      <td className="px-4 py-3.5 text-sm font-mono text-gray-700 tabular-nums">{cw.avgCompletionDays}d</td>
-                      {/* Satisfaction */}
-                      <td className="px-4 py-3.5">
-                        <StarRating value={cw.clientSatisfaction} />
-                      </td>
-                      {/* Escalations */}
-                      <td className="px-4 py-3.5">
-                        <span className={`text-sm font-bold tabular-nums ${cw.escalations <= 3 ? "text-green-600" : cw.escalations <= 8 ? "text-amber-600" : "text-red-600"}`}>
-                          {cw.escalations}
-                        </span>
-                      </td>
-                      {/* Trend sparkline */}
-                      <td className="px-4 py-3.5">
-                        <Sparkline
-                          data={cw.monthlyTrend}
-                          color={
-                            cw.monthlyTrend[11] > cw.monthlyTrend[0] ? "#22c55e" : "#ef4444"
-                          }
-                        />
-                      </td>
-                      {/* Actions */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedCW(cw)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-secondary/30 text-secondary bg-secondary/5 hover:bg-secondary/10 transition-colors whitespace-nowrap"
-                          >
-                            <FiEye size={12} />
-                            View
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const reportRows = cw.recentCases.map(c => ({
-                                CaseworkerID: cw.id,
-                                CaseworkerName: cw.name,
-                                CaseID: c.id,
-                                Client: c.client,
-                                VisaType: c.type,
-                                Status: c.status,
-                                Date: c.date,
-                                SLA: c.sla
-                              }));
-                              if (reportRows.length === 0) {
-                                showToast?.({
-                                  message: "No recent cases available to export for this caseworker.",
-                                  variant: "warning",
-                                });
-                              } else {
-                                exportToCsv(`${cw.id}_performance_report.csv`, reportRows, showToast);
-                              }
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors whitespace-nowrap"
-                          >
-                            <FiDownload size={12} />
-                            Report
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
->>>>>>> dev
-
-          {/* Table footer */}
-          {caseworkers .length > 0 && (
-            <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
-              <span>{caseworkers.length} result{caseworkers.length !== 1 ? "s" : ""}</span>
-              <span className="font-mono">
-                Team avg workload: <span className="font-black text-secondary">{avgSla}%</span>
-              </span>
-            </div>
-          )}
         </div>
-      </motion.div>
-    </>
-  );
-}
+        </motion.div>
+      </>
+    );
+  }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+  // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function AdminReports() {
-  const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState("cases");
-  const [dateRange, setDateRange] = useState({ start: null, end: null });
+  export default function AdminReports() {
+    const { showToast } = useToast();
+    const [activeTab, setActiveTab] = useState("cases");
+    const [reportExporting, setReportExporting] = useState(false);
+    const [performanceData, setPerformanceData] = useState(null);
+    const [deptOptions, setDeptOptions] = useState([]);
+    const [dateRange, setDateRange] = useState({ start: null, end: null });
+    const [visaFilter, setVisaFilter] = useState("all");
+    
+    // Case Type Data
+    const [caseTypes, setCaseTypes] = useState([]);
+    const [caseTypesLoading, setCaseTypesLoading] = useState(false);
+    const [caseTypesError, setCaseTypesError] = useState(null);
 
-<<<<<<< HEAD
-  // Case Type Data
-  const [caseTypes, setCaseTypes] = useState([]);
-  const [caseTypesLoading, setCaseTypesLoading] = useState(false);
-  const [caseTypesError, setCaseTypesError] = useState(null);
-=======
-  // ── API Data State ────────────────────────────────────────────────────────
-  const [apiData, setApiData] = useState({
-    summary:     null,
-    cases:       null,
-    workload:    null,
-    financial:   null,
-    performance: null,
-  });
-  const [apiLoading, setApiLoading] = useState(false);
-  const [apiError,   setApiError]   = useState(null);
-  const [reportExporting, setReportExporting] = useState(false);
-  const [deptOptions, setDeptOptions] = useState([{ value: "all", label: "All departments" }]);
->>>>>>> dev
-
-  // Workload Data
-  const [workload, setWorkload] = useState([]);
-  const [workloadLoading, setWorkloadLoading] = useState(false);
-  const [workloadError, setWorkloadError] = useState(null);
-  const [workloadSearch, setWorkloadSearch] = useState("");
-  const [apiLoading, setapiLoading] = useState(false);
+    // Workload Data
+    const [workload, setWorkload] = useState([]);
+    const [workloadLoading, setWorkloadLoading] = useState(false);
+    const [workloadError, setWorkloadError] = useState(null);
+    const [workloadSearch, setWorkloadSearch] = useState("");
+    const [apiLoading, setapiLoading] = useState(false);
 
   // Financial Data
   const [revenueByVisa, setRevenueByVisa] = useState([]);
   const [revenueBySponsor, setRevenueBySponsor] = useState([]);
   const [financeLoading, setFinanceLoading] = useState(false);
-  const [financeError, setFinanceError] = useState(null);
+  const [financeError, setFinanceError] = useState(null);   
   const [financeSearch, setFinanceSearch] = useState("");
 
   // Tab visibility tracking for lazy loading
@@ -1416,8 +1248,7 @@ export default function AdminReports() {
   const handleExportWorkbook = async () => {
     setReportExporting(true);
     try {
-      const params = buildParams();
-      const res = await exportReportingExcel(params);
+      const res = await exportReportingExcel({});
       const blob = new Blob([res.data], {
         type:
           res.headers["content-type"] ||
@@ -1554,12 +1385,8 @@ export default function AdminReports() {
             type="button"
             variant="primary"
             className="rounded-xl shadow-sm inline-flex items-center gap-2"
-<<<<<<< HEAD
-            onClick={handleExportPDF}
-=======
             onClick={handleExportWorkbook}
             disabled={apiLoading || reportExporting}
->>>>>>> dev
           >
             {reportExporting ? (
               <Loader2 size={14} className="animate-spin" />
@@ -1840,20 +1667,16 @@ export default function AdminReports() {
 
       {/* ── Performance Tab ── */}
       {activeTab === "performance" && (
-<<<<<<< HEAD
-        <PerformanceTab
-          dateRange={dateRange}
-          performanceData={[]}
-          deptOptions={[]}
-=======
         <PerformanceTab 
           dateRange={dateRange}
-          performanceData={apiData.performance}
-          deptOptions={deptOptions}
+          performanceData={performanceData || []}
+          deptOptions={deptOptions || []}
           showToast={showToast}
->>>>>>> dev
         />
       )}
     </motion.div>
   );
 }
+
+
+
