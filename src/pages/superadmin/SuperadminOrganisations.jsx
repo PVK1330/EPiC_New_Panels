@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import {
   RiSearchLine,
   RiFilter3Line,
@@ -18,6 +19,29 @@ import CreateOrganizationModal from '../../components/superadmin/CreateOrganizat
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/Input';
+import {
+  fetchOrganisations,
+  createOrganisation,
+  updateOrganisation,
+  createOrganisationAdmin,
+} from '../../services/superadminOrganisation.service';
+
+const capitalize = (s) =>
+  s && typeof s === 'string' ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
+
+const mapApiOrgToRow = (o) => ({
+  id: o.id,
+  name: o.name,
+  slug: o.slug,
+  plan: capitalize(o.plan || 'starter'),
+  users: Array.isArray(o.users) ? o.users.length : 0,
+  cases: 0,
+  storage: '—',
+  status: capitalize(o.status || 'trial'),
+  country: o.country || '—',
+  primaryEmail: o.primaryEmail,
+  _raw: o,
+});
 
 const SuperadminOrganisations = () => {
   const [activeTab, setActiveTab] = useState('All');
@@ -26,55 +50,92 @@ const SuperadminOrganisations = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [orgs, setOrgs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [orgs, setOrgs] = useState([
-    { id: 1, name: 'Elite Visa Solutions', slug: 'elite-visa', plan: 'Enterprise', users: 45, cases: 1240, storage: '4.2 GB', status: 'Active', country: 'United Kingdom' },
-    { id: 2, name: 'Global Migrate Pro', slug: 'global-migrate', plan: 'Pro', users: 12, cases: 450, storage: '1.1 GB', status: 'Active', country: 'Canada' },
-    { id: 3, name: 'London Legal Partners', slug: 'london-legal', plan: 'Starter', users: 4, cases: 85, storage: '250 MB', status: 'Trial', country: 'United Kingdom' },
-    { id: 4, name: 'Bridge UK Immigration', slug: 'bridge-uk', plan: 'Enterprise', users: 38, cases: 980, storage: '3.8 GB', status: 'Suspended', country: 'United Kingdom' },
-    { id: 5, name: 'Westminster Agency', slug: 'westminster', plan: 'Pro', users: 15, cases: 310, storage: '800 MB', status: 'Active', country: 'United Kingdom' },
-    { id: 6, name: 'Dubai Visa Experts', slug: 'dubai-visa', plan: 'Pro', users: 8, cases: 210, storage: '450 MB', status: 'Active', country: 'UAE' },
-    { id: 7, name: 'Sydney Migrate', slug: 'sydney-migrate', plan: 'Starter', users: 2, cases: 45, storage: '120 MB', status: 'Trial', country: 'Australia' },
-  ]);
+  const loadOrgs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetchOrganisations();
+      const list = res.data?.data?.organisations ?? res.data?.organisations ?? [];
+      setOrgs(Array.isArray(list) ? list.map(mapApiOrgToRow) : []);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e.message || 'Failed to load organisations');
+      setOrgs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOrgs();
+  }, [loadOrgs]);
 
   const tabs = ['All', 'Active', 'Trial', 'Suspended'];
 
   const filteredOrgs = orgs.filter(org => {
-    const matchesTab = activeTab === 'All' || org.status === activeTab;
+    const tab = activeTab.toLowerCase();
+    const st = (org.status || '').toLowerCase();
+    const matchesTab = activeTab === 'All' || st === tab.toLowerCase();
     const matchesSearch = org.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          org.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         org.country.toLowerCase().includes(searchTerm.toLowerCase());
+                         String(org.country).toLowerCase().includes(searchTerm.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
-  const handleCreateOrg = (data) => {
-    const newOrg = {
-      id: orgs.length + 1,
-      name: data.name,
-      slug: data.slug,
-      plan: data.plan.charAt(0).toUpperCase() + data.plan.slice(1),
-      users: 0,
-      cases: 0,
-      storage: '0 MB',
-      status: 'Trial',
-      country: data.country
-    };
-    setOrgs([...orgs, newOrg]);
-    setIsCreateModalOpen(false);
+  const handleCreateOrg = async (data) => {
+    const orgRes = await createOrganisation({
+      name: data.name.trim(),
+      slug: data.slug?.trim() || undefined,
+      primaryEmail: data.primaryEmail.trim(),
+      country: data.country?.trim() || null,
+      plan: data.plan || 'starter',
+      status: 'trial',
+    });
+    const created = orgRes.data?.data?.organisation ?? orgRes.data?.organisation;
+    if (!created?.id) {
+      throw new Error(orgRes.data?.message || 'Organisation create failed');
+    }
+    const adminRes = await createOrganisationAdmin(created.id, {
+      email: data.adminEmail.trim().toLowerCase(),
+      first_name: data.adminFirstName.trim(),
+      last_name: data.adminLastName.trim(),
+      country_code: (data.adminCountryCode || '+44').trim(),
+      mobile: String(data.adminMobile || '').replace(/\s/g, '') || '0000000001',
+    });
+    const inner = adminRes.data?.data ?? adminRes.data;
+    const tempPw = inner?.temporary_password;
+    if (tempPw) {
+      toast.success(`Organisation created. Save this admin password: ${tempPw}`, { duration: 14000 });
+    } else {
+      toast.success('Organisation and admin created');
+    }
+    await loadOrgs();
   };
 
-  const handleEditOrg = (data) => {
-    setOrgs(orgs.map(org => org.id === selectedOrg.id ? { ...org, ...data } : org));
-    setIsEditModalOpen(false);
+  const handleEditOrg = async () => {
+    if (!selectedOrg?.id) return;
+    try {
+      await updateOrganisation(selectedOrg.id, {
+        name: selectedOrg.name?.trim(),
+        plan: (selectedOrg.plan || 'starter').toLowerCase(),
+        status: (selectedOrg.status || 'active').toLowerCase(),
+      });
+      toast.success('Organisation updated');
+      await loadOrgs();
+      setIsEditModalOpen(false);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e.message || 'Update failed');
+    }
   };
 
   const handleDeleteOrg = () => {
-    setOrgs(orgs.filter(org => org.id !== selectedOrg.id));
+    toast('Organisation delete is not enabled in the API yet.', { icon: 'ℹ️' });
     setIsDeleteModalOpen(false);
   };
 
   const handleLoginAs = (org) => {
-    alert(`Impersonating ${org.name}. Redirecting to organisation dashboard...`);
+    toast('Impersonation is not wired to the API yet.', { icon: 'ℹ️' });
   };
 
   return (
@@ -95,7 +156,7 @@ const SuperadminOrganisations = () => {
         footer={
           <div className="flex justify-end gap-2 w-full">
             <Button variant="secondary" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2 text-[10px] font-bold uppercase tracking-widest">Cancel</Button>
-            <Button onClick={() => handleEditOrg(selectedOrg)} className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest shadow-sm">Save Changes</Button>
+            <Button onClick={handleEditOrg} className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest shadow-sm">Save Changes</Button>
           </div>
         }
       >
@@ -244,7 +305,20 @@ const SuperadminOrganisations = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50/50">
-              {filteredOrgs.map((org) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-10 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    Loading organisations…
+                  </td>
+                </tr>
+              ) : filteredOrgs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-10 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    No organisations found
+                  </td>
+                </tr>
+              ) : (
+              filteredOrgs.map((org) => (
                 <tr key={org.id} className="hover:bg-gray-50/50 transition-colors group">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
@@ -302,7 +376,8 @@ const SuperadminOrganisations = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>

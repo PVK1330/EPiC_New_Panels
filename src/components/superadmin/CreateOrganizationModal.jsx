@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import {
   RiBuilding2Line,
@@ -13,18 +14,31 @@ import Input from '../Input';
 import Button from '../Button';
 import Modal from '../common/Modal';
 
+const initialForm = () => ({
+  name: '',
+  slug: '',
+  primaryEmail: '',
+  country: '',
+  plan: 'starter',
+  adminFirstName: '',
+  adminLastName: '',
+  adminEmail: '',
+  adminCountryCode: '+44',
+  adminMobile: '',
+});
+
 const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    name: '',
-    slug: '',
-    primaryEmail: '',
-    country: '',
-    plan: 'starter',
-    adminFirstName: '',
-    adminLastName: '',
-    adminEmail: '',
-  });
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState(initialForm);
+
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      setFormData(initialForm());
+      setSubmitting(false);
+    }
+  }, [isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,8 +74,25 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
               Previous Step
             </Button>
           ) : <div />}
-          <Button onClick={step < 3 ? handleNext : () => onSubmit(formData)}>
-            {step < 3 ? 'Continue' : 'Create Organisation'}
+          <Button
+            disabled={submitting}
+            onClick={async () => {
+              if (step < 3) {
+                handleNext();
+                return;
+              }
+              setSubmitting(true);
+              try {
+                await onSubmit(formData);
+                onClose();
+              } catch (e) {
+                toast.error(e?.response?.data?.message || e.message || 'Request failed');
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+          >
+            {submitting ? 'Saving…' : step < 3 ? 'Continue' : 'Create Organisation'}
           </Button>
         </div>
       }
@@ -203,9 +234,31 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
               onChange={handleChange}
               required
             />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Admin mobile (digits)"
+                name="adminMobile"
+                placeholder="7700900123"
+                value={formData.adminMobile}
+                onChange={handleChange}
+                required
+              />
+              <Input
+                label="Country code"
+                name="adminCountryCode"
+                placeholder="+44"
+                value={formData.adminCountryCode}
+                onChange={handleChange}
+                required
+              />
+            </div>
             <div className="p-6 bg-gray-50 rounded-xl border border-gray-100 text-center">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">Initial Password</p>
-              <p className="font-bold text-secondary tracking-[0.3em] text-lg">EPIC-ADMIN-2024</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">
+                Password
+              </p>
+              <p className="text-xs font-bold text-secondary">
+                If you do not set a password in the API request, the platform returns a temporary password in the success response (shown as a toast).
+              </p>
             </div>
           </motion.div>
         )}

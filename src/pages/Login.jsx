@@ -13,6 +13,7 @@ import {
   verifyTwoFactor,
 } from "../services/auth.service";
 import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
+import { getAuthUserAndToken } from "../utils/authResponse";
 
 const VIEWS = {
   login: "login",
@@ -174,15 +175,16 @@ const Login = () => {
         throw new Error("No response received from authentication server");
       }
 
-      const responsePayload = res.data?.user ? res.data : res.user ? res : res.data?.data;
-      const requires2fa = res.data?.requires_2fa || res.requires_2fa || responsePayload?.requires_2fa;
+      const requires2fa =
+        res?.data?.requires_2fa ||
+        res?.requires_2fa ||
+        res?.data?.data?.requires_2fa;
 
       if (requires2fa) {
         setPendingLogin({ email: form.email, password: form.password });
         setView(VIEWS.twoFactor);
       } else {
-        const userData = responsePayload?.user;
-        const jwtToken = responsePayload?.token;
+        const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
 
         if (!userData || !jwtToken) {
           throw new Error(res.message || "Invalid credentials or response structure");
@@ -190,8 +192,15 @@ const Login = () => {
 
         const role = ROLE_NAMES[userData.role_id] || "candidate";
         dispatch(
-          setCredentials({ user: { ...userData, role }, token: jwtToken },
-        ));
+          setCredentials({
+            user: {
+              ...userData,
+              role,
+              organisation_id: userData.organisation_id ?? null,
+            },
+            token: jwtToken,
+          }),
+        );
         navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
       }
     } catch (err) {
@@ -266,9 +275,7 @@ const Login = () => {
         throw new Error("No response received from 2FA server");
       }
 
-      const responsePayload = res.data?.user ? res.data : res.user ? res : res.data?.data;
-      const userData = responsePayload?.user;
-      const jwtToken = responsePayload?.token;
+      const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
 
       if (!userData || !jwtToken) {
         throw new Error(res.message || "Invalid 2FA code or server response");
@@ -276,7 +283,14 @@ const Login = () => {
 
       const role = ROLE_NAMES[userData.role_id] || "candidate";
       dispatch(
-        setCredentials({ user: { ...userData, role }, token: jwtToken }),
+        setCredentials({
+          user: {
+            ...userData,
+            role,
+            organisation_id: userData.organisation_id ?? null,
+          },
+          token: jwtToken,
+        }),
       );
       navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
     } catch (err) {

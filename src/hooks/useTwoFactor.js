@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { setup2FA, verifySetup2FA, disable2FA, verifyTwoFactor } from '../services/auth.service';
 import { setCredentials } from '../store/slices/authSlice';
 import { ROLE_NAMES, ROLE_ROUTES } from '../utils/constants';
+import { getAuthUserAndToken } from '../utils/authResponse';
 
 const useTwoFactor = () => {
   const dispatch = useDispatch();
@@ -58,9 +59,19 @@ const useTwoFactor = () => {
     setError('');
     try {
       const res = await verifyTwoFactor({ email, password, token });
-      const { user: userData, token: jwtToken } = res.data;
+      const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
+      if (!userData || !jwtToken) {
+        throw new Error(res?.message || 'Invalid 2FA response');
+      }
       const role = ROLE_NAMES[userData.role_id] || 'candidate';
-      dispatch(setCredentials({ user: { ...userData, role }, token: jwtToken }));
+      dispatch(setCredentials({
+        user: {
+          ...userData,
+          role,
+          organisation_id: userData.organisation_id ?? null,
+        },
+        token: jwtToken,
+      }));
       sessionStorage.removeItem('pending_2fa_email');
       sessionStorage.removeItem('pending_2fa_password');
       navigate(ROLE_ROUTES[userData.role_id] || '/candidate/dashboard');
