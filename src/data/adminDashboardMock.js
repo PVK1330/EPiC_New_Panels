@@ -46,6 +46,7 @@ export const MOCK_DASHBOARD_STATS = {
   teamWorkload: [],
 };
 
+
 export const MOCK_RECENT_CASES = [
   {
     id: 1,
