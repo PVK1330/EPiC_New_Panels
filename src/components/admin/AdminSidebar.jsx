@@ -51,6 +51,7 @@ const navSections = [
     items: [
       { to: "/admin/cases",             label: "All Cases",        icon: RiFolderOpenLine },
       { to: "/admin/pipeline",          label: "Pipeline",         icon: RiExchangeLine },
+      { to: "/admin/case-process",      label: "Case Process",     icon: RiGitBranchLine },
       { to: "/admin/calendar",          label: "Calendar",         icon: RiCalendarLine },
       { to: "/admin/escalations",       label: "Escalations",      icon: RiAlarmWarningLine },
       { to: "/admin/licence-requests",  label: "Licence Requests", icon: RiShieldCheckLine },

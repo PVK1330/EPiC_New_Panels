@@ -49,6 +49,7 @@ import AdminUsers from '../pages/admin/AdminUsers';
 import AdminPermissions from '../pages/admin/AdminPermissions';
 import AdminCaseDetail from '../pages/admin/AdminCaseDetail';
 import AdminPipeline from '../pages/admin/AdminPipeline';
+import AdminImmigrationProcess from '../pages/admin/AdminImmigrationProcess';
 import AdminAssign from '../pages/admin/AdminAssign';
 import AdminEscalations from '../pages/admin/AdminEscalations';
 import AdminWorkload from '../pages/admin/AdminWorkload';
@@ -180,6 +181,7 @@ const AppRouter = () => {
           <Route path="permissions" element={<AdminPermissions />} />
           <Route path="case-detail/:caseId?" element={<AdminCaseDetail />} />
           <Route path="pipeline" element={<AdminPipeline />} />
+          <Route path="case-process" element={<AdminImmigrationProcess />} />
           <Route path="calendar" element={<AdminCalendar />} />
           <Route path="assign" element={<AdminAssign />} />
           <Route path="escalations" element={<AdminEscalations />} />
