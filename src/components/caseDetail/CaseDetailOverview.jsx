@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import CaseWorkflowProgress from "../case/CaseWorkflowProgress";
+import CaseWorkflowBadge from "../case/CaseWorkflowBadge";
 
 const Field = ({ label, children }) => (
   <div>
@@ -74,9 +76,13 @@ const CaseDetailOverview = ({ data }) => {
             </span>
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Case Status</p>
-            <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-black bg-green-100 text-green-800">
-              {k.caseStatus}
+            <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Workflow stage</p>
+            <CaseWorkflowBadge caseRecord={{ caseStage: k.caseStage, status: k.caseStatus }} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Legacy status</p>
+            <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-black bg-gray-100 text-gray-700">
+              {k.caseStatus || "—"}
             </span>
           </div>
           <Field label="Date Opened">{k.dateOpened}</Field>
@@ -94,6 +100,11 @@ const CaseDetailOverview = ({ data }) => {
           </div>
         </div>
       </div>
+
+      <CaseWorkflowProgress
+        caseRecord={{ caseStage: k.caseStage, status: k.caseStatus }}
+        compact
+      />
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 lg:col-span-2">
         <h3 className="text-xs font-black uppercase tracking-widest text-primary mb-4 pb-2 border-b border-gray-100">

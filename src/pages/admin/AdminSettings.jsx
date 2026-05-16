@@ -17,6 +17,10 @@ import {
   FiX,
   FiFileText
 } from "react-icons/fi";
+import {
+  RiShieldFlashLine,
+  RiTeamLine,
+} from "react-icons/ri";
 
 // Components
 import Modal from "../../components/Modal";
@@ -36,6 +40,9 @@ import CategorySettings from "../../components/admin/settings/CategorySettings";
 import EmailTemplateEditor from "../../components/admin/settings/EmailTemplateEditor";
 import EmailTemplatePreview from "../../components/admin/settings/EmailTemplatePreview";
 import DocumentChecklistSettings from "../../components/admin/settings/DocumentChecklistSettings";
+import RolesAndPermissionsPanel from "../../components/permissions/RolesAndPermissionsPanel";
+import UsersAndRolesPanel from "../../components/permissions/UsersAndRolesPanel";
+import { TAB_IDS, TABS } from "../../components/permissions/permissionsData";
 
 // Services
 import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from "../../services/caseWorker";
@@ -114,6 +121,10 @@ export default function AdminSettings() {
   const [emailTemplates, setEmailTemplates] = useState([]);
   const [slaRules, setSlaRules] = useState([]);
   const [paymentConfig, setPaymentConfig] = useState({ currency: "GBP", pay_bank: true, pay_card: true, pay_cheque: false, bank_details: "Account Name: ElitePic Global Ltd\nSort Code: 20-04-15\nAccount No: 88291044\nBank: Barclays Bank PLC", invoice_prefix: "INV-", stripe_public_key: "", stripe_secret_key: "", paypal_client_id: "", paypal_secret: "", razorpay_key_id: "", razorpay_key_secret: "", active_gateway: "stripe" });
+
+  // Permissions Sub-tab State
+  const [rbacTab, setRbacTab] = useState(TAB_IDS.roles);
+  const rbacIcons = { shield: RiShieldFlashLine, users: RiTeamLine };
 
   // Modal States
   const [visaModalOpen, setVisaModalOpen] = useState(false);
@@ -505,20 +516,44 @@ export default function AdminSettings() {
             )}
 
             {configTab === "roles" && (
-              <div className="bg-white p-12 md:p-20 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/20 text-center">
-                <div className="inline-flex p-8 bg-amber-50 rounded-full mb-8 text-amber-500 shadow-inner">
-                  <FiShield size={64} />
+              <div className="space-y-10">
+                {/* Modern Segmented Pill Toggle for RBAC */}
+                <div className="flex justify-center sm:justify-start">
+                   <div className="bg-gray-100/80 p-1.5 rounded-[1.5rem] flex items-center gap-1.5 backdrop-blur-md border border-gray-100 shadow-inner">
+                      {TABS.map(tab => {
+                        const Icon = rbacIcons[tab.icon];
+                        const isActive = rbacTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => setRbacTab(tab.id)}
+                            className={`flex items-center gap-3 px-10 py-3 text-xs font-black transition-all duration-300 rounded-[1.25rem] ${
+                              isActive
+                                ? 'bg-secondary text-white shadow-2xl shadow-secondary/30 scale-[1.02]'
+                                : 'text-gray-500 hover:text-secondary hover:bg-white/50'
+                            }`}
+                          >
+                            {Icon && <Icon size={20} />}
+                            {tab.label}
+                          </button>
+                        );
+                      })}
+                   </div>
                 </div>
-                <h3 className="text-2xl font-black text-secondary mb-4 tracking-tight">Access Control & Roles</h3>
-                <p className="text-gray-500 max-w-xl mx-auto mb-10 text-lg font-medium leading-relaxed">
-                  Manage user permissions, define hierarchical roles, and secure your system with granular RBAC settings in the specialized permissions module.
-                </p>
-                <Link 
-                  to="/admin/permissions" 
-                  className="inline-flex items-center gap-4 px-10 py-5 bg-secondary text-white rounded-2xl font-black text-sm shadow-2xl shadow-secondary/30 hover:scale-[1.02] active:scale-95 transition-all"
-                >
-                  Configure RBAC Matrix <FiArrowRight />
-                </Link>
+
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={rbacTab}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.02 }}
+                    transition={{ duration: 0.3, ease: "circOut" }}
+                    className="min-h-[500px]"
+                  >
+                    {rbacTab === TAB_IDS.roles && <RolesAndPermissionsPanel />}
+                    {rbacTab === TAB_IDS.users && <UsersAndRolesPanel />}
+                  </motion.div>
+                </AnimatePresence>
               </div>
             )}
 

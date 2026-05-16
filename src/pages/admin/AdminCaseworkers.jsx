@@ -28,17 +28,7 @@ import {
   getDepartments,
 } from "../../services/caseWorker";
 
-const ROLE_CHIPS = {
-  caseworker: "bg-blue-100 text-blue-700",
-  admin: "bg-purple-100 text-purple-700",
-};
-
-const STATUS_CHIPS = {
-  active: "bg-green-100 text-green-700",
-  "high load": "bg-yellow-100 text-yellow-700",
-  "on leave": "bg-blue-100 text-blue-600",
-  inactive: "bg-gray-100 text-gray-500",
-};
+import { RoleBadge, StatusBadge } from "../../components/common/Badge";
 
 const AVATAR_COLORS = [
   "bg-blue-500",
@@ -699,7 +689,7 @@ export default function AdminCaseworkers() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-800 whitespace-nowrap">{fullName(user)}</p>
-                            <p className="text-[11px] text-gray-400 whitespace-nowrap">{displayRoleName(user)}</p>
+                            <RoleBadge role={displayRoleName(user)} />
                           </div>
                         </div>
                       </td>
@@ -725,12 +715,7 @@ export default function AdminCaseworkers() {
                         </div>
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
-                        <button
-                          onClick={() => handleToggleStatus(user)}
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-black cursor-pointer hover:opacity-80 transition-opacity ${STATUS_CHIPS[user.status?.toLowerCase()] ?? "bg-gray-100 text-gray-500"}`}
-                        >
-                          {formatStatusLabel(user.status)}
-                        </button>
+                        <StatusBadge status={formatStatusLabel(user.status)} onClick={() => handleToggleStatus(user)} />
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1">
@@ -957,9 +942,7 @@ export default function AdminCaseworkers() {
                 <p className="text-xs text-gray-500 mt-1">{modal.data.email} · {modal.data.country_code} {modal.data.mobile}</p>
               </div>
               <div className="text-right">
-                <span className={`px-3 py-1 rounded-full text-xs font-black ${STATUS_CHIPS[modal.data.status?.toLowerCase()] ?? "bg-gray-100 text-gray-500"}`}>
-                  {formatStatusLabel(modal.data.status)}
-                </span>
+                <StatusBadge status={formatStatusLabel(modal.data.status)} />
               </div>
             </div>
             {modal.data.performance && (

@@ -17,3 +17,27 @@ export const clearAuth = () => {
   localStorage.removeItem('token');
   localStorage.removeItem(USER_KEY);
 };
+
+const IMPERSONATOR_TOKEN_KEY = 'epic_superadmin_token';
+const IMPERSONATOR_USER_KEY = 'epic_superadmin_user';
+
+export const saveImpersonatorSession = (token, user) => {
+  if (token) sessionStorage.setItem(IMPERSONATOR_TOKEN_KEY, token);
+  if (user) sessionStorage.setItem(IMPERSONATOR_USER_KEY, JSON.stringify(user));
+};
+
+export const getImpersonatorSession = () => {
+  const token = sessionStorage.getItem(IMPERSONATOR_TOKEN_KEY);
+  const userRaw = sessionStorage.getItem(IMPERSONATOR_USER_KEY);
+  if (!token || !userRaw) return null;
+  try {
+    return { token, user: JSON.parse(userRaw) };
+  } catch {
+    return null;
+  }
+};
+
+export const clearImpersonatorSession = () => {
+  sessionStorage.removeItem(IMPERSONATOR_TOKEN_KEY);
+  sessionStorage.removeItem(IMPERSONATOR_USER_KEY);
+};

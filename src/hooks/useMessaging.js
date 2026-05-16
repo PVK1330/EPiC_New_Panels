@@ -371,8 +371,17 @@ const useMessaging = (opts = {}) => {
     });
 
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
+      if (socketRef.current) {
+        const s = socketRef.current;
+        // Small delay to ensure any pending connection attempts are handled
+        // before we forcefully disconnect during rapid remounts.
+        setTimeout(() => {
+          if (s.connected || s.connecting) {
+            s.disconnect();
+          }
+        }, 50);
+        socketRef.current = null;
+      }
     };
   }, [user?.id, token]);
 

@@ -4,27 +4,32 @@ import toast from 'react-hot-toast';
 import {
   RiSearchLine,
   RiFilter3Line,
-  RiMore2Line,
-  RiBuilding2Line,
-  RiShieldCheckLine,
   RiErrorWarningLine,
-  RiExchangeLine,
   RiEditLine,
   RiDeleteBin6Line,
   RiLoginBoxLine,
   RiAddLine,
+  RiEyeLine,
 } from 'react-icons/ri';
-import { Plus } from 'lucide-react';
 import CreateOrganizationModal from '../../components/superadmin/CreateOrganizationModal';
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/Input';
+import TableActionButton from '../../components/common/TableActionButton';
 import {
   fetchOrganisations,
+  fetchOrganisationById,
   createOrganisation,
   updateOrganisation,
+  deleteOrganisation,
   createOrganisationAdmin,
+  impersonateOrganisation,
 } from '../../services/superadminOrganisation.service';
+import { getOrganisationSubdomainLabel } from '../../utils/organisationHost';
+import { getAuthUserAndToken, getDashboardRouteForUser } from '../../utils/authResponse';
+import { getToken, getUser, saveImpersonatorSession } from '../../utils/storage';
+import { buildTenantHandoffUrl } from '../../utils/organisationHost';
+import { MOCK_ORGANISATIONS } from '../../data/mockOrganisations';
 
 const capitalize = (s) =>
   s && typeof s === 'string' ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
@@ -33,7 +38,8 @@ const mapApiOrgToRow = (o) => ({
   id: o.id,
   name: o.name,
   slug: o.slug,
-  plan: capitalize(o.plan || 'starter'),
+  plan: capitalize(o.plan?.name || o.plan || 'Starter'),
+  _mock: Boolean(o._mock),
   users: Array.isArray(o.users) ? o.users.length : 0,
   cases: 0,
   storage: '—',
@@ -45,9 +51,14 @@ const mapApiOrgToRow = (o) => ({
 
 const SuperadminOrganisations = () => {
   const [activeTab, setActiveTab] = useState('All');
+  const [showingMockData, setShowingMockData] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewOrg, setViewOrg] = useState(null);
+  const [viewLoading, setViewLoading] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [orgs, setOrgs] = useState([]);
@@ -58,10 +69,18 @@ const SuperadminOrganisations = () => {
     try {
       const res = await fetchOrganisations();
       const list = res.data?.data?.organisations ?? res.data?.organisations ?? [];
-      setOrgs(Array.isArray(list) ? list.map(mapApiOrgToRow) : []);
+      const rows = Array.isArray(list) ? list.map(mapApiOrgToRow) : [];
+      if (rows.length === 0) {
+        setOrgs(MOCK_ORGANISATIONS.map(mapApiOrgToRow));
+        setShowingMockData(true);
+      } else {
+        setOrgs(rows);
+        setShowingMockData(false);
+      }
     } catch (e) {
       toast.error(e?.response?.data?.message || e.message || 'Failed to load organisations');
-      setOrgs([]);
+      setOrgs(MOCK_ORGANISATIONS.map(mapApiOrgToRow));
+      setShowingMockData(true);
     } finally {
       setLoading(false);
     }
@@ -104,9 +123,12 @@ const SuperadminOrganisations = () => {
       mobile: String(data.adminMobile || '').replace(/\s/g, '') || '0000000001',
     });
     const inner = adminRes.data?.data ?? adminRes.data;
+    const welcome = inner?.welcome_email;
     const tempPw = inner?.temporary_password;
-    if (tempPw) {
-      toast.success(`Organisation created. Save this admin password: ${tempPw}`, { duration: 14000 });
+    if (welcome?.sent) {
+      toast.success(`Organisation created. Login details emailed to ${data.adminEmail.trim().toLowerCase()}`);
+    } else if (tempPw) {
+      toast.success(`Organisation created. Email not configured — admin password: ${tempPw}`, { duration: 14000 });
     } else {
       toast.success('Organisation and admin created');
     }
@@ -129,22 +151,142 @@ const SuperadminOrganisations = () => {
     }
   };
 
-  const handleDeleteOrg = () => {
-    toast('Organisation delete is not enabled in the API yet.', { icon: 'ℹ️' });
-    setIsDeleteModalOpen(false);
+  const handleDeleteOrg = async () => {
+    if (!selectedOrg?.id || selectedOrg._mock) return;
+    setActionLoading(true);
+    try {
+      await deleteOrganisation(selectedOrg.id);
+      toast.success('Organisation permanently deleted');
+      await loadOrgs();
+      setIsDeleteModalOpen(false);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e.message || 'Delete failed');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleLoginAs = (org) => {
-    toast('Impersonation is not wired to the API yet.', { icon: 'ℹ️' });
+  const openView = async (org) => {
+    if (org._mock) {
+      setViewOrg(org._raw || org);
+      setIsViewModalOpen(true);
+      return;
+    }
+    setIsViewModalOpen(true);
+    setViewLoading(true);
+    setViewOrg(null);
+    try {
+      const res = await fetchOrganisationById(org.id);
+      const detail = res.data?.data?.organisation ?? res.data?.organisation;
+      setViewOrg(detail || org._raw || org);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e.message || 'Failed to load details');
+      setViewOrg(org._raw || org);
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
+  const handleLoginAs = async (org) => {
+    if (org._mock || showingMockData) {
+      toast.error('Login as works only for live organisations created in the platform.');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const res = await impersonateOrganisation(org.id);
+      const inner = res.data?.data ?? res.data;
+      const { user, token } = getAuthUserAndToken(res.data);
+      if (!token || !user) throw new Error(res.data?.message || 'Impersonation failed');
+      const slug = inner?.organisation?.slug || org.slug;
+      const superToken = getToken();
+      const superUser = getUser();
+      if (superToken && superUser) saveImpersonatorSession(superToken, superUser);
+      window.location.href = buildTenantHandoffUrl(slug, {
+        token,
+        user,
+        nextPath: getDashboardRouteForUser(user),
+      });
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e.message || 'Login as failed');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   return (
     <div className="space-y-5 pb-6">
+      {showingMockData && (
+        <motion.div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 font-medium">
+          Showing sample organisations for preview. Create a real organisation to use Login as and tenant features.
+        </motion.div>
+      )}
       <CreateOrganizationModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
         onSubmit={handleCreateOrg}
       />
+
+      {/* View Modal */}
+      <Modal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        title="View organisation"
+        subtitle={viewOrg?.name || 'Details'}
+        maxWidth="max-w-md"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>
+              Close
+            </Button>
+            {viewOrg && !viewOrg._mock && (
+              <Button onClick={() => { setIsViewModalOpen(false); handleLoginAs(mapApiOrgToRow(viewOrg)); }}>
+                <RiLoginBoxLine className="inline mr-1" size={16} />
+                Login as
+              </Button>
+            )}
+          </div>
+        }
+      >
+        {viewLoading ? (
+          <p className="text-sm text-gray-400 py-6 text-center">Loading…</p>
+        ) : viewOrg ? (
+          <dl className="space-y-3 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-400 font-semibold">Name</dt>
+              <dd className="font-bold text-secondary text-right">{viewOrg.name}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-400 font-semibold">Slug</dt>
+              <dd className="font-mono text-xs text-secondary">{viewOrg.slug}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-400 font-semibold">Email</dt>
+              <dd className="font-medium text-secondary">{viewOrg.primaryEmail}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-400 font-semibold">Country</dt>
+              <dd className="font-medium text-secondary">{viewOrg.country || '—'}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-400 font-semibold">Plan</dt>
+              <dd className="font-medium text-secondary">{viewOrg.plan?.name || viewOrg.plan || '—'}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-400 font-semibold">Status</dt>
+              <dd className="font-medium text-secondary capitalize">{viewOrg.status}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-400 font-semibold">Subdomain</dt>
+              <dd className="font-mono text-xs text-primary">{getOrganisationSubdomainLabel(viewOrg.slug)}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-400 font-semibold">Users</dt>
+              <dd className="font-medium text-secondary">{viewOrg.users?.length ?? 0}</dd>
+            </div>
+          </dl>
+        ) : null}
+      </Modal>
 
       {/* Edit Modal */}
       <Modal
@@ -351,28 +493,37 @@ const SuperadminOrganisations = () => {
                     </span>
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button 
+                    <div className="flex items-center justify-end gap-0.5">
+                      <TableActionButton label="View" onClick={() => openView(org)}>
+                        <RiEyeLine size={17} />
+                      </TableActionButton>
+                      <TableActionButton
+                        label="Login as"
                         onClick={() => handleLoginAs(org)}
-                        title="Impersonate"
-                        className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                        disabled={actionLoading}
                       >
                         <RiLoginBoxLine size={17} />
-                      </button>
-                      <button 
-                        onClick={() => { setSelectedOrg({ ...org }); setIsEditModalOpen(true); }}
-                        title="Edit"
-                        className="p-1.5 text-gray-500 hover:text-secondary hover:bg-gray-100 rounded-lg transition-all"
+                      </TableActionButton>
+                      <TableActionButton
+                        label="Edit"
+                        variant="edit"
+                        onClick={() => {
+                          setSelectedOrg({ ...org });
+                          setIsEditModalOpen(true);
+                        }}
                       >
                         <RiEditLine size={17} />
-                      </button>
-                      <button 
-                        onClick={() => { setSelectedOrg(org); setIsDeleteModalOpen(true); }}
-                        title="Delete"
-                        className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                      </TableActionButton>
+                      <TableActionButton
+                        label="Delete"
+                        variant="danger"
+                        onClick={() => {
+                          setSelectedOrg(org);
+                          setIsDeleteModalOpen(true);
+                        }}
                       >
                         <RiDeleteBin6Line size={17} />
-                      </button>
+                      </TableActionButton>
                     </div>
                   </td>
                 </tr>

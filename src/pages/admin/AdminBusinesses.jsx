@@ -30,15 +30,7 @@ import {
 
 const PASSWORD_MIN = 6;
 
-const ROLE_CHIPS = {
-  sponsor: "bg-emerald-100 text-emerald-800",
-  admin: "bg-purple-100 text-purple-700",
-};
-
-const STATUS_CHIPS = {
-  active: "bg-green-100 text-green-700",
-  inactive: "bg-gray-100 text-gray-500",
-};
+import { RoleBadge, StatusBadge } from "../../components/common/Badge";
 
 const LICENCE_CHIPS = {
   Active: "bg-green-100 text-green-700",
@@ -786,19 +778,13 @@ export default function AdminBusinesses() {
                         </div>
                       </td>
                       <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">
-                        {userName}
+                        <div className="flex flex-col">
+                          <span>{userName}</span>
+                          <RoleBadge role="Sponsor" />
+                        </div>
                       </td>
                       <td className="px-4 py-3.5 whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => handleToggle(user)}
-                          disabled={toggleId === user.id}
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-black cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed ${
-                            user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                          }`}
-                        >
-                          {toggleId === user.id ? '...' : formatStatusLabel(user.status)}
-                        </button>
+                        <StatusBadge status={formatStatusLabel(user.status)} onClick={() => handleToggle(user)} />
                       </td>
                       <td className="px-4 py-3.5 whitespace-nowrap">
                         <span

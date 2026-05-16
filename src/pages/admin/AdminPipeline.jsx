@@ -19,159 +19,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { getPipelineCases, updatePipelineStage, getCaseById } from "../../services/caseApi";
-
-const INITIAL_STAGES = [
-  {
-    id: "lead",
-    title: "Lead",
-    count: 4,
-    accent: "border-t-gray-400",
-    dot: "bg-gray-400",
-    cards: [
-      {
-        id: "1",
-        caseId: "#VF-2850",
-        name: "Omar Hassan",
-        meta: "Skilled Worker · BlueSky Ltd",
-        badge: "New",
-        badgeClass: "bg-gray-100 text-gray-600",
-      },
-      {
-        id: "2",
-        caseId: "#VF-2848",
-        name: "Ana Rodriguez",
-        meta: "ILR · Apex Co",
-        badge: "New",
-        badgeClass: "bg-gray-100 text-gray-600",
-      },
-    ],
-  },
-  {
-    id: "docs",
-    title: "Docs Pending",
-    count: 12,
-    accent: "border-t-amber-400",
-    dot: "bg-amber-400",
-    cards: [
-      {
-        id: "3",
-        caseId: "#VF-2841",
-        name: "Priya Sharma",
-        meta: "Skilled Worker · TechNova",
-        badge: "2 Missing",
-        badgeClass: "bg-amber-100 text-amber-800",
-      },
-      {
-        id: "4",
-        caseId: "#VF-2839",
-        name: "James Okoye",
-        meta: "Sponsor Licence",
-        badge: "Due Soon",
-        badgeClass: "bg-red-100 text-red-700",
-      },
-      {
-        id: "5",
-        caseId: "#VF-2838",
-        name: "Maria Santos",
-        meta: "Student · UniLondon",
-        badge: "1 Missing",
-        badgeClass: "bg-amber-100 text-amber-800",
-      },
-    ],
-  },
-  {
-    id: "drafting",
-    title: "Drafting",
-    count: 8,
-    accent: "border-t-blue-500",
-    dot: "bg-blue-500",
-    cards: [
-      {
-        id: "6",
-        caseId: "#VF-2830",
-        name: "Amara Diallo",
-        meta: "ILR · BlueSky Co",
-        badge: "In Draft",
-        badgeClass: "bg-blue-100 text-blue-800",
-      },
-      {
-        id: "7",
-        caseId: "#VF-2826",
-        name: "Kenji Tanaka",
-        meta: "Graduate Visa",
-        badge: "In Draft",
-        badgeClass: "bg-blue-100 text-blue-800",
-      },
-    ],
-  },
-  {
-    id: "submitted",
-    title: "Submitted",
-    count: 21,
-    accent: "border-t-purple-500",
-    dot: "bg-purple-500",
-    cards: [
-      {
-        id: "8",
-        caseId: "#VF-2820",
-        name: "Yemi Adeyemi",
-        meta: "Skilled Worker",
-        badge: "Awaiting",
-        badgeClass: "bg-purple-100 text-purple-800",
-      },
-      {
-        id: "9",
-        caseId: "#VF-2818",
-        name: "Chen Jing",
-        meta: "Student Visa",
-        badge: "Awaiting",
-        badgeClass: "bg-purple-100 text-purple-800",
-      },
-    ],
-  },
-  {
-    id: "decision",
-    title: "Decision",
-    count: 9,
-    accent: "border-t-orange-500",
-    dot: "bg-orange-500",
-    cards: [
-      {
-        id: "10",
-        caseId: "#VF-2810",
-        name: "Ali Al-Rashid",
-        meta: "ILR",
-        badge: "Pending HO",
-        badgeClass: "bg-orange-100 text-orange-800",
-      },
-    ],
-  },
-  {
-    id: "closed",
-    title: "Closed",
-    count: 218,
-    accent: "border-t-green-500",
-    dot: "bg-green-500",
-    cards: [
-      {
-        id: "11",
-        caseId: "#VF-2805",
-        name: "Fatou Diallo",
-        meta: "Skilled Worker",
-        badge: "Approved ✓",
-        badgeClass: "bg-green-100 text-green-800",
-      },
-      {
-        id: "12",
-        caseId: "#VF-2800",
-        name: "Ivan Petrov",
-        meta: "Graduate Visa",
-        badge: "Approved ✓",
-        badgeClass: "bg-green-100 text-green-800",
-      },
-    ],
-  },
-];
+import { PIPELINE_STAGES, buildStagesFromPipelineData } from "../../constants/immigrationCaseProcess";
+import CaseWorkflowBadge from "../../components/case/CaseWorkflowBadge";
 
 const CardContent = ({ card }) => (
   <>
@@ -251,7 +100,7 @@ const colVariant = {
 };
 
 const AdminPipeline = () => {
-  const [stages, setStages] = useState(INITIAL_STAGES);
+  const [stages, setStages] = useState(() => PIPELINE_STAGES.map((s) => ({ ...s, cards: [] })));
   const [activeCard, setActiveCard] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCase, setSelectedCase] = useState(null);
@@ -267,109 +116,7 @@ const AdminPipeline = () => {
     try {
       const response = await getPipelineCases();
       if (response?.data?.data) {
-        const pipelineData = response.data.data;
-        
-        // Map API response to stages structure
-        const mappedStages = [
-          {
-            id: "lead",
-            title: "Lead",
-            count: pipelineData.lead?.length || 0,
-            accent: "border-t-gray-400",
-            dot: "bg-gray-400",
-            cards: (pipelineData.lead || []).map(c => ({
-              id: c.caseId || c.id.toString(),
-              caseId: c.caseId || c.id.toString(),
-              name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
-              meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
-              badge: "New",
-              badgeClass: "bg-gray-100 text-gray-600",
-              status: c.status,
-            })),
-          },
-          {
-            id: "docs",
-            title: "Docs Pending",
-            count: pipelineData.docs?.length || 0,
-            accent: "border-t-amber-400",
-            dot: "bg-amber-400",
-            cards: (pipelineData.docs || []).map(c => ({
-              id: c.caseId || c.id.toString(),
-              caseId: c.caseId || c.id.toString(),
-              name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
-              meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
-              badge: "Pending",
-              badgeClass: "bg-amber-100 text-amber-800",
-              status: c.status,
-            })),
-          },
-          {
-            id: "drafting",
-            title: "Drafting",
-            count: pipelineData.drafting?.length || 0,
-            accent: "border-t-blue-500",
-            dot: "bg-blue-500",
-            cards: (pipelineData.drafting || []).map(c => ({
-              id: c.caseId || c.id.toString(),
-              caseId: c.caseId || c.id.toString(),
-              name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
-              meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
-              badge: "In Draft",
-              badgeClass: "bg-blue-100 text-blue-800",
-              status: c.status,
-            })),
-          },
-          {
-            id: "submitted",
-            title: "Submitted",
-            count: pipelineData.submitted?.length || 0,
-            accent: "border-t-purple-500",
-            dot: "bg-purple-500",
-            cards: (pipelineData.submitted || []).map(c => ({
-              id: c.caseId || c.id.toString(),
-              caseId: c.caseId || c.id.toString(),
-              name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
-              meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
-              badge: "Awaiting",
-              badgeClass: "bg-purple-100 text-purple-800",
-              status: c.status,
-            })),
-          },
-          {
-            id: "decision",
-            title: "Decision",
-            count: pipelineData.decision?.length || 0,
-            accent: "border-t-orange-500",
-            dot: "bg-orange-500",
-            cards: (pipelineData.decision || []).map(c => ({
-              id: c.caseId || c.id.toString(),
-              caseId: c.caseId || c.id.toString(),
-              name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
-              meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
-              badge: "Pending HO",
-              badgeClass: "bg-orange-100 text-orange-800",
-              status: c.status,
-            })),
-          },
-          {
-            id: "closed",
-            title: "Closed",
-            count: pipelineData.closed?.length || 0,
-            accent: "border-t-green-500",
-            dot: "bg-green-500",
-            cards: (pipelineData.closed || []).map(c => ({
-              id: c.caseId || c.id.toString(),
-              caseId: c.caseId || c.id.toString(),
-              name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
-              meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
-              badge: c.status === 'Approved' ? 'Approved ✓' : c.status === 'Rejected' ? 'Rejected' : 'Closed',
-              badgeClass: c.status === 'Approved' ? 'bg-green-100 text-green-800' : c.status === 'Rejected' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-600',
-              status: c.status,
-            })),
-          },
-        ];
-        
-        setStages(mappedStages);
+        setStages(buildStagesFromPipelineData(response.data.data));
       }
     } catch (error) {
       console.error("Error fetching pipeline data:", error);
@@ -445,21 +192,8 @@ const AdminPipeline = () => {
       // Dropped on a different column - update status
       const card = activeStage.cards.find((c) => c.id === active.id);
       if (card) {
-        const statusMap = {
-          lead: 'Lead',
-          docs: 'Docs Pending',
-          drafting: 'Drafting',
-          submitted: 'Submitted',
-          decision: 'Decision',
-          closed: 'Closed'
-        };
-        
-        const newStatus = statusMap[overStage.id];
-        console.log(`Moving card ${card.caseId} from ${activeStage.id} to ${overStage.id}, new status: ${newStatus}`);
-        
         try {
-          await updatePipelineStage(card.caseId, newStatus);
-          console.log(`Successfully updated status to ${newStatus}`);
+          await updatePipelineStage(card.caseId, overStage.id);
           
           // Refresh pipeline data to reflect the change without page refresh
           await fetchPipelineData();
@@ -516,7 +250,7 @@ const AdminPipeline = () => {
                 Case Pipeline
               </h1>
               <p className="text-sm text-gray-500 mt-0.5">
-                Kanban view of all active cases by stage
+                Standard 16-step immigration workflow — drag cases between stages
               </p>
             </div>
           </div>
@@ -548,7 +282,7 @@ const AdminPipeline = () => {
             <motion.section
               key={stage.id}
               variants={colVariant}
-              className={`shrink-0 w-[min(100%,280px)] sm:w-72 h-full max-h-full min-h-0 flex flex-col rounded-2xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/90 shadow-sm overflow-hidden ${stage.accent} border-t-[3px]`}
+              className={`shrink-0 w-[min(100%,240px)] sm:w-56 h-full max-h-full min-h-0 flex flex-col rounded-2xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/90 shadow-sm overflow-hidden ${stage.accent} border-t-[3px]`}
             >
               <header className="px-3.5 pt-3.5 pb-2 flex items-center justify-between gap-2 border-b border-gray-100/80 bg-white/60 backdrop-blur-sm">
                 <div className="flex items-center gap-2 min-w-0">
@@ -632,8 +366,14 @@ const AdminPipeline = () => {
                       <p className="text-sm font-mono font-semibold text-primary mt-1">{selectedCase.caseId}</p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Status</label>
-                      <p className="text-sm font-semibold mt-1">{selectedCase.status}</p>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Workflow stage</label>
+                      <div className="mt-1">
+                        <CaseWorkflowBadge caseRecord={selectedCase} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Legacy status</label>
+                      <p className="text-sm font-semibold mt-1">{selectedCase.status || "—"}</p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Candidate</label>

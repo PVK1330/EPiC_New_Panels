@@ -21,16 +21,7 @@ import {
   exportAdmins,
 } from "../../services/adminService";
 
-const ROLE_CHIPS = {
-  "Super Admin": "bg-purple-100 text-purple-700",
-  Admin: "bg-blue-100 text-blue-700",
-};
-
-const STATUS_CHIPS = {
-  Active: "bg-green-100 text-green-700",
-  Inactive: "bg-gray-100 text-gray-500",
-  Suspended: "bg-red-100 text-red-600",
-};
+import { RoleBadge, StatusBadge } from "../../components/common/Badge";
 
 const AVATAR_COLORS = [
   "bg-blue-500",
@@ -42,10 +33,10 @@ const AVATAR_COLORS = [
   "bg-teal-500",
 ];
 
-const ROLE_OPTIONS = [
-  { value: "1", label: "Admin" },
-  { value: "2", label: "Super Admin" },
-];
+/** Tenant role_id for admin (matches backend ROLES.ADMIN / org provisioning). */
+const ADMIN_ROLE_ID = "3";
+
+const ROLE_OPTIONS = [{ value: ADMIN_ROLE_ID, label: "Admin" }];
 
 // const PERMISSIONS_OPTIONS = [
 //   { value: "Full Access", label: "Full Access" },
@@ -73,7 +64,7 @@ const EMPTY_CREATE = {
   email: "",
   country_code: "+1",
   mobile: "",
-  role_id: "1",
+  role_id: ADMIN_ROLE_ID,
   permissions: "Cases Only",
   password: "",
   confirm_password: "",
@@ -184,7 +175,7 @@ export default function AdminUsers() {
       email: row.email || "",
       country_code: row.country_code || "+1",
       mobile: row.mobile || "",
-      role_id: String(row.role_id ?? 1),
+      role_id: String(row.role_id ?? ADMIN_ROLE_ID),
       permissions: row.permissions || "Cases Only",
       status: row.status === "inactive" ? "inactive" : row.status === "suspended" ? "suspended" : "active",
     });
@@ -199,7 +190,7 @@ export default function AdminUsers() {
       email: row.email || "",
       country_code: row.country_code || "+1",
       mobile: row.mobile || "",
-      role_id: String(row.role_id ?? 1),
+      role_id: String(row.role_id ?? ADMIN_ROLE_ID),
       permissions: row.permissions || "Cases Only",
       status: row.status || "active",
       lastLogin: row.last_login || "Never",
@@ -232,11 +223,13 @@ export default function AdminUsers() {
       errs.email = "Enter a valid email";
     if (!createForm.country_code.trim()) errs.country_code = "Country code is required";
     if (!createForm.mobile.trim()) errs.mobile = "Mobile is required";
-    if (!createForm.password) errs.password = "Password is required";
-    if (!createForm.confirm_password)
-      errs.confirm_password = "Please confirm password";
-    else if (createForm.password !== createForm.confirm_password)
-      errs.confirm_password = "Passwords do not match";
+    if (createForm.password || createForm.confirm_password) {
+      if (!createForm.password) errs.password = "Enter a password or leave both blank to email a generated one";
+      if (!createForm.confirm_password)
+        errs.confirm_password = "Please confirm password";
+      else if (createForm.password !== createForm.confirm_password)
+        errs.confirm_password = "Passwords do not match";
+    }
     return errs;
   };
 
@@ -556,25 +549,10 @@ export default function AdminUsers() {
                       {user.email}
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-black ${ROLE_CHIPS[
-                          (user.role?.name || "admin").toLowerCase()
-                          ] ?? "bg-gray-100 text-gray-500"
-                          }`}
-                      >
-                        {displayRoleName(user)}
-                      </span>
+                      <RoleBadge role={displayRoleName(user)} />
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleStatusToggle(user)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-black cursor-pointer hover:opacity-80 transition-opacity ${STATUS_CHIPS[formatStatusLabel(user.status)] ??
-                          "bg-gray-100 text-gray-500"
-                          }`}
-                      >
-                        {formatStatusLabel(user.status)}
-                      </button>
+                      <StatusBadge status={formatStatusLabel(user.status)} onClick={() => handleStatusToggle(user)} />
                     </td>
                     <td className="px-5 py-3.5 text-xs text-gray-500 font-mono whitespace-nowrap">
                       {user.last_login || "Never"}
@@ -743,8 +721,7 @@ export default function AdminUsers() {
               type="password"
               value={createForm.password}
               onChange={handleCreateChange}
-              placeholder="••••••••"
-              required
+              placeholder="Leave blank to email a generated password"
               error={errors.password}
             />
             <Input
@@ -753,11 +730,10 @@ export default function AdminUsers() {
               type="password"
               value={createForm.confirm_password}
               onChange={handleCreateChange}
-              placeholder="••••••••"
-              required
+              placeholder="Required if password is set"
               error={errors.confirm_password}
             />
-             <Input
+            <Input
               label="Status"
               name="status"
               value={createForm.status}
@@ -901,14 +877,7 @@ export default function AdminUsers() {
               <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
                 Role
               </p>
-              <span
-                className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${ROLE_CHIPS[
-                  (modal.data?.role?.name || "Admin")
-                  ] ?? "bg-gray-100 text-gray-500"
-                  }`}
-              >
-                {modal.data ? displayRoleName(modal.data) : ""}
-              </span>
+              <RoleBadge role={modal.data ? displayRoleName(modal.data) : ""} />
             </div>
             <div>
               <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
@@ -922,13 +891,7 @@ export default function AdminUsers() {
               <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
                 Status
               </p>
-              <span
-                className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black ${STATUS_CHIPS[formatStatusLabel(modal.data?.status)] ??
-                  "bg-gray-100 text-gray-500"
-                  }`}
-              >
-                {modal.data ? formatStatusLabel(modal.data.status) : ""}
-              </span>
+              <StatusBadge status={modal.data ? formatStatusLabel(modal.data.status) : ""} />
             </div>
           </div>
           <div className="pt-2">

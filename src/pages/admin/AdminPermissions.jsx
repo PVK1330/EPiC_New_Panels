@@ -1,149 +1,114 @@
 import { useState, useEffect } from "react";
+import Button from "../../components/Button.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  RiShieldKeyholeLine,
-  RiBarChartBoxLine,
-  RiGridLine,
-  RiShieldLine,
-  RiLockLine,
+  RiShieldFlashLine,
   RiTeamLine,
+  RiShieldKeyholeLine,
 } from "react-icons/ri";
 
 import { TAB_IDS, TABS } from "../../components/permissions/permissionsData";
-
-import RbacOverviewPanel from "../../components/permissions/SegregationPanel";
-import ModuleMatrixPanel from "../../components/permissions/ModuleMatrixPanel";
-import RoleAssignmentPanel from "../../components/permissions/RoleAssignmentPanel";
-import PermissionManagementPanel from "../../components/permissions/PermissionManagementPanel";
-import UserRolePanel from "../../components/permissions/VisibilityControlsPanel";
+import RolesAndPermissionsPanel from "../../components/permissions/RolesAndPermissionsPanel";
+import UsersAndRolesPanel from "../../components/permissions/UsersAndRolesPanel";
 
 const ICON_MAP = {
-  chart: RiBarChartBoxLine,
-  grid: RiGridLine,
-  shield: RiShieldLine,
-  lock: RiLockLine,
+  shield: RiShieldFlashLine,
   users: RiTeamLine,
 };
 
 const AdminPermissions = () => {
-  const [activeTab, setActiveTab] = useState(TAB_IDS.overview);
+  const [activeTab, setActiveTab] = useState(TAB_IDS.roles);
+  const [stats, setStats] = useState({
+    totalRoles: 5,
+    totalPermissions: 120,
+    totalUsers: 48,
+    totalRolePermissions: 342,
+  });
 
   useEffect(() => {
-    document.title = "Permissions & RBAC | EPiC Admin";
+    document.title = "Permissions & Roles | EPiC Admin";
   }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      className="min-h-screen"
-    >
-      {/* ── Hero Header ───────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl mb-6 bg-secondary">
-        {/* Decorative blobs using primary/secondary */}
-        <div
-          className="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-10 blur-3xl pointer-events-none bg-primary"
-        />
-        <div
-          className="absolute -bottom-10 -left-10 w-64 h-64 rounded-full opacity-10 blur-2xl pointer-events-none bg-primary"
-        />
-        {/* Subtle grid pattern */}
-        <div
-          className="absolute inset-0 opacity-5 pointer-events-none"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(0deg,transparent,transparent 30px,rgba(255,255,255,0.4) 30px,rgba(255,255,255,0.4) 31px),repeating-linear-gradient(90deg,transparent,transparent 30px,rgba(255,255,255,0.4) 30px,rgba(255,255,255,0.4) 31px)",
-          }}
-        />
+    <div className="space-y-6 pb-8 max-w-[1600px] mx-auto p-4">
+      {/* Slim Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center gap-5">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-secondary/30 relative group overflow-hidden">
+            <RiShieldKeyholeLine size={32} className="relative z-10" />
+            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-secondary tracking-tight">Permissions & Roles</h1>
+            <p className="text-sm text-gray-400 mt-1 font-semibold flex items-center gap-2">
+               Global Governance 
+               <span className="w-1 h-1 rounded-full bg-gray-300" />
+               <span className="text-secondary/80 italic">RBAC System</span>
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+           {/* Actions removed for simplicity */}
+        </div>
+      </div>
 
-        <div className="relative px-6 py-8 sm:px-10 sm:py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shrink-0 shadow-lg">
-              <RiShieldKeyholeLine size={26} className="text-white" />
-            </div>
+      {/* Stats Bar */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        {[
+          { label: 'Platform Roles', value: stats.totalRoles, color: 'border-blue-500' },
+          { label: 'Defined Actions', value: stats.totalPermissions, color: 'border-indigo-500' },
+          { label: 'Authorized Users', value: stats.totalUsers, color: 'border-emerald-500' },
+          { label: 'Active Mappings', value: stats.totalRolePermissions, color: 'border-primary' },
+        ].map(stat => (
+          <div key={stat.label} className={`px-6 py-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all group overflow-hidden relative`}>
+            <div className={`absolute top-0 left-0 w-1.5 h-full ${stat.color.replace('border-', 'bg-')}`} />
             <div>
-              <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-1">
-                Access Control
-              </p>
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                Permissions & RBAC
-              </h1>
-              <p className="text-sm text-white/60 mt-1 max-w-md">
-                Configure roles, module permissions, and control who can access what across the system.
-              </p>
+              <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider mb-1">{stat.label}</p>
+              <p className="text-3xl font-black text-secondary tracking-tighter">{stat.value}</p>
+            </div>
+            <div className="absolute right-4 bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+               <RiShieldFlashLine size={40} />
             </div>
           </div>
-
-          {/* Quick stats chips using project colors */}
-          <div className="flex flex-wrap gap-2.5 shrink-0">
-            {[
-              { label: "Roles", value: "5" },
-              { label: "Modules", value: "11" },
-              { label: "Users", value: "—" },
-            ].map((chip) => (
-              <div
-                key={chip.label}
-                className="px-4 py-2 rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">{chip.label}</p>
-                <p className="text-base font-black text-white">{chip.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* ── Navigation Tabs — NOT sticky (avoids overlap issue) ──────────── */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm mb-6 p-1.5">
-        <div className="flex flex-wrap gap-1.5">
-          {TABS.map((tab) => {
-            const active = tab.id === activeTab;
-            const Icon = ICON_MAP[tab.icon] || RiLockLine;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${active
-                    ? "bg-secondary text-white shadow-md"
-                    : "text-gray-500 hover:text-secondary hover:bg-secondary/5"
-                  }`}
-              >
-                {active && (
-                  <motion.span
-                    layoutId="perm-tab-pill"
-                    className="absolute inset-0 rounded-xl bg-secondary"
-                    initial={false}
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-                <Icon size={15} className="relative z-10 shrink-0" />
-                <span className="relative z-10 hidden sm:inline">{tab.label}</span>
-                <span className="relative z-10 sm:hidden">{tab.label.split(" ")[0]}</span>
-              </button>
-            );
-          })}
-        </div>
+      {/* 2-Tab Navigation */}
+      <div className="flex border-b border-gray-100 gap-0">
+        {TABS.map(tab => {
+          const Icon = ICON_MAP[tab.icon];
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2.5 px-8 py-4 text-xs font-black transition-all -mb-px border-b-2 ${
+                isActive
+                  ? 'border-secondary text-secondary bg-secondary/5 rounded-t-2xl'
+                  : 'border-transparent text-gray-400 hover:text-secondary hover:bg-gray-50/50'
+              }`}
+            >
+              {Icon && <Icon size={18} className={isActive ? 'text-secondary' : 'text-gray-400'} />}
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* ── Active Panel ─────────────────────────────────────────────────── */}
+      {/* Active Panel */}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.22 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
         >
-          {activeTab === TAB_IDS.overview && <RbacOverviewPanel />}
-          {activeTab === TAB_IDS.matrix && <ModuleMatrixPanel />}
-          {activeTab === TAB_IDS.roles && <RoleAssignmentPanel />}
-          {activeTab === TAB_IDS.permissions && <PermissionManagementPanel />}
-          {activeTab === TAB_IDS.userRoles && <UserRolePanel />}
+          {activeTab === TAB_IDS.roles && <RolesAndPermissionsPanel />}
+          {activeTab === TAB_IDS.users && <UsersAndRolesPanel />}
         </motion.div>
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };
 

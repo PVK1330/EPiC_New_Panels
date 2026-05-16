@@ -4,7 +4,7 @@ import api from "./api";
 // GET /api/case-details/:id  — full aggregate for one case
 export const getCaseDetails = (id) => api.get(`/api/case-details/${id}`);
 
-// PATCH /api/case-details/:id/status
+// PATCH /api/case-details/:id/status  { caseStage?, status?, priority?, ... }
 export const updateCaseStatus = (id, data) =>
   api.patch(`/api/case-details/${id}/status`, data);
 
@@ -48,9 +48,12 @@ export const deleteCase = (id) => api.delete(`/api/cases/${id}`);
 export const assignCase = (id, data) =>
   api.patch(`/api/cases/${id}/assign`, data);
 
-// PATCH /api/cases/:id/stage  { status }
-export const updateCaseStage = (id, status) =>
-  api.patch(`/api/cases/${id}/stage`, { status });
+// PATCH /api/cases/:id/stage  { caseStage }
+export const updateCaseStage = (id, caseStage) =>
+  api.patch(`/api/cases/${id}/stage`, { caseStage });
+
+// GET /api/cases/workflow — 16-step immigration process definition
+export const getCaseWorkflow = () => api.get(`/api/cases/workflow`);
 
 // ── Documents ────────────────────────────────────────────────────────────────
 // POST /api/documents/upload  (multipart/form-data: caseId, documentCategory, documents, expiryDate, userFileName, userId)

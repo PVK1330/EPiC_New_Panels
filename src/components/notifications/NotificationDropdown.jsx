@@ -51,7 +51,13 @@ const NotificationDropdown = () => {
     });
 
     return () => {
-      socket.disconnect();
+      // Small delay to ensure any pending connection attempts are handled
+      // before we forcefully disconnect during rapid remounts.
+      setTimeout(() => {
+        if (socket.connected || socket.connecting) {
+          socket.disconnect();
+        }
+      }, 50);
     };
   }, [user?.id, token, dispatch]);
 

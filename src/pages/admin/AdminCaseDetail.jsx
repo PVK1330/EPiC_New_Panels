@@ -15,8 +15,10 @@ import CaseDetailCommunication from "../../components/caseDetail/CaseDetailCommu
 import CaseDetailNotes from "../../components/caseDetail/CaseDetailNotes";
 import CaseDetailAuditLog from "../../components/caseDetail/CaseDetailAuditLog";
 import { CASE_DETAIL_TABS, TAB_IDS, DEFAULT_CASE_DETAIL } from "../../components/caseDetail/caseDetailData";
+import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
 import { 
   getCaseDetails,
+  updateCaseStatus as updateCaseDetailStatus,
   getDocumentsByCaseId, 
   uploadCaseDocument, 
   updateCaseDocumentStatus, 
@@ -63,6 +65,7 @@ const AdminCaseDetail = () => {
   const [flagReason, setFlagReason] = useState("");
   const [flagErr, setFlagErr] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
+  const [stageSaving, setStageSaving] = useState(false);
 
   // State for data
   const [caseData, setCaseData] = useState(null);
@@ -367,6 +370,7 @@ const AdminCaseDetail = () => {
       },
       case: {
         visaType: visaType?.name || "Unknown",
+        caseStage: overview?.caseStage,
         caseStatus: overview?.status || "Unknown",
         dateOpened: keyDates?.submitted || "N/A",
         targetDate: keyDates?.targetSubmissionDate || "N/A",
@@ -451,6 +455,20 @@ const AdminCaseDetail = () => {
   };
 
   // ── Flag handler ───────────────────────────────────────────────────────────
+  const handleWorkflowStageChange = async (caseStage) => {
+    if (!cleanId) return;
+    setStageSaving(true);
+    try {
+      await updateCaseDetailStatus(cleanId, { caseStage });
+      await fetchCaseDetail(cleanId);
+    } catch (err) {
+      console.error("Failed to update workflow stage:", err);
+      alert(err?.response?.data?.message || "Failed to update workflow stage");
+    } finally {
+      setStageSaving(false);
+    }
+  };
+
   const submitFlag = () => {
     if (!flagReason.trim()) {
       setFlagErr("Reason is required");
@@ -674,6 +692,15 @@ const AdminCaseDetail = () => {
               </div>
             </div>
           </div>
+
+          <CaseWorkflowPanel
+            caseRecord={{
+              caseStage: data.case?.caseStage,
+              status: data.case?.caseStatus,
+            }}
+            onStageChange={handleWorkflowStageChange}
+            saving={stageSaving}
+          />
 
           <CaseDetailTabBar tabs={CASE_DETAIL_TABS} activeId={tab} onChange={setTab} />
 

@@ -18,6 +18,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import Button from "../../components/Button";
+import CaseWorkflowBadge from "../../components/case/CaseWorkflowBadge";
 import Input from "../../components/Input";
 import { getCases, createCase, updateCase, deleteCase, getVisaTypes, getPetitionTypes, getCandidates, getSponsors, getCaseworkers, updateCaseStatus, exportCases, getAllUsers, getDepartments } from "../../services/caseApi";
 
@@ -53,6 +54,7 @@ const TABLE_COLS = [
   "CaseWorker (s)",
   "Visa Type",
   "Priority",
+  "Workflow",
   "Status",
   "Submitted",
   "Actions",
@@ -671,6 +673,7 @@ export default function AdminCases() {
             "Unknown",
           visa: c.visaType?.name || "Unknown",
           status: c.status,
+          caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
           priority: c.priority?.toLowerCase() || "medium",
           payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
@@ -1382,8 +1385,13 @@ export default function AdminCases() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <CaseWorkflowBadge
+                      caseRecord={{ caseStage: c.caseStage, status: c.status }}
+                    />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-2 py-0.5 text-xs font-semibold rounded-full ${statusBadge[c.status]}`}
+                      className={`px-2 py-0.5 text-xs font-semibold rounded-full ${statusBadge[c.status] || "bg-gray-100 text-gray-700"}`}
                     >
                       {c.status}
                     </span>

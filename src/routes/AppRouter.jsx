@@ -6,6 +6,7 @@ import AdminLayout from '../layouts/AdminLayout';
 import SuperadminLayout from '../layouts/SuperadminLayout';
 
 import CandidateDashboard from '../pages/candidate/CandidateDashboard';
+import CandidateVisaEnquiry from '../pages/candidate/CandidateVisaEnquiry';
 import Documents from '../pages/candidate/Documents';
 import DocumentChecklist from '../pages/candidate/DocumentChecklist';
 import UploadDocuments from '../pages/candidate/UploadDocuments';
@@ -95,9 +96,11 @@ const SuperadminPayments = lazy(() => import('../pages/superadmin/SuperadminPaym
 const SuperadminTeam = lazy(() => import('../pages/superadmin/SuperadminTeam'));
 const SuperadminFrontend = lazy(() => import('../pages/superadmin/SuperadminFrontend'));
 const SuperadminProfile = lazy(() => import('../pages/superadmin/SuperadminProfile'));
+const SuperadminNotifications = lazy(() => import('../pages/superadmin/SuperadminNotifications'));
 
 
 import NotFoundPage from '../pages/NotFoundPage';
+import { getDashboardRouteForUser } from '../utils/authResponse';
 
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/auth/RegisterPage'));
@@ -106,6 +109,7 @@ const TwoFactorPage = lazy(() => import('../pages/auth/TwoFactorPage'));
 const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage'));
 const VerifyResetOtpPage = lazy(() => import('../pages/auth/VerifyResetOtpPage'));
 const SetPasswordPage = lazy(() => import('../pages/auth/SetPasswordPage'));
+const AuthHandoffPage = lazy(() => import('../pages/auth/AuthHandoffPage'));
 const DashboardPage = lazy(() => import('../pages/dashboard/DashboardPage'));
 
 const Fallback = () => (
@@ -122,17 +126,18 @@ const AppRouter = () => {
       <Routes>
         <Route
           path="/login"
-          element={token && user ? <Navigate to={`/${user.role}/dashboard`} replace /> : <LoginPage />}
+          element={token && user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <LoginPage />}
         />
         <Route
           path="/register"
-          element={token && user ? <Navigate to={`/${user.role}/dashboard`} replace /> : <RegisterPage />}
+          element={token && user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <RegisterPage />}
         />
         <Route path="/verify-otp" element={<VerifyOtpPage />} />
         <Route path="/2fa" element={<TwoFactorPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/verify-reset-otp" element={<VerifyResetOtpPage />} />
         <Route path="/set-password" element={<SetPasswordPage />} />
+        <Route path="/auth/handoff" element={<AuthHandoffPage />} />
 
         <Route
           path="/dashboard"
@@ -147,7 +152,7 @@ const AppRouter = () => {
           path="/"
           element={
             token && user
-              ? <Navigate to={`/${user.role}/dashboard`} replace />
+              ? <Navigate to={getDashboardRouteForUser(user)} replace />
               : <Navigate to="/login" replace />
           }
         />
@@ -195,6 +200,7 @@ const AppRouter = () => {
         >
           <Route index element={<Navigate to="/candidate/dashboard" replace />} />
           <Route path="dashboard" element={<CandidateDashboard />} />
+          <Route path="visa-enquiry" element={<CandidateVisaEnquiry />} />
           <Route path="application" element={<Application />} />
           <Route path="documents" element={<Navigate to="/candidate/document-checklist" replace />} />
           <Route path="document-checklist" element={<DocumentChecklist />} />
@@ -299,6 +305,7 @@ const AppRouter = () => {
           <Route path="billing" element={<SuperadminBilling />} />
           <Route path="audit-log" element={<SuperadminAuditLog />} />
           <Route path="settings" element={<SuperadminSettings />} />
+          <Route path="notifications" element={<SuperadminNotifications />} />
           <Route path="payments" element={<SuperadminPayments />} />
           <Route path="team" element={<SuperadminTeam />} />
           <Route path="frontend" element={<SuperadminFrontend />} />

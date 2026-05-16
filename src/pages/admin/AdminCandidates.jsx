@@ -46,10 +46,7 @@ const PASSWORD_MIN = 6;
 /** Session draft for Add client application wizard (partial saves before account creation). */
 const ADMIN_CREATE_APPLICATION_DRAFT_KEY = "elitepic_admin_create_application_draft";
 
-const ROLE_CHIPS = {
-  candidate: "bg-blue-100 text-blue-700",
-  admin: "bg-purple-100 text-purple-700",
-};
+import { RoleBadge, StatusBadge } from "../../components/common/Badge";
 
 const CASE_CHIPS = {
   "On Track": "bg-green-100 text-green-700",
@@ -79,10 +76,6 @@ const VISA_CHIPS = {
   "Visitor Visa": "bg-orange-100 text-orange-700",
 };
 
-const STATUS_CHIPS = {
-  active: "bg-green-100 text-green-700",
-  inactive: "bg-gray-100 text-gray-500",
-};
 
 const AVATAR_COLORS = [
   "bg-blue-500",
@@ -1025,18 +1018,12 @@ export default function AdminCandidates() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-800 whitespace-nowrap">{fullName(c)}</p>
-                            <p className="text-[11px] text-gray-400 whitespace-nowrap">{c.email}</p>
+                            <RoleBadge role="Candidate" />
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3.5 whitespace-nowrap">
-                        <button
-                          onClick={() => handleToggle(c)}
-                          className={`relative z-10 px-2.5 py-1 rounded-full text-[11px] font-black cursor-pointer hover:opacity-80 transition-opacity ${STATUS_CHIPS[c.status] ?? "bg-gray-100 text-gray-500"}`}
-                          title={`Click to ${c.status === 'active' ? 'deactivate' : 'activate'} candidate`}
-                        >
-                          {formatStatusLabel(c.status)}
-                        </button>
+                        <StatusBadge status={formatStatusLabel(c.status)} onClick={() => handleToggle(c)} />
                       </td>
                       <td className="px-4 py-3.5 text-xs text-gray-500 whitespace-nowrap font-mono">{dob}</td>
                       <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{nationality}</td>

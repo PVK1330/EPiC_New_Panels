@@ -93,7 +93,7 @@ const SuperadminLayout = () => {
                   <div key={to} className="flex items-center shrink-0">
                     <RiArrowRightSLine size={14} className="mx-1.5 text-gray-300" />
                     {last ? (
-                      <span className="text-secondary font-black truncate max-w-[120px] md:max-w-[200px]">
+                      <span className="text-secondary font-semibold truncate max-w-[120px] md:max-w-[200px]">
                         {name}
                       </span>
                     ) : (
@@ -126,10 +126,13 @@ const SuperadminLayout = () => {
             </div>
 
             {/* Notifications */}
-            <button className="p-2 text-gray-500 hover:text-primary hover:bg-gray-50 rounded-lg transition-all relative">
+            <Link 
+              to="/superadmin/notifications"
+              className="p-2 text-gray-500 hover:text-primary hover:bg-gray-50 rounded-lg transition-all relative"
+            >
               <RiNotification3Line size={20} />
               <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
-            </button>
+            </Link>
 
             {/* Profile */}
             <div className="relative">
@@ -142,10 +145,10 @@ const SuperadminLayout = () => {
                   {user?.name?.charAt(0) || "S"}
                 </div>
                 <div className="text-left hidden sm:block">
-                  <p className="text-xs font-black text-secondary leading-none">
+                  <p className="text-xs font-semibold text-secondary leading-none">
                     {user?.name || "Super Admin"}
                   </p>
-                  <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-wider">
+                  <p className="text-[10px] text-gray-400 mt-1 font-bold">
                     Platform Owner
                   </p>
                 </div>
@@ -161,7 +164,7 @@ const SuperadminLayout = () => {
                     className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden py-1 z-50 origin-top-right"
                   >
                     <div className="px-4 py-3 border-b border-gray-100 mb-1">
-                      <p className="text-sm font-black text-secondary">{user?.name || "Super Admin"}</p>
+                      <p className="text-sm font-semibold text-secondary">{user?.name || "Super Admin"}</p>
                       <p className="text-xs text-gray-400 truncate mt-0.5">
                         {user?.email || "super@epic.com"}
                       </p>

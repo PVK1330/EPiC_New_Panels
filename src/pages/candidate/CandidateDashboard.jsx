@@ -21,14 +21,14 @@ import { useSelector } from "react-redux";
 import useCandidate from "../../hooks/useCandidate";
 import { getNotifications } from "../../services/notificationApi";
 import messagingApi from "../../services/messagingApi";
-
-const STAGES = [
-  { name: "Started", key: "started" },
-  { name: "Application", key: "submitted" },
-  { name: "Review", key: "under_review" },
-  { name: "Decision", key: "decision" },
-  { name: "Closed", key: "closed" },
-];
+import { MOCK_RECENT_MESSAGES, MOCK_NOTIFICATIONS } from "../../data/adminDashboardMock";
+import CaseWorkflowProgress from "../../components/case/CaseWorkflowProgress";
+import Button from "../../components/Button";
+import {
+  resolveCaseStage,
+  getStepById,
+  DEFAULT_CASE_STAGE,
+} from "../../constants/immigrationCaseProcess";
 
 const getStatusColor = (status) => {
   const map = {
@@ -53,14 +53,19 @@ const CandidateDashboard = () => {
   useEffect(() => {
     getMyApplication();
     getNotifications({ limit: 4 })
-      .then(res => setNotifications(res?.data?.data?.notifications || res?.data?.data || []))
-      .catch(() => {});
-    messagingApi.getConversations()
-      .then(res => {
-        const mData = res?.data?.conversations || res?.data?.data?.conversations || res?.data || [];
-        setMessages(Array.isArray(mData) ? mData.slice(0, 4) : []);
+      .then((res) => {
+        const list = res?.data?.data?.notifications || res?.data?.data || [];
+        setNotifications(Array.isArray(list) && list.length > 0 ? list : MOCK_NOTIFICATIONS);
       })
-      .catch(() => {});
+      .catch(() => setNotifications(MOCK_NOTIFICATIONS));
+    messagingApi
+      .getConversations()
+      .then((res) => {
+        const mData = res?.data?.conversations || res?.data?.data?.conversations || res?.data || [];
+        const list = Array.isArray(mData) ? mData.slice(0, 4) : [];
+        setMessages(list.length > 0 ? list : MOCK_RECENT_MESSAGES);
+      })
+      .catch(() => setMessages(MOCK_RECENT_MESSAGES));
   }, [getMyApplication]);
 
   if (applicationLoading && !myApplication) {
@@ -74,14 +79,13 @@ const CandidateDashboard = () => {
 
   const appStatus = myApplication?.status || "draft";
   const caseData = myApplication?._relatedData?.cases?.[0] || {};
-  const caseStatus = caseData.status || (appStatus === "submitted" ? "Pending" : "Draft");
-
-  // Determine current step index
-  let currentIndex = 0;
-  if (appStatus === "submitted") currentIndex = 1;
-  if (["under_review", "under review"].includes(appStatus.toLowerCase())) currentIndex = 2;
-  if (["approved", "rejected", "decision"].includes(appStatus.toLowerCase())) currentIndex = 3;
-  if (["closed", "completed"].includes(appStatus.toLowerCase())) currentIndex = 4;
+  const caseStatus = caseData.status || (appStatus === "submitted" ? "Lead" : "Draft");
+  const caseStage = resolveCaseStage({
+    caseStage: caseData.caseStage,
+    status: caseStatus,
+  });
+  const currentStep = getStepById(caseStage) || getStepById(DEFAULT_CASE_STAGE);
+  const needsEnquiry = appStatus === "draft" && !myApplication?.visaType;
 
   const widgets = [
     {
@@ -128,51 +132,29 @@ const CandidateDashboard = () => {
         </p>
       </div>
 
+      {needsEnquiry && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest text-amber-800">Step 1 — Client enquiry</p>
+            <p className="text-sm font-bold text-amber-950 mt-1">Submit your visa enquiry to begin the 16-step process.</p>
+          </div>
+          <Button onClick={() => navigate("/candidate/visa-enquiry")}>Start visa enquiry</Button>
+        </section>
+      )}
+
       <section className="rounded-2xl border border-primary/15 bg-gradient-to-r from-secondary/[0.08] via-white to-primary/[0.06] p-4 md:p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
           <div className="shrink-0">
             <p className="text-[11px] font-black uppercase tracking-widest text-gray-500">
-              Current Stage
+              Standard process
             </p>
             <p className="text-xl md:text-2xl font-black text-secondary mt-1">
-              {STAGES[currentIndex].name}
+              {currentStep?.title || "Client Enquiry"}
             </p>
           </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start gap-1 sm:gap-2 overflow-x-auto pb-2">
-              {STAGES.map((step, idx) => {
-                const done = idx < currentIndex;
-                const current = idx === currentIndex;
-                return (
-                  <div key={step.name} className="flex items-start flex-1 min-w-[72px]">
-                    <div className="flex flex-col items-center w-full">
-                      <div
-                        className={`h-7 w-7 rounded-full border-2 flex items-center justify-center text-[11px] font-black ${
-                          done
-                            ? "bg-primary border-primary text-white"
-                            : current
-                              ? "bg-amber-400 border-amber-400 text-white"
-                              : "bg-white border-gray-300 text-gray-400"
-                        }`}
-                      >
-                        {done ? "✓" : idx + 1}
-                      </div>
-                      <span className="mt-1 text-[10px] font-bold text-gray-500 text-center leading-tight">
-                        {step.name}
-                      </span>
-                    </div>
-                    {idx < STAGES.length - 1 && (
-                      <div
-                        className={`mt-3 h-0.5 flex-1 min-w-3 ${
-                          done ? "bg-primary" : "bg-gray-300"
-                        }`}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+          <div className="flex-1 min-w-0 w-full">
+            <CaseWorkflowProgress caseRecord={{ caseStage }} />
           </div>
 
           <span className={`shrink-0 self-start xl:self-center rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wider ${getStatusColor(caseStatus)}`}>

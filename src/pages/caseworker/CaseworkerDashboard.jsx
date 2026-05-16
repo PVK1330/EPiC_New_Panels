@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { CalendarDays, Check, TrendingUp, Bell, Plus, Send, MessageSquareMore } from "lucide-react";
 import api from "../../services/api";
+import { MOCK_RECENT_MESSAGES } from "../../data/adminDashboardMock";
 
 
 
@@ -63,20 +64,26 @@ const CaseworkerDashboard = () => {
       }
     };
 
+    const formatConversations = (conversations) =>
+      (Array.isArray(conversations) ? conversations : []).slice(0, 4).map((conv) => ({
+        from: `${conv.user?.first_name || ""} ${conv.user?.last_name || ""}`.trim() || "User",
+        initials: `${conv.user?.first_name?.[0] || "?"}${conv.user?.last_name?.[0] || ""}`.toUpperCase(),
+        text: conv.lastMessage?.content || "No message",
+        time: conv.lastMessage?.createdAt
+          ? new Date(conv.lastMessage.createdAt).toLocaleString()
+          : "",
+        unread: conv.unreadCount > 0,
+      }));
+
     const fetchRecentMessages = async () => {
       try {
         const response = await api.get("/api/messages/conversations");
-        const conversations = response.data.data.conversations || [];
-        const formattedMessages = conversations.slice(0, 4).map(conv => ({
-          from: conv.user.first_name + " " + conv.user.last_name,
-          initials: (conv.user.first_name[0] + conv.user.last_name[0]).toUpperCase(),
-          text: conv.lastMessage?.content || "No message",
-          time: new Date(conv.lastMessage?.createdAt).toLocaleString(),
-          unread: conv.unreadCount > 0,
-        }));
-        setRecentMessages(formattedMessages);
+        const conversations = response.data.data?.conversations || response.data.conversations || [];
+        const formatted = formatConversations(conversations);
+        setRecentMessages(formatted.length > 0 ? formatted : formatConversations(MOCK_RECENT_MESSAGES));
       } catch (error) {
         console.error("Error fetching messages:", error);
+        setRecentMessages(formatConversations(MOCK_RECENT_MESSAGES));
       }
     };
 

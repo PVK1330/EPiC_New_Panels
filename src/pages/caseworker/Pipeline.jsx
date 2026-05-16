@@ -20,15 +20,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { getCaseworkerPipelineCases, updatePipelineStage, getCaseById } from "../../services/caseApi";
-
-const STAGES = [
-  { id: "lead", title: "Lead", header: "bg-slate-100 border-slate-200", titleClass: "text-slate-600", countClass: "bg-slate-200/80 text-slate-700" },
-  { id: "docs", title: "Docs Pending", header: "bg-amber-50 border-amber-100", titleClass: "text-amber-700", countClass: "bg-amber-100 text-amber-800" },
-  { id: "drafting", title: "Drafting", header: "bg-blue-50 border-blue-100", titleClass: "text-blue-700", countClass: "bg-blue-100 text-blue-800" },
-  { id: "submitted", title: "Submitted", header: "bg-purple-50 border-purple-100", titleClass: "text-purple-700", countClass: "bg-purple-100 text-purple-800" },
-  { id: "decision", title: "Decision", header: "bg-orange-50 border-orange-100", titleClass: "text-orange-700", countClass: "bg-orange-100 text-orange-800" },
-  { id: "closed", title: "Closed", header: "bg-emerald-50 border-emerald-100", titleClass: "text-emerald-700", countClass: "bg-emerald-100 text-emerald-800" },
-];
+import { PIPELINE_STAGES, buildStagesFromPipelineData } from "../../constants/immigrationCaseProcess";
+import CaseWorkflowBadge from "../../components/case/CaseWorkflowBadge";
 
 
 function formatShort(iso) {
@@ -126,7 +119,7 @@ const colVariant = {
 
 export default function Pipeline() {
   const navigate = useNavigate();
-  const [stages, setStages] = useState(STAGES.map(s => ({ ...s, cards: [] })));
+  const [stages, setStages] = useState(() => PIPELINE_STAGES.map((s) => ({ ...s, cards: [] })));
   const [activeCard, setActiveCard] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCase, setSelectedCase] = useState(null);
@@ -142,28 +135,7 @@ export default function Pipeline() {
     try {
       const response = await getCaseworkerPipelineCases();
       if (response?.data?.data) {
-        const pipeline = response.data.data;
-        
-        // Map API response to stages structure
-        const mappedStages = STAGES.map(stage => {
-          const stageCases = pipeline[stage.id] || [];
-
-          return {
-            ...stage,
-            count: stageCases.length,
-            cards: stageCases.map(c => ({
-              id: c.caseId || c.id.toString(),
-              caseId: c.caseId || c.id.toString(),
-              name: c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown',
-              meta: `${c.visaType?.name || '—'} · ${c.sponsor ? `${c.sponsor.first_name} ${c.sponsor.last_name}` : '—'}`,
-              badge: c.priority || 'Normal',
-              badgeClass: c.priority === 'High' ? 'bg-red-100 text-red-800' : c.priority === 'Medium' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600',
-              status: c.status,
-            })),
-          };
-        });
-        
-        setStages(mappedStages);
+        setStages(buildStagesFromPipelineData(response.data.data));
       }
     } catch (error) {
       console.error("Error fetching caseworker pipeline data:", error);
@@ -233,19 +205,8 @@ export default function Pipeline() {
     if (overStage && activeStage.id !== overStage.id) {
       const card = activeStage.cards.find((c) => c.id === active.id);
       if (card) {
-        const statusMap = {
-          lead: 'Lead',
-          docs: 'Docs Pending',
-          drafting: 'Drafting',
-          submitted: 'Submitted',
-          decision: 'Decision',
-          closed: 'Closed'
-        };
-        
-        const newStatus = statusMap[overStage.id];
-        
         try {
-          await updatePipelineStage(card.caseId, newStatus);
+          await updatePipelineStage(card.caseId, overStage.id);
           await fetchPipelineData();
         } catch (error) {
           console.error("Error updating pipeline stage:", error);
@@ -300,7 +261,7 @@ export default function Pipeline() {
                     My Pipeline
                   </h1>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    Kanban view of your assigned cases by stage
+                    Standard 16-step immigration workflow — drag cases between stages
                   </p>
                 </div>
               </div>
@@ -332,7 +293,7 @@ export default function Pipeline() {
                 <motion.section
                   key={stage.id}
                   variants={colVariant}
-                  className={`shrink-0 w-[min(100%,280px)] sm:w-72 flex flex-col rounded-2xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/90 shadow-sm overflow-hidden ${stage.header}`}
+                  className={`shrink-0 w-[min(100%,240px)] sm:w-56 flex flex-col rounded-2xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/90 shadow-sm overflow-hidden border-t-4 ${stage.accent} ${stage.header}`}
                 >
                   <header className="px-3.5 pt-3.5 pb-2 flex items-center justify-between gap-2 border-b border-gray-100/80 bg-white/60 backdrop-blur-sm">
                     <div className="flex items-center gap-2 min-w-0">
@@ -412,8 +373,14 @@ export default function Pipeline() {
                       <p className="text-sm font-mono font-semibold text-primary mt-1">{selectedCase.caseId}</p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Status</label>
-                      <p className="text-sm font-semibold mt-1">{selectedCase.status}</p>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Workflow stage</label>
+                      <div className="mt-1">
+                        <CaseWorkflowBadge caseRecord={selectedCase} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Legacy status</label>
+                      <p className="text-sm font-semibold mt-1">{selectedCase.status || "—"}</p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Candidate</label>

@@ -17,6 +17,7 @@ import { getBusinessDashboard, getBusinessCases } from "../../services/businessP
 import { getSponsoredWorkers } from "../../services/sponsoredWorkerApi";
 import { getNotifications } from "../../services/notificationApi";
 import messagingApi from "../../services/messagingApi";
+import { MOCK_RECENT_MESSAGES, MOCK_NOTIFICATIONS } from "../../data/adminDashboardMock";
 
 const getStatusIcon = (status) => {
   if (status === "Completed") return <CheckCircle size={16} className="text-green-600" />;
@@ -52,9 +53,13 @@ export default function BusinessDashboard() {
         setDashboard(dRes?.data?.data || null);
         setCases(cRes?.data?.data?.cases || []);
         setWorkers(wRes?.data?.data || []);
-        setNotifications(nRes?.data?.data?.notifications || nRes?.data?.data || []);
+        const notifList = nRes?.data?.data?.notifications || nRes?.data?.data || [];
+        setNotifications(
+          Array.isArray(notifList) && notifList.length > 0 ? notifList : MOCK_NOTIFICATIONS,
+        );
         const mData = mRes?.data?.conversations || mRes?.data?.data?.conversations || mRes?.data || [];
-        setMessages(Array.isArray(mData) ? mData.slice(0, 5) : []);
+        const msgList = Array.isArray(mData) ? mData.slice(0, 5) : [];
+        setMessages(msgList.length > 0 ? msgList : MOCK_RECENT_MESSAGES);
       } finally {
         setLoading(false);
       }
