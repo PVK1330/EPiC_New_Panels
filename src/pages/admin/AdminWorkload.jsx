@@ -5,19 +5,10 @@ import { FiBarChart2, FiDownload } from "react-icons/fi";
 import { RiBarChartLine } from "react-icons/ri";
 import { Loader2 } from "lucide-react";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
-import axios from "axios"
+import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 
-// ─── API Configuration ───────────────────────────────────────────────────────
-const API_BASE_URL = "http://localhost:5000/api/workload";
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
-  return {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-};
+const WORKLOAD_PATH = "/api/workload";
 
 const TABS = [
   { id: "team", label: "Team Workload" },
@@ -181,9 +172,7 @@ const AdminWorkload = () => {
   const fetchWorkloadData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/team-workload`, {
-        headers: getAuthHeaders(),
-      });
+      const response = await api.get(`${WORKLOAD_PATH}/team-workload`);
      const {caseworkers}= response.data.data
      setWorkloadData(caseworkers || []);     
     } catch (e) {
@@ -208,9 +197,7 @@ const AdminWorkload = () => {
 
   const fetchPendingTasks = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/pending-tasks`, {
-        headers: getAuthHeaders(),
-      });
+      const response = await api.get(`${WORKLOAD_PATH}/pending-tasks`);
       
       console.log("Pending tasks API response:", response.data);
       
@@ -229,9 +216,7 @@ const AdminWorkload = () => {
 
   const fetchCases = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/deadline-monitor`, {
-        headers: getAuthHeaders(),
-      });
+      const response = await api.get(`${WORKLOAD_PATH}/deadline-monitor`);
       
       console.log("Deadline monitor API response:", response.data);
       
@@ -251,8 +236,7 @@ const AdminWorkload = () => {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/export-report`, {
-        headers: getAuthHeaders(),
+      const response = await api.get(`${WORKLOAD_PATH}/export-report`, {
         responseType: "blob",
       });
       

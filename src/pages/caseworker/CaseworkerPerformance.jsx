@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import axios from "axios";
-import { getToken } from "../../utils/storage.js";
+import api from "../../services/api";
 
 const StatCard = ({ label, value, color = "secondary", suffix }) => {
   const colorMap = {
@@ -71,14 +70,9 @@ const CaseworkerPerformance = () => {
   useEffect(() => {
     const fetchPerformanceData = async () => {
       try {
-        const token = getToken();
         const [perfResponse, activityResponse] = await Promise.all([
-          axios.get('http://localhost:5000/api/caseworker/performance', {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          axios.get('http://localhost:5000/api/caseworker/activity-log?limit=20', {
-            headers: { Authorization: `Bearer ${token}` }
-          })
+          api.get('/api/caseworker/performance'),
+          api.get('/api/caseworker/activity-log?limit=20')
         ]);
 
         setPerformanceData(perfResponse.data.data);

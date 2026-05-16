@@ -19,6 +19,7 @@ import {
 import { getSponsoredWorkerDetails, updateSponsoredWorker, updateWorkerStatus } from "../../services/sponsoredWorkerApi";
 import { toast } from "react-hot-toast";
 import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
+import { API_BASE_URL } from "../../utils/constants";
 
 const SponsoredWorkerDetails = () => {
   const [activeTab, setActiveTab] = useState("details");
@@ -104,7 +105,7 @@ const SponsoredWorkerDetails = () => {
   const handleDownload = (path, name) => {
     if (!path) return;
     const link = document.createElement("a");
-    link.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${path}`;
+    link.href = `${API_BASE_URL}${path}`;
     link.setAttribute("download", name || "document");
     link.target = "_blank";
     document.body.appendChild(link);

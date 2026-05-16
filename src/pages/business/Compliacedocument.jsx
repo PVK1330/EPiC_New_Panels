@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getComplianceDocuments } from "../../services/licenceApi";
+import { API_BASE_URL } from "../../utils/constants";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -100,7 +101,7 @@ const DocumentList = () => {
   const handleDownload = (doc) => {
     if (!doc.path) return alert("No file path available for this document.");
     const link = document.createElement("a");
-    link.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${doc.path}`;
+    link.href = `${API_BASE_URL}${doc.path}`;
     link.setAttribute("download", doc.name);
     link.target = "_blank";
     document.body.appendChild(link);
