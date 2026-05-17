@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { setCredentials, logout } from "../store/slices/authSlice";
 import { loginUser, registerUser, logoutUser } from "../services/auth.service";
 import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
+import { getAuthUserAndToken } from "../utils/authResponse";
 
 const useAuth = () => {
   const dispatch = useDispatch();
@@ -15,16 +16,26 @@ const useAuth = () => {
     setIsLoading(true);
     try {
       const res = await loginUser({ email, password });
-      if (res.data?.requires_2fa) {
+      if (res?.data?.requires_2fa || res?.requires_2fa || res?.data?.data?.requires_2fa) {
         sessionStorage.setItem("pending_2fa_email", email);
         sessionStorage.setItem("pending_2fa_password", password);
         navigate("/2fa");
         return { twoFactorRequired: true };
       }
-      const { user: userData, token: jwtToken } = res.data;
+      const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
+      if (!userData || !jwtToken) {
+        throw new Error(res?.message || "Invalid login response");
+      }
       const role = ROLE_NAMES[userData.role_id] || "candidate";
       dispatch(
-        setCredentials({ user: { ...userData, role }, token: jwtToken }),
+        setCredentials({
+          user: {
+            ...userData,
+            role,
+            organisation_id: userData.organisation_id ?? null,
+          },
+          token: jwtToken,
+        }),
       );
       navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
       return { success: true };

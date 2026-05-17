@@ -1,9 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { verifyOtp, resendOtp, verifyResetOtp } from "../services/auth.service";
+import { useDispatch } from "react-redux";
+import { verifyOtp, resendOtp, verifyResetOtp, forgotPassword } from "../services/auth.service";
+import { setCredentials } from "../store/slices/authSlice";
+import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
+import { getAuthUserAndToken } from "../utils/authResponse";
 
 const useOtp = (type = "register") => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
@@ -35,11 +40,35 @@ const useOtp = (type = "register") => {
           ? sessionStorage.getItem("pending_otp_email")
           : sessionStorage.getItem("pending_reset_email");
       if (type === "register") {
-        await verifyOtp({ email, otp });
+        const res = await verifyOtp({ email, otp });
         sessionStorage.removeItem("pending_otp_email");
-        navigate("/login");
+        const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
+        if (userData && jwtToken) {
+          const role = ROLE_NAMES[userData.role_id] || "candidate";
+          dispatch(
+            setCredentials({
+              user: {
+                ...userData,
+                role,
+                organisation_id: userData.organisation_id ?? null,
+              },
+              token: jwtToken,
+            }),
+          );
+          navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
+        } else {
+          navigate("/login");
+        }
       } else {
-        await verifyResetOtp({ email, otp });
+        const res = await verifyResetOtp({ email, otp });
+        console.log("Verify Reset OTP Response:", res);
+        const token = res?.data?.reset_token || res?.reset_token;
+        if (token) {
+          sessionStorage.setItem("reset_token", token);
+          console.log("Token stored in sessionStorage");
+        } else {
+          console.error("No token found in response:", res);
+        }
         navigate("/set-password");
       }
     } catch (err) {
@@ -57,7 +86,12 @@ const useOtp = (type = "register") => {
         type === "register"
           ? sessionStorage.getItem("pending_otp_email")
           : sessionStorage.getItem("pending_reset_email");
-      await resendOtp(email);
+      
+      if (type === "register") {
+        await resendOtp(email);
+      } else {
+        await forgotPassword(email);
+      }
       startCountdown();
     } catch (err) {
       setError(err.message);

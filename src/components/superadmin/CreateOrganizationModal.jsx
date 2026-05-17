@@ -1,0 +1,256 @@
+import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
+import {
+  RiBuilding2Line,
+  RiMailLine,
+  RiGlobalLine,
+  RiShieldUserLine,
+  RiCheckLine,
+  RiInformationLine,
+  RiArrowDownSLine
+} from 'react-icons/ri';
+import Input from '../Input';
+import Button from '../Button';
+import Modal from '../common/Modal';
+import {
+  slugifyOrganisation,
+  isValidOrganisationSlug,
+  getOrganisationSubdomainLabel,
+} from '../../utils/organisationHost';
+
+const initialForm = () => ({
+  name: '',
+  slug: '',
+  primaryEmail: '',
+  country: '',
+  plan: 'starter',
+  adminFirstName: '',
+  adminLastName: '',
+  adminEmail: '',
+  adminCountryCode: '+44',
+  adminMobile: '',
+});
+
+const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState(initialForm);
+  const [slugTouched, setSlugTouched] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(initialForm());
+      setSlugTouched(false);
+      setSubmitting(false);
+    }
+  }, [isOpen]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    if (name === 'slug') {
+      setSlugTouched(true);
+      setFormData((prev) => ({ ...prev, slug: slugifyOrganisation(value) }));
+      return;
+    }
+
+    if (name === 'name') {
+      setFormData((prev) => {
+        const next = { ...prev, name: value };
+        if (!slugTouched) {
+          next.slug = slugifyOrganisation(value);
+        }
+        return next;
+      });
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFormSubmit = async () => {
+    if (!formData.name || !formData.primaryEmail || !formData.adminEmail) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    const slug = slugifyOrganisation(formData.slug || formData.name);
+    if (!isValidOrganisationSlug(slug)) {
+      toast.error('Enter a valid subdomain (e.g. acme-immigration). Letters, numbers, and hyphens only.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await onSubmit({ ...formData, slug });
+      onClose();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e.message || 'Request failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Create New Organisation"
+      subtitle="Register a new company and its administrator account."
+      maxWidth="max-w-3xl"
+      footer={
+        <div className="flex justify-end gap-3 w-full">
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            disabled={submitting}
+            onClick={handleFormSubmit}
+          >
+            {submitting ? 'Creating...' : 'Create Organisation'}
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-8 py-2">
+        {/* Section: Organisation Details */}
+        <div className="space-y-4">
+          <h4 className="text-sm font-bold text-secondary flex items-center gap-2">
+            <RiBuilding2Line className="text-primary" /> Organisation Information
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Organisation Name"
+              name="name"
+              placeholder="e.g. Elite Visa Solutions"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-gray-700 ml-1">
+                Subdomain <span className="text-gray-400 font-normal">(editable)</span>
+              </label>
+              <input
+                name="slug"
+                value={formData.slug}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-sm font-semibold text-secondary outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+                placeholder="acme-immigration"
+              />
+              <p className="text-[11px] text-gray-400 ml-1">
+                Login URL:{' '}
+                <span className="font-mono text-primary">{getOrganisationSubdomainLabel(formData.slug)}</span>
+              </p>
+              <p className="text-[11px] text-gray-400 ml-1">
+                Filled from the organisation name until you edit this field.
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Business Email"
+              name="primaryEmail"
+              type="email"
+              placeholder="contact@organisation.com"
+              value={formData.primaryEmail}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              label="Country"
+              name="country"
+              placeholder="United Kingdom"
+              value={formData.country}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-gray-700 ml-1">Subscription Plan</label>
+            <div className="relative">
+              <select
+                name="plan"
+                value={formData.plan}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-sm font-semibold text-secondary outline-none focus:ring-2 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
+              >
+                <option value="starter">Starter Plan (£99/mo)</option>
+                <option value="pro">Professional Plan (£299/mo)</option>
+                <option value="enterprise">Enterprise Plan (£599/mo)</option>
+              </select>
+              <RiArrowDownSLine className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+            </div>
+          </div>
+        </div>
+
+        {/* Section: Admin Details */}
+        <div className="pt-6 border-t border-gray-100 space-y-4">
+          <h4 className="text-sm font-bold text-secondary flex items-center gap-2">
+            <RiShieldUserLine className="text-primary" /> Administrator Account
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="First Name"
+              name="adminFirstName"
+              placeholder="John"
+              value={formData.adminFirstName}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              label="Last Name"
+              name="adminLastName"
+              placeholder="Doe"
+              value={formData.adminLastName}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Admin Email"
+              name="adminEmail"
+              type="email"
+              placeholder="admin@organisation.com"
+              value={formData.adminEmail}
+              onChange={handleChange}
+              required
+            />
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-1">
+                <Input
+                  label="Code"
+                  name="adminCountryCode"
+                  placeholder="+44"
+                  value={formData.adminCountryCode}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="col-span-2">
+                <Input
+                  label="Mobile Number"
+                  name="adminMobile"
+                  placeholder="7700900123"
+                  value={formData.adminMobile}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 flex gap-3">
+          <RiInformationLine className="text-primary shrink-0 mt-0.5" size={16} />
+          <p className="text-xs text-gray-500 leading-relaxed">
+            A temporary password will be generated for the admin account. You can view it in the notification toast after creation.
+          </p>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+export default CreateOrganizationModal;

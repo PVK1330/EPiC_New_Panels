@@ -1,50 +1,47 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import {
   FiCheck, FiMinus, FiRefreshCw, FiAlertCircle, FiSave,
 } from "react-icons/fi";
 import { getRbacMatrix } from "../../services/rbacApi";
 import { assignPermissionsToRole } from "../../services/rolesApi";
 
+const humanize = (str) => {
+  if (!str) return "";
+  let cleaned = str.replace(/^admin\./i, "");
+  cleaned = cleaned.replace(/[._]/g, " ");
+  return cleaned.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+};
+
 // ── Cell ─────────────────────────────────────────────────────────────────────
 const MatrixCell = ({ has, pending, saving, onClick }) => {
-  const isGranted  = pending !== undefined ? pending : has;
-  const isDirty    = pending !== undefined && pending !== has;
+  const isGranted = pending !== undefined ? pending : has;
+  const isDirty = pending !== undefined && pending !== has;
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={saving}
-      title={isGranted ? "Revoke permission" : "Grant permission"}
-      className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto transition-all border-2 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary ${
-        isGranted
-          ? isDirty
-            ? "border-amber-400 bg-amber-50 text-amber-600"
-            : "border-green-400 bg-green-50 text-green-600"
-          : isDirty
-          ? "border-amber-300 bg-amber-50 text-amber-400"
-          : "border-gray-200 bg-white text-gray-200 hover:border-gray-300 hover:text-gray-300"
-      }`}
-    >
-      {isGranted ? (
-        <FiCheck size={13} strokeWidth={3} />
-      ) : (
-        <FiMinus size={13} strokeWidth={2} />
-      )}
-    </button>
+    <div className="flex items-center justify-center h-10">
+      <input
+        type="checkbox"
+        checked={isGranted}
+        onChange={onClick}
+        disabled={saving}
+        className={`w-4 h-4 rounded border-gray-300 text-secondary focus:ring-secondary/30 transition-all cursor-pointer ${
+          isDirty ? "ring-2 ring-amber-400 ring-offset-1" : ""
+        }`}
+      />
+    </div>
   );
 };
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 const ModuleMatrixPanel = () => {
-  const [matrixData, setMatrixData]  = useState(null);
-  const [loading, setLoading]        = useState(true);
-  const [error, setError]            = useState(null);
+  const [matrixData, setMatrixData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   // pendingChanges: { [roleId]: Set of permissionIds that should be granted }
   const [pendingChanges, setPending] = useState({});
-  const [saving, setSaving]          = useState(false);
-  const [savedMsg, setSavedMsg]      = useState("");
-  const [filterModule, setFilter]    = useState("all");
+  const [saving, setSaving] = useState(false);
+  const [savedMsg, setSavedMsg] = useState("");
+  const [filterModule, setFilter] = useState("all");
 
   const fetchMatrixData = useCallback(async () => {
     setLoading(true);
@@ -52,7 +49,11 @@ const ModuleMatrixPanel = () => {
     setPending({});
     try {
       const res = await getRbacMatrix();
-      if (res.data?.status === "success") setMatrixData(res.data.data);
+      if (res.data?.status === "success") {
+        const data = res.data.data || {};
+        if (data.roles) data.roles = data.roles.filter(r => r.roleName?.toLowerCase() !== "superadmin");
+        setMatrixData(data);
+      }
       else setError("Unexpected response from server.");
     } catch {
       setError("Failed to load permission matrix.");
@@ -136,23 +137,42 @@ const ModuleMatrixPanel = () => {
     );
   }
 
-  // Build distinct list of all permissions from roles[0] (they're all the same set)
-  const allPerms = matrixData?.roles?.[0]?.permissions || [];
-  const modules  = ["all", ...(matrixData?.modules || [])];
-  const visiblePerms = filterModule === "all"
+  // Build a deduplicated permission list across ALL roles (not just roles[0])
+  // The API returns each permission entry per-role, so we use a Map to deduplicate
+  const allPermsMap = new Map();
+  matrixData?.roles?.forEach((role) => {
+    role.permissions.forEach((p) => {
+      if (!allPermsMap.has(p.permissionId)) {
+        allPermsMap.set(p.permissionId, p);
+      }
+    });
+  });
+  const allPerms = Array.from(allPermsMap.values());
+  const modules = ["all", ...(matrixData?.modules || [])];
+  const visiblePerms = (filterModule === "all"
     ? allPerms
-    : allPerms.filter((p) => p.module === filterModule);
+    : allPerms.filter((p) => p.module === filterModule)
+  ).map(p => ({ ...p, module: p.module.trim() }));
+
+  const visibleGrouped = Object.entries(
+    visiblePerms.reduce((acc, p) => {
+      const mod = p.module;
+      if (!acc[mod]) acc[mod] = [];
+      acc[mod].push(p);
+      return acc;
+    }, {})
+  );
 
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Module</label>
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Filter</label>
           <select
             value={filterModule}
             onChange={(e) => setFilter(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 bg-white font-medium text-secondary"
           >
             {modules.map((m) => (
               <option key={m} value={m}>{m === "all" ? "All Modules" : m}</option>
@@ -162,16 +182,18 @@ const ModuleMatrixPanel = () => {
 
         <div className="flex items-center gap-3">
           {savedMsg && (
-            <span className="text-xs font-bold text-green-600">{savedMsg}</span>
+            <span className="text-xs font-bold text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100">
+              ✓ {savedMsg}
+            </span>
           )}
           {hasDirtyChanges && (
-            <span className="text-xs text-amber-600 font-semibold">
+            <span className="text-xs text-amber-700 font-semibold bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
               {countDirtyRoles()} role(s) have unsaved changes
             </span>
           )}
           <button
             onClick={fetchMatrixData}
-            className="text-gray-400 hover:text-primary transition-colors"
+            className="p-2 text-gray-400 hover:text-secondary transition-colors hover:bg-secondary/5 rounded-lg"
             title="Refresh"
           >
             <FiRefreshCw size={15} />
@@ -179,11 +201,13 @@ const ModuleMatrixPanel = () => {
           <button
             onClick={handleSaveAll}
             disabled={!hasDirtyChanges || saving}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
-              hasDirtyChanges && !saving
-                ? "bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/20"
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${hasDirtyChanges && !saving
+                ? "text-white shadow-md shadow-indigo-200"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
-            }`}
+              }`}
+            style={hasDirtyChanges && !saving ? {
+              background: "var(--color-secondary)",
+            } : {}}
           >
             <FiSave size={14} />
             {saving ? "Saving…" : "Save Changes"}
@@ -192,76 +216,130 @@ const ModuleMatrixPanel = () => {
       </div>
 
       {/* Matrix Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-50 bg-white flex items-center justify-between">
           <div>
             <h2 className="text-sm font-black text-secondary">Module Permissions Matrix</h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              Click any cell to toggle. Green = granted · Amber = pending change · Grey = denied
+              Manage permissions across all roles. Use checkboxes to grant/revoke access.
             </p>
           </div>
-          <div className="flex items-center gap-4 text-[11px] text-gray-500">
-            <span className="flex items-center gap-1">
-              <span className="w-4 h-4 rounded bg-green-50 border-2 border-green-400 inline-block" />
+          <div className="flex items-center gap-3 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+            <span className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded bg-secondary" />
               Granted
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-4 h-4 rounded bg-amber-50 border-2 border-amber-400 inline-block" />
+            <span className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded bg-amber-400" />
               Pending
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-4 h-4 rounded bg-white border-2 border-gray-200 inline-block" />
-              Denied
             </span>
           </div>
         </div>
 
-        <div className="overflow-auto max-h-[calc(100vh-320px)] border-t border-gray-100 custom-scrollbar">
-          <table className="w-full text-sm border-separate border-spacing-0" style={{ minWidth: `${180 + (matrixData?.roles?.length || 0) * 90}px` }}>
+        <div className="overflow-auto max-h-[calc(100vh-320px)] custom-scrollbar">
+          <table className="w-full text-sm border-separate border-spacing-0" style={{ minWidth: `${200 + (matrixData?.roles?.length || 0) * 100}px` }}>
             <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-[11px] font-black text-gray-400 uppercase tracking-wider sticky left-0 top-0 bg-gray-50 z-30 border-r border-b border-gray-100 min-w-[180px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                  Permission
+              <tr className="bg-gray-50/50">
+                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest sticky left-0 top-0 bg-gray-50 z-30 border-r border-b border-gray-100 min-w-[200px] text-left">
+                  Module & Action
                 </th>
                 {matrixData?.roles?.map((role) => (
                   <th
                     key={role.roleId}
-                    className="px-2 py-3 text-[11px] font-black text-gray-400 uppercase tracking-wider text-center whitespace-nowrap sticky top-0 bg-gray-50 z-20 border-b border-gray-100"
+                    className="px-4 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-center sticky top-0 bg-gray-50/95 backdrop-blur-sm z-20 border-b border-gray-100"
                   >
                     <div className="flex flex-col items-center gap-1">
-                      <span>{role.roleName}</span>
-                      {pendingChanges[role.roleId] !== undefined && (
-                        <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[9px] font-black">
-                          UNSAVED
-                        </span>
-                      )}
+                      {role.roleName}
                     </div>
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {visiblePerms.map((perm) => (
-                <tr key={perm.permissionId} className="hover:bg-gray-50/60 transition-colors group">
-                  <td className="px-4 py-2.5 sticky left-0 bg-white group-hover:bg-gray-50/90 border-r border-gray-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                    <div className="text-[10px] font-bold text-primary uppercase tracking-wide">{perm.module}</div>
-                    <div className="text-xs font-semibold text-secondary capitalize">{perm.action}</div>
-                    {perm.permissionName && (
-                      <div className="text-[10px] text-gray-400 truncate max-w-[160px]">{perm.permissionName}</div>
-                    )}
+            <tbody className="divide-y divide-gray-100">
+              {visibleGrouped.map(([module, perms]) => (
+                <tr key={module} className="hover:bg-gray-50/40 transition-colors group">
+                  <td className="px-6 py-5 sticky left-0 bg-white group-hover:bg-gray-50 transition-colors border-r border-gray-100 z-10">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-secondary tracking-tight">{humanize(module)}</span>
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{perms.length} Permissions</span>
+                    </div>
                   </td>
+
                   {matrixData?.roles?.map((role) => {
-                    const rolePerm = role.permissions.find((p) => p.permissionId === perm.permissionId);
-                    const originalHas = rolePerm?.hasPermission || false;
-                    const pendingVal  = isPending(role.roleId, perm.permissionId, originalHas);
+                    const rolePerms = perms.map(p => ({
+                      ...p,
+                      granted: isGranted(role.roleId, p.permissionId, role.permissions.find(rp => rp.permissionId === p.permissionId)?.hasPermission || false)
+                    }));
+                    
+                    const grantedCount = rolePerms.filter(p => p.granted).length;
+                    const totalCount = perms.length;
+                    
+                    let level = "custom";
+                    if (grantedCount === 0) level = "none";
+                    else if (grantedCount === totalCount) level = "admin";
+                    else {
+                      const isViewer = rolePerms.every(p => {
+                        if (p.action === "read" || p.action === "view") return p.granted;
+                        return !p.granted;
+                      });
+                      const isEditor = rolePerms.every(p => {
+                        if (["read", "view", "write", "update", "edit"].includes(p.action)) return p.granted;
+                        if (["delete", "manage", "approve"].includes(p.action)) return !p.granted;
+                        return true; 
+                      });
+                      if (isViewer) level = "viewer";
+                      else if (isEditor) level = "editor";
+                    }
+
+                    const handleLevelChange = (newLevel) => {
+                      perms.forEach(p => {
+                        const rolePerm = role.permissions.find(rp => rp.permissionId === p.permissionId);
+                        const originalHas = rolePerm?.hasPermission || false;
+                        const currentHas = isGranted(role.roleId, p.permissionId, originalHas);
+                        
+                        let shouldGrant = false;
+                        if (newLevel === "admin") shouldGrant = true;
+                        else if (newLevel === "viewer") shouldGrant = (p.action === "read" || p.action === "view");
+                        else if (newLevel === "editor") shouldGrant = ["read", "view", "write", "update", "edit"].includes(p.action);
+                        else if (newLevel === "none") shouldGrant = false;
+                        
+                        if (currentHas !== shouldGrant) {
+                          toggleCell(role.roleId, p.permissionId, originalHas);
+                        }
+                      });
+                    };
+
+                    const isDirty = perms.some(p => {
+                      const rolePerm = role.permissions.find(rp => rp.permissionId === p.permissionId);
+                      return isPending(role.roleId, p.permissionId, rolePerm?.hasPermission || false) !== undefined;
+                    });
+
                     return (
-                      <td key={`${role.roleId}-${perm.permissionId}`} className="px-2 py-2.5 text-center border-b border-gray-50">
-                        <MatrixCell
-                          has={originalHas}
-                          pending={pendingVal}
-                          saving={saving}
-                          onClick={() => toggleCell(role.roleId, perm.permissionId, originalHas)}
-                        />
+                      <td key={`${role.roleId}-${module}`} className="px-4 py-5 border-b border-gray-50 text-center">
+                        <div className="inline-block relative min-w-[130px]">
+                          <select
+                            value={level}
+                            onChange={(e) => handleLevelChange(e.target.value)}
+                            disabled={saving}
+                            className={`w-full appearance-none pl-3 pr-8 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-secondary/20 ${
+                              level === "none" ? "bg-gray-50 text-gray-400 border-gray-100" :
+                              level === "viewer" ? "bg-blue-50 text-blue-600 border-blue-100" :
+                              level === "editor" ? "bg-indigo-50 text-indigo-600 border-indigo-100" :
+                              level === "admin" ? "bg-secondary text-white border-secondary shadow-sm" :
+                              "bg-amber-50 text-amber-700 border-amber-200"
+                            } ${isDirty ? "ring-2 ring-amber-400 ring-offset-2" : ""}`}
+                          >
+                            <option value="none">No Access</option>
+                            <option value="viewer">Viewer Only</option>
+                            <option value="editor">Editor Access</option>
+                            <option value="admin">Full Admin</option>
+                            {level === "custom" && <option value="custom">Custom Mix</option>}
+                          </select>
+                          <div className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${level === "admin" ? "text-white" : "text-gray-400"}`}>
+                            <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                          </div>
+                        </div>
+                        {isDirty && <div className="text-[9px] font-black text-amber-500 mt-1 uppercase">Pending</div>}
                       </td>
                     );
                   })}
@@ -270,7 +348,7 @@ const ModuleMatrixPanel = () => {
               {visiblePerms.length === 0 && (
                 <tr>
                   <td colSpan={(matrixData?.roles?.length || 0) + 1} className="px-4 py-8 text-center text-sm text-gray-400">
-                    No permissions found for the selected module.
+                    No permissions found.
                   </td>
                 </tr>
               )}

@@ -26,14 +26,15 @@ const PermissionsTabBar = ({ tabs, activeId, onChange }) => {
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors ${
-              active ? "text-white" : "text-gray-500 hover:text-secondary"
+            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${
+              active ? "text-white shadow-md" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
             }`}
           >
             {active && (
               <motion.span
                 layoutId="perm-tab-pill"
-                className="absolute inset-0 bg-primary rounded-lg shadow-md shadow-primary/25"
+                className="absolute inset-0 bg-primary rounded-lg"
+                initial={false}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />
             )}

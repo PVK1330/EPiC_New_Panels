@@ -26,16 +26,13 @@ export const APPLICATION_FIELD_LABELS = {
   issueDate: "Passport issue date",
   expiryDate: "Passport expiry date",
   passportAvailable: "Passport available (Yes/No)",
-  nationalIdCardNumber: "National ID card number",
   nationalIdNumber: "National ID number",
-  idIssuingAuthorityCard: "ID issuing authority (card)",
-  idIssuingAuthorityNational: "ID issuing authority (national)",
+  idIssuingAuthorityNational: "ID issuing authority",
   otherNationality: "Other nationality / citizenship",
   ukLicense: "UK driving licence",
   medicalTreatment: "Medical treatment in UK",
   ukStayDuration: "How long in UK",
   contactNumber2: "Alternate contact number",
-  previousFullAddress: "Previous full address",
   previousAddress: "Previous address",
   startDate: "Address start date",
   endDate: "Address end date",
@@ -84,14 +81,8 @@ export function getDefaultFieldVisibility() {
 const STORAGE_KEY_VISIBILITY = "elitepic_application_field_visibility";
 
 export function loadFieldVisibilityFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_VISIBILITY);
-    if (!raw) return getDefaultFieldVisibility();
-    const parsed = JSON.parse(raw);
-    return { ...getDefaultFieldVisibility(), ...parsed };
-  } catch {
-    return getDefaultFieldVisibility();
-  }
+  // Always return default visibility to show all fields
+  return getDefaultFieldVisibility();
 }
 
 export function saveFieldVisibilityToStorage(visibility) {
@@ -165,16 +156,13 @@ export function getInitialApplicationFormData() {
     issueDate: "",
     expiryDate: "",
     passportAvailable: "",
-    nationalIdCardNumber: "",
     nationalIdNumber: "",
-    idIssuingAuthorityCard: "",
     idIssuingAuthorityNational: "",
     otherNationality: "",
     ukLicense: "",
     medicalTreatment: "",
     ukStayDuration: "",
     contactNumber2: "",
-    previousFullAddress: "",
     previousAddress: "",
     startDate: "",
     endDate: "",

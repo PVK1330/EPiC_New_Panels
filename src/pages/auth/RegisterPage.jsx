@@ -176,11 +176,10 @@ export default function RegisterPage() {
                   key={r.value}
                   type="button"
                   onClick={() => setForm((prev) => ({ ...prev, role_id: r.value }))}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all duration-200 ${
-                    form.role_id === r.value
+                  className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all duration-200 ${form.role_id === r.value
                       ? "bg-primary border-primary text-white shadow-sm shadow-primary/20"
                       : "bg-white border-gray-200 text-gray-600 hover:border-primary/50 hover:text-primary"
-                  }`}
+                    }`}
                 >
                   {r.label}
                 </button>

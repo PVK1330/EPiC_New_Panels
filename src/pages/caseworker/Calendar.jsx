@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Search, Settings, Grid3x3, List, Calendar as CalendarIcon, Clock, MapPin, Users, Video, Phone, X, Edit, Trash2, Eye, UserCheck, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Search, Settings, Grid3x3, List, Calendar as CalendarIcon, Clock, MapPin, Users, Video, Phone, X, Edit, Trash2, Eye, UserCheck, CheckCircle2, CheckSquare } from "lucide-react";
 import MicrosoftConnect from "../../components/MicrosoftConnect";
 import CreateMeetingModal from "../../components/CreateMeetingModal";
 import { getUpcomingMeetings } from "../../services/teamsApi";
+import { getMyAppointments } from "../../services/appointmentApi";
+import api from "../../services/api";
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -15,11 +17,15 @@ const Calendar = () => {
   const [showTeamsModal, setShowTeamsModal] = useState(false);
   const [teamsMeetings, setTeamsMeetings] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
+  const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [tasks, setTasks] = useState([]);
 
   const today = new Date();
 
   useEffect(() => {
     fetchTeamsMeetings();
+    fetchAppointments();
+    fetchTasks();
   }, []);
 
   const fetchTeamsMeetings = async () => {
@@ -35,132 +41,89 @@ const Calendar = () => {
     }
   };
 
-  // Mock events data — includes past months for completed meetings display
-  const [events, setEvents] = useState([
-    // ── Past / Completed events (previous months) ──────────────────────────
-    {
-      id: 101,
-      title: "Visa Consultation - Omar Hassan",
-      date: new Date(today.getFullYear(), today.getMonth() - 1, 5, 10, 0),
-      endDate: new Date(today.getFullYear(), today.getMonth() - 1, 5, 11, 0),
-      type: "meeting",
-      location: "Office Room 101",
-      attendees: ["Omar Hassan", "Caseworker"],
-      description: "Initial visa consultation",
-      color: "bg-blue-500",
-      completed: true,
-    },
-    {
-      id: 102,
-      title: "Document Submission - Fatima Al-Zahra",
-      date: new Date(today.getFullYear(), today.getMonth() - 1, 12, 14, 0),
-      endDate: new Date(today.getFullYear(), today.getMonth() - 1, 12, 15, 0),
-      type: "task",
-      location: "Virtual",
-      attendees: ["Fatima Al-Zahra"],
-      description: "Document submission review",
-      color: "bg-green-500",
-      completed: true,
-    },
-    {
-      id: 103,
-      title: "Team Sync",
-      date: new Date(today.getFullYear(), today.getMonth() - 1, 18, 9, 0),
-      endDate: new Date(today.getFullYear(), today.getMonth() - 1, 18, 10, 0),
-      type: "meeting",
-      location: "Conference Room",
-      attendees: ["Team"],
-      description: "Monthly team meeting",
-      color: "bg-purple-500",
-      completed: true,
-    },
-    {
-      id: 104,
-      title: "Client Call - Ibrahim Khalil",
-      date: new Date(today.getFullYear(), today.getMonth() - 1, 22, 15, 0),
-      endDate: new Date(today.getFullYear(), today.getMonth() - 1, 22, 15, 30),
-      type: "call",
-      location: "Phone",
-      attendees: ["Ibrahim Khalil"],
-      description: "Follow-up on pending documents",
-      color: "bg-amber-500",
-      completed: true,
-    },
-    {
-      id: 105,
-      title: "UKVI Deadline - Sara Youssef",
-      date: new Date(today.getFullYear(), today.getMonth() - 1, 28, 23, 59),
-      endDate: new Date(today.getFullYear(), today.getMonth() - 1, 28, 23, 59),
-      type: "deadline",
-      location: "System",
-      attendees: ["Sara Youssef"],
-      description: "Application deadline — completed",
-      color: "bg-red-500",
-      completed: true,
-    },
+  const fetchAppointments = async () => {
+    try {
+      setLoadingAppointments(true);
+      const response = await getMyAppointments();
+      const appointments = response.data?.data?.appointments || [];
+      
+      const mappedEvents = appointments.map(app => {
+        const startDateTime = new Date(`${app.date}T${app.time}`);
+        // Default 1 hour duration
+        const endDateTime = new Date(startDateTime.getTime() + 60 * 60000);
+        
+        return {
+          id: app.id,
+          title: app.title,
+          date: startDateTime,
+          endDate: endDateTime,
+          type: "meeting",
+          location: app.platform === "in-person" ? "Office" : (app.platform || "Virtual"),
+          attendees: [
+            app.candidate ? `${app.candidate.first_name} ${app.candidate.last_name}` : null,
+            app.caseworker ? `${app.caseworker.first_name} ${app.caseworker.last_name}` : null
+          ].filter(Boolean),
+          description: app.description || "",
+          color: "bg-indigo-600",
+          completed: app.status === "completed" || endDateTime < new Date(),
+          meeting_url: app.meeting_url,
+          caseId: app.case?.caseId,
+          isBackendApp: true
+        };
+      });
 
-    // ── Current & upcoming events ─────────────────────────────────────────
-    {
-      id: 1,
-      title: "Client Meeting - Ahmed Al-Rashid",
-      date: new Date(today.getFullYear(), today.getMonth(), 15, 10, 0),
-      endDate: new Date(today.getFullYear(), today.getMonth(), 15, 11, 0),
-      type: "meeting",
-      location: "Office Room 101",
-      attendees: ["Ahmed Al-Rashid", "Caseworker"],
-      description: "Discuss visa application progress",
-      color: "bg-blue-500",
-      completed: false,
-    },
-    {
-      id: 2,
-      title: "Document Review - Priya Sharma",
-      date: new Date(today.getFullYear(), today.getMonth(), 15, 14, 0),
-      endDate: new Date(today.getFullYear(), today.getMonth(), 15, 15, 0),
-      type: "task",
-      location: "Virtual",
-      attendees: ["Priya Sharma"],
-      description: "Review submitted documents",
-      color: "bg-green-500",
-      completed: false,
-    },
-    {
-      id: 3,
-      title: "UKVI Deadline - Carlos Mendes",
-      date: new Date(today.getFullYear(), today.getMonth(), 18, 23, 59),
-      endDate: new Date(today.getFullYear(), today.getMonth(), 18, 23, 59),
-      type: "deadline",
-      location: "System",
-      attendees: ["Carlos Mendes"],
-      description: "Application submission deadline",
-      color: "bg-red-500",
-      completed: false,
-    },
-    {
-      id: 4,
-      title: "Team Meeting",
-      date: new Date(today.getFullYear(), today.getMonth(), 20, 9, 0),
-      endDate: new Date(today.getFullYear(), today.getMonth(), 20, 10, 0),
-      type: "meeting",
-      location: "Conference Room",
-      attendees: ["Team"],
-      description: "Weekly team sync",
-      color: "bg-purple-500",
-      completed: false,
-    },
-    {
-      id: 5,
-      title: "Client Call - Mei Lin Chen",
-      date: new Date(today.getFullYear(), today.getMonth(), 22, 15, 30),
-      endDate: new Date(today.getFullYear(), today.getMonth(), 22, 16, 0),
-      type: "call",
-      location: "Phone",
-      attendees: ["Mei Lin Chen"],
-      description: "Follow-up call regarding application",
-      color: "bg-amber-500",
-      completed: false,
-    },
-  ]);
+      setEvents(prev => {
+        // Filter out existing backend-sourced appointments to avoid duplicates, 
+        // keeping manually added local events (from this session)
+        const localEvents = prev.filter(e => !e.isBackendApp && typeof e.id !== 'number' || e.id > 200); 
+        return [...mappedEvents]; // For now, let's just use server as source of truth
+      });
+    } catch (error) {
+      console.error("Failed to fetch internal appointments:", error);
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
+
+  const fetchTasks = async () => {
+    try {
+      const response = await api.get("/api/tasks/assign?filter=all");
+      
+      if (response.data.status === "success") {
+        const apiTasks = response.data.data.tasks || [];
+        
+        const taskEvents = apiTasks.map((task) => {
+          const dueDate = task.due_date ? new Date(task.due_date) : new Date();
+          // Default 1 hour duration for tasks
+          const endDate = new Date(dueDate.getTime() + 60 * 60000);
+          const isCompleted = task.status === "completed";
+          
+          return {
+            id: `task-${task.id}`,
+            title: task.title,
+            date: dueDate,
+            endDate: endDate,
+            type: "task",
+            location: "Task",
+            attendees: [task.assignee_name || "You"],
+            description: `Priority: ${task.priority}`,
+            color: isCompleted ? "bg-gray-400" : task.priority === "high" ? "bg-red-500" : task.priority === "medium" ? "bg-amber-500" : "bg-green-500",
+            completed: isCompleted,
+            caseId: task.case_number || (task.case_id ? `#C-${task.case_id}` : null),
+            isTask: true,
+            taskId: task.id
+          };
+        });
+        
+        setTasks(taskEvents);
+      }
+    } catch (error) {
+      console.error("Failed to fetch tasks:", error);
+    }
+  };
+
+  // Mock events data — includes past months for completed meetings display
+  const [events, setEvents] = useState([]);
 
   // Auto-mark past events as completed
   const eventsWithCompletion = useMemo(() =>
@@ -188,8 +151,8 @@ const Calendar = () => {
   }));
 
   const allEvents = useMemo(
-    () => [...eventsWithCompletion, ...teamsEvents],
-    [eventsWithCompletion, teamsEvents]
+    () => [...eventsWithCompletion, ...teamsEvents, ...tasks],
+    [eventsWithCompletion, teamsEvents, tasks]
   );
 
   const [newEvent, setNewEvent] = useState({
@@ -319,6 +282,7 @@ const Calendar = () => {
       case "call":    return <Phone size={12} />;
       case "deadline":return <Clock size={12} />;
       case "teams":   return <Video size={12} />;
+      case "task":    return <CheckSquare size={12} />;
       default:        return <CalendarIcon size={12} />;
     }
   };

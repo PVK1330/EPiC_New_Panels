@@ -13,6 +13,7 @@ import {
   verifyTwoFactor,
 } from "../services/auth.service";
 import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
+import { getAuthUserAndToken } from "../utils/authResponse";
 
 const VIEWS = {
   login: "login",
@@ -82,6 +83,7 @@ const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
 
   const [registerForm, setRegisterForm] = useState({
     firstName: "",
@@ -168,14 +170,36 @@ const Login = () => {
         email: form.email,
         password: form.password,
       });
-      if (res.data?.requires_2fa) {
+
+      if (!res) {
+        throw new Error("No response received from authentication server");
+      }
+
+      const requires2fa =
+        res?.data?.requires_2fa ||
+        res?.requires_2fa ||
+        res?.data?.data?.requires_2fa;
+
+      if (requires2fa) {
         setPendingLogin({ email: form.email, password: form.password });
         setView(VIEWS.twoFactor);
       } else {
-        const { user: userData, token: jwtToken } = res.data;
+        const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
+
+        if (!userData || !jwtToken) {
+          throw new Error(res.message || "Invalid credentials or response structure");
+        }
+
         const role = ROLE_NAMES[userData.role_id] || "candidate";
         dispatch(
-          setCredentials({ user: { ...userData, role }, token: jwtToken }),
+          setCredentials({
+            user: {
+              ...userData,
+              role,
+              organisation_id: userData.organisation_id ?? null,
+            },
+            token: jwtToken,
+          }),
         );
         navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
       }
@@ -199,7 +223,7 @@ const Login = () => {
         password: registerForm.password,
         country_code: selectedCountry.code,
         mobile: registerForm.phone.trim(),
-        role_id: 3,
+        role_id: 1,
       });
       sessionStorage.setItem("pending_otp_email", registerForm.email.trim());
       navigate("/verify-otp");
@@ -246,10 +270,27 @@ const Login = () => {
         password: pendingLogin.password,
         token: twoFactorCode,
       });
-      const { user: userData, token: jwtToken } = res.data;
+
+      if (!res) {
+        throw new Error("No response received from 2FA server");
+      }
+
+      const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
+
+      if (!userData || !jwtToken) {
+        throw new Error(res.message || "Invalid 2FA code or server response");
+      }
+
       const role = ROLE_NAMES[userData.role_id] || "candidate";
       dispatch(
-        setCredentials({ user: { ...userData, role }, token: jwtToken }),
+        setCredentials({
+          user: {
+            ...userData,
+            role,
+            organisation_id: userData.organisation_id ?? null,
+          },
+          token: jwtToken,
+        }),
       );
       navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
     } catch (err) {

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getEmployeeRecords } from "../../services/licenceApi";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -21,80 +22,36 @@ const EmployeeRecords = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
-  const [employees, setEmployees] = useState([
-    {
-      id: 1,
-      name: "Ahmed Khan",
-      nationality: "Pakistan",
-      visaType: "Skilled Worker",
-      niNumber: "AB123456C",
-      email: "ahmed.khan@company.com",
-      phone: "+44 20 7123 4567",
-      startDate: "2023-01-15",
-      status: "Active",
-      documents: {
-        passport: "complete",
-        visaCopy: "complete",
-        cosCopy: "complete",
-        contract: "complete",
-        payslips: "partial",
-      },
-    },
-    {
-      id: 2,
-      name: "Priya Sharma",
-      nationality: "India",
-      visaType: "Skilled Worker",
-      niNumber: "CD234567D",
-      email: "priya.sharma@company.com",
-      phone: "+44 20 7123 4568",
-      startDate: "2023-03-20",
-      status: "Active",
-      documents: {
-        passport: "complete",
-        visaCopy: "complete",
-        cosCopy: "complete",
-        contract: "complete",
-        payslips: "complete",
-      },
-    },
-    {
-      id: 3,
-      name: "John Smith",
-      nationality: "United Kingdom",
-      visaType: "British Citizen",
-      niNumber: "EF345678E",
-      email: "john.smith@company.com",
-      phone: "+44 20 7123 4569",
-      startDate: "2022-11-01",
-      status: "Active",
-      documents: {
-        passport: "complete",
-        visaCopy: "complete",
-        cosCopy: "complete",
-        contract: "complete",
-        payslips: "complete",
-      },
-    },
-    {
-      id: 4,
-      name: "Sarah Johnson",
-      nationality: "United States",
-      visaType: "Skilled Worker",
-      niNumber: "GH456789F",
-      email: "sarah.johnson@company.com",
-      phone: "+44 20 7123 4570",
-      startDate: "2023-06-10",
-      status: "On Leave",
-      documents: {
-        passport: "complete",
-        visaCopy: "complete",
-        cosCopy: "complete",
-        contract: "complete",
-        payslips: "partial",
-      },
-    },
-  ]);
+  const [employees, setEmployees] = useState([]);
+
+  useEffect(() => {
+    getEmployeeRecords()
+      .then((res) => {
+        const workers = res.data?.data || [];
+        setEmployees(
+          workers.map((w) => ({
+            id: w.id ?? w.candidateId,
+            name: `${w.candidate?.first_name || ""} ${w.candidate?.last_name || ""}`.trim() || "Worker",
+            email: w.candidate?.email || "",
+            phone: w.candidate?.mobile || "",
+            jobTitle: w.jobTitle || "",
+            visaType: w.visaType || "-",
+            nationality: w.nationality || "-",
+            niNumber: "-",
+            startDate: w.startDate || (w.created_at ? String(w.created_at).slice(0, 10) : "-"),
+            status: w.status || "—",
+            documents: w.documents || {
+              passport: "risk",
+              visaCopy: "risk",
+              cosCopy: "risk",
+              contract: "risk",
+              payslips: "risk",
+            },
+          }))
+        );
+      })
+      .catch(() => {});
+  }, []);
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -130,7 +87,7 @@ const EmployeeRecords = () => {
   const filteredEmployees = employees.filter((employee) => {
     const matchesSearch =
       employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.niNumber.toLowerCase().includes(searchQuery.toLowerCase());
+      (employee.niNumber || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter =
       filterType === "all" ||
       (filterType === "active" && employee.status === "Active") ||

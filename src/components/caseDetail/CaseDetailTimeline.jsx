@@ -17,11 +17,14 @@ const CaseDetailTimeline = ({ items }) => {
       <h3 className="text-sm font-black text-secondary mb-6 pb-2 border-b border-gray-100">
         Case Timeline (Immutable Activity Log)
       </h3>
+      {items.length === 0 ? (
+        <p className="text-sm text-gray-400">No timeline events yet.</p>
+      ) : (
       <div className="relative pl-2">
         <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gray-200" aria-hidden />
         <ul className="space-y-6">
-          {items.map((item) => (
-            <li key={item.id} className="relative flex gap-4 pl-8">
+          {items.map((item, i) => (
+            <li key={item.id ?? i} className="relative flex gap-4 pl-8">
               <span
                 className={`absolute left-0 top-1.5 w-3 h-3 rounded-full shrink-0 ${dotClass[item.dot] || dotClass.done}`}
               />
@@ -34,6 +37,7 @@ const CaseDetailTimeline = ({ items }) => {
           ))}
         </ul>
       </div>
+      )}
     </motion.div>
   );
 };

@@ -1,66 +1,72 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import NotificationsPanel from "../../components/notifications/NotificationsPanel";
-
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: "n1",
-    icon: "📤",
-    type: "info",
-    title: "Document request — Certificate of Sponsorship",
-    body: "Your caseworker has requested your Certificate of Sponsorship from your employer.",
-    time: "2 hours ago",
-    unread: true,
-  },
-  {
-    id: "n2",
-    icon: "❌",
-    type: "alert",
-    title: "Document rejected — Bank statement (February)",
-    body: "Your bank statement was rejected. Please re-upload with a balance of £1,270+ for 28 days.",
-    time: "11 Apr, 10:32am",
-    unread: true,
-  },
-  {
-    id: "n3",
-    icon: "💰",
-    type: "warning",
-    title: "Payment reminder — £800 balance due",
-    body: "Your remaining balance of £800 is due by 30 Apr 2026.",
-    time: "10 Apr, 9:00am",
-    unread: true,
-  },
-  {
-    id: "n4",
-    icon: "📅",
-    type: "warning",
-    title: "Deadline alert — Passport upload",
-    body: "Your passport upload is due on 18 Apr. Don't miss this deadline.",
-    time: "10 Apr, 8:00am",
-    unread: true,
-  },
-  {
-    id: "n5",
-    icon: "✅",
-    type: "success",
-    title: "Document approved — Employment contract",
-    body: "Your employment contract has been reviewed and approved.",
-    time: "9 Apr, 4:00pm",
-    unread: false,
-  },
-  {
-    id: "n6",
-    icon: "🚀",
-    type: "success",
-    title: "Case created — VT-2024-0841",
-    body: "Your visa application case has been created. Welcome!",
-    time: "5 Apr, 9:00am",
-    unread: false,
-  },
-];
+import {
+  getNotifications,
+  markNotificationAsRead,
+} from "../../services/notificationApi";
 
 export default function CandidateNotifications() {
   const [filter, setFilter] = useState("all");
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    setIsLoading(true);
+    try {
+      const res = await getNotifications();
+      if (res.data?.status === "success") {
+        const mappedNotifications = (res.data.data.notifications || []).map(n => ({
+          id: n.id,
+          icon: getIconForType(n.type),
+          type: n.type === 'error' ? 'alert' : n.type === 'warning' ? 'warning' : n.type,
+          title: n.title,
+          body: n.message,
+          time: formatTime(n.createdAt),
+          unread: !n.isRead,
+        }));
+        setNotifications(mappedNotifications);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return "Unknown";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const getIconForType = (type) => {
+    const map = {
+      info: "📤",
+      alert: "❌",
+      error: "❌",
+      warning: "�",
+      success: "✅",
+      case_assigned: "🚀",
+      case_status: "📅",
+      payment: "💰",
+      system: "ℹ️",
+    };
+    return map[type] || "📢";
+  };
 
   const filtered = useMemo(() => {
     if (filter === "all") return notifications;
@@ -68,8 +74,13 @@ export default function CandidateNotifications() {
     return notifications.filter((n) => n.type === filter);
   }, [notifications, filter]);
 
-  const markRead = (id) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: false } : n)));
+  const markRead = async (id) => {
+    try {
+      await markNotificationAsRead(id);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: false } : n)));
+    } catch (error) {
+      console.error("Failed to mark as read:", error);
+    }
   };
 
   return (

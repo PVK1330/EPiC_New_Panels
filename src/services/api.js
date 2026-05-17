@@ -3,25 +3,34 @@ import { getToken } from "../utils/storage";
 import store from "../store";
 import { logout } from "../store/slices/authSlice";
 import { API_BASE_URL } from "../utils/constants";
+import { getOrganisationSlugFromHost } from "../utils/organisationHost";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
-  headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
-// Attach token from storage on every request
+
+
+// Attach token from localStorage on every request
 api.interceptors.request.use((config) => {
-  const token = getToken();
+  const token = getToken() || localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const orgSlug = getOrganisationSlugFromHost();
+  if (orgSlug) {
+    config.headers["X-Organisation-Slug"] = orgSlug;
   }
   return config;
 });
 
 // Global error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       store.dispatch(logout());

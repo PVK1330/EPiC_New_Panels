@@ -2,14 +2,11 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import ProtectedRoute from './ProtectedRoute';
-import RoleRoute from './RoleRoute';
-
 import AdminLayout from '../layouts/AdminLayout';
-import CandidateLayout from '../layouts/CandidateLayout';
-import CaseworkerLayout from '../layouts/CaseworkerLayout';
-import BusinessLayout from '../layouts/BusinessLayout';
+import SuperadminLayout from '../layouts/SuperadminLayout';
 
 import CandidateDashboard from '../pages/candidate/CandidateDashboard';
+import CandidateVisaEnquiry from '../pages/candidate/CandidateVisaEnquiry';
 import Documents from '../pages/candidate/Documents';
 import DocumentChecklist from '../pages/candidate/DocumentChecklist';
 import UploadDocuments from '../pages/candidate/UploadDocuments';
@@ -36,6 +33,7 @@ import CaseworkerClients from '../pages/caseworker/CaseworkerClients';
 import CaseworkerPerformance from '../pages/caseworker/CaseworkerPerformance';
 import CaseworkerMessages from '../pages/caseworker/CaseworkerMessages';
 import CaseworkerFinance from '../pages/caseworker/CaseworkerFinance';
+import CaseworkerLicenceApplications from '../pages/caseworker/CaseworkerLicenceApplications';
 
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminCases from '../pages/admin/AdminCases';
@@ -51,15 +49,19 @@ import AdminUsers from '../pages/admin/AdminUsers';
 import AdminPermissions from '../pages/admin/AdminPermissions';
 import AdminCaseDetail from '../pages/admin/AdminCaseDetail';
 import AdminPipeline from '../pages/admin/AdminPipeline';
+import AdminImmigrationProcess from '../pages/admin/AdminImmigrationProcess';
 import AdminAssign from '../pages/admin/AdminAssign';
 import AdminEscalations from '../pages/admin/AdminEscalations';
 import AdminWorkload from '../pages/admin/AdminWorkload';
 import AdminDepartments from '../pages/admin/AdminDepartments';
 import AdminDocuments from '../pages/admin/AdminDocuments';
 import AdminMessages from '../pages/admin/AdminMessages';
+import AdminCalendar from '../pages/admin/AdminCalendar';
+import AdminLicenceApplications from '../pages/admin/AdminLicenceApplications';
 
 import BusinessDashboard from '../pages/business/BusinessDashboard';
-import BussinessProfile from '../pages/business/BusinessProfile';
+import BussinessProfile from '../pages/business/BusinessProfile'; import CandidateCalendar from '../pages/candidate/CandidateCalendar';
+import BusinessCalendar from '../pages/business/BusinessCalendar';
 import BusinessRegistration from '../pages/business/BusinessRegistration';
 import KeyPersonnel from '../pages/business/BusinessPersonnel';
 import LicenceStatus from '../pages/business/LicenceStatus';
@@ -80,10 +82,26 @@ import BusinessSettings from '../pages/business/BusinessSettings';
 import ReportingObligations from '../pages/business/ReportingObligations';
 import EmployeeRecords from '../pages/business/EmployeeRecords';
 import Invoices from '../pages/business/Invoices';
-import MyCandidates from '../pages/business/MyCandidates';
 import Reports from '../pages/business/Reports';
 import ApplyLicence from '../pages/business/ApplyLicence';
 import LicenceDocuments from '../pages/business/LicenceDocuments';
+
+// Superadmin Pages
+const SuperadminDashboard = lazy(() => import('../pages/superadmin/SuperadminDashboard'));
+const SuperadminOrganisations = lazy(() => import('../pages/superadmin/SuperadminOrganisations'));
+const SuperadminPlans = lazy(() => import('../pages/superadmin/SuperadminPlans'));
+const SuperadminBilling = lazy(() => import('../pages/superadmin/SuperadminBilling'));
+const SuperadminAuditLog = lazy(() => import('../pages/superadmin/SuperadminAuditLog'));
+const SuperadminSettings = lazy(() => import('../pages/superadmin/SuperadminSettings'));
+const SuperadminPayments = lazy(() => import('../pages/superadmin/SuperadminPayments'));
+const SuperadminTeam = lazy(() => import('../pages/superadmin/SuperadminTeam'));
+const SuperadminFrontend = lazy(() => import('../pages/superadmin/SuperadminFrontend'));
+const SuperadminProfile = lazy(() => import('../pages/superadmin/SuperadminProfile'));
+const SuperadminNotifications = lazy(() => import('../pages/superadmin/SuperadminNotifications'));
+
+
+import NotFoundPage from '../pages/NotFoundPage';
+import { getDashboardRouteForUser } from '../utils/authResponse';
 
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/auth/RegisterPage'));
@@ -92,6 +110,7 @@ const TwoFactorPage = lazy(() => import('../pages/auth/TwoFactorPage'));
 const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage'));
 const VerifyResetOtpPage = lazy(() => import('../pages/auth/VerifyResetOtpPage'));
 const SetPasswordPage = lazy(() => import('../pages/auth/SetPasswordPage'));
+const AuthHandoffPage = lazy(() => import('../pages/auth/AuthHandoffPage'));
 const DashboardPage = lazy(() => import('../pages/dashboard/DashboardPage'));
 
 const Fallback = () => (
@@ -108,17 +127,18 @@ const AppRouter = () => {
       <Routes>
         <Route
           path="/login"
-          element={token && user ? <Navigate to={`/${user.role}/dashboard`} replace /> : <LoginPage />}
+          element={token && user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <LoginPage />}
         />
         <Route
           path="/register"
-          element={token && user ? <Navigate to={`/${user.role}/dashboard`} replace /> : <RegisterPage />}
+          element={token && user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <RegisterPage />}
         />
         <Route path="/verify-otp" element={<VerifyOtpPage />} />
         <Route path="/2fa" element={<TwoFactorPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/verify-reset-otp" element={<VerifyResetOtpPage />} />
         <Route path="/set-password" element={<SetPasswordPage />} />
+        <Route path="/auth/handoff" element={<AuthHandoffPage />} />
 
         <Route
           path="/dashboard"
@@ -133,7 +153,7 @@ const AppRouter = () => {
           path="/"
           element={
             token && user
-              ? <Navigate to={`/${user.role}/dashboard`} replace />
+              ? <Navigate to={getDashboardRouteForUser(user)} replace />
               : <Navigate to="/login" replace />
           }
         />
@@ -161,24 +181,28 @@ const AppRouter = () => {
           <Route path="permissions" element={<AdminPermissions />} />
           <Route path="case-detail/:caseId?" element={<AdminCaseDetail />} />
           <Route path="pipeline" element={<AdminPipeline />} />
+          <Route path="case-process" element={<AdminImmigrationProcess />} />
+          <Route path="calendar" element={<AdminCalendar />} />
           <Route path="assign" element={<AdminAssign />} />
           <Route path="escalations" element={<AdminEscalations />} />
           <Route path="workload" element={<AdminWorkload />} />
           <Route path="departments" element={<AdminDepartments />} />
           <Route path="documents" element={<AdminDocuments />} />
           <Route path="messages" element={<AdminMessages />} />
+          <Route path="licence-requests" element={<AdminLicenceApplications />} />
         </Route>
 
         <Route
           path="/candidate"
           element={
             <ProtectedRoute allowedRoles={['candidate']}>
-              <CandidateLayout />
+              <AdminLayout />
             </ProtectedRoute>
           }
         >
           <Route index element={<Navigate to="/candidate/dashboard" replace />} />
           <Route path="dashboard" element={<CandidateDashboard />} />
+          <Route path="visa-enquiry" element={<CandidateVisaEnquiry />} />
           <Route path="application" element={<Application />} />
           <Route path="documents" element={<Navigate to="/candidate/document-checklist" replace />} />
           <Route path="document-checklist" element={<DocumentChecklist />} />
@@ -192,6 +216,7 @@ const AppRouter = () => {
           <Route path="messages" element={<CandidateMessages />} />
           <Route path="notifications" element={<CandidateNotifications />} />
           <Route path="appointments" element={<Appointments />} />
+          <Route path="calendar" element={<CandidateCalendar />} />
           <Route path="activity-log" element={<ActivityLog />} />
           <Route path="application-status" element={<ApplicationStatus />} />
           <Route path="timeline" element={<Navigate to="/candidate/application-status?tab=timeline" replace />} />
@@ -207,7 +232,7 @@ const AppRouter = () => {
           path="/caseworker"
           element={
             <ProtectedRoute allowedRoles={['caseworker']}>
-              <CaseworkerLayout />
+              <AdminLayout />
             </ProtectedRoute>
           }
         >
@@ -226,43 +251,68 @@ const AppRouter = () => {
           <Route path="messages" element={<CaseworkerMessages />} />
           <Route path="finance" element={<CaseworkerFinance />} />
           <Route path="performance" element={<CaseworkerPerformance />} />
+          <Route path="licence-reviews" element={<CaseworkerLicenceApplications />} />
         </Route>
 
         <Route
           path="/business"
           element={
             <ProtectedRoute allowedRoles={['business']}>
-              <BusinessLayout />
+              <AdminLayout />
             </ProtectedRoute>
           }
         >
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<BusinessDashboard />} />
+          <Route path="apply-licence" element={<ApplyLicence />} />
+          <Route path="licence-documents" element={<LicenceDocuments />} />
           <Route path="profile" element={<BussinessProfile />} />
           <Route path="personnel" element={<KeyPersonnel />} />
           <Route path="licence" element={<LicenceStatus />} />
-          <Route path="Businessregistration" element={<BusinessRegistration />} />
-          <Route path="compliacedocument" element={<Compliacedocument />} />
+          <Route path="business-registration" element={<BusinessRegistration />} />
+          <Route path="compliance-documents" element={<Compliacedocument />} />
           <Route path="compliance" element={<BusinessCompliance />} />
           <Route path="cosallocation" element={<CosAllocationpage />} />
           <Route path="account" element={<BusinessAccount />} />
           <Route path="sponsored-workers" element={<SponsoredWorkerForm />} />
           <Route path="cosregistrationform" element={<CosRegistrationForm />} />
-          <Route path="Sponsorworkerdetails" element={<SponsorWorkerDetails />} />
-          <Route path="licenceprocess" element={<LicenceProcess />} />
+          <Route path="worker-details" element={<SponsorWorkerDetails />} />
+          <Route path="licence-process" element={<LicenceProcess />} />
+          <Route path="admin-licence-view" element={<AdminLicenceApplications />} />
           <Route path="documents" element={<BusinessDocuments />} />
           <Route path="messages" element={<BusinessMessages />} />
           <Route path="notifications" element={<BusinessNotifications />} />
           <Route path="payment" element={<BusinessPayment />} />
           <Route path="workers" element={<BusinessWorkers />} />
           <Route path="settings" element={<BusinessSettings />} />
+          <Route path="calendar" element={<BusinessCalendar />} />
           <Route path="reporting-obligations" element={<ReportingObligations />} />
           <Route path="employee-records" element={<EmployeeRecords />} />
           <Route path="invoices" element={<Invoices />} />
-          <Route path="my-candidates" element={<MyCandidates />} />
           <Route path="reports" element={<Reports />} />
-          <Route path="apply-licence" element={<ApplyLicence />} />
-          <Route path="licence-documents" element={<LicenceDocuments />} />
+        </Route>
+
+        <Route
+          path="/superadmin"
+          element={
+            <ProtectedRoute allowedRoles={['superadmin']}>
+              <SuperadminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<SuperadminDashboard />} />
+          <Route path="organisations" element={<SuperadminOrganisations />} />
+          <Route path="plans" element={<SuperadminPlans />} />
+          <Route path="billing" element={<SuperadminBilling />} />
+          <Route path="audit-log" element={<SuperadminAuditLog />} />
+          <Route path="settings" element={<SuperadminSettings />} />
+          <Route path="notifications" element={<SuperadminNotifications />} />
+          <Route path="payments" element={<SuperadminPayments />} />
+          <Route path="team" element={<SuperadminTeam />} />
+          <Route path="frontend" element={<SuperadminFrontend />} />
+          <Route path="profile" element={<SuperadminProfile />} />
+
         </Route>
 
         <Route
@@ -289,7 +339,7 @@ const AppRouter = () => {
           <Route path="dashboard" element={<div className="text-center"><h1 className="text-2xl font-bold">Agent Dashboard</h1><p className="text-gray-500">Portal coming soon</p></div>} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
   );

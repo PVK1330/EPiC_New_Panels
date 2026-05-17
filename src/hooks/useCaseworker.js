@@ -11,10 +11,10 @@ export default function useCaseworker() {
   });
   const [loading, setLoading] = useState(true);
 
-  const fetchCaseworkers = useCallback(async (page, limit, search, status) => {
+  const fetchCaseworkers = useCallback(async (page, limit, search, status, department) => {
     setLoading(true);
     try {
-      const res = await getCaseworkers(page, limit, search, status);
+      const res = await getCaseworkers(page, limit, search, status, department);
       const payload = res.data?.data;
       setCaseworkers(payload?.caseworkers ?? []);
       setPagination(

@@ -1,17 +1,11 @@
 export const TAB_IDS = {
-  overview:    "overview",
-  matrix:      "matrix",
-  roles:       "roles",
-  permissions: "permissions",
-  userRoles:   "userRoles",
+  roles: 'roles',
+  users: 'users',
 };
 
 export const TABS = [
-  { id: TAB_IDS.overview,    label: "RBAC Overview",    icon: "chart" },
-  { id: TAB_IDS.matrix,      label: "Permission Matrix", icon: "grid" },
-  { id: TAB_IDS.roles,       label: "Role Management",  icon: "shield" },
-  { id: TAB_IDS.permissions, label: "Permissions",      icon: "lock" },
-  { id: TAB_IDS.userRoles,   label: "User Roles",       icon: "users" },
+  { id: 'roles',  label: 'Roles & Permissions', icon: 'shield' },
+  { id: 'users',  label: 'Users & Roles',        icon: 'users'  },
 ];
 
 export const CASE_VISIBILITY_OPTIONS = [
@@ -20,34 +14,22 @@ export const CASE_VISIBILITY_OPTIONS = [
   { value: "all",  label: "All Cases" },
 ];
 
-export const CREATE_ROLE_INHERIT_OPTIONS = [
-  { value: "",           label: "No inheritance (blank role)" },
-  { value: "admin",      label: "Admin" },
-  { value: "caseworker", label: "Caseworker" },
-  { value: "client",     label: "Client" },
-  { value: "sponsor",    label: "Sponsor" },
-];
-
 export const MODULE_ACTION_OPTIONS = [
-  { value: "read",   label: "Read" },
-  { value: "write",  label: "Write" },
-  { value: "update", label: "Update" },
+  { value: "view",   label: "View" },
+  { value: "create", label: "Create" },
+  { value: "edit",   label: "Edit" },
   { value: "delete", label: "Delete" },
   { value: "manage", label: "Manage" },
   { value: "export", label: "Export" },
-  { value: "approve","label": "Approve" },
 ];
 
 export const DEFAULT_MODULES = [
-  "Dashboard",
-  "Cases",
-  "Documents",
-  "Finance",
-  "Reports",
-  "Users",
-  "Settings",
-  "Audit",
-  "Escalations",
-  "Notifications",
-  "Permissions",
+  { name: "Dashboard", icon: "RiDashboardLine" },
+  { name: "Cases", icon: "RiFolderLine" },
+  { name: "Contacts", icon: "RiUserLine" },
+  { name: "Finance", icon: "RiMoneyDollarCircleLine" },
+  { name: "Reports", icon: "RiLineChartLine" },
+  { name: "Infrastructure", icon: "RiShieldLine" },
+  { name: "Security", icon: "RiLockLine" },
+  { name: "Audit Log", icon: "RiFileListLine" },
 ];

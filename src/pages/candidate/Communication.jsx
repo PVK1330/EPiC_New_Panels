@@ -165,9 +165,9 @@ const Communication = () => {
 
   const messagesByThread = threadMessages;
 
-  const sendMessage = () => {
+  const sendMessage = (file) => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text && !file) return false;
     setThreadMessages((prev) => ({
       ...prev,
       [activeThreadId]: [
@@ -177,10 +177,12 @@ const Communication = () => {
           from: "me",
           text,
           meta: `You · Just now`,
+          attachment: file ? file.name : null,
         },
       ],
     }));
     setDraft("");
+    return true;
   };
 
   return (

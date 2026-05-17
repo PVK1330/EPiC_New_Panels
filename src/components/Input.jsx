@@ -12,16 +12,16 @@ const Input = ({
   rows,
   readOnly = false,
 }) => {
-  const fieldCls = `w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 transition-colors ${
-    readOnly ? "bg-gray-50 cursor-not-allowed text-gray-600" : "bg-white"
-  } ${error ? "border-primary" : "border-gray-200"}`;
+  const fieldCls = `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-400 ${
+    readOnly ? "bg-slate-50 cursor-not-allowed text-slate-500" : "bg-white"
+  } ${error ? "border-red-500" : "border-slate-200"}`;
 
   return (
-    <div className={`flex flex-col gap-1 ${className}`}>
+    <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
-        <label htmlFor={name} className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+        <label htmlFor={name} className="text-sm font-medium text-slate-700">
           {label}
-          {required && <span className="text-primary ml-1">*</span>}
+          {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
 
@@ -65,7 +65,7 @@ const Input = ({
         />
       )}
 
-      {error && <span className="text-xs text-primary">{error}</span>}
+      {error && <span className="text-xs text-red-500">{error}</span>}
     </div>
   );
 };

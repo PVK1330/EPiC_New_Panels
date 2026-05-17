@@ -1,11 +1,37 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FiEye, FiDownload, FiPlus } from "react-icons/fi";
+import { FiEye, FiDownload, FiPlus, FiEdit2, FiTrash2, FiUserCheck } from "react-icons/fi";
 import { RiAlarmWarningLine } from "react-icons/ri";
 import { Loader2, X } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
-import { getEscalations, createEscalation } from "../../services/escalationApi";
+import { getEscalations, createEscalation, updateEscalation, assignEscalation, deleteEscalation, exportEscalationsExcel } from "../../services/escalationApi";
+import { getCases } from "../../services/caseApi";
+import { getAdmins } from "../../services/adminApi";
+
+const OTHER_CATEGORY_MARKER = /\n\n\(Other category:\s([\s\S]+?)\)\s*$/;
+
+const parseTriggerStoredWithOtherCategory = (triggerText, triggerType) => {
+  if (triggerType !== "Other" || typeof triggerText !== "string") {
+    return { triggerBody: triggerText || "", otherCategory: "" };
+  }
+  const m = triggerText.match(OTHER_CATEGORY_MARKER);
+  if (m) {
+    return { triggerBody: triggerText.slice(0, m.index), otherCategory: m[1].trim() };
+  }
+  return { triggerBody: triggerText || "", otherCategory: "" };
+};
+
+const buildTriggerForApi = (trigger, triggerType, otherCategory) => {
+  const trimmed = (trigger || "").trim();
+  const other = (otherCategory || "").trim();
+  if (triggerType === "Other" && other) {
+    return trimmed ? `${trimmed}\n\n(Other category: ${other})` : `(Other category: ${other})`;
+  }
+  return trimmed;
+};
+
+const omitTriggerTypeOther = ({ triggerTypeOther, ...rest }) => rest;
 
 const SEVERITY_FILTER = ["All", "Critical", "High", "Medium", "Low"];
 const TYPE_FILTER = ["All", "Deadline Breach", "Missing Docs", "Stuck Case"];
@@ -16,6 +42,8 @@ const AdminEscalations = () => {
   const [typ, setTyp] = useState("All");
   const [loading, setLoading] = useState(false);
   const [escalations, setEscalations] = useState([]);
+  const [cases, setCases] = useState([]);
+  const [admins, setAdmins] = useState([]);
   const [kpi, setKpi] = useState({
     critical: 0,
     high: 0,
@@ -23,27 +51,67 @@ const AdminEscalations = () => {
     resolvedToday: 0,
   });
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [editingEscalation, setEditingEscalation] = useState(null);
+  const [assigningEscalation, setAssigningEscalation] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [formData, setFormData] = useState({
     caseId: "",
     candidate: "",
     severity: "Medium",
     trigger: "",
-    triggerType: "Other",
-    assignedAdminId: "",
-    relatedCaseId: "",
+    triggerType: "Deadline Breach",
+    triggerTypeOther: "",
+    assignedAdminId: null,
+    relatedCaseId: null,
     notes: "",
+  });
+  const [assignData, setAssignData] = useState({
+    assignedAdminId: null,
   });
 
   useEffect(() => {
-    fetchEscalations();
+    fetchCases();
+    fetchAdmins();
   }, []);
 
-  const fetchEscalations = async () => {
+  const fetchAdmins = async () => {
+    try {
+      const res = await getAdmins();
+      if (res.data?.data?.admins) {
+        setAdmins(res.data.data.admins);
+      }
+    } catch (e) {
+      console.error("Failed to fetch admins:", e);
+    }
+  };
+
+  const fetchCases = async () => {
+    try {
+      const res = await getCases(1, 1000);
+      if (res.data?.data?.cases) {
+        setCases(res.data.data.cases);
+      }
+    } catch (e) {
+      console.error("Failed to fetch cases:", e);
+    }
+  };
+
+  const listQueryParams = useCallback(() => {
+    const params = {};
+    if (sev !== "All") params.severity = sev;
+    if (typ !== "All") params.quickTypeFilter = typ;
+    return params;
+  }, [sev, typ]);
+
+  const fetchEscalations = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getEscalations();
-      console.log("Escalations API response:", res);
+      const res = await getEscalations(listQueryParams());
       if (res.data?.status === "success") {
         const data = res.data.data;
         setEscalations(data.escalations || []);
@@ -54,13 +122,54 @@ const AdminEscalations = () => {
     } finally {
       setLoading(false);
     }
+  }, [listQueryParams]);
+
+  useEffect(() => {
+    fetchEscalations();
+  }, [fetchEscalations]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await exportEscalationsExcel(listQueryParams());
+      const blob = new Blob([res.data], {
+        type:
+          res.headers["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `escalations_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast({ message: "Escalations exported successfully", variant: "success" });
+    } catch (e) {
+      console.error("Failed to export escalations:", e);
+      showToast({ message: "Failed to export escalations", variant: "danger" });
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleCreateEscalation = async (e) => {
     e.preventDefault();
+    if (formData.triggerType === "Other" && !formData.triggerTypeOther?.trim()) {
+      showToast({
+        message: 'Please specify what "Other" means (e.g. a short category or label).',
+        variant: "danger",
+      });
+      return;
+    }
     setCreating(true);
     try {
-      const res = await createEscalation(formData);
+      const payload = {
+        ...omitTriggerTypeOther(formData),
+        trigger: buildTriggerForApi(formData.trigger, formData.triggerType, formData.triggerTypeOther),
+      };
+      const res = await createEscalation(payload);
       if (res.data?.status === "success") {
         showToast({
           message: "Escalation created successfully",
@@ -72,9 +181,10 @@ const AdminEscalations = () => {
           candidate: "",
           severity: "Medium",
           trigger: "",
-          triggerType: "Other",
-          assignedAdminId: "",
-          relatedCaseId: "",
+          triggerType: "Deadline Breach",
+          triggerTypeOther: "",
+          assignedAdminId: null,
+          relatedCaseId: null,
           notes: "",
         });
         fetchEscalations();
@@ -88,6 +198,133 @@ const AdminEscalations = () => {
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleUpdateEscalation = async (e) => {
+    e.preventDefault();
+    if (formData.triggerType === "Other" && !formData.triggerTypeOther?.trim()) {
+      showToast({
+        message: 'Please specify what "Other" means (e.g. a short category or label).',
+        variant: "danger",
+      });
+      return;
+    }
+    setUpdating(true);
+    try {
+      const payload = {
+        ...omitTriggerTypeOther(formData),
+        trigger: buildTriggerForApi(formData.trigger, formData.triggerType, formData.triggerTypeOther),
+      };
+      const res = await updateEscalation(editingEscalation.id, payload);
+      if (res.data?.status === "success") {
+        showToast({
+          message: "Escalation updated successfully",
+          variant: "success",
+        });
+        setShowEditModal(false);
+        setEditingEscalation(null);
+        setFormData({
+          caseId: "",
+          candidate: "",
+          severity: "Medium",
+          trigger: "",
+          triggerType: "Deadline Breach",
+          triggerTypeOther: "",
+          assignedAdminId: null,
+          relatedCaseId: null,
+          notes: "",
+        });
+        fetchEscalations();
+      }
+    } catch (e) {
+      console.error("Failed to update escalation:", e);
+      showToast({
+        message: "Failed to update escalation",
+        variant: "danger",
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleAssignEscalation = async (e) => {
+    e.preventDefault();
+    setAssigning(true);
+    try {
+      const res = await assignEscalation(assigningEscalation.id, assignData);
+      if (res.data?.status === "success") {
+        showToast({
+          message: "Escalation assigned successfully",
+          variant: "success",
+        });
+        setShowAssignModal(false);
+        setAssigningEscalation(null);
+        setAssignData({ assignedAdminId: null });
+        fetchEscalations();
+      }
+    } catch (e) {
+      console.error("Failed to assign escalation:", e);
+      showToast({
+        message: "Failed to assign escalation",
+        variant: "danger",
+      });
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleDeleteEscalation = async (id) => {
+    if (!confirm("Are you sure you want to delete this escalation?")) return;
+    try {
+      const res = await deleteEscalation(id);
+      if (res.data?.status === "success") {
+        showToast({
+          message: "Escalation deleted successfully",
+          variant: "success",
+        });
+        fetchEscalations();
+      }
+    } catch (e) {
+      console.error("Failed to delete escalation:", e);
+      showToast({
+        message: "Failed to delete escalation",
+        variant: "danger",
+      });
+    }
+  };
+
+  const openEditModal = (esc) => {
+    setEditingEscalation(esc);
+    const tt = esc.triggerType || "Other";
+    const { triggerBody, otherCategory } = parseTriggerStoredWithOtherCategory(esc.trigger, tt);
+    setFormData({
+      caseId: esc.caseId || "",
+      candidate: esc.candidate || "",
+      severity: esc.severity || "Medium",
+      trigger: triggerBody,
+      triggerType: tt,
+      triggerTypeOther: otherCategory,
+      assignedAdminId: esc.assignedAdminId || null,
+      relatedCaseId: esc.relatedCaseId || null,
+      notes: esc.notes || "",
+    });
+    setShowEditModal(true);
+  };
+
+  const handleCaseChange = (caseId) => {
+    const selectedCase = cases.find(c => c.caseId === caseId);
+    setFormData({
+      ...formData,
+      caseId,
+      candidate: selectedCase?.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : "",
+      relatedCaseId: selectedCase?.id || null,
+    });
+  };
+
+  const openAssignModal = (esc) => {
+    setAssigningEscalation(esc);
+    setAssignData({ assignedAdminId: esc.assignedAdminId || null });
+    setShowAssignModal(true);
   };
 
   // Map API data to UI format
@@ -118,18 +355,6 @@ const AdminEscalations = () => {
     };
   });
 
-  const filtered = useMemo(() => {
-    return mappedRows.filter((r) => {
-      const matchSev = sev === "All" || r.severity === sev || (sev === "Critical" && r.severity === "Critical");
-      const matchType =
-        typ === "All" ||
-        (typ === "Deadline Breach" && r.trigger.includes("Deadline")) ||
-        (typ === "Missing Docs" && r.trigger.includes("BRP")) ||
-        (typ === "Stuck Case" && r.trigger.includes("stuck"));
-      return matchSev && matchType;
-    });
-  }, [sev, typ, mappedRows]);
-
   return (
     <motion.div
       className="space-y-6 pb-10"
@@ -156,9 +381,11 @@ const AdminEscalations = () => {
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm shrink-0 self-start"
+            onClick={handleExport}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm shrink-0 self-start disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FiDownload size={14} />
+            {exporting ? <Loader2 size={14} className="animate-spin" /> : <FiDownload size={14} />}
             Export
           </button>
         </div>
@@ -209,7 +436,7 @@ const AdminEscalations = () => {
           <table className="w-full min-w-[900px]">
             <thead>
               <tr className="bg-gray-50 text-left">
-                {["Case ID", "Candidate", "Severity", "Trigger Reason", "Assigned Admin", "Days Open", "Status", ""].map((h, i) => (
+                {["Case ID", "Candidate", "Severity", "Trigger Reason", "Assigned Admin", "Days Open", "Status", "Actions"].map((h, i) => (
                   <th key={i} className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">
                     {h || " "}
                   </th>
@@ -217,14 +444,14 @@ const AdminEscalations = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {!loading && filtered.length === 0 ? (
+              {!loading && mappedRows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-5 py-12 text-center text-sm text-gray-400">
                     No escalations match your filters.
                   </td>
                 </tr>
               ) : (
-                filtered.map((r) => (
+                mappedRows.map((r) => (
                   <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
                     <td className="px-4 py-3 font-mono text-sm font-bold text-primary whitespace-nowrap">#{r.caseId}</td>
                     <td className="px-4 py-3 text-sm font-semibold text-secondary whitespace-nowrap">{r.candidate}</td>
@@ -238,13 +465,36 @@ const AdminEscalations = () => {
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${r.statusClass}`}>{r.status}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        to={`/admin/case-detail/${r.caseId}`}
-                        className="inline-flex p-2 rounded-lg text-gray-400 hover:text-secondary hover:bg-blue-50 transition-colors"
-                        title="View"
-                      >
-                        <FiEye size={15} />
-                      </Link>
+                      <div className="flex items-center gap-1">
+                        <Link
+                          to={`/admin/case-detail/${r.caseId}`}
+                          className="inline-flex p-2 rounded-lg text-gray-400 hover:text-secondary hover:bg-blue-50 transition-colors"
+                          title="View"
+                        >
+                          <FiEye size={15} />
+                        </Link>
+                        <button
+                          onClick={() => openEditModal(escalations.find(e => e.id === r.id))}
+                          className="inline-flex p-2 rounded-lg text-gray-400 hover:text-secondary hover:bg-blue-50 transition-colors"
+                          title="Edit"
+                        >
+                          <FiEdit2 size={15} />
+                        </button>
+                        <button
+                          onClick={() => openAssignModal(escalations.find(e => e.id === r.id))}
+                          className="inline-flex p-2 rounded-lg text-gray-400 hover:text-secondary hover:bg-blue-50 transition-colors"
+                          title="Assign"
+                        >
+                          <FiUserCheck size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEscalation(r.id)}
+                          className="inline-flex p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                          title="Delete"
+                        >
+                          <FiTrash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -269,14 +519,19 @@ const AdminEscalations = () => {
             <form onSubmit={handleCreateEscalation} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Case ID</label>
-                <input
-                  type="text"
+                <select
                   value={formData.caseId}
-                  onChange={(e) => setFormData({ ...formData, caseId: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm"
-                  placeholder="e.g., VF-2835"
+                  onChange={(e) => handleCaseChange(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
                   required
-                />
+                >
+                  <option value="">Select a case</option>
+                  {cases.map((c) => (
+                    <option key={c.caseId} value={c.caseId}>
+                      {c.caseId} — {c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown'}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Candidate Name</label>
@@ -284,9 +539,9 @@ const AdminEscalations = () => {
                   type="text"
                   value={formData.candidate}
                   onChange={(e) => setFormData({ ...formData, candidate: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm"
-                  placeholder="e.g., John Doe"
-                  required
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-gray-50"
+                  placeholder="Auto-populated from case selection"
+                  readOnly
                 />
               </div>
               <div>
@@ -317,7 +572,14 @@ const AdminEscalations = () => {
                 <label className="block text-sm font-bold text-gray-700 mb-1">Trigger Type</label>
                 <select
                   value={formData.triggerType}
-                  onChange={(e) => setFormData({ ...formData, triggerType: e.target.value })}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setFormData({
+                      ...formData,
+                      triggerType: next,
+                      triggerTypeOther: next === "Other" ? formData.triggerTypeOther : "",
+                    });
+                  }}
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
                 >
                   <option value="Deadline Breach">Deadline Breach</option>
@@ -327,6 +589,22 @@ const AdminEscalations = () => {
                   <option value="Other">Other</option>
                 </select>
               </div>
+              {formData.triggerType === "Other" && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">
+                    Specify {'"Other"'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.triggerTypeOther}
+                    onChange={(e) => setFormData({ ...formData, triggerTypeOther: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
+                    placeholder="e.g. Communication breakdown, Partner delay, Wrong visa type..."
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Short label so the team knows which kind of escalation this is.</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Related Case ID</label>
                 <input
@@ -367,6 +645,209 @@ const AdminEscalations = () => {
                     </>
                   ) : (
                     "Create Escalation"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-black text-secondary">Edit Escalation</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateEscalation} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Case ID</label>
+                <select
+                  value={formData.caseId}
+                  onChange={(e) => handleCaseChange(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
+                  required
+                >
+                  <option value="">Select a case</option>
+                  {cases.map((c) => (
+                    <option key={c.caseId} value={c.caseId}>
+                      {c.caseId} — {c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Candidate Name</label>
+                <input
+                  type="text"
+                  value={formData.candidate}
+                  onChange={(e) => setFormData({ ...formData, candidate: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-gray-50"
+                  placeholder="Auto-populated from case selection"
+                  readOnly
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Severity</label>
+                <select
+                  value={formData.severity}
+                  onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
+                >
+                  <option value="Critical">Critical</option>
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Trigger Reason</label>
+                <textarea
+                  value={formData.trigger}
+                  onChange={(e) => setFormData({ ...formData, trigger: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm resize-none"
+                  rows={3}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Trigger Type</label>
+                <select
+                  value={formData.triggerType}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setFormData({
+                      ...formData,
+                      triggerType: next,
+                      triggerTypeOther: next === "Other" ? formData.triggerTypeOther : "",
+                    });
+                  }}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
+                >
+                  <option value="Deadline Breach">Deadline Breach</option>
+                  <option value="Missing Docs">Missing Docs</option>
+                  <option value="Stuck Case">Stuck Case</option>
+                  <option value="Payment Issue">Payment Issue</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              {formData.triggerType === "Other" && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">
+                    Specify {'"Other"'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.triggerTypeOther}
+                    onChange={(e) => setFormData({ ...formData, triggerTypeOther: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
+                    placeholder="e.g. Communication breakdown, Partner delay, Wrong visa type..."
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Short label so the team knows which kind of escalation this is.</p>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Related Case ID</label>
+                <input
+                  type="text"
+                  value={formData.relatedCaseId}
+                  onChange={(e) => setFormData({ ...formData, relatedCaseId: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm resize-none"
+                  rows={2}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-600 bg-gray-100 border border-gray-200 rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-secondary border border-secondary rounded-xl hover:bg-secondary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {updating ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Escalation"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAssignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-black text-secondary">Assign Escalation</h2>
+              <button
+                onClick={() => setShowAssignModal(false)}
+                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleAssignEscalation} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Assign to Admin</label>
+                <select
+                  value={assignData.assignedAdminId || ""}
+                  onChange={(e) => setAssignData({ ...assignData, assignedAdminId: e.target.value ? parseInt(e.target.value) : null })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
+                  required
+                >
+                  <option value="">Select an admin</option>
+                  {admins.map((admin) => (
+                    <option key={admin.id} value={admin.id}>
+                      {admin.first_name} {admin.last_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAssignModal(false)}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-600 bg-gray-100 border border-gray-200 rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={assigning}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-secondary border border-secondary rounded-xl hover:bg-secondary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {assigning ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Assigning...
+                    </>
+                  ) : (
+                    "Assign"
                   )}
                 </button>
               </div>

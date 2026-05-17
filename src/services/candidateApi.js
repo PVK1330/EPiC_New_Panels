@@ -1,29 +1,73 @@
 import api from "./api";
 
-export const getCandidates = (page = 1, limit = 10, search = "", status = "") =>
-  api.get(`/api/candidate`, { params: { page, limit, search, status } });
+export const getCandidates = (page = 1, limit = 10, search = "", status = "", visaType = "", paymentStatus = "") =>
+  api.get(`/api/admin/candidates`, { params: { page, limit, search, status, visaType, paymentStatus } });
 
-export const getCandidateById = (id) => api.get(`/api/candidate/${id}`);
+export const getCandidateById = (id) => api.get(`/api/admin/candidates/${id}`);
 
-export const createCandidate = (data) => api.post(`/api/candidate/`, data);
+// Enhanced function to fetch candidate with full application data
+export const getCandidateWithApplication = (id) => api.get(`/api/admin/candidates/${id}`);
 
-export const updateCandidate = (id, data) => api.put(`/api/candidate/${id}`, data);
+export const createCandidate = (data) => api.post(`/api/admin/candidates/`, data);
+
+export const updateCandidate = (id, data) => api.put(`/api/admin/candidates/${id}`, data);
 
 export const toggleCandidateStatus = (id) =>
-  api.patch(`/api/candidate/${id}/toggle-status`);
+  api.patch(`/api/admin/candidates/${id}/toggle-status`);
 
 export const resetCandidatePassword = (id, data) =>
-  api.patch(`/api/candidate/${id}/reset-password`, data);
+  api.patch(`/api/admin/candidates/${id}/reset-password`, data);
 
-export const deleteCandidate = (id) => api.delete(`/api/candidate/${id}`);
+export const deleteCandidate = (id) => api.delete(`/api/admin/candidates/${id}`);
 
 export const bulkImportCandidates = (file) => {
   const formData = new FormData();
   formData.append('file', file);
-  return api.post(`/api/candidate/bulk-import`, formData, {
+  return api.post(`/api/admin/candidates/bulk-import`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
 };
 
 export const exportCandidates = (params = {}) =>
-  api.get(`/api/candidate/export`, { params, responseType: 'blob' });
+  api.get(`/api/admin/candidates/export`, { params, responseType: 'blob' });
+
+export const updateAdminCandidateApplication = (id, data) =>
+  api.put(`/api/admin/candidates/${id}/application`, data);
+
+export const exportCandidateApplicationsExcel = (params = {}) =>
+  api.get(`/api/admin/candidates/applications/export`, {
+    params,
+    responseType: "blob",
+  });
+
+export const importCandidateApplicationsExcel = (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.post(`/api/admin/candidates/applications/import`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};
+
+// ── Candidate-facing application routes (/api/candidate/application) ────────
+
+/** Fetch the currently logged-in candidate's saved application */
+export const getMyApplication = () =>
+  api.get('/api/candidate/application');
+
+export const getCandidateApplicationFieldSettings = () =>
+  api.get('/api/candidate/application/field-settings');
+
+export const getCandidateApplicationCustomFields = () =>
+  api.get('/api/candidate/application/custom-fields');
+
+/** Submit the completed application (creates or overwrites, status → submitted) */
+export const submitApplication = (data) =>
+  api.post('/api/candidate/application', data);
+
+/** Save progress as a draft without changing submission status */
+export const saveApplicationDraft = (data) =>
+  api.put('/api/candidate/application', data);
+
+/** Unlock a submitted application (admin / caseworker only) */
+export const unlockApplication = (candidateId) =>
+  api.patch(`/api/candidate/application/${candidateId}/unlock`);

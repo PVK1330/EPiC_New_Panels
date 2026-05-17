@@ -10,21 +10,24 @@ import {
   RiBuildingLine,
   RiLockLine,
   RiFolderOpenLine,
-  RiFileTextLine,
   RiGitBranchLine,
-  RiUserAddLine,
   RiAlarmWarningLine,
   RiBarChartLine,
   RiMoneyDollarCircleLine,
   RiLineChartLine,
-  RiFileList3Line,
+  RiStackLine,
   RiNotification2Line,
   RiMessage2Line,
   RiShieldCheckLine,
+  RiFileShieldLine,
   RiSettings3Line,
   RiLogoutBoxRLine,
-  RiQuestionLine,
   RiCloseLine,
+  RiCalendarLine,
+  RiUserStarLine,
+  RiContactsLine,
+  RiExchangeLine,
+  RiHistoryLine,
 } from "react-icons/ri";
 import eliteLogo from "../../assets/elitepic_logo.png";
 
@@ -35,56 +38,40 @@ const navSections = [
     ],
   },
   {
-    label: "User Management",
+    label: "People",
     items: [
-      { to: "/admin/admin-users",  label: "Admin Users",          icon: RiShieldUserLine   },
-      { to: "/admin/caseworkers",  label: "Case Workers",         icon: RiUserSettingsLine },
-      { to: "/admin/candidates",   label: "Clients / Candidates", icon: RiTeamLine         },
-      { to: "/admin/businesses",   label: "Sponsors / Businesses",icon: RiBuildingLine     },
+      { to: "/admin/admin-users",  label: "Admin Users",          icon: RiShieldUserLine },
+      { to: "/admin/caseworkers",  label: "Caseworkers",          icon: RiUserStarLine },
+      { to: "/admin/candidates",   label: "Clients",              icon: RiContactsLine },
+      { to: "/admin/businesses",   label: "Sponsors",             icon: RiBuildingLine },
     ],
   },
   {
-    label: "Access Control",
+    label: "Cases & Workflow",
     items: [
-      { to: "/admin/permissions", label: "Permissions & RBAC", icon: RiLockLine },
+      { to: "/admin/cases",             label: "All Cases",        icon: RiFolderOpenLine },
+      { to: "/admin/pipeline",          label: "Pipeline",         icon: RiExchangeLine },
+      { to: "/admin/case-process",      label: "Case Process",     icon: RiGitBranchLine },
+      { to: "/admin/calendar",          label: "Calendar",         icon: RiCalendarLine },
+      { to: "/admin/escalations",       label: "Escalations",      icon: RiAlarmWarningLine },
+      { to: "/admin/licence-requests",  label: "Licence Requests", icon: RiShieldCheckLine },
     ],
   },
   {
-    label: "Case Management",
+    label: "Analytics & Finance",
     items: [
-      { to: "/admin/cases",       label: "All Cases",        icon: RiFolderOpenLine  },
-      { to: "/admin/case-detail", label: "Case Detail",      icon: RiFileTextLine    },
-      { to: "/admin/pipeline",    label: "Pipeline",         icon: RiGitBranchLine   },
-      { to: "/admin/assign",      label: "Assign / Reassign",icon: RiUserAddLine     },
-      { to: "/admin/escalations", label: "Escalations",      icon: RiAlarmWarningLine},
+      { to: "/admin/workload",  label: "Workload",   icon: RiBarChartLine },
+      { to: "/admin/finance",   label: "Finance",    icon: RiMoneyDollarCircleLine },
+      { to: "/admin/reports",   label: "Reports",    icon: RiLineChartLine },
     ],
   },
   {
-    label: "Team",
+    label: "System",
     items: [
-      { to: "/admin/workload", label: "Workload Monitoring", icon: RiBarChartLine },
-    ],
-  },
-  {
-    label: "Finance",
-    items: [
-      { to: "/admin/finance", label: "Finance & Payments", icon: RiMoneyDollarCircleLine },
-    ],
-  },
-  {
-    label: "Reports",
-    items: [
-      { to: "/admin/reports", label: "Reporting & Analytics", icon: RiLineChartLine },
-    ],
-  },
-  {
-    label: "Tools",
-    items: [
-      // { to: "/admin/documents",   label: "Document Management", icon: RiFileList3Line    },
-      { to: "/admin/notifications",label: "Notifications",      icon: RiNotification2Line},
-      { to: "/admin/messages",    label: "Messages",            icon: RiMessage2Line     },
-      { to: "/admin/audit-logs",  label: "Compliance & Audits", icon: RiShieldCheckLine  },
-      { to: "/admin/settings",    label: "Settings",            icon: RiSettings3Line    },
+      { to: "/admin/notifications", label: "Notifications",icon: RiNotification2Line },
+      { to: "/admin/messages",      label: "Messages",     icon: RiMessage2Line },
+      { to: "/admin/audit-logs",    label: "Audit Log",    icon: RiHistoryLine },
+      { to: "/admin/settings",      label: "Settings",     icon: RiSettings3Line },
     ],
   },
 ];
@@ -143,7 +130,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
               <h2 className="text-base font-black text-secondary leading-none tracking-tight">
                 ElitePic
               </h2>
-              <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1.5 opacity-80">
+              <p className="text-[10px] font-black text-primary tracking-wide mt-1.5 opacity-80">
                 Admin Panel
               </p>
             </div>
@@ -170,48 +157,44 @@ const AdminSidebar = ({ isOpen, onClose }) => {
               className="mb-1"
             >
               {section.label && (
-                <p className="text-[9.5px] font-black uppercase tracking-[0.18em] text-gray-400 px-3 pt-3 pb-1.5">
+                <p className="text-[10px] font-black tracking-wide text-gray-400 px-3 pt-3 pb-1.5">
                   {section.label}
                 </p>
               )}
 
               <div className="space-y-0.5">
                 {section.items.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      onClick={() => {
-                        // Let React Router commit navigation first; closing the drawer in the same tick
-                        // can race with Outlet remount and cause a blank main area (esp. on mobile).
-                        queueMicrotask(() => onClose());
-                      }}
-                      end={item.to === "/admin/dashboard"}
-                      className={({ isActive }) =>
-                        `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 relative ${
-                          isActive
-                            ? "bg-primary text-white shadow-lg shadow-primary/20"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-primary"
-                        }`
-                      }
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <item.icon
-                            size={17}
-                            className={`shrink-0 transition-colors ${
-                              isActive
-                                ? "text-white"
-                                : "text-gray-400 group-hover:text-primary"
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => {
+                      queueMicrotask(() => onClose());
+                    }}
+                    end={item.to === "/admin/dashboard"}
+                    className={({ isActive }) =>
+                      `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 relative ${isActive
+                        ? "bg-primary text-white shadow-lg shadow-primary/20"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <item.icon
+                          size={17}
+                          className={`shrink-0 transition-colors ${isActive
+                            ? "text-white"
+                            : "text-gray-400 group-hover:text-primary"
                             }`}
-                          />
-                          <span className="truncate">{item.label}</span>
-                          {isActive && (
-                            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-white/25 rounded-l-full" />
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-                  ),
+                        />
+                        <span className="truncate tracking-tight">{item.label}</span>
+                        {isActive && (
+                          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-white rounded-r-full" />
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                ),
                 )}
               </div>
             </motion.div>
@@ -228,8 +211,8 @@ const AdminSidebar = ({ isOpen, onClose }) => {
               <p className="text-xs font-black text-secondary truncate">
                 {user?.name || "Admin"}
               </p>
-              <p className="text-[10px] font-bold text-gray-400 truncate uppercase tracking-wider">
-                Admin
+              <p className="text-[9px] font-black text-primary tracking-wider">
+                Administrator
               </p>
             </div>
             <button
@@ -240,17 +223,6 @@ const AdminSidebar = ({ isOpen, onClose }) => {
               <RiLogoutBoxRLine size={17} />
             </button>
           </div>
-
-          {/* <div className="mt-3 px-1 flex items-center justify-between">
-            <button
-              type="button"
-              className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-1.5"
-            >
-              <RiQuestionLine size={13} />
-              Support
-            </button>
-            <span className="text-[10px] font-bold text-gray-300">v1.0.2</span>
-          </div> */}
         </div>
       </aside>
     </>

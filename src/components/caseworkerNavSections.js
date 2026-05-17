@@ -5,133 +5,65 @@ import {
   ListChecks,
   Calendar,
   Upload,
-  Search,
   User,
   Users,
   MessageSquare,
-  // DollarSign,
+  DollarSign,
   Activity,
   UserCircle,
   CalendarClock,
-  Files,
-  Settings,
+  ShieldCheck,
 } from "lucide-react";
 
 /** Caseworker portal sidebar — sectioned nav aligned with portal workflow */
-export const caseworkerNavSections = [
+export const caseworkerNavSections = (taskCount = 0) => [
   {
-    title: "Dashboard",
-    standalone: true,
+    standalone: true, // no label shown
     items: [
-      {
-        to: "/caseworker/dashboard",
-        label: "Dashboard",
-        icon: LayoutDashboard,
-      },
+      { to: "/caseworker/dashboard", label: "Dashboard", icon: LayoutDashboard },
     ],
   },
   {
     title: "Cases",
-    standalone: true,
-    items: [{ to: "/caseworker/cases", label: "Cases", icon: Briefcase }],
+    items: [
+      { to: "/caseworker/cases",    label: "All Cases",  icon: Briefcase },
+      { to: "/caseworker/tasks",    label: "Tasks",      icon: ListChecks, badge: taskCount || null },
+      { to: "/caseworker/calendar", label: "Calendar",   icon: Calendar },
+    ],
   },
   {
-    title: "Workflow",
+    title: "Contacts",
     items: [
-      {
-        to: "/caseworker/pipeline",
-        label: "Pipeline view",
-        icon: BarChart3,
-      },
-      {
-        to: "/caseworker/tasks",
-        label: "Tasks",
-        icon: ListChecks,
-        badge: 5,
-      },
-      {
-        to: "/caseworker/calendar",
-        label: "Calendar",
-        icon: Calendar,
-      },
+      { to: "/caseworker/people/candidates",  label: "Candidates",      icon: User },
+      { to: "/caseworker/people/sponsors",    label: "Sponsors",         icon: Users },
+      { to: "/caseworker/licence-reviews",    label: "Licence Reviews",  icon: ShieldCheck },
     ],
   },
   {
     title: "Documents",
     items: [
-      {
-        to: "/caseworker/documents/upload",
-        label: "Document upload",
-        icon: Upload,
-      },
-      // {
-      //   to: "/caseworker/documents/missing",
-      //   label: "Missing docs",
-      //   icon: Search,
-      //   badge: 3,
-      // },
+      { to: "/caseworker/documents/upload", label: "Upload Documents", icon: Upload },
     ],
   },
   {
-    title: "People",
+    title: "Analytics",
     items: [
-      // {
-      //   to: "/caseworker/people/candidates",
-      //   label: "Candidate profiles",
-      //   icon: User,
-      // },
-      {
-        to: "/caseworker/people/sponsors",
-        label: "Sponsor profiles",
-        icon: Users,
-      },
+      { to: "/caseworker/pipeline",     label: "Pipeline",     icon: BarChart3 },
+      { to: "/caseworker/finance",      label: "Finance",      icon: DollarSign },
+      { to: "/caseworker/performance",  label: "Performance",  icon: Activity },
     ],
   },
   {
-    title: "Other",
+    title: "Inbox",
     items: [
-      {
-        to: "/caseworker/messages",
-        label: "Messages",
-        icon: MessageSquare,
-      },
-      // {
-      //   to: "/caseworker/finance",
-      //   label: "Finance",
-      //   icon: DollarSign,
-      // },
-      {
-        to: "/caseworker/performance",
-        label: "Performance",
-        icon: Activity,
-      },
+      { to: "/caseworker/messages", label: "Messages", icon: MessageSquare },
     ],
   },
   {
     title: "Account",
     items: [
-      {
-        to: "/caseworker/my-account",
-        label: "My account",
-        icon: UserCircle,
-      },
-      {
-        to: "/caseworker/reschedule-form",
-        label: "Reschedule form",
-        icon: CalendarClock,
-      },
+      { to: "/caseworker/my-account",       label: "My Account",       icon: UserCircle },
+      { to: "/caseworker/reschedule-form",  label: "Reschedule Form",  icon: CalendarClock },
     ],
   },
 ];
-
-/** Section header icons (collapsed toggle row) — mirrors CandidateSidebar */
-export function caseworkerSectionHeaderIcon(title) {
-  const map = {
-    Workflow: BarChart3,
-    Documents: Files,
-    People: Users,
-    Other: Settings,
-    Account: UserCircle,
-  };
-  return map[title] || Settings;
-}

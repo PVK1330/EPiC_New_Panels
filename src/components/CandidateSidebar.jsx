@@ -1,7 +1,7 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../store/slices/authSlice";
-import { HelpCircle, LogOut, X } from "lucide-react";
+import { LogOut, X } from "lucide-react";
 import eliteLogo from "../assets/elitepic_logo.png";
 import { useMemo } from "react";
 import { candidateNavSections as navSections } from "./candidateNavSections";
@@ -12,6 +12,8 @@ function resolveAccountNavMatch(pathname, search) {
   const t = p.get("tab");
   if (t === "feedback") return "feedback";
   if (t === "profile") return "profile";
+  if (t === "report") return "report";
+  if (t === "downloads") return "downloads-pack";
   if (p.get("section") === "final") return "downloads-final";
   return "downloads-pack";
 }
@@ -43,7 +45,6 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
-  // Candidate sidebar should behave like Admin sidebar (no accordion, no collapse).
   useMemo(() => navSections, []);
 
   const handleLogout = () => {
@@ -86,7 +87,7 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
               <h2 className="text-base font-black text-secondary leading-none tracking-tight truncate">
                 ElitePic
               </h2>
-              <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1.5 opacity-80">
+              <p className="text-[10px] font-black text-primary tracking-wide mt-1.5 opacity-80">
                 Candidate
               </p>
             </div>
@@ -101,68 +102,55 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Nav (Admin style) */}
-        <nav className="flex-1 px-4 py-3 overflow-y-auto">
+        {/* Nav */}
+        <nav className="flex-1 px-4 py-3 overflow-y-auto custom-scrollbar">
           {navSections.map((section, sectionIdx) => (
             <div key={`${section.title}-${sectionIdx}`} className="mb-1">
               {!section.standalone && section.title && (
-                <p className="text-[9.5px] font-black uppercase tracking-[0.18em] text-gray-400 px-3 pt-3 pb-1.5">
+                <p className="text-[10px] font-black tracking-wide text-gray-400 px-3 pt-4 pb-1.5">
                   {section.title}
                 </p>
               )}
 
               <div className="space-y-0.5">
-                {section.items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={onClose}
-                    end={item.to === "/candidate/dashboard"}
-                    className={({ isActive }) => {
-                      const matched = navLinkMatches(
-                        location.pathname,
-                        location.search,
-                        {
-                          accountTab: item.accountTab,
-                          paymentTab: item.paymentTab,
-                        },
-                        isActive,
-                      );
-                      return `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 relative ${matched
-                          ? "bg-primary text-white shadow-lg shadow-primary/20"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-primary"
-                        }`;
-                    }}
-                  >
-                    {({ isActive }) => {
-                      const matched = navLinkMatches(
-                        location.pathname,
-                        location.search,
-                        {
-                          accountTab: item.accountTab,
-                          paymentTab: item.paymentTab,
-                        },
-                        isActive,
-                      );
-                      const Icon = item.icon;
-                      return (
-                        <>
-                          <Icon
-                            size={17}
-                            className={`shrink-0 transition-colors ${matched
-                                ? "text-white"
-                                : "text-gray-400 group-hover:text-primary"
-                              }`}
-                          />
-                          <span className="truncate">{item.label}</span>
-                          {matched && (
-                            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-white/25 rounded-l-full" />
-                          )}
-                        </>
-                      );
-                    }}
-                  </NavLink>
-                ))}
+                {section.items.map((item) => {
+                  const matched = navLinkMatches(
+                    location.pathname,
+                    location.search,
+                    {
+                      accountTab: item.accountTab,
+                      paymentTab: item.paymentTab,
+                    },
+                    location.pathname === item.to
+                  );
+
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => {
+                        queueMicrotask(() => onClose());
+                      }}
+                      end={item.to === "/candidate/dashboard"}
+                      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 relative ${matched
+                        ? "bg-primary text-white shadow-lg shadow-primary/20"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                        }`}
+                    >
+                      <item.icon
+                        size={17}
+                        className={`shrink-0 transition-colors ${matched
+                          ? "text-white"
+                          : "text-gray-400 group-hover:text-primary"
+                          }`}
+                      />
+                      <span className="truncate tracking-tight">{item.label}</span>
+                      {matched && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-white rounded-r-full" />
+                      )}
+                    </NavLink>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -170,7 +158,7 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
 
         {/* Footer */}
         <div className="px-4 py-4 border-t border-gray-100 shrink-0">
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50/80 border border-gray-100 transition-all hover:bg-white hover:shadow-md hover:border-transparent group">
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100 transition-all hover:bg-white hover:shadow-md group">
             <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-sm group-hover:bg-primary group-hover:text-white transition-all shrink-0">
               {user?.name?.charAt(0) || "U"}
             </div>
@@ -178,8 +166,8 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
               <p className="text-xs font-black text-secondary truncate">
                 {user?.name || "User"}
               </p>
-              <p className="text-[10px] font-bold text-gray-400 truncate uppercase tracking-wider">
-                Candidate Portal
+              <p className="text-[9px] font-black text-primary tracking-wider">
+                Client Portal
               </p>
             </div>
             <button
@@ -191,17 +179,6 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
               <LogOut size={17} />
             </button>
           </div>
-
-          {/* <div className="mt-3 px-1 flex items-center justify-between">
-            <button
-              type="button"
-              className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-1.5"
-            >
-              <HelpCircle size={13} />
-              Support
-            </button>
-            <span className="text-[10px] font-bold text-gray-300">v1.0.2</span>
-          </div> */}
         </div>
       </aside>
     </>

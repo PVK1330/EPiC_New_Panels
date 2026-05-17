@@ -12,8 +12,15 @@ import {
   X,
   UserCheck,
   DollarSign,
-  Briefcase,
   TrendingUp,
+  Calendar,
+  ShieldCheck,
+  Files,
+  Activity,
+  ClipboardCheck,
+  FileWarning,
+  Receipt,
+  UserCog,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../store/slices/authSlice";
@@ -47,19 +54,13 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
       ],
     },
     {
-      label: "Sponsorship",
+      label: "Sponsorship & HR",
       items: [
-        { to: "/business/licence", label: "Licence Status", icon: FileText },
-        { to: "/business/apply-licence", label: "Apply / Renew Licence", icon: FileText },
-        { to: "/business/licence-documents", label: "Licence Documents", icon: FileText },
-        { to: "/business/cosallocation", label: "CoS Allocation", icon: Package },
-        { to: "/business/workers", label: "Sponsored Workers", icon: Users },
-      ],
-    },
-    {
-      label: "Candidates",
-      items: [
-        { to: "/business/my-candidates", label: "My Candidates", icon: Briefcase },
+        { to: "/business/licence",            label: "Licence Management",  icon: ShieldCheck },
+        { to: "/business/licence-documents",  label: "Licence Documents",   icon: Files },
+        { to: "/business/cosallocation",      label: "CoS Allocation",      icon: Package },
+        { to: "/business/workers",            label: "Sponsored Workers",   icon: UserCog },
+        { to: "/business/employee-records",   label: "Employee Records",    icon: UserCheck },
       ],
     },
     {
@@ -68,44 +69,33 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
         {
           to: "/business/compliance",
           label: "Compliance Dashboard",
-          icon: BarChart3,
+          icon: Activity,
         },
-        { to: "/business/compliacedocument", label: "Compliance Documents", icon: FileText },
-        { to: "/business/reporting-obligations", label: "Reporting Obligations", icon: UserCheck },
-      ],
-    },
-    {
-      label: "HR File Management",
-      items: [
-        { to: "/business/employee-records", label: "Employee Records", icon: Users },
+        { to: "/business/compliance-documents", label: "Compliance Documents", icon: ClipboardCheck },
+        { to: "/business/reporting-obligations", label: "Reporting Obligations", icon: FileWarning },
       ],
     },
     {
       label: "Finance",
       items: [
-        { to: "/business/invoices", label: "Invoices", icon: DollarSign },
-        { to: "/business/payment", label: "Payments", icon: DollarSign },
+        { to: "/business/invoices", label: "Invoices", icon: Receipt },
+        { to: "/business/payment",  label: "Payments", icon: DollarSign },
       ],
     },
     {
       label: "Communication",
       items: [
         { to: "/business/messages", label: "Messages", icon: MessageSquare },
-        {
-          to: "/business/notifications",
-          label: "Notifications",
-          icon: Bell,
-        },
+        { to: "/business/calendar", label: "Calendar", icon: Calendar },
+        { to: "/business/notifications", label: "Notifications", icon: Bell },
       ],
     },
     {
-      label: "Reports",
+      label: "System",
       items: [
         { to: "/business/reports", label: "Reports", icon: TrendingUp },
+        { to: "/business/settings", label: "Settings", icon: Settings },
       ],
-    },
-    {
-      items: [{ to: "/business/settings", label: "Settings", icon: Settings }],
     },
   ];
 
@@ -132,7 +122,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
         {/* Brand */}
         <div className="px-6 py-5 flex items-center justify-between border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-50 rounded-xl border border-gray-100 shadow-inner group transition-all hover:bg-white hover:shadow-md">
+            <div className="p-2 bg-gray-50 rounded-xl border border-gray-100 shadow-inner group transition-all hover:bg-white hover:shadow-md shrink-0">
               <img
                 src={eliteLogo}
                 alt="ElitePic Logo"
@@ -143,8 +133,8 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
               <h2 className="text-base font-black text-secondary leading-none tracking-tight">
                 ElitePic
               </h2>
-              <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1.5 opacity-80">
-                Business
+              <p className="text-[10px] font-black text-primary tracking-wide mt-1.5 opacity-80">
+                Business Portal
               </p>
             </div>
           </div>
@@ -159,11 +149,11 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-4 py-3 overflow-y-auto">
+        <nav className="flex-1 px-4 py-3 overflow-y-auto custom-scrollbar">
           {navSections.map((section, sectionIdx) => (
             <div key={sectionIdx} className="mb-1">
               {section.label && (
-                <p className="text-[9.5px] font-black uppercase tracking-[0.18em] text-gray-400 px-3 pt-3 pb-1.5">
+                <p className="text-[10px] font-black tracking-wide text-gray-400 px-3 pt-4 pb-1.5">
                   {section.label}
                 </p>
               )}
@@ -172,10 +162,12 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
                   <NavLink
                     key={item.to}
                     to={item.to}
-                    onClick={onClose}
+                    onClick={() => {
+                      queueMicrotask(() => onClose());
+                    }}
                     end={item.to === "/business/dashboard"}
                     className={({ isActive }) =>
-                      `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 relative ${isActive
+                      `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 relative ${isActive
                         ? "bg-primary text-white shadow-lg shadow-primary/20"
                         : "text-gray-600 hover:bg-gray-50 hover:text-primary"
                       }`
@@ -186,13 +178,13 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
                         <item.icon
                           size={17}
                           className={`shrink-0 transition-colors ${isActive
-                              ? "text-white"
-                              : "text-gray-400 group-hover:text-primary"
+                            ? "text-white"
+                            : "text-gray-400 group-hover:text-primary"
                             }`}
                         />
-                        <span className="truncate">{item.label}</span>
+                        <span className="truncate tracking-tight">{item.label}</span>
                         {isActive && (
-                          <div className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-white/25 rounded-l-full" />
+                          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-white rounded-r-full" />
                         )}
                       </>
                     )}
@@ -205,7 +197,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
 
         {/* Footer */}
         <div className="px-4 py-4 border-t border-gray-100 shrink-0">
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50/80 border border-gray-100 transition-all hover:bg-white hover:shadow-md hover:border-transparent group">
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100 transition-all hover:bg-white hover:shadow-md group">
             <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-sm group-hover:bg-primary group-hover:text-white transition-all shrink-0">
               {user?.name?.charAt(0) || "B"}
             </div>
@@ -213,8 +205,8 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
               <p className="text-xs font-black text-secondary truncate">
                 {user?.name || "Business Account"}
               </p>
-              <p className="text-[10px] font-bold text-gray-400 truncate uppercase tracking-wider">
-                Business Portal
+              <p className="text-[9px] font-black text-primary tracking-wider">
+                Sponsor Admin
               </p>
             </div>
             <button
@@ -226,16 +218,6 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
               <LogOut size={17} />
             </button>
           </div>
-
-          {/* <div className="mt-3 px-1 flex items-center justify-between">
-            <button
-              type="button"
-              className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-1.5"
-            >
-              Support
-            </button>
-            <span className="text-[10px] font-bold text-gray-300">v1.0.2</span>
-          </div> */}
         </div>
       </aside>
     </>
@@ -243,4 +225,3 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
 };
 
 export default BusinessSidebar;
-

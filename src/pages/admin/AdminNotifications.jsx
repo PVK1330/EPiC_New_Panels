@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   FiBell,
@@ -15,6 +15,16 @@ import { RiNotification3Line } from "react-icons/ri";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import Modal from "../../components/Modal";
+import {
+  getNotifications,
+  getUnreadNotificationCount,
+  getNotificationStats,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  createManualNotification,
+  getAllNotifications,
+} from "../../services/notificationApi";
 
 const ICON_MAP = {
   info: FiInfo,
@@ -146,34 +156,157 @@ const FORM_ID = "create-notification-form";
 export default function AdminNotifications() {
   const [modalOpen, setModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const [viewAll, setViewAll] = useState(false);
   const [formData, setFormData] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [newUserInput, setNewUserInput] = useState("");
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [stats, setStats] = useState({ total: 0, unread: 0, read: 0 });
 
   const initialPrefs = useMemo(() => Object.fromEntries(preferencesList.map((p) => [p.key, p.on])), []);
   const [prefs, setPrefs] = useState(initialPrefs);
 
-  const unreadCount = useMemo(() => notifications.filter((n) => n.unread).length, [notifications]);
-  const readCount = useMemo(() => notifications.filter((n) => !n.unread).length, [notifications]);
+  const readCount = useMemo(() => stats.total - stats.unread, [stats.total, stats.unread]);
 
-  const stats = useMemo(
+  const statsDisplay = useMemo(
     () => [
-      { label: "Total notifications", value: notifications.length, bg: "bg-blue-100", color: "text-blue-600" },
-      { label: "Unread", value: unreadCount, bg: "bg-yellow-100", color: "text-yellow-600" },
+      { label: "Total notifications", value: stats.total, bg: "bg-blue-100", color: "text-blue-600" },
+      { label: "Unread", value: stats.unread, bg: "bg-yellow-100", color: "text-yellow-600" },
       { label: "Read", value: readCount, bg: "bg-green-100", color: "text-green-600" },
     ],
-    [notifications.length, unreadCount, readCount],
+    [stats.total, stats.unread, readCount],
   );
+
+  useEffect(() => {
+    fetchNotifications();
+    fetchStats();
+  }, [viewAll]);
+
+  const fetchNotifications = async () => {
+    setIsFetching(true);
+    try {
+      const res = viewAll 
+        ? await getAllNotifications()
+        : await getNotifications();
+      
+      if (res.data?.status === "success") {
+        const mappedNotifications = (res.data.data.notifications || []).map(n => ({
+          id: n.id,
+          title: n.title,
+          message: n.message,
+          time: formatTime(n.createdAt),
+          unread: !n.isRead,
+          iconBg: getIconBg(n.type),
+          iconColor: getIconColor(n.type),
+          iconKey: getIconKey(n.type),
+          userName: viewAll && n.user ? `${n.user.first_name} ${n.user.last_name}` : null,
+          userRole: viewAll && n.role ? n.role.name : null,
+        }));
+        setNotifications(mappedNotifications);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const res = await getNotificationStats();
+      if (res.data?.status === "success") {
+        setStats(res.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+    }
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return "Unknown";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const getIconBg = (type) => {
+    const map = {
+      info: "bg-blue-100",
+      warning: "bg-yellow-100",
+      success: "bg-green-100",
+      error: "bg-red-100",
+      alert: "bg-red-100",
+      case_assigned: "bg-blue-100",
+      case_status: "bg-green-100",
+      payment: "bg-yellow-100",
+      system: "bg-purple-100",
+    };
+    return map[type] || "bg-gray-100";
+  };
+
+  const getIconColor = (type) => {
+    const map = {
+      info: "text-blue-600",
+      warning: "text-yellow-600",
+      success: "text-green-600",
+      error: "text-red-600",
+      alert: "text-red-600",
+      case_assigned: "text-blue-600",
+      case_status: "text-green-600",
+      payment: "text-yellow-600",
+      system: "text-purple-600",
+    };
+    return map[type] || "text-gray-600";
+  };
+
+  const getIconKey = (type) => {
+    const map = {
+      info: "info",
+      warning: "warning",
+      success: "success",
+      error: "alert",
+      alert: "alert",
+      case_assigned: "info",
+      case_status: "success",
+      payment: "warning",
+      system: "clock",
+    };
+    return map[type] || "info";
+  };
 
   const togglePref = (key) => setPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const markAllRead = useCallback(() => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+  const markAllRead = useCallback(async () => {
+    try {
+      await markAllNotificationsAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+      setUnreadCount(0);
+      fetchStats();
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+    }
   }, []);
 
-  const markRead = useCallback((id) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: false } : n)));
+  const markRead = useCallback(async (id) => {
+    try {
+      await markNotificationAsRead(id);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: false } : n)));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      fetchStats();
+    } catch (error) {
+      console.error("Failed to mark as read:", error);
+    }
   }, []);
 
   const markUnread = useCallback((id) => {
@@ -217,33 +350,34 @@ export default function AdminNotifications() {
     if (!validate()) return;
     setIsLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const newEntry = {
-        id: `n-${Date.now()}`,
+      const payload = {
         title: formData.title.trim(),
         message: formData.message.trim(),
-        time: "Just now",
-        unread: true,
-        iconBg:
-          formData.type === "success"
-            ? "bg-green-100"
-            : formData.type === "warning"
-              ? "bg-yellow-100"
-              : formData.type === "error"
-                ? "bg-red-100"
-                : "bg-blue-100",
-        iconColor:
-          formData.type === "success"
-            ? "text-green-600"
-            : formData.type === "warning"
-              ? "text-yellow-600"
-              : formData.type === "error"
-                ? "text-red-600"
-                : "text-blue-600",
-        iconKey: formData.type === "success" ? "success" : formData.type === "warning" ? "warning" : formData.type === "error" ? "alert" : "info",
+        type: formData.type,
+        priority: formData.priority,
+        sendEmail: formData.sendEmail,
+        scheduledFor: formData.isScheduled ? formData.scheduledDate : null,
+        actionType: formData.caseId ? 'case' : formData.businessId ? 'business' : null,
+        entityId: formData.caseId || formData.businessId || null,
+        entityType: formData.caseId ? 'case' : formData.businessId ? 'business' : null,
       };
-      setNotifications((prev) => [newEntry, ...prev]);
+
+      if (formData.recipientType === 'caseworkers') {
+        payload.recipientRoleId = 2; // Caseworker role ID
+      } else if (formData.recipientType === 'managers') {
+        payload.recipientRoleId = 1; // Admin/Manager role ID
+      } else if (formData.recipientType === 'specific' && formData.specificUsers.length > 0) {
+        if (formData.specificUsers.length === 1) {
+          payload.recipientUserId = formData.specificUsers[0];
+        } else {
+          payload.recipientUserIds = formData.specificUsers;
+        }
+      }
+
+      await createManualNotification(payload);
       closeModal();
+      fetchNotifications();
+      fetchStats();
     } catch (error) {
       console.error("Failed to create notification:", error);
     } finally {
@@ -276,8 +410,16 @@ export default function AdminNotifications() {
           <p className="text-primary font-bold text-sm mt-1">Manage system notifications and alerts</p>
         </div>
         <div className="flex flex-wrap gap-2 sm:gap-3 shrink-0">
-          <Button type="button" variant="ghost" className="rounded-xl" onClick={markAllRead} disabled={unreadCount === 0}>
+          <Button type="button" variant="ghost" className="rounded-xl" onClick={markAllRead} disabled={stats.unread === 0}>
             Mark all read
+          </Button>
+          <Button 
+            type="button" 
+            variant={viewAll ? "secondary" : "ghost"} 
+            className="rounded-xl" 
+            onClick={() => setViewAll(!viewAll)}
+          >
+            {viewAll ? "View My Notifications" : "View All Notifications"}
           </Button>
           <Button type="button" className="rounded-xl shadow-sm" onClick={() => setModalOpen(true)}>
             Create notification
@@ -291,7 +433,7 @@ export default function AdminNotifications() {
         initial="hidden"
         animate="visible"
       >
-        {stats.map(({ label, value, bg, color }) => (
+        {statsDisplay.map(({ label, value, bg, color }) => (
           <motion.div
             key={label}
             variants={cardVariants}
@@ -336,7 +478,14 @@ export default function AdminNotifications() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                      <h4 className="text-sm font-bold text-secondary">{item.title}</h4>
+                      <div>
+                        <h4 className="text-sm font-bold text-secondary">{item.title}</h4>
+                        {viewAll && item.userName && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            To: {item.userName} {item.userRole && `(${item.userRole})`}
+                          </p>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {item.unread ? (
                           <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-bold">

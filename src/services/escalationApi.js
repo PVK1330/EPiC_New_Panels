@@ -20,3 +20,9 @@ export const assignEscalation = (id, data) =>
 
 export const deleteEscalation = (id) =>
   api.delete(`/api/escalations/${id}`);
+
+export const exportEscalationsExcel = (params = {}) =>
+  api.get(`/api/escalations/export/excel`, {
+    params,
+    responseType: "blob",
+  });

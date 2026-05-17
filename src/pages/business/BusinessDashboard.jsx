@@ -1,217 +1,23 @@
-import { LayoutDashboard, Inbox, CheckCircle, Clock, Users,Bell,AlertTriangle, Briefcase,MessageSquare,Send } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-
-const stats = [
-  {
-    label: "Active Workers",
-    value: 45,
-    icon: Users,
-    bg: "bg-blue-100",
-    color: "text-blue-600",
-  },
-  {
-    label: "Pending Requests",
-    value: 12,
-    icon: Inbox,
-    bg: "bg-orange-100",
-    color: "text-orange-600",
-  },
-  {
-    label: "Completed Cases",
-    value: 234,
-    icon: CheckCircle,
-    bg: "bg-green-100",
-    color: "text-green-600",
-  },
-  {
-    label: "In Progress",
-    value: 28,
-    icon: Clock,
-    bg: "bg-yellow-100",
-    color: "text-yellow-600",
-  },
-];
-  const remindersData = [
-  {
-    id: 1,
-    title: "Visa Renewal - John Doe",
-    description: "Visa expiring soon",
-    dueDate: "2026-04-10",
-    priority: "High",
-    status: "Pending",
-  },
-  {
-    id: 2,
-    title: "Upload Compliance Document",
-    description: "Case #102 missing contract file",
-    dueDate: "2026-04-08",
-    priority: "Medium",
-    status: "Pending",
-  },
-  {
-    id: 3,
-    title: "Medical Check - Alex",
-    description: "Worker health verification pending",
-    dueDate: "2026-04-15",
-    priority: "Low",
-    status: "Completed",
-  },
-  {
-    id: 4,
-    title: "Work Permit Expiry - Sarah",
-    description: "Renew permit before deadline",
-    dueDate: "2026-04-05",
-    priority: "High",
-    status: "Overdue",
-  },
-];
-const casesData = [
-  {
-    id: 1,
-    name: "John Doe",
-    caseType: "Skilled Worker Visa",
-    status: "In Progress",
-    deadline: "2026-04-10",
-    priority: "High",
-  },
-  {
-    id: 2,
-    name: "Sarah Smith",
-    caseType: "Student Visa",
-    status: "Pending",
-    deadline: "2026-04-15",
-    priority: "Medium",
-  },
-  {
-    id: 3,
-    name: "Alex Johnson",
-    caseType: "Work Permit",
-    status: "Completed",
-    deadline: "2026-04-05",
-    priority: "Low",
-  },
-];
-
-const workersData = [
-  {
-    id: 1,
-    name: "Mohammed Ali",
-    visaType: "Skilled Worker Visa",
-    cosNumber: "COS-1024",
-    jobTitle: "Mechanical Engineer",
-    visaExpiry: "2026-10-12",
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Aisha Khan",
-    visaType: "Student Visa",
-    cosNumber: "COS-1087",
-    jobTitle: "Digital Marketing Specialist",
-    visaExpiry: "2026-08-03",
-    status: "Pending",
-  },
-  {
-    id: 3,
-    name: "Rahul Sharma",
-    visaType: "Intra-company Transfer",
-    cosNumber: "COS-1135",
-    jobTitle: "Project Manager",
-    visaExpiry: "2026-09-21",
-    status: "Active",
-  },
-  {
-    id: 4,
-    name: "Sara Williams",
-    visaType: "Work Permit",
-    cosNumber: "COS-1178",
-    jobTitle: "HR Coordinator",
-    visaExpiry: "2026-07-14",
-    status: "Expiring",
-  },
-];
-const notification = [
-  {
-    "id": 1,
-    "type": "visa_update",
-    "title": "New Skilled Worker Visa Rules",
-    "message": "Updated salary threshold requirements announced for Skilled Worker visas.",
-    "date": "2026-04-20",
-    "time": "10:30 AM",
-    "priority": "High",
-    "status": "unread"
-  },
-  {
-    "id": 2,
-    "type": "event",
-    "title": "Immigration Webinar 2026",
-    "message": "Join our webinar to understand the latest immigration policies.",
-    "date": "2026-04-22",
-    "time": "03:00 PM",
-    "priority": "Medium",
-    "status": "read"
-  },
-  {
-    "id": 3,
-    "type": "meeting",
-    "title": "Client Meeting - Visa Consultation",
-    "message": "Discuss visa application process with client John Doe.",
-    "date": "2026-04-18",
-    "time": "11:00 AM",
-    "priority": "High",
-    "status": "unread"
-  },
-  {
-    "id": 4,
-    "type": "visa_update",
-    "title": "Student Visa Policy Change",
-    "message": "New rules for part-time work hours for international students.",
-    "date": "2026-04-25",
-    "time": "09:00 AM",
-    "priority": "Medium",
-    "status": "unread"
-  },
-  {
-    "id": 5,
-    "type": "event",
-    "title": "Compliance Deadline Reminder",
-    "message": "Submit all required documents before deadline.",
-    "date": "2026-04-28",
-    "time": "05:00 PM",
-    "priority": "High",
-    "status": "unread"
-  },
-  {
-    "id": 6,
-    "type": "meeting",
-    "title": "Internal Team Sync",
-    "message": "Weekly sync meeting with development team.",
-    "date": "2026-04-17",
-    "time": "04:30 PM",
-    "priority": "low",
-    "status": "read"
-  },
-  {
-    "id": 7,
-    "type": "event",
-    "title": "HR Compliance Workshop",
-    "message": "Workshop on latest HR compliance regulations.",
-    "date": "2026-05-02",
-    "time": "02:00 PM",
-    "priority": "Medium",
-    "status": "unread"
-  },
-  {
-    "id": 8,
-    "type": "meeting",
-    "title": "Sponsor License Review Meeting",
-    "message": "Review sponsor license status with legal team.",
-    "date": "2026-04-19",
-    "time": "01:00 PM",
-    "priority": "High",
-    "status": "unread"
-  }
-]
+import {
+  LayoutDashboard,
+  Inbox,
+  CheckCircle,
+  Clock,
+  Users,
+  Bell,
+  AlertTriangle,
+  Briefcase,
+  ShieldCheck,
+  Loader2,
+  MessageSquare,
+} from "lucide-react";
+import { getBusinessDashboard, getBusinessCases } from "../../services/businessProfileApi";
+import { getSponsoredWorkers } from "../../services/sponsoredWorkerApi";
+import { getNotifications } from "../../services/notificationApi";
+import messagingApi from "../../services/messagingApi";
+import { MOCK_RECENT_MESSAGES, MOCK_NOTIFICATIONS } from "../../data/adminDashboardMock";
 
 const getStatusIcon = (status) => {
   if (status === "Completed") return <CheckCircle size={16} className="text-green-600" />;
@@ -225,8 +31,123 @@ const getPriorityColor = (priority) => {
   return "text-green-600 bg-green-100";
 };
 
-
 export default function BusinessDashboard() {
+  const [loading, setLoading] = useState(true);
+  const [dashboard, setDashboard] = useState(null);
+  const [cases, setCases] = useState([]);
+  const [workers, setWorkers] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [dRes, cRes, wRes, nRes, mRes] = await Promise.all([
+          getBusinessDashboard().catch(() => null),
+          getBusinessCases({ limit: 5 }).catch(() => null),
+          getSponsoredWorkers().catch(() => null),
+          getNotifications({ limit: 6 }).catch(() => null),
+          messagingApi.getConversations().catch(() => null),
+        ]);
+        setDashboard(dRes?.data?.data || null);
+        setCases(cRes?.data?.data?.cases || []);
+        setWorkers(wRes?.data?.data || []);
+        const notifList = nRes?.data?.data?.notifications || nRes?.data?.data || [];
+        setNotifications(
+          Array.isArray(notifList) && notifList.length > 0 ? notifList : MOCK_NOTIFICATIONS,
+        );
+        const mData = mRes?.data?.conversations || mRes?.data?.data?.conversations || mRes?.data || [];
+        const msgList = Array.isArray(mData) ? mData.slice(0, 5) : [];
+        setMessages(msgList.length > 0 ? msgList : MOCK_RECENT_MESSAGES);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  const stats = useMemo(
+    () => [
+      {
+        label: "Active Workers",
+        value: dashboard?.stats?.activeCases ?? workers.length,
+        icon: Users,
+        bg: "bg-blue-100",
+        color: "text-blue-600",
+      },
+      {
+        label: "Pending Licence Cases",
+        value: dashboard?.stats?.pendingLicenceApplications ?? 0,
+        icon: Inbox,
+        bg: "bg-orange-100",
+        color: "text-orange-600",
+      },
+      {
+        label: "Total Cases",
+        value: dashboard?.stats?.totalWorkers ?? cases.length,
+        icon: CheckCircle,
+        bg: "bg-green-100",
+        color: "text-green-600",
+      },
+      {
+        label: "Overdue Cases",
+        value: dashboard?.stats?.overdueCount ?? 0,
+        icon: Clock,
+        bg: "bg-yellow-100",
+        color: "text-yellow-600",
+      },
+      {
+        label: "Licence Status",
+        value: dashboard?.licenceStatus || "Pending",
+        icon: ShieldCheck,
+        bg: "bg-purple-100",
+        color: "text-purple-600",
+      },
+    ],
+    [dashboard, workers.length, cases.length]
+  );
+
+  const remindersData = useMemo(() => {
+    const items = [];
+    if (dashboard?.licenceExpiry?.date) {
+      const days = dashboard.licenceExpiry.daysRemaining ?? 999;
+      items.push({
+        id: "licence-expiry",
+        title: "Sponsor Licence Expiry",
+        description: `${days} day(s) remaining`,
+        dueDate: new Date(dashboard.licenceExpiry.date).toLocaleDateString("en-GB"),
+        priority: days < 30 ? "High" : "Medium",
+        status: dashboard.licenceExpiry.renewalDue ? "Pending" : "In Progress",
+      });
+    }
+    if ((dashboard?.stats?.overdueCount ?? 0) > 0) {
+      items.push({
+        id: "overdue",
+        title: "Caseworker Follow-up Required",
+        description: `${dashboard.stats.overdueCount} case(s) overdue`,
+        dueDate: "Immediate",
+        priority: "High",
+        status: "Overdue",
+      });
+    }
+    return items;
+  }, [dashboard]);
+
+  const workerRows = useMemo(
+    () =>
+      workers.slice(0, 6).map((w) => ({
+        id: w.id,
+        name: `${w.candidate?.first_name || ""} ${w.candidate?.last_name || ""}`.trim() || "Worker",
+        visaType: w.visaType || "Unknown",
+        cosNumber: w.caseId || "N/A",
+        jobTitle: w.jobTitle || "Not assigned",
+        visaExpiry: w.created_at ? new Date(w.created_at).toLocaleDateString("en-GB") : "N/A",
+        status: w.status || "Pending",
+      })),
+    [workers]
+  );
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
@@ -237,35 +158,28 @@ export default function BusinessDashboard() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-[420px] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-sm font-bold text-gray-600">Loading sponsor dashboard...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 pb-10">
-      <motion.div
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
+      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
           <LayoutDashboard className="text-red-600" size={36} />
           Business Dashboard
         </h1>
-        <p className="text-primary font-bold text-sm mt-1">
-          Manage your business operations and workers
-        </p>
+        <p className="text-primary font-bold text-sm mt-1">Manage your business operations and workers.</p>
       </motion.div>
 
-      {/* Stats Cards */}
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
+      <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" variants={containerVariants} initial="hidden" animate="visible">
         {stats.map(({ label, value, icon: Icon, bg, color }) => (
-          <motion.div
-            key={label}
-            variants={cardVariants}
-            className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4"
-          >
+          <motion.div key={label} variants={cardVariants} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div className={`p-3 ${bg} rounded-xl`}>
               <Icon className={`${color} h-6 w-6`} />
             </div>
@@ -277,179 +191,92 @@ export default function BusinessDashboard() {
         ))}
       </motion.div>
 
-      {/* Recent Activity */}
-      <div className="grid md:grid-cols-2 gap-6 mb-8 cursor-default  ">
-      <motion.div 
-        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-         
-        <div className="flex items-center justify-between mb-4">
-        <h3 className="font-black text-secondary flex items-center gap-2">
-          <Bell size={25} className="text-primary" /> Compliance Reminders
-        </h3>
-        <button className="text-xs font-bold text-primary hover:underline">
-          View All
-        </button>
-      </div>
-        <div className="space-y-4">
-
-        {remindersData.map((item) => (
-          <div
-            key={item.id}
-            className=" p-4 hover:bg-gray-50 transition"
-          >
-
-            <div className="flex justify-between items-start">
-
-              {/* Left */}
-              <div>
-                <h4 className="text-sm font-black text-secondary">
-                  {item.title}
-                </h4>
-                <p className="text-xs font-bold text-gray-500">
-                  {item.description}
-                </p>
-
-                <p className="text-[10px] font-bold text-gray-400 mt-1">
-                  Due: {item.dueDate}
-                </p>
-              </div>
-
-              {/* Right */}
-              <div className="flex flex-col items-end gap-2">
-
-                {/* Priority */}
-                <span
-                  className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(
-                    item.priority
-                  )}`}
-                >
-                  {item.priority}
-                </span>
-
-                {/* Status */}
-                <div className="flex items-center gap-1 text-[10px] font-bold">
-                  {getStatusIcon(item.status)}
-                  {item.status}
-                </div>
-
-              </div>
-
-            </div>
+      <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-black text-secondary flex items-center gap-2">
+              <Bell size={25} className="text-primary" /> Compliance Reminders
+            </h3>
           </div>
-        ))}
-
-      </div>
-       
-      </motion.div>
-      {/* Active Cases */}
-      <motion.div
-        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-        >
-           <div className="bg-white p-5 rounded-2xl shadow">
-          
-                {/* Header */}
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-black text-secondary flex items-center gap-2">
-                    <Briefcase size={25} className="text-primary" /> Active Cases
-                  </h3>
-                  <button className="text-xs font-bold text-primary hover:underline">
-                    View All
-                  </button>
+          <div className="space-y-4">
+            {remindersData.length === 0 && <p className="text-xs font-bold text-gray-500 px-4 py-6">No urgent compliance reminders.</p>}
+            {remindersData.map((item) => (
+              <div key={item.id} className="p-4 hover:bg-gray-50 transition">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="text-sm font-black text-secondary">{item.title}</h4>
+                    <p className="text-xs font-bold text-gray-500">{item.description}</p>
+                    <p className="text-[10px] font-bold text-gray-400 mt-1">Due: {item.dueDate}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(item.priority)}`}>{item.priority}</span>
+                    <div className="flex items-center gap-1 text-[10px] font-bold">
+                      {getStatusIcon(item.status)}
+                      {item.status}
+                    </div>
+                  </div>
                 </div>
-          
-                {/* List */}
-                <div className="space-y-4">
-          
-                  {casesData.map((item) => (
-                    <div
-                      key={item.id}
-                      className=" p-4 hover:bg-gray-50 transition cursor-pointer"
-                    >
-          
-                      <div className="flex justify-between items-start">
-          
-                        {/* Left */}
-                        <div>
-                          <h4 className="text-sm font-black text-secondary">
-                            {item.name}
-                          </h4>
-                          <p className="text-xs font-bold text-gray-500">
-                            {item.caseType}
-                          </p>
-          
-                          <p className="text-[10px] font-bold text-gray-400 mt-1">
-                            Deadline: {item.deadline}
-                          </p>
-                        </div>
-          
-                        {/* Right */}
-                        <div className="flex flex-col items-end gap-2">
-          
-                          {/* Priority */}
-                          <span
-                            className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(
-                              item.priority
-                            )}`}
-                          >
-                            {item.priority}
-                          </span>
-          
-                          <div className="flex items-center gap-1 text-[10px] font-bold">
-                            {getStatusIcon(item.status)}
-                            {item.status}
-                          </div>
-          
-                        </div>
-          
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="bg-white p-5 rounded-2xl shadow">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-black text-secondary flex items-center gap-2">
+                <Briefcase size={25} className="text-primary" /> Active Cases
+              </h3>
+            </div>
+            <div className="space-y-4">
+              {cases.length === 0 && <p className="text-xs font-bold text-gray-500 px-4 py-6">No active cases yet.</p>}
+              {cases.map((item) => (
+                <div key={item.id} className="p-4 hover:bg-gray-50 transition">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="text-sm font-black text-secondary">
+                        {`${item.candidate?.first_name || ""} ${item.candidate?.last_name || ""}`.trim() || "Candidate"}
+                      </h4>
+                      <p className="text-xs font-bold text-gray-500">{item.jobTitle || "Case in progress"}</p>
+                      <p className="text-[10px] font-bold text-gray-400 mt-1">Case ID: {item.caseId || "N/A"}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(item.status === "Overdue" ? "High" : "Medium")}`}>
+                        {item.status === "Overdue" ? "High" : "Medium"}
+                      </span>
+                      <div className="flex items-center gap-1 text-[10px] font-bold">
+                        {getStatusIcon(item.status || "Pending")}
+                        {item.status || "Pending"}
                       </div>
                     </div>
-                  ))}
-          
+                  </div>
                 </div>
-          
-              </div>
-
-
+              ))}
+            </div>
+          </div>
         </motion.div>
       </div>
 
-      {/* Recent Sponsored Workers */}
-      <motion.div
-        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.7 }}
-      >
+      <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-black text-secondary flex items-center gap-2">
             <Users size={25} className="text-primary" /> Recent Sponsored Workers
           </h3>
-          <button className="text-xs font-bold text-primary hover:text-primary-dark transition-colors">
-            View all
-          </button>
         </div>
-
         <div className="overflow-x-auto">
           <table className="min-w-full text-left divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Worker Name</th>
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Visa Type</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">CoS No.</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Case Ref</th>
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Job Title</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Visa Expiry</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Added On</th>
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {workersData.map((worker) => (
+              {workerRows.map((worker) => (
                 <tr key={worker.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-4 text-sm font-black text-secondary">{worker.name}</td>
                   <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.visaType}</td>
@@ -457,83 +284,98 @@ export default function BusinessDashboard() {
                   <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.jobTitle}</td>
                   <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.visaExpiry}</td>
                   <td className="px-4 py-4">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black ${
-                      worker.status === "Active"
-                        ? "bg-green-100 text-green-700"
-                        : worker.status === "Pending"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-red-100 text-red-700"
-                    }`}>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black ${worker.status === "Active" ? "bg-green-100 text-green-700" : worker.status === "Pending" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
                       {worker.status}
                     </span>
                   </td>
                 </tr>
               ))}
+              {workerRows.length === 0 && (
+                <tr>
+                  <td className="px-4 py-4 text-xs font-bold text-gray-500" colSpan={6}>
+                    No sponsored workers yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </motion.div>
-      <div className="grid md:grid-cols-1">
-          
-      <motion.div
-        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-         
-        <div className="flex items-center justify-between mb-4">
-        <h3 className="font-black text-secondary flex items-center gap-2">
-          <Bell size={25} className="text-primary" /> New Updates and Notifications
-        </h3>
-        <button className="text-xs font-bold text-primary hover:underline">
-          View All
-        </button>
-      </div>
-        <div className="space-y-4">
 
-        {notification.map((item) => (
-          <div
-            key={item.id}
-            className=" p-4 hover:bg-gray-50 transition"
-          >
-
-            <div className="flex justify-between items-start">
-
-              {/* Left */}
-              <div>
-                <h4 className="text-sm font-black text-secondary">
-                  {item.title}
-                </h4>
-                <p className="text-xs font-bold text-gray-500">
-                  {item.message}
-                </p>
-
-                <p className="text-[10px] font-bold text-gray-400 mt-1">
-                  Due: {item.date}
-                </p>
-                <p className="text-[10px] font-bold text-gray-400 mt-1">
-                  Due: {item.time}
-                </p>
-              </div>
-
-              <span
-                  className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(
-                    item.priority
-                  )}`}
-                >
-                  {item.priority}
-                </span>
-
-      
-
-            </div>
+      <div className="grid md:grid-cols-2 gap-6">
+        <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pb-5 pt-5 flex flex-col" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-black text-secondary flex items-center gap-2">
+              <MessageSquare size={22} className="text-primary" /> Recent Messages
+            </h3>
+            <button
+              type="button"
+              onClick={() => window.location.href = '/business/messages'}
+              className="text-xs font-bold text-primary hover:underline"
+            >
+              View all
+            </button>
           </div>
-        ))}
+          <div className="space-y-3 flex-1">
+            {messages.map((item) => {
+              const otherUser = item.user || {};
+              const lastMsg = item.lastMessage || {};
+              const name = `${otherUser.first_name || ""} ${otherUser.last_name || ""}`.trim() || "User";
+              const preview = typeof lastMsg === "object" ? lastMsg?.content : lastMsg;
+              const time = String(lastMsg.createdAt || item.lastMessageTime || "").split("T")[0];
+              return (
+                <div
+                  key={item.id || Math.random()}
+                  onClick={() => window.location.href = '/business/messages'}
+                  className="p-3 rounded-xl bg-gray-50/70 border border-gray-100 hover:bg-gray-50 cursor-pointer transition"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xs font-black text-secondary truncate">{name}</h4>
+                    {time && <span className="text-[9px] font-bold text-gray-400 shrink-0">{time}</span>}
+                  </div>
+                  <p className="text-xs text-gray-600 truncate mt-0.5">{preview || "Open conversation"}</p>
+                </div>
+              );
+            })}
+            {messages.length === 0 && (
+              <p className="text-xs font-bold text-gray-400 text-center py-8">No recent messages.</p>
+            )}
+          </div>
+        </motion.div>
 
-      </div>
-       
-      </motion.div>
+        <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pb-5 pt-5 flex flex-col" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-black text-secondary flex items-center gap-2">
+              <Bell size={22} className="text-primary" /> Updates & Notifications
+            </h3>
+            <button
+              type="button"
+              onClick={() => window.location.href = '/business/notifications'}
+              className="text-xs font-bold text-primary hover:underline"
+            >
+              View all
+            </button>
+          </div>
+          <div className="space-y-3 flex-1">
+            {notifications.slice(0, 4).map((item) => (
+              <div key={item.id} className="p-3 rounded-xl bg-gray-50/70 border border-gray-100 hover:bg-gray-50 transition">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-black text-secondary truncate">{item.title}</h4>
+                    <p className="text-xs text-gray-600 line-clamp-1 mt-0.5">{item.message}</p>
+                    <p className="text-[9px] font-bold text-gray-400 mt-1">
+                      {item.createdAt ? new Date(item.createdAt).toLocaleString("en-GB", { dateStyle: 'short', timeStyle: 'short' }) : "Recent"}
+                    </p>
+                  </div>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${getPriorityColor(item.priority === "high" ? "High" : item.priority === "medium" ? "Medium" : "Low")}`}>
+                    {item.priority === "high" ? "High" : item.priority === "medium" ? "Medium" : "Low"}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {notifications.length === 0 && <p className="text-xs font-bold text-gray-400 text-center py-8">No notifications yet.</p>}
+          </div>
+        </motion.div>
       </div>
     </div>
   );

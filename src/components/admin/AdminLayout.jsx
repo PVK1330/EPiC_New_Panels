@@ -4,9 +4,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { logout } from "../../store/slices/authSlice";
 import AdminSidebar from "./AdminSidebar";
+import CaseworkerSidebar from "../CaseworkerSidebar";
+import BusinessSidebar from "../business/BusinessSidebar";
+import CandidateSidebar from "../CandidateSidebar";
 import {
-  RiBellLine,
-  RiMessage2Line,
   RiMenuLine,
   RiHome5Line,
   RiArrowRightSLine,
@@ -15,32 +16,10 @@ import {
   RiLogoutBoxRLine,
 } from "react-icons/ri";
 
-const mockNotifications = [
-  {
-    title: "New case assigned",
-    detail: "Tech Corp H-1B — awaiting review",
-    time: "2h ago",
-    dot: "bg-primary",
-  },
-  {
-    title: "Payment received",
-    detail: "£5,000 from Global Corp",
-    time: "5h ago",
-    dot: "bg-green-500",
-  },
-  {
-    title: "Document uploaded",
-    detail: "John Smith uploaded passport copy",
-    time: "1d ago",
-    dot: "bg-secondary",
-  },
-];
+import NotificationDropdown from "../Notifications/NotificationDropdown";
+import MessageDropdown from "../notifications/MessageDropdown";
 
-const mockMessages = [
-  { name: "John Smith", msg: "Re: Visa application update", time: "2m ago" },
-  { name: "Tech Corp", msg: "Document submission confirmed", time: "1h ago" },
-  { name: "Sarah Chen", msg: "Case escalation — urgent", time: "3h ago" },
-];
+
 
 const dropdownVariants = {
   hidden: { opacity: 0, y: -6, scale: 0.97 },
@@ -50,8 +29,6 @@ const dropdownVariants = {
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [msgOpen, setMsgOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   const dropdownRef = useRef(null);
@@ -66,9 +43,27 @@ const AdminLayout = () => {
   };
 
   const closeAll = () => {
-    setNotifOpen(false);
-    setMsgOpen(false);
     setProfileOpen(false);
+  };
+
+  const renderSidebar = () => {
+    const props = {
+      isOpen: sidebarOpen,
+      onClose: () => setSidebarOpen(false),
+    };
+
+    switch (user?.role) {
+      case "admin":
+        return <AdminSidebar {...props} />;
+      case "caseworker":
+        return <CaseworkerSidebar {...props} />;
+      case "business":
+        return <BusinessSidebar {...props} />;
+      case "candidate":
+        return <CandidateSidebar {...props} />;
+      default:
+        return <AdminSidebar {...props} />;
+    }
   };
 
   const pathnames = location.pathname.split("/").filter((x) => x);
@@ -85,14 +80,11 @@ const AdminLayout = () => {
 
   return (
     <div className="flex h-screen bg-surface overflow-hidden">
-      <AdminSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      {renderSidebar()}
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* ── Top Bar ── */}
-        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 shrink-0 shadow-sm">
+        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40 shrink-0 shadow-sm">
           {/* Left: hamburger + breadcrumb */}
           <div className="flex items-center gap-2 min-w-0 overflow-hidden">
             <button
@@ -106,7 +98,7 @@ const AdminLayout = () => {
 
             <nav className="flex items-center text-sm font-medium text-gray-500 overflow-hidden">
               <Link
-                to="/admin/dashboard"
+                to={`/${user?.role || 'admin'}/dashboard`}
                 className="hover:text-primary transition-colors flex items-center shrink-0"
                 aria-label="Home"
               >
@@ -146,116 +138,17 @@ const AdminLayout = () => {
             ref={dropdownRef}
             className="flex items-center gap-1 md:gap-1.5 ml-4 shrink-0"
           >
-            {/* Messages */}
-            <div className="relative">
-              <button
-                onClick={() => { setMsgOpen(!msgOpen); setNotifOpen(false); setProfileOpen(false); }}
-                className={`p-2 rounded-xl transition-colors relative group ${msgOpen ? "bg-gray-100 text-secondary" : "text-gray-500 hover:bg-gray-100"
-                  }`}
-                aria-label="Messages"
-              >
-                <RiMessage2Line size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-secondary border-2 border-white rounded-full" />
-              </button>
 
-              <AnimatePresence>
-                {msgOpen && (
-                  <motion.div
-                    variants={dropdownVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="absolute right-0 mt-2 w-72 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden z-50 origin-top-right"
-                  >
-                    <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
-                      <h3 className="font-black text-secondary text-sm">Messages</h3>
-                      <span className="text-[10px] font-bold text-white bg-secondary px-2 py-0.5 rounded-full">
-                        {mockMessages.length}
-                      </span>
-                    </div>
-                    <div className="max-h-60 overflow-y-auto">
-                      {mockMessages.map((m, i) => (
-                        <div
-                          key={i}
-                          className="p-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer flex items-start gap-3"
-                        >
-                          <div className="w-8 h-8 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center text-xs font-black shrink-0">
-                            {m.name.charAt(0)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-black text-secondary truncate">{m.name}</p>
-                            <p className="text-xs text-gray-500 truncate">{m.msg}</p>
-                            <p className="text-[10px] text-gray-300 mt-0.5">{m.time}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="px-4 py-2.5 bg-gray-50 text-center">
-                      <button className="text-xs font-bold text-gray-500 hover:text-secondary transition-colors">
-                        View all messages
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            {/* Messages */}
+            <MessageDropdown />
 
             {/* Notifications */}
-            <div className="relative">
-              <button
-                onClick={() => { setNotifOpen(!notifOpen); setMsgOpen(false); setProfileOpen(false); }}
-                className={`p-2 rounded-xl transition-colors relative group ${notifOpen ? "bg-gray-100 text-primary" : "text-gray-500 hover:bg-gray-100"
-                  }`}
-                aria-label="Notifications"
-              >
-                <RiBellLine size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary border-2 border-white rounded-full" />
-              </button>
-
-              <AnimatePresence>
-                {notifOpen && (
-                  <motion.div
-                    variants={dropdownVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="absolute right-0 mt-2 w-80 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden z-50 origin-top-right"
-                  >
-                    <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
-                      <h3 className="font-black text-secondary text-sm">Notifications</h3>
-                      <button className="text-[10px] font-bold text-primary hover:underline">
-                        Mark all read
-                      </button>
-                    </div>
-                    <div className="max-h-72 overflow-y-auto">
-                      {mockNotifications.map((n, i) => (
-                        <div
-                          key={i}
-                          className="px-4 py-3.5 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer flex items-start gap-3"
-                        >
-                          <div className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.dot}`} />
-                          <div className="min-w-0">
-                            <p className="text-sm font-black text-secondary">{n.title}</p>
-                            <p className="text-xs text-gray-500">{n.detail}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">{n.time}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="px-4 py-2.5 bg-gray-50 text-center">
-                      <button className="text-xs font-bold text-gray-500 hover:text-secondary transition-colors">
-                        View all notifications
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <NotificationDropdown />
 
             {/* Profile */}
             <div className="relative">
               <button
-                onClick={() => { setProfileOpen(!profileOpen); setNotifOpen(false); setMsgOpen(false); }}
+                onClick={() => { setProfileOpen(!profileOpen); }}
                 className={`flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all ${profileOpen ? "bg-gray-100 ring-2 ring-primary/10" : "hover:bg-gray-50"
                   }`}
               >
@@ -267,7 +160,7 @@ const AdminLayout = () => {
                     {user?.name || "Admin"}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">
-                    Admin
+                    {user?.role || "Admin"}
                   </p>
                 </div>
               </button>
@@ -311,12 +204,12 @@ const AdminLayout = () => {
         </header>
 
         {/* ── Main Content ── */}
-        <main id="main-content" className="flex-1 overflow-y-auto p-4 md:p-8 bg-surface">
+        <main id="main-content" className="flex-1 overflow-y-auto p-4 md:p-5 bg-surface">
           {/* No mode="wait" — wait mode can leave a blank gap until exit finishes (bad on first nav). */}
           <AnimatePresence initial={false}>
             <motion.div
               key={location.pathname}
-              className="max-w-7xl mx-auto"
+              className="w-full"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
