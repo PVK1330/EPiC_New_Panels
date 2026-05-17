@@ -29,7 +29,6 @@ import { getOrganisationSubdomainLabel } from '../../utils/organisationHost';
 import { getAuthUserAndToken, getDashboardRouteForUser } from '../../utils/authResponse';
 import { getToken, getUser, saveImpersonatorSession } from '../../utils/storage';
 import { buildTenantHandoffUrl } from '../../utils/organisationHost';
-import { MOCK_ORGANISATIONS } from '../../data/mockOrganisations';
 
 const capitalize = (s) =>
   s && typeof s === 'string' ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
@@ -39,7 +38,6 @@ const mapApiOrgToRow = (o) => ({
   name: o.name,
   slug: o.slug,
   plan: capitalize(o.plan?.name || o.plan || 'Starter'),
-  _mock: Boolean(o._mock),
   users: Array.isArray(o.users) ? o.users.length : 0,
   cases: 0,
   storage: '—',
@@ -51,7 +49,6 @@ const mapApiOrgToRow = (o) => ({
 
 const SuperadminOrganisations = () => {
   const [activeTab, setActiveTab] = useState('All');
-  const [showingMockData, setShowingMockData] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -69,18 +66,10 @@ const SuperadminOrganisations = () => {
     try {
       const res = await fetchOrganisations();
       const list = res.data?.data?.organisations ?? res.data?.organisations ?? [];
-      const rows = Array.isArray(list) ? list.map(mapApiOrgToRow) : [];
-      if (rows.length === 0) {
-        setOrgs(MOCK_ORGANISATIONS.map(mapApiOrgToRow));
-        setShowingMockData(true);
-      } else {
-        setOrgs(rows);
-        setShowingMockData(false);
-      }
+      setOrgs(Array.isArray(list) ? list.map(mapApiOrgToRow) : []);
     } catch (e) {
       toast.error(e?.response?.data?.message || e.message || 'Failed to load organisations');
-      setOrgs(MOCK_ORGANISATIONS.map(mapApiOrgToRow));
-      setShowingMockData(true);
+      setOrgs([]);
     } finally {
       setLoading(false);
     }
@@ -103,6 +92,9 @@ const SuperadminOrganisations = () => {
   });
 
   const handleCreateOrg = async (data) => {
+    if (!data.adminFirstName?.trim() || !data.adminLastName?.trim()) {
+      throw new Error('Administrator first and last name are required');
+    }
     const orgRes = await createOrganisation({
       name: data.name.trim(),
       slug: data.slug?.trim() || undefined,
@@ -152,7 +144,7 @@ const SuperadminOrganisations = () => {
   };
 
   const handleDeleteOrg = async () => {
-    if (!selectedOrg?.id || selectedOrg._mock) return;
+    if (!selectedOrg?.id) return;
     setActionLoading(true);
     try {
       await deleteOrganisation(selectedOrg.id);
@@ -167,11 +159,6 @@ const SuperadminOrganisations = () => {
   };
 
   const openView = async (org) => {
-    if (org._mock) {
-      setViewOrg(org._raw || org);
-      setIsViewModalOpen(true);
-      return;
-    }
     setIsViewModalOpen(true);
     setViewLoading(true);
     setViewOrg(null);
@@ -188,10 +175,6 @@ const SuperadminOrganisations = () => {
   };
 
   const handleLoginAs = async (org) => {
-    if (org._mock || showingMockData) {
-      toast.error('Login as works only for live organisations created in the platform.');
-      return;
-    }
     setActionLoading(true);
     try {
       const res = await impersonateOrganisation(org.id);
@@ -216,11 +199,6 @@ const SuperadminOrganisations = () => {
 
   return (
     <div className="space-y-5 pb-6">
-      {showingMockData && (
-        <motion.div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 font-medium">
-          Showing sample organisations for preview. Create a real organisation to use Login as and tenant features.
-        </motion.div>
-      )}
       <CreateOrganizationModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
@@ -239,7 +217,7 @@ const SuperadminOrganisations = () => {
             <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>
               Close
             </Button>
-            {viewOrg && !viewOrg._mock && (
+            {viewOrg && (
               <Button onClick={() => { setIsViewModalOpen(false); handleLoginAs(mapApiOrgToRow(viewOrg)); }}>
                 <RiLoginBoxLine className="inline mr-1" size={16} />
                 Login as
@@ -455,8 +433,13 @@ const SuperadminOrganisations = () => {
                 </tr>
               ) : filteredOrgs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    No organisations found
+                  <td colSpan={7} className="px-5 py-12 text-center">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+                      No organisations yet
+                    </p>
+                    <Button onClick={() => setIsCreateModalOpen(true)} className="text-[10px] font-bold uppercase tracking-widest">
+                      <RiAddLine size={16} /> Create your first organisation
+                    </Button>
                   </td>
                 </tr>
               ) : (

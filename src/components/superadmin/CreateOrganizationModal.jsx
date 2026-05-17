@@ -69,8 +69,14 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
   };
 
   const handleFormSubmit = async () => {
-    if (!formData.name || !formData.primaryEmail || !formData.adminEmail) {
-      toast.error('Please fill in all required fields');
+    if (
+      !formData.name?.trim() ||
+      !formData.primaryEmail?.trim() ||
+      !formData.adminEmail?.trim() ||
+      !formData.adminFirstName?.trim() ||
+      !formData.adminLastName?.trim()
+    ) {
+      toast.error('Please fill in all required fields (including admin name)');
       return;
     }
 
