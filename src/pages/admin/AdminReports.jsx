@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
 import {
   FiCalendar, FiDownload, FiSearch, FiChevronLeft, FiChevronRight,
   FiX, FiEye, FiUser, FiCheckCircle, FiAlertCircle, FiClock,
@@ -23,7 +22,6 @@ import {
 } from "../../services/reportingApi";
 import { getVisaTypes } from "../../services/settingsService";
 import { getDepartments } from "../../services/caseWorker";
-import { getToken } from "../../utils/storage";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 

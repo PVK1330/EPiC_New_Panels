@@ -1,6 +1,7 @@
 import { ChevronLeft, FileText, Paperclip, Search, Send, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import useMediaQuery from "../../hooks/useMediaQuery";
+import { API_BASE_URL } from "../../utils/constants";
 
 /**
  * Reusable messages UI used across portals (Candidate/Caseworker/Business/Admin).
@@ -263,7 +264,7 @@ const MessagePanel = ({
                                 // Assume backend is serving uploads directly or prepend API URL
                                 const url = msg.attachmentUrl.startsWith('http') 
                                   ? msg.attachmentUrl 
-                                  : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${msg.attachmentUrl}`;
+                                  : `${API_BASE_URL}${msg.attachmentUrl}`;
                                 window.open(url, '_blank');
                               }
                             }}

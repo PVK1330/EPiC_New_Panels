@@ -22,6 +22,7 @@ import {
   updateKeyPersonnel,
 } from "../../services/businessProfileApi";
 import { useToast } from "../../context/ToastContext";
+import { API_BASE_URL } from "../../utils/constants";
 
 
 const BusinessProfile = () => {
@@ -605,7 +606,7 @@ const BusinessProfile = () => {
                     </div>
                     {registrationData?.[doc.field] && (
                       <a
-                        href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/${registrationData[doc.field]}`}
+                        href={`${API_BASE_URL}/${registrationData[doc.field]}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition flex-shrink-0"

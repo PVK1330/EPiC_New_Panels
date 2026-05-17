@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import axios from "axios";
+import api from "../../services/api";
 import {
   FiClipboard,
   FiCheckCircle,
@@ -11,8 +11,6 @@ import {
   FiPlay,
 } from "react-icons/fi";
 import Button from "../../components/Button";
-
-const API_BASE_URL = "http://localhost:5000";
 
  const getInitials = (name) => {
   if (!name) return "N/A";
@@ -101,8 +99,8 @@ const exportAuditLogs = async (filters) => {
       (key) => params[key] === undefined && delete params[key]
     );
 
-    const response = await axios.get(
-      `${API_BASE_URL}/api/audit-logs/export`,
+    const response = await api.get(
+      `/api/audit-logs/export`,
       {
         params,
         responseType: "blob",
@@ -146,9 +144,7 @@ export default function AdminAuditLogs() {
   const fetchAuditStats = async () => {
  
  try {
-    const response = await axios.get(`${API_BASE_URL}/api/audit-logs/stats`, {
-      withCredentials: true,
-    });
+    const response = await api.get(`/api/audit-logs/stats`);
     setAuditStats(response.data.data);
   } catch (error) {
     console.error("Error fetching audit stats:", error);
@@ -157,9 +153,7 @@ export default function AdminAuditLogs() {
 };
 const fetchAuditLogs = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/audit-logs`, {
-      withCredentials: true,
-    });
+    const response = await api.get(`/api/audit-logs`);
     console.log("Audit logs response:", response.data.data);
     setLogs(response.data.data);
   } catch (error) {
