@@ -1,4 +1,8 @@
-import { PIPELINE_STAGES, IMMIGRATION_CASE_STEPS } from "../constants/immigrationCaseProcess";
+import {
+  PIPELINE_STAGES,
+  IMMIGRATION_CASE_STEPS,
+  STAGE_GUIDANCE,
+} from "../constants/immigrationCaseProcess";
 
 /** Static demo cases spread across workflow stages (UI preview only). */
 export const MOCK_PIPELINE_CARDS = [
@@ -45,58 +49,7 @@ export const MOCK_SAMPLE_CASE = {
 /** Document-aligned detail per step (from Standard Immigration Case Process). */
 export const PROCESS_STEP_DETAILS = IMMIGRATION_CASE_STEPS.map((step) => {
   const extras = {
-    client_enquiry: {
-      actions: ["Log enquiry", "Assign caseworker", "Schedule consultation"],
-      docs: [],
-    },
-    initial_consultation: {
-      actions: ["Assess eligibility", "Confirm visa route", "Send fee estimate"],
-      docs: [],
-    },
-    data_capture_initial_docs: {
-      actions: ["Send Data Capture Sheet", "Request mandatory documents"],
-      docs: ["Passport", "BRP / eVisa", "Driving licence (if applicable)"],
-    },
-    application_preparation: {
-      actions: ["Begin application form", "Verify DCS received"],
-      docs: ["Completed Data Capture Sheet"],
-    },
-    document_review: {
-      actions: ["Review uploads", "Flag gaps", "Internal QC"],
-      docs: ["All mandatory documents"],
-    },
-    further_information_request: {
-      actions: ["Email client for missing items", "Set follow-up date"],
-      docs: ["As identified in review"],
-    },
-    draft_application_review: {
-      actions: ["Send draft to client", "Collect written approval"],
-      docs: ["Draft application PDF"],
-    },
-    ccl_issued: {
-      actions: ["Issue Client Care Letter", "Attach terms & fees"],
-      docs: ["Client Care Letter (unsigned)"],
-    },
-    ccl_payment_received: {
-      actions: ["Collect signed CCL", "Confirm payment cleared"],
-      docs: ["Signed CCL", "Payment receipt"],
-    },
-    application_submitted: {
-      actions: ["Submit to Home Office", "Record UAN / reference"],
-      docs: ["Submission confirmation"],
-    },
-    biometrics_booked: {
-      actions: ["Book appointment", "Add to case calendar"],
-      docs: ["Appointment letter"],
-    },
-    biometrics_confirmation_sent: {
-      actions: ["Email client instructions", "Confirm attendance"],
-      docs: ["Biometrics confirmation email"],
-    },
-    documents_uploaded: {
-      actions: ["Upload supporting docs", "Pre-biometrics checklist"],
-      docs: ["Supporting evidence bundle"],
-    },
+    ...STAGE_GUIDANCE,
     awaiting_decision: {
       actions: ["Monitor status", "Chase if overdue"],
       docs: [],

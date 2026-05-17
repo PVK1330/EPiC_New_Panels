@@ -19,6 +19,7 @@ import CandidateMessages from '../pages/candidate/CandidateMessages';
 import CandidateNotifications from '../pages/candidate/CandidateNotifications';
 import ActivityLog from '../pages/candidate/ActivityLog';
 import ApplicationStatus from '../pages/candidate/ApplicationStatus';
+import DataCaptureSheet from '../pages/candidate/DataCaptureSheet';
 import CandidateAccount from '../pages/candidate/CandidateAccount';
 
 import CaseworkerDashboard from '../pages/caseworker/CaseworkerDashboard';
@@ -219,6 +220,7 @@ const AppRouter = () => {
           <Route path="calendar" element={<CandidateCalendar />} />
           <Route path="activity-log" element={<ActivityLog />} />
           <Route path="application-status" element={<ApplicationStatus />} />
+          <Route path="data-capture-sheet" element={<DataCaptureSheet />} />
           <Route path="timeline" element={<Navigate to="/candidate/application-status?tab=timeline" replace />} />
           <Route path="pending-actions" element={<Navigate to="/candidate/application-status?tab=actions" replace />} />
           <Route path="account" element={<CandidateAccount />} />

@@ -29,6 +29,10 @@ import { getCaseChecklist } from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
 import { updateCaseFinance } from "../../services/caseDetailApi";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
+import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
+import CaseWorkflowGuidance from "../../components/case/CaseWorkflowGuidance";
+import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
+import { updatePipelineStage } from "../../services/caseApi";
 
 const PAGE_SIZE = 7;
 
@@ -353,6 +357,8 @@ const Cases = () => {
   const [page, setPage] = useState(1);
   const [detailCase, setDetailCase] = useState(null);
   const [detailTab, setDetailTab] = useState("overview");
+  const [stageSaving, setStageSaving] = useState(false);
+  const { showToast } = useToast();
   const [newCaseOpen, setNewCaseOpen] = useState(false);
   const [newCaseForm, setNewCaseForm] = useState(emptyNewCaseForm);
   const [newCaseErrors, setNewCaseErrors] = useState({});
@@ -409,6 +415,8 @@ const Cases = () => {
             "Unknown",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
+          legacyStatus: c.status,
+          caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
           priority: c.priority?.toLowerCase() || "medium",
           payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
@@ -509,6 +517,40 @@ const Cases = () => {
   const [reassignments, setReassignments] = useState({});
   // ───────────────────────────────────────────────────────────────────────────
 
+  const handleWorkflowStageChange = useCallback(
+    async (caseStage) => {
+      if (!detailCase?.caseId) return;
+      setStageSaving(true);
+      try {
+        const res = await updatePipelineStage(detailCase.caseId, caseStage);
+        const updated = res?.data?.data?.case;
+        setDetailCase((prev) =>
+          prev
+            ? {
+                ...prev,
+                caseStage: updated?.caseStage ?? caseStage,
+                legacyStatus: updated?.status ?? prev.legacyStatus,
+              }
+            : null,
+        );
+        setCases((prev) =>
+          prev.map((item) =>
+            item.caseId === detailCase.caseId ? { ...item, caseStage } : item,
+          ),
+        );
+        showToast({ message: "Workflow stage updated." });
+      } catch (err) {
+        showToast({
+          message: err?.response?.data?.message || "Failed to update stage.",
+          variant: "danger",
+        });
+      } finally {
+        setStageSaving(false);
+      }
+    },
+    [detailCase?.caseId, showToast],
+  );
+
   const openDetail = useCallback((c) => {
     setNewCaseOpen(false);
     setEditCaseId(null);
@@ -606,6 +648,8 @@ const Cases = () => {
             "Unknown",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
+          legacyStatus: c.status,
+          caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
           priority: c.priority?.toLowerCase() || "medium",
           payment:
@@ -735,6 +779,8 @@ const Cases = () => {
             "Unknown",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
+          legacyStatus: c.status,
+          caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
           priority: c.priority?.toLowerCase() || "medium",
           payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
@@ -2347,7 +2393,12 @@ const Cases = () => {
 
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6">
               {detailTab === "overview" && (
-                <OverviewTab c={detailCase} userName={user?.name || "You"} />
+                <OverviewTab
+                  c={detailCase}
+                  userName={user?.name || "You"}
+                  onStageChange={handleWorkflowStageChange}
+                  stageSaving={stageSaving}
+                />
               )}
               {detailTab === "documents" && (
                 <DocumentsTab
@@ -2804,10 +2855,18 @@ function Field({ label, children }) {
   );
 }
 
-function OverviewTab({ c, userName }) {
+function OverviewTab({ c, userName, onStageChange, stageSaving }) {
   const st = badgeStatus(c.status);
+  const caseRecord = { caseStage: c.caseStage, status: c.legacyStatus || c.status };
   return (
     <div className="space-y-6">
+      <CaseWorkflowPanel
+        caseRecord={caseRecord}
+        onStageChange={onStageChange}
+        saving={stageSaving}
+      />
+      <CaseWorkflowGuidance caseRecord={caseRecord} />
+      <CaseWorkflowActions caseId={c.caseId} totalAmount={c.totalAmount} />
       {/* <div className="flex flex-wrap gap-2 pb-4 border-b border-gray-100">
         <button
           type="button"

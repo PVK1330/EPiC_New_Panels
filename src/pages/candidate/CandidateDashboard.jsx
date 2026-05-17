@@ -97,8 +97,8 @@ const CandidateDashboard = () => {
       valueSize: "text-lg md:text-xl leading-snug",
     },
     {
-      label: "Case Status",
-      value: caseStatus,
+      label: "Workflow step",
+      value: currentStep?.shortTitle || currentStep?.title || caseStatus,
       sub: caseData.updatedAt ? `Updated ${new Date(caseData.updatedAt).toLocaleDateString()}` : "Form submission pending",
       Icon: ClipboardCheck,
       valueClass: "text-primary",

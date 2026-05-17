@@ -32,6 +32,10 @@ import {
   changeOwnPassword,
 } from "../../services/candidateAccountService";
 import useDownloads from "../../hooks/useDownloads";
+import useCandidate from "../../hooks/useCandidate";
+import { resolveCaseStage } from "../../constants/immigrationCaseProcess";
+import { getDecisionDocuments } from "../../services/workflowApi";
+import { downloadDocument, triggerDownload } from "../../services/documentApi";
 
 const RATING_LABELS = [
   "",
@@ -131,20 +135,20 @@ const FINAL_ITEMS = [
   {
     icon: ScrollText,
     name: "Decision letter",
+    docType: "Decision Letter",
     meta: "Available after UKVI decision",
-    available: false,
   },
   {
     icon: BadgeCheck,
     name: "Approval notice",
+    docType: "Approval Notice",
     meta: "Available upon approval",
-    available: false,
   },
   {
     icon: Plane,
     name: "Visa copy / BRP information",
+    docType: "Visa Copy",
     meta: "Available upon approval",
-    available: false,
   },
 ];
 
@@ -217,10 +221,13 @@ function apiErrorMessage(error) {
   return error?.message || "Something went wrong";
 }
 
+const DECISION_UNLOCK_STAGES = new Set(["decision_communicated", "case_closure"]);
+
 const CandidateAccount = () => {
   const dispatch = useDispatch();
   const reduxUser = useSelector((state) => state.auth.user);
   const { showToast } = useToast();
+  const { myApplication, getMyApplication } = useCandidate();
   const {
     busy: downloadBusy,
     downloadFilledApplicationPdf,
@@ -230,6 +237,35 @@ const CandidateAccount = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const finalSectionRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    getMyApplication();
+  }, [getMyApplication]);
+
+  const caseStage = resolveCaseStage({
+    caseStage: myApplication?._relatedData?.cases?.[0]?.caseStage,
+    status: myApplication?._relatedData?.cases?.[0]?.status,
+  });
+  const decisionDocsUnlocked = DECISION_UNLOCK_STAGES.has(caseStage);
+  const [decisionDocs, setDecisionDocs] = useState([]);
+  const [decisionDocBusy, setDecisionDocBusy] = useState(null);
+
+  const handleDecisionDownload = async (doc) => {
+    if (!doc?.id) return;
+    setDecisionDocBusy(doc.id);
+    try {
+      const res = await downloadDocument(doc.id);
+      triggerDownload(
+        res.data,
+        doc.userFileName || doc.documentName || "document",
+      );
+      showToast({ message: "Download started." });
+    } catch (error) {
+      showToast({ variant: "danger", message: apiErrorMessage(error) });
+    } finally {
+      setDecisionDocBusy(null);
+    }
+  };
 
   const tabParam = searchParams.get("tab");
   const tab = useMemo(() => {
@@ -252,6 +288,16 @@ const CandidateAccount = () => {
     },
     [setSearchParams],
   );
+
+  useEffect(() => {
+    if (tab !== "downloads" || !decisionDocsUnlocked) {
+      setDecisionDocs([]);
+      return;
+    }
+    getDecisionDocuments()
+      .then((res) => setDecisionDocs(res.data?.data?.documents || []))
+      .catch(() => setDecisionDocs([]));
+  }, [tab, decisionDocsUnlocked]);
 
   useEffect(() => {
     if (tab === "downloads" && searchParams.get("section") === "final") {
@@ -833,28 +879,60 @@ const CandidateAccount = () => {
               </span>
             </h2>
             <div className="space-y-2.5">
-              {FINAL_ITEMS.map((row) => (
+              {FINAL_ITEMS.map((row) => {
+                const file = decisionDocs.find((d) => d.documentType === row.docType);
+                const canDownload = decisionDocsUnlocked && file?.id;
+                return (
                 <div
                   key={row.name}
-                  className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-gray-50/80 p-4 opacity-90 sm:flex-row sm:items-center sm:gap-4"
+                  className={`flex flex-col gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center sm:gap-4 ${
+                    decisionDocsUnlocked
+                      ? "border-gray-100 bg-white shadow-sm"
+                      : "border-gray-100 bg-gray-50/80 opacity-90"
+                  }`}
                 >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-200/80 text-gray-500">
+                  <div
+                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
+                      decisionDocsUnlocked
+                        ? "bg-secondary/10 text-secondary"
+                        : "bg-gray-200/80 text-gray-500"
+                    }`}
+                  >
                     <row.icon size={24} strokeWidth={2} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-black text-gray-800">
-                      {row.name}
-                    </p>
+                    <p className="text-sm font-black text-gray-800">{row.name}</p>
                     <p className="text-xs font-bold text-gray-500 mt-0.5">
-                      {row.meta}
+                      {canDownload
+                        ? file.documentName || row.meta
+                        : decisionDocsUnlocked
+                          ? "Not uploaded yet"
+                          : row.meta}
                     </p>
                   </div>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-black text-gray-500 shrink-0">
-                    <Lock size={12} strokeWidth={2.5} />
-                    Locked
-                  </span>
+                  {canDownload ? (
+                    <button
+                      type="button"
+                      disabled={decisionDocBusy === file.id}
+                      onClick={() => handleDecisionDownload(file)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-secondary/30 bg-secondary/10 px-4 py-2.5 text-xs font-black text-secondary hover:bg-secondary hover:text-white shrink-0 disabled:opacity-50"
+                    >
+                      <Download size={16} strokeWidth={2.5} />
+                      {decisionDocBusy === file.id ? "…" : "Download"}
+                    </button>
+                  ) : decisionDocsUnlocked ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-800 shrink-0">
+                      Pending
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-black text-gray-500 shrink-0">
+                      <Lock size={12} strokeWidth={2.5} />
+                      Locked
+                    </span>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         </div>

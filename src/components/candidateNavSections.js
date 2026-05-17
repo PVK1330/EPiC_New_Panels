@@ -24,6 +24,7 @@ export const candidateNavSections = [
     items: [
       { to: "/candidate/application",          label: "Application Form",    icon: ClipboardList },
       { to: "/candidate/document-checklist",   label: "Document Checklist",  icon: FileCheck },
+      { to: "/candidate/data-capture-sheet",   label: "Data Capture Sheet",  icon: ClipboardList },
       { to: "/candidate/upload-documents",     label: "Upload Documents",    icon: Upload },
       { to: "/candidate/application-status",   label: "Track My Progress",   icon: BarChart3 },
     ],

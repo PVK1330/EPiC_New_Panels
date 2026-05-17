@@ -19,6 +19,12 @@ export const ROLE_ROUTES = {
 
 export const DOCUMENT_TYPE_OPTIONS = [
   "General",
+  "Data Capture Sheet",
+  "Client Care Letter",
+  "Decision Letter",
+  "Approval Notice",
+  "Visa Copy",
+  "BRP Information",
   "Passport",
   "Visa",
   "Right to Work",

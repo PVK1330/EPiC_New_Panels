@@ -25,6 +25,7 @@ import {
 import useCandidate from "../../hooks/useCandidate";
 import { useToast } from "../../context/ToastContext";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
+import { confirmCclSigned } from "../../services/workflowApi";
 
 const DOC_TYPE_PLACEHOLDER = "— Select document type —";
 const DOC_TYPES = [DOC_TYPE_PLACEHOLDER, ...DOCUMENT_TYPE_OPTIONS];
@@ -217,7 +218,7 @@ const UploadDocuments = () => {
       const activeCase = myApplication?._relatedData?.cases?.[0];
       const caseIdToAttach = activeCase ? activeCase.id : undefined;
 
-      await uploadDocumentsApi(
+      const uploadRes = await uploadDocumentsApi(
         [file],
         {
           userId,
@@ -229,8 +230,28 @@ const UploadDocuments = () => {
         (pct) => setUploadProgress(pct)
       );
 
+      const uploadedDoc =
+        uploadRes?.data?.data?.documents?.[0] ||
+        uploadRes?.data?.data?.document ||
+        uploadRes?.data?.data?.[0];
+      if (docType === "Client Care Letter" && uploadedDoc?.id) {
+        try {
+          await confirmCclSigned(uploadedDoc.id);
+          showToast({
+            message: "Signed Client Care Letter uploaded and recorded.",
+            variant: "success",
+          });
+        } catch {
+          showToast({
+            message: "Document uploaded. CCL confirmation pending — contact your caseworker if needed.",
+            variant: "warning",
+          });
+        }
+      } else {
+        showToast({ message: "Document uploaded successfully.", variant: "success" });
+      }
+
       setUploadSuccess(true);
-      showToast({ message: "Document uploaded successfully.", variant: "success" });
       clearFile();
       setDocType(DOC_TYPE_PLACEHOLDER);
       setDescription("");
