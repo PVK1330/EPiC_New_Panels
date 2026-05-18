@@ -36,6 +36,13 @@ export function normalizeAuthUser(user) {
   };
 }
 
+/** Password-reset OTP verify response: `{ reset_token }` or nested under `data`. */
+export function getPasswordResetToken(apiBody) {
+  if (!apiBody) return null;
+  if (apiBody.reset_token) return apiBody.reset_token;
+  return apiBody.data?.reset_token ?? null;
+}
+
 /** Dashboard path for a user (never returns /undefined/dashboard). */
 export function getDashboardRouteForUser(user) {
   const normalized = normalizeAuthUser(user);

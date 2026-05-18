@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, Fragment } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Search,
   Plus,
@@ -32,7 +32,10 @@ import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
 import CaseWorkflowGuidance from "../../components/case/CaseWorkflowGuidance";
 import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
+import CclFeeProposalModal from "../../components/case/CclFeeProposalModal";
+import PrintClientApplicationButton from "../../components/CandidateApplicationForm/PrintClientApplicationButton";
 import { updatePipelineStage } from "../../services/caseApi";
+import { proposeCclFees, getCclStatus } from "../../services/workflowApi";
 
 const PAGE_SIZE = 7;
 
@@ -341,6 +344,7 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
 const Cases = () => {
   const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
+  const location = useLocation();
   const [viewMode, setViewMode] = useState("table"); // 'table' or 'kanban'
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -560,6 +564,18 @@ const Cases = () => {
   }, []);
 
   const closeDetail = useCallback(() => setDetailCase(null), []);
+
+  useEffect(() => {
+    const ref = location.state?.openCaseRef;
+    if (!ref || loading || !cases.length) return;
+    const found = cases.find(
+      (c) => c.caseId === ref || String(c.id) === String(ref),
+    );
+    if (found) {
+      openDetail(found);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [cases, loading, location.state, location.pathname, openDetail, navigate]);
 
   const openNewCaseModal = useCallback(() => {
     setDetailCase(null);
@@ -2860,13 +2876,27 @@ function OverviewTab({ c, userName, onStageChange, stageSaving }) {
   const caseRecord = { caseStage: c.caseStage, status: c.legacyStatus || c.status };
   return (
     <div className="space-y-6">
+      {c.candidateId ? (
+        <div className="flex justify-end">
+          <PrintClientApplicationButton
+            candidateId={c.candidateId}
+            label="Print / PDF application"
+          />
+        </div>
+      ) : null}
       <CaseWorkflowPanel
         caseRecord={caseRecord}
         onStageChange={onStageChange}
         saving={stageSaving}
       />
       <CaseWorkflowGuidance caseRecord={caseRecord} />
-      <CaseWorkflowActions caseId={c.caseId} totalAmount={c.totalAmount} />
+      <CaseWorkflowActions
+        caseId={c.caseId}
+        totalAmount={c.totalAmount}
+        amountStatus={c.amountStatus}
+        caseStage={c.caseStage}
+        onRefresh={onStageChange}
+      />
       {/* <div className="flex flex-wrap gap-2 pb-4 border-b border-gray-100">
         <button
           type="button"
@@ -3749,32 +3779,62 @@ function PaymentsTab({ caseDetail, onUpdate }) {
   const [totalAmount, setTotalAmount] = useState(caseDetail?.totalAmount || 0);
   const [amountNotes, setAmountNotes] = useState(caseDetail?.amountNotes || "");
   const [loading, setLoading] = useState(false);
+  const [feeModalOpen, setFeeModalOpen] = useState(false);
+  const [cclMeta, setCclMeta] = useState(null);
+
+  const caseRef = caseDetail?.caseId || caseDetail?.id;
 
   useEffect(() => {
     setTotalAmount(caseDetail?.totalAmount || 0);
     setAmountNotes(caseDetail?.amountNotes || "");
   }, [caseDetail]);
 
-  const handleSave = async (submitForApproval = false) => {
+  useEffect(() => {
+    if (!caseRef) return;
+    getCclStatus(caseRef)
+      .then((data) => setCclMeta(data?.ccl || null))
+      .catch(() => setCclMeta(null));
+  }, [caseRef, caseDetail?.amountStatus, caseDetail?.caseStage]);
+
+  const handleSaveDraft = async () => {
     if (!caseDetail?.id) return;
     setLoading(true);
-    const newStatus = submitForApproval ? "Pending Approval" : caseDetail?.amountStatus;
     try {
       const payload = {
         totalAmount: parseFloat(totalAmount) || 0,
         amountNotes,
-        ...(submitForApproval ? { amountStatus: "Pending Approval" } : {}),
       };
       await updateCaseFinance(caseDetail.id, payload);
       onUpdate?.(payload);
-      toast?.showSuccess?.(
-        submitForApproval
-          ? "Proposed amount submitted to Admin for approval."
-          : "Financial details saved successfully."
-      );
+      toast?.showSuccess?.("Financial details saved successfully.");
     } catch (err) {
       console.error("Finance update error:", err);
-      toast?.showError?.("Failed to update financial details.");
+      toast?.showError?.(err?.response?.data?.message || "Failed to update financial details.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitProposal = async (payload) => {
+    if (!caseRef) return;
+    setLoading(true);
+    try {
+      await proposeCclFees(caseRef, payload);
+      setFeeModalOpen(false);
+      onUpdate?.({
+        totalAmount: payload.feeAmount,
+        amountNotes: payload.notes,
+        amountStatus: "Pending Approval",
+        caseStage: "ccl_fee_admin_review",
+      });
+      toast?.showSuccess?.(
+        "Fee proposal submitted. Admins have been notified and a review task was created.",
+      );
+    } catch (err) {
+      console.error("CCL propose error:", err);
+      toast?.showError?.(
+        err?.response?.data?.message || "Failed to submit fee proposal for approval.",
+      );
     } finally {
       setLoading(false);
     }
@@ -3791,6 +3851,15 @@ function PaymentsTab({ caseDetail, onUpdate }) {
   const paid = parseFloat(caseDetail?.paidAmount) || 0;
   const total = parseFloat(caseDetail?.totalAmount) || 0;
   const outstanding = Math.max(0, total - paid);
+  const awaitingAdmin =
+    currentStatus === "Pending Approval" ||
+    caseDetail?.caseStage === "ccl_fee_admin_review" ||
+    cclMeta?.status === "fee_proposed";
+  const canSubmit =
+    currentStatus !== "Approved" &&
+    cclMeta?.status !== "issued" &&
+    cclMeta?.status !== "signed" &&
+    !awaitingAdmin;
 
   return (
     <div className="space-y-6">
@@ -3858,11 +3927,17 @@ function PaymentsTab({ caseDetail, onUpdate }) {
           />
         </div>
 
-        {currentStatus !== "Approved" && (
+        {awaitingAdmin && (
+          <p className="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+            Awaiting admin approval. Admins have been notified and a review task was created.
+          </p>
+        )}
+
+        {canSubmit && (
           <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-gray-50">
             <button
               type="button"
-              onClick={() => handleSave(false)}
+              onClick={handleSaveDraft}
               disabled={loading}
               className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-black text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
@@ -3870,15 +3945,25 @@ function PaymentsTab({ caseDetail, onUpdate }) {
             </button>
             <button
               type="button"
-              onClick={() => handleSave(true)}
+              onClick={() => setFeeModalOpen(true)}
               disabled={loading || !totalAmount}
               className="rounded-xl bg-secondary px-4 py-2 text-xs font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90 transition-all disabled:opacity-50"
             >
-              Submit for Approval
+              Submit CCL fees for approval
             </button>
           </div>
         )}
       </div>
+
+      <CclFeeProposalModal
+        open={feeModalOpen}
+        onClose={() => setFeeModalOpen(false)}
+        busy={loading}
+        initialFee={totalAmount || cclMeta?.feeAmount}
+        initialPlan={cclMeta?.installmentPlan || cclMeta?.installment_plan}
+        initialNotes={amountNotes || cclMeta?.notes}
+        onSubmit={handleSubmitProposal}
+      />
 
       {/* Summary Grid */}
       <div className="grid grid-cols-3 gap-3">

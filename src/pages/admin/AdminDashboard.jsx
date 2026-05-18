@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { toPng } from "html-to-image";
+import { cloneWithResolvedStyles, removeCloneHost } from "../../utils/canvasExportUtils";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Skeleton } from "boneyard-js/react";
@@ -154,9 +155,10 @@ export default function AdminDashboard() {
 
   const handleExport = async () => {
     if (!dashboardRef.current) return;
+    const { clone, host } = cloneWithResolvedStyles(dashboardRef.current);
     try {
       setIsExporting(true);
-      const dataUrl = await toPng(dashboardRef.current, {
+      const dataUrl = await toPng(clone, {
         cacheBust: true,
         backgroundColor: "#f9fafb",
         style: { borderRadius: "0" },
@@ -168,6 +170,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Export failed:", error);
     } finally {
+      removeCloneHost(host);
       setIsExporting(false);
     }
   };

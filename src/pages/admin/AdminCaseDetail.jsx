@@ -16,6 +16,8 @@ import CaseDetailNotes from "../../components/caseDetail/CaseDetailNotes";
 import CaseDetailAuditLog from "../../components/caseDetail/CaseDetailAuditLog";
 import { CASE_DETAIL_TABS, TAB_IDS, DEFAULT_CASE_DETAIL } from "../../components/caseDetail/caseDetailData";
 import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
+import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
+import PrintClientApplicationButton from "../../components/CandidateApplicationForm/PrintClientApplicationButton";
 import { 
   getCaseDetails,
   updateCaseStatus as updateCaseDetailStatus,
@@ -405,6 +407,7 @@ const AdminCaseDetail = () => {
         amountStatus: financial?.amountStatus || "Not Submitted",
         amountNotes: financial?.amountNotes || "",
         caseId: cleanId,
+        caseStage: overview?.caseStage,
       },
       timeline: timelineList,
       threads: threadsList,
@@ -700,6 +703,23 @@ const AdminCaseDetail = () => {
             }}
             onStageChange={handleWorkflowStageChange}
             saving={stageSaving}
+          />
+
+          <div className="flex flex-wrap items-center gap-2">
+            {caseData?.candidate?.id && (
+              <PrintClientApplicationButton
+                candidateId={caseData.candidate.id}
+                label="Print / PDF application"
+              />
+            )}
+          </div>
+
+          <CaseWorkflowActions
+            caseId={cleanId}
+            totalAmount={caseData?.financial?.totalFee}
+            amountStatus={data.payments?.amountStatus}
+            caseStage={data.case?.caseStage}
+            onRefresh={() => fetchCaseDetail(cleanId)}
           />
 
           <CaseDetailTabBar tabs={CASE_DETAIL_TABS} activeId={tab} onChange={setTab} />

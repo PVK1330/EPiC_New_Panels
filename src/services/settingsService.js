@@ -35,3 +35,7 @@ export const deleteEmailTemplate = (key) => api.delete(`/api/settings/email-temp
 
 export const getPaymentSetting = () => api.get("/api/settings/payment-settings");
 export const updatePaymentSetting = (data) => api.put("/api/settings/payment-settings", data);
+
+export const getSmtpSettings = () => api.get("/api/settings/smtp-settings");
+export const updateSmtpSettings = (data) => api.put("/api/settings/smtp-settings", data);
+export const testSmtpSettings = (data) => api.post("/api/settings/smtp-settings/test", data);

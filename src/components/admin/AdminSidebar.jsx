@@ -31,6 +31,7 @@ import {
   RiExchangeLine,
   RiHistoryLine,
   RiInboxLine,
+  RiMoneyPoundCircleLine,
 } from "react-icons/ri";
 import eliteLogo from "../../assets/elitepic_logo.png";
 
@@ -53,6 +54,7 @@ const navSections = [
     label: "Cases & Workflow",
     items: [
       { to: "/admin/enquiries",         label: "Enquiries",        icon: RiInboxLine, badgeKey: "enquiries" },
+      { to: "/admin/ccl-fee-approvals", label: "CCL fee approvals", icon: RiMoneyPoundCircleLine, badgeKey: "cclFees" },
       { to: "/admin/cases",             label: "All Cases",        icon: RiFolderOpenLine },
       { to: "/admin/pipeline",          label: "Pipeline",         icon: RiExchangeLine },
       { to: "/admin/case-process",      label: "Case Process",     icon: RiGitBranchLine },
@@ -94,14 +96,19 @@ const AdminSidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const [enquiryCount, setEnquiryCount] = useState(0);
+  const [cclApprovalCount, setCclApprovalCount] = useState(0);
 
   useEffect(() => {
     getPipelineCases()
       .then((res) => {
         const pipeline = res.data?.data || {};
         setEnquiryCount((pipeline.client_enquiry || []).length);
+        setCclApprovalCount((pipeline.ccl_fee_admin_review || []).length);
       })
-      .catch(() => setEnquiryCount(0));
+      .catch(() => {
+        setEnquiryCount(0);
+        setCclApprovalCount(0);
+      });
   }, []);
 
   const handleLogout = () => {
@@ -204,6 +211,9 @@ const AdminSidebar = ({ isOpen, onClose }) => {
                         <span className="truncate tracking-tight">{item.label}</span>
                         {item.badgeKey === "enquiries" && enquiryCount > 0 && (
                           <span className="ml-auto flex h-2 w-2 rounded-full bg-red-500 shrink-0" title={`${enquiryCount} new enquiries`} />
+                        )}
+                        {item.badgeKey === "cclFees" && cclApprovalCount > 0 && (
+                          <span className="ml-auto flex h-2 w-2 rounded-full bg-red-500 shrink-0" title={`${cclApprovalCount} CCL fees pending`} />
                         )}
                         {isActive && (
                           <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-white rounded-r-full" />

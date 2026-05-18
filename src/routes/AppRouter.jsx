@@ -36,6 +36,7 @@ import CaseworkerPerformance from '../pages/caseworker/CaseworkerPerformance';
 import CaseworkerMessages from '../pages/caseworker/CaseworkerMessages';
 import CaseworkerFinance from '../pages/caseworker/CaseworkerFinance';
 import CaseworkerLicenceApplications from '../pages/caseworker/CaseworkerLicenceApplications';
+import CaseworkerNotifications from '../pages/caseworker/CaseworkerNotifications';
 
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminCases from '../pages/admin/AdminCases';
@@ -61,6 +62,7 @@ import AdminMessages from '../pages/admin/AdminMessages';
 import AdminCalendar from '../pages/admin/AdminCalendar';
 import AdminLicenceApplications from '../pages/admin/AdminLicenceApplications';
 import AdminEnquiryInbox from '../pages/admin/AdminEnquiryInbox';
+import AdminCclFeeApprovals from '../pages/admin/AdminCclFeeApprovals';
 
 import BusinessDashboard from '../pages/business/BusinessDashboard';
 import BussinessProfile from '../pages/business/BusinessProfile'; import CandidateCalendar from '../pages/candidate/CandidateCalendar';
@@ -172,6 +174,7 @@ const AppRouter = () => {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="enquiries" element={<AdminEnquiryInbox />} />
+          <Route path="ccl-fee-approvals" element={<AdminCclFeeApprovals />} />
           <Route path="cases" element={<AdminCases />} />
           <Route path="businesses" element={<AdminBusinesses />} />
           <Route path="candidates" element={<AdminCandidates />} />
@@ -256,6 +259,7 @@ const AppRouter = () => {
           <Route path="people/candidates" element={<CaseworkerClients />} />
           <Route path="people/sponsors" element={<CaseworkerClients />} />
           <Route path="messages" element={<CaseworkerMessages />} />
+          <Route path="notifications" element={<CaseworkerNotifications />} />
           <Route path="finance" element={<CaseworkerFinance />} />
           <Route path="performance" element={<CaseworkerPerformance />} />
           <Route path="licence-reviews" element={<CaseworkerLicenceApplications />} />

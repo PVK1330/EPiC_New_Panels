@@ -34,6 +34,7 @@ import AccountSettings from "../../components/admin/settings/AccountSettings";
 import VisaSettings from "../../components/admin/settings/VisaSettings";
 import EmailSettings from "../../components/admin/settings/EmailSettings";
 import PaymentSettings from "../../components/admin/settings/PaymentSettings";
+import SmtpSettings from "../../components/admin/settings/SmtpSettings";
 import SLASettings from "../../components/admin/settings/SLASettings";
 import DepartmentSettings from "../../components/admin/settings/DepartmentSettings";
 import CategorySettings from "../../components/admin/settings/CategorySettings";
@@ -73,6 +74,9 @@ import {
   deleteEmailTemplate,
   getPaymentSetting,
   updatePaymentSetting,
+  getSmtpSettings,
+  updateSmtpSettings,
+  testSmtpSettings,
 } from "../../services/settingsService";
 
 const CONFIG_TABS = [
@@ -83,6 +87,7 @@ const CONFIG_TABS = [
   { id: "departments", label: "Departments", icon: <FiFolder />, color: "text-violet-500", bg: "bg-violet-50" },
   { id: "roles", label: "Role Permissions", icon: <FiShield />, color: "text-amber-500", bg: "bg-amber-50" },
   { id: "email", label: "Email Templates", icon: <FiMail />, color: "text-rose-500", bg: "bg-rose-50" },
+  { id: "smtp", label: "SMTP / Mail", icon: <FiMail />, color: "text-pink-500", bg: "bg-pink-50" },
   { id: "payment", label: "Payment Config", icon: <FiCreditCard />, color: "text-cyan-500", bg: "bg-cyan-50" },
   { id: "sla", label: "SLA Rules", icon: <FiClock />, color: "text-orange-500", bg: "bg-orange-50" },
 ];
@@ -121,6 +126,19 @@ export default function AdminSettings() {
   const [emailTemplates, setEmailTemplates] = useState([]);
   const [slaRules, setSlaRules] = useState([]);
   const [paymentConfig, setPaymentConfig] = useState({ currency: "GBP", pay_bank: true, pay_card: true, pay_cheque: false, bank_details: "Account Name: ElitePic Global Ltd\nSort Code: 20-04-15\nAccount No: 88291044\nBank: Barclays Bank PLC", invoice_prefix: "INV-", stripe_public_key: "", stripe_secret_key: "", paypal_client_id: "", paypal_secret: "", razorpay_key_id: "", razorpay_key_secret: "", active_gateway: "stripe" });
+  const [smtpForm, setSmtpForm] = useState({
+    enabled: false,
+    host: "",
+    port: "",
+    secure: false,
+    service: "gmail",
+    user: "",
+    from: "",
+    password: "",
+    hasPassword: false,
+  });
+  const [smtpMeta, setSmtpMeta] = useState({ activeSource: "none", platformConfigured: false });
+  const [testingSmtp, setTestingSmtp] = useState(false);
 
   // Permissions Sub-tab State
   const [rbacTab, setRbacTab] = useState(TAB_IDS.roles);
@@ -192,6 +210,25 @@ export default function AdminSettings() {
       } else if (configTab === "payment") {
         const res = await getPaymentSetting();
         if (res.data?.data) setPaymentConfig(res.data.data);
+      } else if (configTab === "smtp") {
+        const res = await getSmtpSettings();
+        const d = res.data?.data || {};
+        const org = d.organisation || {};
+        setSmtpMeta({
+          activeSource: d.activeSource || "none",
+          platformConfigured: d.platformConfigured === true,
+        });
+        setSmtpForm({
+          enabled: org.enabled === true,
+          host: org.host || "",
+          port: org.port || "",
+          secure: org.secure === true,
+          service: org.service || "gmail",
+          user: org.user || "",
+          from: org.from || "",
+          password: "",
+          hasPassword: org.hasPassword === true,
+        });
       } else if (configTab === "sla") {
         const res = await getSlaRules();
         setSlaRules(res.data?.data?.rules ?? []);
@@ -338,6 +375,44 @@ export default function AdminSettings() {
       showToast({ message: "Payment configuration updated." });
     } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
     finally { setSaving(false); }
+  };
+
+  const handleSmtpSave = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        enabled: smtpForm.enabled,
+        host: smtpForm.host,
+        port: smtpForm.port,
+        secure: smtpForm.secure,
+        service: smtpForm.service,
+        user: smtpForm.user,
+        from: smtpForm.from,
+      };
+      if (smtpForm.password) payload.pass = smtpForm.password;
+      const res = await updateSmtpSettings(payload);
+      const d = res.data?.data || {};
+      setSmtpMeta((m) => ({ ...m, activeSource: d.activeSource || m.activeSource }));
+      setSmtpForm((f) => ({ ...f, password: "", hasPassword: f.enabled ? true : f.hasPassword }));
+      showToast({ message: res.data?.message || "SMTP settings saved." });
+      loadData();
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSmtpTest = async () => {
+    setTestingSmtp(true);
+    try {
+      const res = await testSmtpSettings({});
+      showToast({ message: res.data?.message || "Test email sent." });
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setTestingSmtp(false);
+    }
   };
 
   // SLA Handlers
@@ -565,6 +640,21 @@ export default function AdminSettings() {
                 onEdit={(key) => { const t = emailTemplates.find(x => x.template_key === key); setEmailModalMode("edit"); setEditingEmailKey(key); setEmailFormKey(t.template_key); setEmailFormSubject(t.subject); setEmailFormBody(t.body); setEmailModalOpen(true); }}
                 onDelete={async (key) => { const r = await Swal.fire({ title: "Delete Template?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteEmailTemplate(key); loadData(); } }}
                 onView={(key) => { setViewingTemplate(emailTemplates.find(x => x.template_key === key)); setViewEmailModalOpen(true); }}
+                error={error}
+              />
+            )}
+
+            {configTab === "smtp" && (
+              <SmtpSettings
+                form={smtpForm}
+                meta={smtpMeta}
+                onChange={(key, val) => setSmtpForm((f) => ({ ...f, [key]: val }))}
+                onToggleEnabled={() => setSmtpForm((f) => ({ ...f, enabled: !f.enabled }))}
+                onSave={handleSmtpSave}
+                onTest={handleSmtpTest}
+                saving={saving}
+                testing={testingSmtp}
+                loading={loading}
                 error={error}
               />
             )}

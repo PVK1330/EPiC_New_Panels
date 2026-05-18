@@ -1,8 +1,9 @@
 import React from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Bell, MessageSquare, FileText, AlertTriangle, CheckCircle, Clock, User, Trash2 } from 'lucide-react';
 import { markAsRead, removeNotification } from '../../store/slices/notificationSlice';
+import { getNotificationRoute, getCaseworkerOpenCaseState } from '../../utils/notificationHelpers';
 
 const formatTimeAgo = (timestamp) => {
   const date = new Date(timestamp);
@@ -23,6 +24,7 @@ const formatTimeAgo = (timestamp) => {
 const NotificationItem = ({ notification }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
 
   const getIcon = (type) => {
     switch (type) {
@@ -30,7 +32,14 @@ const NotificationItem = ({ notification }) => {
         return <MessageSquare className="w-5 h-5 text-blue-500" />;
       case 'case_assigned':
       case 'case_updated':
+      case 'case_status_changed':
+      case 'case_stage_change':
+      case 'ccl_fee_review':
+      case 'ccl_issued':
         return <FileText className="w-5 h-5 text-green-500" />;
+      case 'task_assigned':
+      case 'workflow_task':
+        return <Clock className="w-5 h-5 text-indigo-500" />;
       case 'deadline_reminder':
         return <Clock className="w-5 h-5 text-orange-500" />;
       case 'system_announcement':
@@ -74,13 +83,20 @@ const NotificationItem = ({ notification }) => {
 
   const handleClick = () => {
     handleMarkAsRead();
-    // Handle navigation based on entity type
-    if (notification.entityType === 'message' && notification.metadata?.conversationId) {
-      // Navigate to conversation
-      navigate(`/messages/${notification.metadata.conversationId}`);
-    } else if (notification.entityType === 'case' && notification.entityId) {
-      // Navigate to case
-      navigate(`/cases/${notification.entityId}`);
+    const route = getNotificationRoute(notification, user);
+    const roleId = Number(user?.role_id);
+    const isCaseworker = user?.role === 'caseworker' || roleId === 2;
+
+    if (isCaseworker) {
+      const openState = getCaseworkerOpenCaseState(notification);
+      if (openState) {
+        navigate('/caseworker/cases', { state: openState });
+        return;
+      }
+    }
+
+    if (route) {
+      navigate(route);
     }
   };
 
@@ -93,34 +109,28 @@ const NotificationItem = ({ notification }) => {
       `}
       onClick={handleClick}
     >
-      {/* Unread indicator */}
       {!notification.isRead && (
-        <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full"></div>
+        <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full" />
       )}
 
       <div className="flex items-start space-x-3">
-        {/* Icon */}
         <div className="flex-shrink-0 mt-1">
-          {getIcon(notification.type)}
+          {getIcon(notification.type || notification.actionType)}
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Title */}
           <h4 className="text-sm font-semibold text-gray-900 truncate">
             {notification.title}
           </h4>
 
-          {/* Message */}
           <p className="text-sm text-gray-600 mt-1 line-clamp-2">
             {notification.message}
           </p>
 
-          {/* Metadata */}
           {notification.metadata && Object.keys(notification.metadata).length > 0 && (
             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
               {Object.entries(notification.metadata).map(([key, value]) => {
-                if (['senderId', 'conversationId', 'entityId', 'applicationId'].includes(key)) return null;
+                if (['senderId', 'conversationId', 'entityId', 'applicationId', 'taskId'].includes(key)) return null;
                 return (
                   <span key={key} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium capitalize">
                     <span className="opacity-60">{key.replace(/([A-Z])/g, ' $1').trim()}:</span> {Array.isArray(value) ? value.join(', ') : String(value)}
@@ -130,16 +140,15 @@ const NotificationItem = ({ notification }) => {
             </div>
           )}
 
-          {/* Timestamp */}
           <div className="mt-2 text-xs text-gray-400">
             {formatTimeAgo(notification.sentAt)}
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex flex-col space-y-2">
           {!notification.isRead && (
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleMarkAsRead();
@@ -151,6 +160,7 @@ const NotificationItem = ({ notification }) => {
             </button>
           )}
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               handleDelete();

@@ -1,39 +1,50 @@
 import api from "./api";
 
-const BASE = "/api/workflow";
+const unwrap = (res) => res.data?.data ?? res.data;
 
-export const getDataCaptureForm = () => api.get(`${BASE}/data-capture`);
+// ── Candidate ────────────────────────────────────────────────────────────────
+export const getDataCaptureForm = () =>
+  api.get("/api/workflow/data-capture").then(unwrap);
 
-export const saveDataCaptureDraft = (responses) =>
-  api.put(`${BASE}/data-capture`, { responses });
+export const saveDataCaptureDraft = (body) =>
+  api.put("/api/workflow/data-capture", body).then(unwrap);
 
-export const submitDataCapture = (responses) =>
-  api.post(`${BASE}/data-capture/submit`, { responses });
+export const submitDataCapture = (body) =>
+  api.post("/api/workflow/data-capture/submit", body).then(unwrap);
 
-export const getDecisionDocuments = () => api.get(`${BASE}/decision-documents`);
+export const getDecisionDocuments = () =>
+  api.get("/api/workflow/decision-documents").then(unwrap);
 
-export const confirmCclSigned = (documentId) =>
-  api.post(`${BASE}/ccl/confirm-signed`, { documentId });
+export const acceptCcl = () =>
+  api.post("/api/workflow/ccl/accept").then(unwrap);
 
+export const confirmCclSigned = (body) =>
+  api.post("/api/workflow/ccl/confirm-signed", body).then(unwrap);
+
+export const getCandidatePaymentSchedule = () =>
+  api.get("/api/workflow/payments/schedule").then((res) => res.data?.data ?? res.data);
+
+// ── Staff (admin / caseworker) ───────────────────────────────────────────────
 export const getCaseWorkflowBundle = (caseId) =>
-  api.get(`${BASE}/cases/${encodeURIComponent(caseId)}/bundle`);
-
-export const sendDataCaptureRequest = (caseId) =>
-  api.post(`${BASE}/cases/${encodeURIComponent(caseId)}/data-capture/send`);
-
-export const reviewDataCapture = (caseId, status, reviewNotes) =>
-  api.patch(`${BASE}/cases/${encodeURIComponent(caseId)}/data-capture/review`, {
-    status,
-    reviewNotes,
-  });
-
-export const issueCcl = (caseId, payload) =>
-  api.post(`${BASE}/cases/${encodeURIComponent(caseId)}/ccl/issue`, payload);
-
-export const getCclStatus = (caseId) =>
-  api.get(`${BASE}/cases/${encodeURIComponent(caseId)}/ccl`);
+  api.get(`/api/workflow/cases/${caseId}/bundle`).then(unwrap);
 
 export const getDataCapture = (caseId) =>
-  api.get(`${BASE}/cases/${encodeURIComponent(caseId)}/data-capture`);
+  api.get(`/api/workflow/cases/${caseId}/data-capture`).then(unwrap);
 
-export const acceptCcl = () => api.post(`${BASE}/ccl/accept`);
+export const sendDataCaptureRequest = (caseId) =>
+  api.post(`/api/workflow/cases/${caseId}/data-capture/send`).then(unwrap);
+
+export const reviewDataCapture = (caseId, body) =>
+  api.patch(`/api/workflow/cases/${caseId}/data-capture/review`, body).then(unwrap);
+
+export const getCclStatus = (caseId) =>
+  api.get(`/api/workflow/cases/${caseId}/ccl`).then(unwrap);
+
+export const proposeCclFees = (caseId, body) =>
+  api.post(`/api/workflow/cases/${caseId}/ccl/propose`, body).then(unwrap);
+
+export const reviewCclFees = (caseId, body) =>
+  api.patch(`/api/workflow/cases/${caseId}/ccl/fee-review`, body).then(unwrap);
+
+export const getPendingCclFeeApprovals = () =>
+  api.get("/api/workflow/ccl/pending-approvals").then(unwrap);

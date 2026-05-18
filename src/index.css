@@ -86,3 +86,22 @@ button{
   font-style: normal;
   left: 24px;
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #candidate-application-print,
+  #candidate-application-print *,
+  .candidate-application-print-root,
+  .candidate-application-print-root * {
+    visibility: visible;
+  }
+  #candidate-application-print,
+  .candidate-application-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}

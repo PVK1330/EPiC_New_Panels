@@ -12,7 +12,7 @@ export default function SetPasswordPage() {
   const [apiError, setApiError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const email = sessionStorage.getItem("pending_reset_email") || "";
+  const email = (sessionStorage.getItem("pending_reset_email") || "").trim().toLowerCase();
   const [token, setToken] = useState(sessionStorage.getItem("reset_token") || "");
 
   useEffect(() => {

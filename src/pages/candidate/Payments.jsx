@@ -12,12 +12,9 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import Modal from "../../components/Modal";
-import useCandidate from "../../hooks/useCandidate";
+import { getCandidatePaymentSchedule } from "../../services/workflowApi";
 
-const CASE_ID = "VT-2024-0841";
-const TOTAL = 2400;
-const INITIAL_PAID = 1600;
-const BALANCE_DUE = 800;
+const CASE_ID_FALLBACK = "—";
 
 const LS_BALANCE_PAID = "elitepic_candidate_balance_paid";
 const LS_FINAL_PAY_DATE = "elitepic_candidate_final_pay_date";
@@ -94,29 +91,63 @@ const Payments = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [payOpen, setPayOpen] = useState(false);
   const [paymentSnapshot, setPaymentSnapshot] = useState(loadSavedPaymentState);
+  const [schedule, setSchedule] = useState(null);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [scheduleError, setScheduleError] = useState("");
   const balanceSettled = paymentSnapshot.settled;
   const finalPayDate = paymentSnapshot.paidAt;
 
-  // Layman-friendly simulation state
-  const [redirectState, setRedirectState] = useState("idle"); // 'idle' | 'redirecting' | 'paid'
-
-  // Authorization Status Controller: synced with candidate data but includes a plain testing switch
-  const [authStatus, setAuthStatus] = useState("Approved");
-  const { myApplication } = useCandidate();
+  const [redirectState, setRedirectState] = useState("idle");
 
   useEffect(() => {
-    if (myApplication?.case?.amountStatus) {
-      setAuthStatus(myApplication.case.amountStatus);
+    let cancelled = false;
+    (async () => {
+      try {
+        setScheduleLoading(true);
+        const res = await getCandidatePaymentSchedule();
+        const data = res.data?.data ?? res.data;
+        if (!cancelled) setSchedule(data);
+      } catch (e) {
+        if (!cancelled) setScheduleError(e.message || "Failed to load payment schedule");
+      } finally {
+        if (!cancelled) setScheduleLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const paymentsVisible = schedule?.visible === true;
+  const caseId = schedule?.caseId || CASE_ID_FALLBACK;
+  const TOTAL = Number(schedule?.totalFee) || 0;
+  const paidFromApi = Number(schedule?.paidAmount) || 0;
+  const balanceFromApi = Number(schedule?.balanceDue) ?? Math.max(0, TOTAL - paidFromApi);
+
+  const historyRows = useMemo(() => {
+    if (!paymentsVisible || !Array.isArray(schedule?.installments)) {
+      return buildHistoryRows(balanceSettled, finalPayDate);
     }
-  }, [myApplication]);
+    return schedule.installments.map((row, i) => ({
+      id: String(i + 1),
+      date: row.dueDate
+        ? new Date(row.dueDate).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })
+        : "—",
+      description: row.label || `Instalment ${i + 1}`,
+      amount: `£${Number(row.amount || 0).toLocaleString()}`,
+      amountClass: "text-gray-900 font-bold",
+      method: "—",
+      status: "Due",
+      receipt: false,
+    }));
+  }, [paymentsVisible, schedule, balanceSettled, finalPayDate]);
 
-  const historyRows = useMemo(
-    () => buildHistoryRows(balanceSettled, finalPayDate),
-    [balanceSettled, finalPayDate],
-  );
-
-  const paid = balanceSettled ? TOTAL : INITIAL_PAID;
-  const balance = balanceSettled ? 0 : BALANCE_DUE;
+  const paid = balanceSettled ? TOTAL : paidFromApi || (paymentsVisible ? 0 : 0);
+  const balance = balanceSettled ? 0 : balanceFromApi;
 
   const tab = useMemo(() => {
     return searchParams.get("tab") === "history" ? "history" : "summary";
@@ -173,36 +204,31 @@ const Payments = () => {
         </div>
         <div className="shrink-0 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 text-right">
           <span className="block text-[11px] font-bold text-gray-400 uppercase">Application ID</span>
-          <span className="block text-sm font-black text-secondary">{CASE_ID}</span>
+          <span className="block text-sm font-black text-secondary">{caseId}</span>
         </div>
       </header>
 
-      {/* ── Very Simple Switcher for Demonstrating Approval Lockout ──────────── */}
-      <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="font-bold text-blue-900 flex items-center gap-1.5">
-          <span>⚙️ Testing panel: Change case state to preview payment button permissions</span>
-        </span>
-        <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-blue-200">
-          <button
-            type="button"
-            onClick={() => setAuthStatus("Pending Approval")}
-            className={`px-2.5 py-1 rounded text-xs font-bold ${
-              authStatus !== "Approved" ? "bg-amber-100 text-amber-800" : "text-gray-500"
-            }`}
-          >
-            Awaiting Admin Review
-          </button>
-          <button
-            type="button"
-            onClick={() => setAuthStatus("Approved")}
-            className={`px-2.5 py-1 rounded text-xs font-bold ${
-              authStatus === "Approved" ? "bg-blue-600 text-white" : "text-gray-500"
-            }`}
-          >
-            Approved (Ready to Pay)
-          </button>
+      {scheduleLoading && (
+        <p className="text-sm text-gray-500 font-bold">Loading payment schedule…</p>
+      )}
+      {scheduleError && (
+        <p className="text-sm text-red-600 font-bold">{scheduleError}</p>
+      )}
+      {!scheduleLoading && !paymentsVisible && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex gap-4">
+          <Lock className="text-amber-700 shrink-0" size={28} />
+          <div>
+            <h3 className="text-base font-black text-amber-950">Payments not available yet</h3>
+            <p className="text-sm text-amber-800 mt-1 leading-relaxed">
+              {schedule?.message ||
+                "Your payment schedule will appear here after your caseworker proposes fees and an administrator approves your Client Care Letter."}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {!scheduleLoading && paymentsVisible && (
+      <>
 
       {/* ── Tabs Navigation ─────────────────────────────────────────────────── */}
       <div className="flex gap-2 border-b border-gray-200 pb-2">
@@ -259,17 +285,22 @@ const Payments = () => {
           </div>
 
           {/* Action Box */}
-          {authStatus !== "Approved" ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-left flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="w-12 h-12 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center shrink-0 font-bold text-lg">
-                ⏳
-              </div>
+          {balance > 0 && !balanceSettled ? (
+            <div className="bg-white border border-gray-100 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-base font-black text-amber-950">Awaiting Final Review</h3>
-                <p className="text-sm text-amber-800 mt-1 leading-relaxed">
-                  Your final balance of <strong>£800</strong> is currently being reviewed by our administrative staff. The payment button will unlock automatically as soon as it is approved.
+                <h3 className="text-base font-black text-secondary">Outstanding balance</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Pay your approved instalment plan securely via Stripe.
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={handlePayClick}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-black text-white shadow-md"
+              >
+                Pay £{balance.toLocaleString()}
+                <ArrowRight size={16} />
+              </button>
             </div>
           ) : balanceSettled ? (
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -292,33 +323,7 @@ const Payments = () => {
                 View Receipts
               </button>
             </div>
-          ) : (
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-secondary text-xs font-bold mb-3">
-                  <ShieldCheck size={14} className="text-secondary" /> Secured by Stripe
-                </span>
-                <h3 className="text-xl font-black text-secondary">
-                  Pay final balance of £{BALANCE_DUE}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1 max-w-lg leading-relaxed">
-                  Clicking the button below will redirect you to Stripe's trusted checkout page to safely process your payment using any major debit or credit card.
-                </p>
-              </div>
-
-              <div className="shrink-0">
-                <button
-                  type="button"
-                  onClick={handlePayClick}
-                  className="w-full sm:w-auto px-8 py-4 bg-secondary text-white rounded-2xl font-black text-base shadow-md hover:bg-secondary/90 transition-all flex items-center justify-center gap-2 group cursor-pointer"
-                >
-                  <span>Pay now</span>
-                  <ExternalLink size={18} className="group-hover:translate-x-0.5 transition-transform" />
-                </button>
-                <span className="text-[11px] text-gray-400 block text-center mt-2">Redirects to secure Stripe Checkout</span>
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -374,6 +379,9 @@ const Payments = () => {
         </div>
       )}
 
+      </>
+      )}
+
       {/* ── Simulated Stripe Redirect Pop-up ───────────────────────────────── */}
       <Modal
         open={payOpen}
@@ -388,7 +396,7 @@ const Payments = () => {
             <div>
               <h3 className="text-base font-black text-secondary">Stripe Checkout Launched</h3>
               <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
-                Stripe's secure checkout gateway has opened in a new tab to safely collect your payment of <strong>£{BALANCE_DUE}</strong>.
+                Stripe's secure checkout gateway has opened in a new tab to safely collect your payment of <strong>£{balance.toLocaleString()}</strong>.
               </p>
             </div>
             <div className="pt-2">

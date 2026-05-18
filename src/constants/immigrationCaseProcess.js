@@ -38,6 +38,8 @@ const STAGE_UI = [
   { accent: "border-t-orange-500", dot: "bg-orange-500", header: "bg-orange-50 border-orange-100", titleClass: "text-orange-800", countClass: "bg-orange-100 text-orange-800" },
   { accent: "border-t-emerald-500", dot: "bg-emerald-500", header: "bg-emerald-50 border-emerald-100", titleClass: "text-emerald-800", countClass: "bg-emerald-100 text-emerald-800" },
   { accent: "border-t-green-500", dot: "bg-green-500", header: "bg-emerald-50 border-emerald-100", titleClass: "text-emerald-800", countClass: "bg-emerald-100 text-emerald-800" },
+  { accent: "border-t-teal-500", dot: "bg-teal-500", header: "bg-teal-50 border-teal-100", titleClass: "text-teal-800", countClass: "bg-teal-100 text-teal-800" },
+  { accent: "border-t-cyan-600", dot: "bg-cyan-600", header: "bg-cyan-50 border-cyan-100", titleClass: "text-cyan-800", countClass: "bg-cyan-100 text-cyan-800" },
 ];
 
 export const IMMIGRATION_CASE_STEPS = [
@@ -48,15 +50,17 @@ export const IMMIGRATION_CASE_STEPS = [
   { id: "document_review", order: 5, title: "Document Review", shortTitle: "Doc Review", description: "Caseworker reviews documents and identifies gaps." },
   { id: "further_information_request", order: 6, title: "Further Information Request", shortTitle: "Further Info", description: "Further information or documents requested from client." },
   { id: "draft_application_review", order: 7, title: "Draft Application Review", shortTitle: "Draft App", description: "Draft application sent to client for review and confirmation." },
-  { id: "ccl_issued", order: 8, title: "Client Care Letter Issued", shortTitle: "CCL Issued", description: "Client Care Letter issued after draft approval." },
-  { id: "ccl_payment_received", order: 9, title: "CCL & Payment Received", shortTitle: "CCL & Pay", description: "Signed CCL and payments received." },
-  { id: "application_submitted", order: 10, title: "Application Submitted", shortTitle: "Submitted", description: "Final application submitted to the Home Office." },
-  { id: "biometrics_booked", order: 11, title: "Biometrics Booked", shortTitle: "Bio Booked", description: "Biometrics appointment booked." },
-  { id: "biometrics_confirmation_sent", order: 12, title: "Biometrics Confirmation Sent", shortTitle: "Bio Confirm", description: "Biometrics confirmation and instructions sent to client." },
-  { id: "documents_uploaded", order: 13, title: "Documents Uploaded", shortTitle: "Uploaded", description: "Supporting documents uploaded before biometrics." },
-  { id: "awaiting_decision", order: 14, title: "Awaiting Decision", shortTitle: "Decision", description: "Monitoring application while awaiting Home Office decision." },
-  { id: "decision_communicated", order: 15, title: "Decision Communicated", shortTitle: "Decided", description: "Approval or refusal communicated to client." },
-  { id: "case_closure", order: 16, title: "Case Closure", shortTitle: "Closed", description: "Final case closure email issued." },
+  { id: "ccl_fee_proposal", order: 8, title: "CCL Fee Proposal", shortTitle: "CCL Fees", description: "Caseworker proposes fees and instalment schedule." },
+  { id: "ccl_fee_admin_review", order: 9, title: "CCL Fee — Admin Review", shortTitle: "Fee Review", description: "Admin reviews and approves fees before CCL is sent to client." },
+  { id: "ccl_issued", order: 10, title: "Client Care Letter Issued", shortTitle: "CCL Issued", description: "Approved CCL and fee schedule sent to client." },
+  { id: "ccl_payment_received", order: 11, title: "CCL & Payment Received", shortTitle: "CCL & Pay", description: "Signed CCL and payments received." },
+  { id: "application_submitted", order: 12, title: "Application Submitted", shortTitle: "Submitted", description: "Final application submitted to the Home Office." },
+  { id: "biometrics_booked", order: 13, title: "Biometrics Booked", shortTitle: "Bio Booked", description: "Biometrics appointment booked." },
+  { id: "biometrics_confirmation_sent", order: 14, title: "Biometrics Confirmation Sent", shortTitle: "Bio Confirm", description: "Biometrics confirmation and instructions sent to client." },
+  { id: "documents_uploaded", order: 15, title: "Documents Uploaded", shortTitle: "Uploaded", description: "Supporting documents uploaded before biometrics." },
+  { id: "awaiting_decision", order: 16, title: "Awaiting Decision", shortTitle: "Decision", description: "Monitoring application while awaiting Home Office decision." },
+  { id: "decision_communicated", order: 17, title: "Decision Communicated", shortTitle: "Decided", description: "Approval or refusal communicated to client." },
+  { id: "case_closure", order: 18, title: "Case Closure", shortTitle: "Closed", description: "Final case closure email issued." },
 ];
 
 const STEP_BY_ID = new Map(IMMIGRATION_CASE_STEPS.map((s) => [s.id, s]));
@@ -160,12 +164,20 @@ export const STAGE_GUIDANCE = {
     docs: ["As identified in review"],
   },
   draft_application_review: {
-    actions: ["Send draft to client", "Collect written approval"],
+    actions: ["Send draft to client", "Collect written approval", "Propose CCL fees & instalments"],
     docs: ["Draft application PDF"],
   },
+  ccl_fee_proposal: {
+    actions: ["Set total fee", "Define instalment schedule", "Submit to admin for approval"],
+    docs: ["Fee breakdown", "Instalment plan"],
+  },
+  ccl_fee_admin_review: {
+    actions: ["Review proposed fees", "Approve or return to caseworker", "Release CCL to client when approved"],
+    docs: ["Proposed fee schedule"],
+  },
   ccl_issued: {
-    actions: ["Issue Client Care Letter", "Attach terms & fees"],
-    docs: ["Client Care Letter (unsigned)"],
+    actions: ["Monitor client acceptance", "Track instalment payments"],
+    docs: ["Client Care Letter (issued to client)"],
   },
   ccl_payment_received: {
     actions: ["Collect signed CCL", "Confirm payment cleared"],
@@ -211,7 +223,7 @@ export function getNextStageId(stageId) {
   return IMMIGRATION_CASE_STEPS[step.order]?.id ?? null;
 }
 
-/** Build 16-step list with done/current/pending state for candidate tracking UI. */
+/** Build 18-step list with done/current/pending state for candidate tracking UI. */
 export function buildStepStates(caseRecord) {
   const stageId = resolveCaseStage(caseRecord);
   const current = getStepById(stageId);
@@ -235,6 +247,12 @@ export const CANDIDATE_STAGE_ACTIONS = {
       text: "Review your draft application and notify your caseworker of any changes",
       to: "/candidate/application",
     },
+  ],
+  ccl_fee_proposal: [
+    { text: "Your caseworker is preparing your fee proposal — no action needed from you.", calm: true },
+  ],
+  ccl_fee_admin_review: [
+    { text: "Fees are being reviewed by the firm — you will receive your Client Care Letter shortly.", calm: true },
   ],
   ccl_issued: [
     { text: "Review and accept your Client Care Letter", to: "/candidate/ccl" },

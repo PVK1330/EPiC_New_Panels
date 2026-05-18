@@ -1,9 +1,11 @@
 import { useMemo, useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { CalendarDays, Check, TrendingUp, Bell, Plus, Send, MessageSquareMore } from "lucide-react";
+import { CalendarDays, Check, Bell, Send, MessageSquareMore } from "lucide-react";
 import api from "../../services/api";
 import { MOCK_RECENT_MESSAGES } from "../../data/adminDashboardMock";
+import NotificationList from "../../components/notifications/NotificationList";
+import { fetchUnreadCount } from "../../store/slices/notificationSlice";
 
 
 
@@ -28,14 +30,22 @@ function badgeClass(tone) {
   return map[tone] || map.gray;
 }
 
+const DASHBOARD_TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "notifications", label: "Notifications" },
+];
+
 const CaseworkerDashboard = () => {
   const user = useSelector((state) => state.auth.user);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [dashboardTab, setDashboardTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({});
   const [recentCases, setRecentCases] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [recentMessages, setRecentMessages] = useState([]);
+  const { unreadCount } = useSelector((state) => state.notifications);
 
   const greetingLine = useMemo(() => {
     const d = new Date();
@@ -89,7 +99,8 @@ const CaseworkerDashboard = () => {
 
     fetchDashboardData();
     fetchRecentMessages();
-  }, []);
+    dispatch(fetchUnreadCount());
+  }, [dispatch]);
 
   const toggleTask = async (id) => {
     try {
@@ -207,12 +218,35 @@ const CaseworkerDashboard = () => {
           </h1>
           <p className="text-sm font-bold text-gray-600 mt-1">{greetingLine}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-
-
+        <div className="flex rounded-xl border border-gray-200 bg-white p-1 gap-1">
+          {DASHBOARD_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setDashboardTab(t.id)}
+              className={`relative rounded-lg px-4 py-2 text-xs font-black transition-colors ${
+                dashboardTab === t.id ? "bg-secondary text-white" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {t.label}
+              {t.id === "notifications" && unreadCount > 0 && (
+                <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] text-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
+      {dashboardTab === "notifications" && (
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+          <NotificationList />
+        </div>
+      )}
+
+      {dashboardTab === "overview" && (
+      <>
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-full text-center py-8">
@@ -504,7 +538,8 @@ const CaseworkerDashboard = () => {
         </div> */}
       </div>
 
-      
+      </>
+      )}
     </div>
   );
 };

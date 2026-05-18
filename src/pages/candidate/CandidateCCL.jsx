@@ -27,8 +27,12 @@ export default function CandidateCCL() {
   }, [getMyApplication]);
 
   const accepted = ccl?.status === "signed";
-  const issued = ccl?.status === "issued" || accepted;
+  const issuedToClient = ccl?.status === "issued" || accepted;
   const fee = Number(caseData.totalAmount) || Number(ccl?.feeAmount) || 0;
+  const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
+  const awaitingAdmin =
+    ["ccl_fee_proposal", "ccl_fee_admin_review"].includes(stageId) ||
+    ccl?.status === "fee_proposed";
 
   const handleAccept = async () => {
     if (!agreed) {
@@ -59,13 +63,15 @@ export default function CandidateCCL() {
     );
   }
 
-  if (!issued && !["ccl_issued", "ccl_payment_received", "application_submitted"].includes(stageId)) {
+  if (!issuedToClient) {
     return (
       <div className="max-w-xl mx-auto rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
         <FileCheck className="mx-auto text-gray-300 mb-4" size={40} />
         <h1 className="text-xl font-black text-secondary">Client Care Letter</h1>
         <p className="text-sm font-bold text-gray-500 mt-2">
-          Your Client Care Letter has not been issued yet. Your caseworker will notify you when it is ready.
+          {awaitingAdmin
+            ? "Your fee proposal is being reviewed by the firm. You will receive your Client Care Letter and payment schedule once approved."
+            : "Your Client Care Letter has not been issued yet. Your caseworker will notify you when it is ready."}
         </p>
       </div>
     );
@@ -118,6 +124,31 @@ export default function CandidateCCL() {
             </dd>
           </div>
         </dl>
+
+        {instalments.length > 0 && (
+          <div className="border-t border-gray-100 pt-4">
+            <p className="text-xs font-black uppercase tracking-wider text-gray-400 mb-2">
+              Payment instalments
+            </p>
+            <ul className="space-y-2 text-sm">
+              {instalments.map((row, i) => (
+                <li
+                  key={i}
+                  className="flex justify-between gap-2 font-bold text-secondary border-b border-gray-50 pb-2"
+                >
+                  <span>{row.label}</span>
+                  <span>
+                    £{Number(row.amount).toFixed(2)}
+                    {row.dueDate
+                      ? ` · due ${new Date(row.dueDate).toLocaleDateString("en-GB")}`
+                      : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <p className="text-sm text-gray-600 leading-relaxed border-t border-gray-100 pt-4">
           By accepting, you agree to the firm&apos;s terms and authorise the visa application to proceed.
           {ccl?.notes && (

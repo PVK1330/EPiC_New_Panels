@@ -4,7 +4,7 @@ import { useDispatch } from "react-redux";
 import { verifyOtp, resendOtp, verifyResetOtp, forgotPassword } from "../services/auth.service";
 import { setCredentials } from "../store/slices/authSlice";
 import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
-import { getAuthUserAndToken } from "../utils/authResponse";
+import { getAuthUserAndToken, getPasswordResetToken } from "../utils/authResponse";
 
 const useOtp = (type = "register") => {
   const navigate = useNavigate();
@@ -60,14 +60,12 @@ const useOtp = (type = "register") => {
           navigate("/login");
         }
       } else {
-        const res = await verifyResetOtp({ email, otp });
-        console.log("Verify Reset OTP Response:", res);
-        const token = res?.data?.reset_token || res?.reset_token;
+        const normalizedEmail = String(email || "").trim().toLowerCase();
+        const res = await verifyResetOtp({ email: normalizedEmail, otp });
+        const token = getPasswordResetToken(res);
         if (token) {
           sessionStorage.setItem("reset_token", token);
-          console.log("Token stored in sessionStorage");
-        } else {
-          console.error("No token found in response:", res);
+          sessionStorage.setItem("pending_reset_email", normalizedEmail);
         }
         navigate("/set-password");
       }
