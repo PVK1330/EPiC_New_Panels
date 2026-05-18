@@ -1,77 +1,91 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
  RiBillLine,
- RiDownload2Line,
- RiInformationLine,
- RiMore2Line,
- RiExchangeLine,
- RiCheckDoubleLine,
- RiArrowRightUpLine,
  RiPieChartLine,
  RiWallet3Line,
  RiPulseLine,
  RiEyeLine,
  RiFileDownloadLine,
- RiEditLine,
- RiHistoryLine,
  RiSearchLine,
  RiFilter3Line,
  RiSecurePaymentLine,
- RiCloseLine,
- RiAddLine,
 } from 'react-icons/ri';
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
+import useBilling from '../../hooks/useBilling';
+import toast from 'react-hot-toast';
 
 const SuperadminBilling = () => {
- const [activeMetric, setActiveMetric] = useState('MRR');
  const [searchTerm, setSearchTerm] = useState('');
  const [currentPage, setCurrentPage] = useState(1);
  const [selectedInvoice, setSelectedInvoice] = useState(null);
  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
 
+ const {
+   invoices,
+   invoicesLoading,
+   fetchInvoices,
+   fetchInvoiceById,
+   downloadFinancials,
+   dashboardStats,
+   statsLoading,
+   fetchDashboardStats,
+ } = useBilling();
+
+ useEffect(() => {
+   fetchInvoices();
+   fetchDashboardStats();
+ }, [fetchInvoices, fetchDashboardStats]);
+
  const stats = [
- { title: 'Monthly Recurring (MRR)', value: '£42,840', trend: '+12.5%', icon: RiPulseLine, color: 'primary' },
- { title: 'Annual Recurring (ARR)', value: '£514,080', trend: '+15.2%', icon: RiWallet3Line, color: 'secondary' },
- { title: 'Churn Rate', value: '1.2%', trend: '-0.4%', icon: RiPieChartLine, color: 'amber' },
- { title: 'Active Subscriptions', value: '1,240', trend: '+5.1%', icon: RiBillLine, color: 'green' },
+ { title: 'Monthly Recurring (MRR)', value: `£${dashboardStats?.mrr || '0'}`, trend: '+12.5%', icon: RiPulseLine, color: 'primary' },
+ { title: 'Annual Recurring (ARR)', value: `£${dashboardStats?.arr || '0'}`, trend: '+15.2%', icon: RiWallet3Line, color: 'secondary' },
+ { title: 'Churn Rate', value: `${dashboardStats?.churnRate || '0'}%`, trend: '-0.4%', icon: RiPieChartLine, color: 'amber' },
+ { title: 'Active Subscriptions', value: dashboardStats?.activeSubscriptions || '0', trend: '+5.1%', icon: RiBillLine, color: 'green' },
  ];
 
- const orgBilling = [
- { id: '#INV-8921', org: 'Elite Visa Solutions', plan: 'Enterprise', amount: '£799', date: '2026-06-12', status: 'Paid', method: 'Stripe' },
- { id: '#INV-8920', org: 'Global Migrate Pro', plan: 'Pro', amount: '£349', date: '2026-06-05', status: 'Pending', method: 'PayPal' },
- { id: '#INV-8919', org: 'London Legal Partners', plan: 'Starter', amount: '£0', date: '2026-05-28', status: 'Trial', method: '-' },
- { id: '#INV-8918', org: 'Bridge UK Immigration', plan: 'Enterprise', amount: '£799', date: '2026-05-12', status: 'Overdue', method: 'Stripe' },
- { id: '#INV-8917', org: 'Westminster Agency', plan: 'Pro', amount: '£349', date: '2026-05-08', status: 'Paid', method: 'Bank' },
- ];
-
- const mrrData = [45, 52, 48, 61, 70, 65, 78, 85, 82, 95, 110, 124];
- const churnData = [2.1, 1.8, 1.9, 1.5, 1.2, 1.4, 1.1, 0.9, 1.2, 1.0, 0.8, 0.7];
-
- const filteredBilling = orgBilling.filter(item => 
- item.org.toLowerCase().includes(searchTerm.toLowerCase()) ||
- item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
- item.plan.toLowerCase().includes(searchTerm.toLowerCase())
+ const filteredBilling = invoices.filter(item => 
+ item.organisation?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+ item.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase())
  );
 
- const handleAction = (type, id) => {
+ const handleAction = async (type, invoice) => {
  if (type === 'View') {
- const invoice = orgBilling.find(inv => inv.id === id);
- setSelectedInvoice(invoice);
+ try {
+ const res = await fetchInvoiceById(invoice.id);
+ if (res.ok) {
+ setSelectedInvoice(res.data);
  setIsInvoiceModalOpen(true);
- } else {
- alert(`${type} initiated for ${id}. File generation in progress...`);
+ }
+ } catch (e) {
+ toast.error('Failed to load invoice details');
+ }
+ } else if (type === 'Download') {
+ toast.success(`Download initiated for ${invoice.invoice_number}`);
  }
  };
 
- const handleGlobalAction = (type) => {
- alert(`${type} workflow started. Redirecting to secure ${type === 'Export' ? 'data stream' : 'audit logs'}...`);
+ const handleGlobalAction = async (type) => {
+ if (type === 'Export') {
+ try {
+ const res = await downloadFinancials();
+ const url = window.URL.createObjectURL(new Blob([res.data]));
+ const link = document.createElement('a');
+ link.href = url;
+ link.setAttribute('download', `financials_${Date.now()}.xlsx`);
+ document.body.appendChild(link);
+ link.click();
+ link.remove();
+ toast.success('Financials exported successfully');
+ } catch (e) {
+ toast.error('Failed to export financials');
+ }
+ }
  };
 
  return (
   <div className="space-y-4 pb-4">
-    {/* Modern Header */}
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-100">
       <div>
         <h1 className="text-xl font-black text-secondary tracking-tight">Billing & Revenue</h1>
@@ -84,14 +98,16 @@ const SuperadminBilling = () => {
   </div>
  </div>
 
- {/* Primary KPI Grid */}
  <motion.div 
   initial={{ opacity: 0 }}
   animate={{ opacity: 1 }}
   transition={{ staggerChildren: 0.1 }}
   className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
  >
- {stats.map((stat, idx) => {
+ {statsLoading ? (
+ <div className="col-span-4 text-center py-10 text-gray-400">Loading stats...</div>
+ ) : (
+ stats.map((stat, idx) => {
  const colorMap = {
  'primary': { bg: 'from-blue-50 to-blue-100/50', border: 'border-blue-200/50', icon: 'from-blue-500 to-blue-600', label: 'text-blue-600', value: 'text-blue-900' },
  'secondary': { bg: 'from-green-50 to-green-100/50', border: 'border-green-200/50', icon: 'from-green-500 to-green-600', label: 'text-green-600', value: 'text-green-900' },
@@ -116,7 +132,7 @@ const SuperadminBilling = () => {
  <div>
  <p className="text-sm font-semibold text-gray-400 mb-1">{stat.title}</p>
  <div className="flex items-center">
-  <span className="text-2xl font-black text-secondary tracking-tight">£{stat.value.replace('£', '')}</span>
+  <span className="text-2xl font-black text-secondary tracking-tight">{stat.value}</span>
   <span className={`ml-2 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${stat.trend.startsWith('+') ? 'text-green-600 bg-green-50 border border-green-100' : 'text-red-600 bg-red-50 border border-red-100'}`}>
   {stat.trend}
   </span>
@@ -124,12 +140,10 @@ const SuperadminBilling = () => {
  </div>
  </motion.div>
  );
- })}
+ })
+ )}
  </motion.div>
 
-
-
-   {/* Financial Ledger */}
    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
     <div className="px-4 py-2.5 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/30">
      <div className="flex items-center gap-3">
@@ -166,34 +180,40 @@ const SuperadminBilling = () => {
       </tr>
      </thead>
  <tbody className="divide-y divide-gray-50/50">
- {filteredBilling.map((item, idx) => (
+ {invoicesLoading ? (
+ <tr>
+ <td colSpan={7} className="px-4 py-10 text-center text-gray-400">Loading invoices...</td>
+ </tr>
+ ) : filteredBilling.length === 0 ? (
+ <tr>
+ <td colSpan={7} className="px-4 py-10 text-center text-gray-400">No invoices found</td>
+ </tr>
+ ) : (
+ filteredBilling.map((item, idx) => (
  <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
  <td className="px-4 py-3">
  <span className="text-sm font-semibold text-secondary bg-gray-50 px-2 py-0.5 rounded border border-gray-100 group-hover:text-primary transition-all">
- {item.id}
+ {item.invoice_number}
  </span>
  </td>
  <td className="px-4 py-3">
- <p className="font-bold text-secondary text-xs">{item.org}</p>
- {item.method === 'Stripe' && <span className="inline-flex items-center mt-0.5 px-2 py-0.5 rounded-full text-xs font-semibold border bg-violet-50 text-violet-700 border-violet-100">Stripe</span>}
- {item.method === 'PayPal' && <span className="inline-flex items-center mt-0.5 px-2 py-0.5 rounded-full text-xs font-semibold border bg-blue-50 text-blue-700 border-blue-100">PayPal</span>}
- {item.method === 'Bank' && <span className="inline-flex items-center mt-0.5 px-2 py-0.5 rounded-full text-xs font-semibold border bg-gray-50 text-gray-600 border-gray-200">Bank Transfer</span>}
- {item.method === '-' && <span className="inline-flex items-center mt-0.5 px-2 py-0.5 rounded-full text-xs font-semibold border bg-gray-50 text-gray-400 border-gray-100">None</span>}
+ <p className="font-bold text-secondary text-xs">{item.organisation?.name || '—'}</p>
+ <span className="inline-flex items-center mt-0.5 px-2 py-0.5 rounded-full text-xs font-semibold border bg-gray-50 text-gray-600 border-gray-200">{item.payment_method || 'N/A'}</span>
  </td>
  <td className="px-4 py-3">
  <span className={`px-2 py-0.5 rounded text-sm font-bold tracking-wider border ${
- item.plan === 'Enterprise' ? 'bg-primary/5 text-primary border-primary/10' : 'bg-gray-50 text-gray-400 border-gray-100'
+ item.subscription?.plan?.name === 'Enterprise' ? 'bg-primary/5 text-primary border-primary/10' : 'bg-gray-50 text-gray-400 border-gray-100'
  }`}>
- {item.plan}
+ {item.subscription?.plan?.name || '—'}
  </span>
  </td>
- <td className="px-5 py-3 text-center font-semibold text-secondary text-xs">{item.amount}</td>
- <td className="px-5 py-3 text-center text-gray-400 font-bold text-sm">{item.date}</td>
+ <td className="px-5 py-3 text-center font-semibold text-secondary text-xs">£{item.amount}</td>
+ <td className="px-5 py-3 text-center text-gray-400 font-bold text-sm">{item.due_at ? new Date(item.due_at).toLocaleDateString() : '—'}</td>
  <td className="px-4 py-3">
  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-bold tracking-wider border ${
- item.status === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' :
- item.status === 'Pending' ? 'bg-blue-50 text-blue-700 border-blue-100' :
- item.status === 'Trial' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-red-50 text-red-700 border-red-100'
+ item.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
+ item.status === 'pending' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+ item.status === 'overdue' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-gray-50 text-gray-400 border-gray-100'
  }`}>
  {item.status}
  </span>
@@ -201,14 +221,14 @@ const SuperadminBilling = () => {
  <td className="px-4 py-3 text-right">
  <div className="flex items-center justify-end gap-1">
  <button 
- onClick={() => handleAction('View', item.id)}
+ onClick={() => handleAction('View', item)}
  className="p-1.5 text-gray-500 hover:text-secondary hover:bg-gray-100 rounded-lg transition-all"
  title="View Invoice"
  >
  <RiEyeLine size={16} />
  </button>
  <button 
- onClick={() => handleAction('Download', item.id)}
+ onClick={() => handleAction('Download', item)}
  className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
  title="Download PDF"
  >
@@ -217,14 +237,14 @@ const SuperadminBilling = () => {
  </div>
  </td>
  </tr>
- ))}
+ ))
+ )}
  </tbody>
  </table>
  </div>
 
- {/* Pagination */}
  <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
- <p className="text-sm font-bold text-gray-400">Page {currentPage} of 14</p>
+ <p className="text-sm font-bold text-gray-400">Page {currentPage} of {Math.ceil(filteredBilling.length / 10)}</p>
  <div className="flex gap-2">
  <button 
  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
@@ -235,7 +255,8 @@ const SuperadminBilling = () => {
  </button>
  <button 
  onClick={() => setCurrentPage(currentPage + 1)}
- className="px-3 py-1 rounded-lg text-sm font-bold bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm"
+ disabled={currentPage >= Math.ceil(filteredBilling.length / 10)}
+ className="px-3 py-1 rounded-lg text-sm font-bold bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50"
  >
  Next
  </button>
@@ -243,41 +264,41 @@ const SuperadminBilling = () => {
  </div>
  </div>
 
- {/* Invoice Details Modal */}
  <Modal
  isOpen={isInvoiceModalOpen}
  onClose={() => setIsInvoiceModalOpen(false)}
- title={`Invoice ${selectedInvoice?.id}`}
+ title={`Invoice ${selectedInvoice?.invoice_number}`}
  subtitle="Transaction details and payment audit."
  maxWidth="max-w-md"
  footer={
  <div className="flex justify-end gap-2 w-full">
  <Button variant="secondary"onClick={() => setIsInvoiceModalOpen(false)} className="px-5 py-2 text-sm font-bold">Close</Button>
- <Button onClick={() => handleAction('Download', selectedInvoice?.id)} className="px-6 py-2 text-sm font-bold shadow-sm">
+ <Button onClick={() => handleAction('Download', selectedInvoice)} className="px-6 py-2 text-sm font-bold shadow-sm">
  Download PDF
  </Button>
  </div>
  }
  >
+ {selectedInvoice && (
  <div className="space-y-6 py-2">
  <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-100 p-4 mb-2">
  <div className="flex justify-between items-start mb-4">
  <div>
- <span className="text-sm font-semibold text-gray-400">{selectedInvoice?.id}</span>
- <h4 className="text-sm font-semibold text-secondary mt-1">{selectedInvoice?.org}</h4>
+ <span className="text-sm font-semibold text-gray-400">{selectedInvoice.invoice_number}</span>
+ <h4 className="text-sm font-semibold text-secondary mt-1">{selectedInvoice.organisation?.name}</h4>
  </div>
  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
- selectedInvoice?.status === 'Paid' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'
- }`}>{selectedInvoice?.status}</span>
+ selectedInvoice.status === 'paid' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'
+ }`}>{selectedInvoice.status}</span>
  </div>
  <div className="flex justify-between items-end border-t border-gray-200 pt-3">
  <div>
- <p className="text-sm text-gray-500 font-bold">Tier: {selectedInvoice?.plan}</p>
- <p className="text-sm text-gray-500 font-bold">{selectedInvoice?.date}</p>
+ <p className="text-sm text-gray-500 font-bold">Tier: {selectedInvoice.subscription?.plan?.name || '—'}</p>
+ <p className="text-sm text-gray-500 font-bold">{selectedInvoice.due_at ? new Date(selectedInvoice.due_at).toLocaleDateString() : '—'}</p>
  </div>
  <div className="text-right">
  <p className="text-sm font-bold text-gray-400 mb-0.5">Amount</p>
- <h4 className="text-xl font-semibold text-primary">{selectedInvoice?.amount}</h4>
+ <h4 className="text-xl font-semibold text-primary">£{selectedInvoice.amount}</h4>
  </div>
  </div>
  </div>
@@ -290,22 +311,22 @@ const SuperadminBilling = () => {
  </div>
  <div>
  <p className="text-sm font-bold text-secondary">Payment Method</p>
- <p className="text-sm text-gray-400 font-bold">{selectedInvoice?.method || 'Standard Card'}</p>
+ <p className="text-sm text-gray-400 font-bold">{selectedInvoice.payment_method || 'Standard Card'}</p>
  </div>
  </div>
  <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
- selectedInvoice?.status === 'Paid' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'
- }`}>{selectedInvoice?.status}</span>
+ selectedInvoice.status === 'paid' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'
+ }`}>{selectedInvoice.status}</span>
  </div>
 
  <div className="grid grid-cols-2 gap-4">
  <div className="p-3 border border-gray-50 rounded-xl">
  <p className="text-xs font-bold text-gray-400 mb-1">Gateway ID</p>
- <p className="text-sm font-mono font-bold text-secondary truncate">txn_3M2q9uL9xZ0k...</p>
+ <p className="text-sm font-mono font-bold text-secondary truncate">{selectedInvoice.stripe_invoice_id || 'N/A'}</p>
  </div>
  <div className="p-3 border border-gray-50 rounded-xl">
- <p className="text-xs font-bold text-gray-400 mb-1">Service Node</p>
- <p className="text-sm font-bold text-secondary">UK-PRIMARY-01</p>
+ <p className="text-xs font-bold text-gray-400 mb-1">Currency</p>
+ <p className="text-sm font-bold text-secondary">{selectedInvoice.currency}</p>
  </div>
  </div>
  </div>
@@ -316,6 +337,7 @@ const SuperadminBilling = () => {
  </p>
  </div>
  </div>
+ )}
  </Modal>
  </div>
  );

@@ -6,11 +6,13 @@ import eliteLogo from "../assets/elitepic_logo.png";
 import { caseworkerNavSections } from "./caseworkerNavSections";
 import { useState, useEffect } from "react";
 import api from "../services/api";
+import useModuleAccess from "../hooks/useModuleAccess";
 
 const CaseworkerSidebar = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
+  const { canAccess } = useModuleAccess();
   const [taskCount, setTaskCount] = useState(0);
 
   useEffect(() => {
@@ -90,7 +92,7 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
               )}
 
               <div className="space-y-0.5">
-                {section.items.map((item) => (
+                {section.items.filter((item) => canAccess(item.moduleKey)).map((item) => (
                   <NavLink
                     key={item.to}
                     to={item.to}

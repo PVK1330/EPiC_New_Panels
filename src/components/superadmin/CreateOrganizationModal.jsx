@@ -1,14 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
 import {
   RiBuilding2Line,
-  RiMailLine,
-  RiGlobalLine,
   RiShieldUserLine,
-  RiCheckLine,
   RiInformationLine,
-  RiArrowDownSLine
+  RiArrowDownSLine,
 } from 'react-icons/ri';
 import Input from '../Input';
 import Button from '../Button';
@@ -18,13 +14,14 @@ import {
   isValidOrganisationSlug,
   getOrganisationSubdomainLabel,
 } from '../../utils/organisationHost';
+import { fetchPlans } from '../../services/superadminPlan.service';
 
 const initialForm = () => ({
   name: '',
   slug: '',
   primaryEmail: '',
   country: '',
-  plan: 'starter',
+  plan_id: '',
   adminFirstName: '',
   adminLastName: '',
   adminEmail: '',
@@ -36,14 +33,33 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState(initialForm);
   const [slugTouched, setSlugTouched] = useState(false);
+  const [plans, setPlans] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setFormData(initialForm());
       setSlugTouched(false);
       setSubmitting(false);
+      loadPlans();
     }
   }, [isOpen]);
+
+  const loadPlans = async () => {
+    setPlansLoading(true);
+    try {
+      const res = await fetchPlans();
+      const list = (res.data?.data?.plans || []).filter((p) => p.status === 'active');
+      setPlans(list);
+      if (list.length > 0) {
+        setFormData((prev) => ({ ...prev, plan_id: String(list[0].id) }));
+      }
+    } catch {
+      setPlans([]);
+    } finally {
+      setPlansLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -57,9 +73,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
     if (name === 'name') {
       setFormData((prev) => {
         const next = { ...prev, name: value };
-        if (!slugTouched) {
-          next.slug = slugifyOrganisation(value);
-        }
+        if (!slugTouched) next.slug = slugifyOrganisation(value);
         return next;
       });
       return;
@@ -106,24 +120,19 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
       maxWidth="max-w-3xl"
       footer={
         <div className="flex justify-end gap-3 w-full">
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            disabled={submitting}
-            onClick={handleFormSubmit}
-          >
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button disabled={submitting} onClick={handleFormSubmit}>
             {submitting ? 'Creating...' : 'Create Organisation'}
           </Button>
         </div>
       }
     >
       <div className="space-y-8 py-2">
-        {/* Section: Organisation Details */}
         <div className="space-y-4">
           <h4 className="text-sm font-bold text-secondary flex items-center gap-2">
             <RiBuilding2Line className="text-primary" /> Organisation Information
           </h4>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Organisation Name"
@@ -149,10 +158,11 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
                 <span className="font-mono text-primary">{getOrganisationSubdomainLabel(formData.slug)}</span>
               </p>
               <p className="text-[11px] text-gray-400 ml-1">
-                Filled from the organisation name until you edit this field.
+                Auto-filled from name until you edit this field.
               </p>
             </div>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Business Email"
@@ -169,32 +179,40 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
               placeholder="United Kingdom"
               value={formData.country}
               onChange={handleChange}
-              required
             />
           </div>
+
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-gray-700 ml-1">Subscription Plan</label>
             <div className="relative">
               <select
-                name="plan"
-                value={formData.plan}
+                name="plan_id"
+                value={formData.plan_id}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-sm font-semibold text-secondary outline-none focus:ring-2 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
+                disabled={plansLoading}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-sm font-semibold text-secondary outline-none focus:ring-2 focus:ring-primary/10 transition-all appearance-none cursor-pointer disabled:opacity-60"
               >
-                <option value="starter">Starter Plan (£99/mo)</option>
-                <option value="pro">Professional Plan (£299/mo)</option>
-                <option value="enterprise">Enterprise Plan (£599/mo)</option>
+                {plansLoading && <option value="">Loading plans...</option>}
+                {!plansLoading && plans.length === 0 && <option value="">No active plans found</option>}
+                {!plansLoading && plans.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.name} — £{Number(p.price).toFixed(0)}/{p.billing_cycle === 'monthly' ? 'mo' : 'yr'}
+                  </option>
+                ))}
               </select>
-              <RiArrowDownSLine className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+              <RiArrowDownSLine
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                size={18}
+              />
             </div>
           </div>
         </div>
 
-        {/* Section: Admin Details */}
         <div className="pt-6 border-t border-gray-100 space-y-4">
           <h4 className="text-sm font-bold text-secondary flex items-center gap-2">
             <RiShieldUserLine className="text-primary" /> Administrator Account
           </h4>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="First Name"
@@ -213,6 +231,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
               required
             />
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Admin Email"

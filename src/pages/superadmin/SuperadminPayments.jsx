@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
+import useBilling from '../../hooks/useBilling';
 import {
  RiMoneyPoundCircleLine,
  RiArrowUpLine,
@@ -7,20 +9,14 @@ import {
  RiDownload2Line,
  RiFilter3Line,
  RiSearchLine,
- RiTimeLine,
  RiBankCardLine,
- RiHandCoinLine,
  RiExchangeLine,
  RiFileDownloadLine,
- RiArrowRightSLine,
  RiShieldCheckLine,
  RiInformationLine,
- RiArrowDownSLine,
  RiEyeLine,
- RiMore2Line,
  RiPulseLine,
  RiSecurePaymentLine,
- RiCloseLine,
  RiMastercardLine,
  RiVisaLine,
 } from 'react-icons/ri';
@@ -58,258 +54,68 @@ const SuperadminPayments = () => {
  const [isTransactionDetailOpen, setIsTransactionDetailOpen] = useState(false);
  const [selectedTransaction, setSelectedTransaction] = useState(null);
  const [searchTerm, setSearchTerm] = useState('');
+ const [gatewayConfig, setGatewayConfig] = useState({
+   publishable_key: '',
+   secret_key: '',
+   webhook_secret: '',
+ });
+
+ const {
+   transactions,
+   transactionsLoading,
+   fetchTransactions,
+   fetchTransactionById,
+   gatewayStatus,
+   gatewayLoading,
+   fetchGatewayStatus,
+   saveGatewayConfig,
+   dashboardStats,
+   statsLoading,
+   fetchDashboardStats,
+ } = useBilling();
+
+ useEffect(() => {
+   fetchTransactions();
+   fetchGatewayStatus();
+   fetchDashboardStats();
+ }, [fetchTransactions, fetchGatewayStatus, fetchDashboardStats]);
 
  const stats = [
- { title: 'Gross Volume', value: '£142,500', trend: '+12.5%', icon: RiMoneyPoundCircleLine, color: 'primary' },
- { title: 'Net Revenue', value: '£128,400', trend: '+10.2%', icon: RiPulseLine, color: 'primary' },
- { title: 'Success Rate', value: '99.4%', trend: '+0.2%', icon: RiShieldCheckLine, color: 'green' },
- { title: 'Refund Rate', value: '0.8%', trend: '-0.1%', icon: RiExchangeLine, color: 'amber' },
+ { title: 'Gross Volume', value: `£${dashboardStats?.grossVolume || '0'}`, trend: '+12.5%', icon: RiMoneyPoundCircleLine, color: 'primary' },
+ { title: 'Net Revenue', value: `£${dashboardStats?.netRevenue || '0'}`, trend: '+10.2%', icon: RiPulseLine, color: 'primary' },
+ { title: 'Success Rate', value: `${dashboardStats?.successRate || '0'}%`, trend: '+0.2%', icon: RiShieldCheckLine, color: 'green' },
+ { title: 'Refund Rate', value: `${dashboardStats?.refundRate || '0'}%`, trend: '-0.1%', icon: RiExchangeLine, color: 'amber' },
  ];
 
- const transactions = [
- {
- id: '#TR-8921',
- transactionId: 'ch_1ABC123DEF456GHI789JKL',
- org: 'Elite Visa Solutions',
- date: '2026-05-08',
- time: '14:32:15',
- amount: '£799',
- status: 'Completed',
- method: 'Stripe',
- provider: 'Visa',
- cardLast4: '4242',
- sender: 'Elite Visa Solutions Ltd',
- receiver: 'Elite Pic CMS Account',
- notes: 'Visa application processing fee - Payment ID: APP-2024-00521'
- },
- {
- id: '#TR-8920',
- transactionId: 'ch_1XYZ789ABC123DEF456GHI',
- org: 'Global Migrate Pro',
- date: '2026-05-07',
- time: '10:15:43',
- amount: '£349',
- status: 'Completed',
- method: 'Stripe',
- provider: 'Mastercard',
- cardLast4: '5555',
- sender: 'Global Migrate Pro Inc',
- receiver: 'Elite Pic CMS Account',
- notes: 'Immigration consultation fee - Ref: CONS-2024-00892'
- },
- {
- id: '#TR-8919',
- transactionId: 'ch_1DEF456GHI789ABC123XYZ',
- org: 'London Legal Partners',
- date: '2026-05-07',
- time: '09:45:22',
- amount: '£149',
- status: 'Failed',
- method: 'Stripe',
- provider: 'Visa',
- cardLast4: '4111',
- sender: 'London Legal Partners LLP',
- receiver: 'Elite Pic CMS Account',
- notes: 'Transaction declined - Insufficient funds'
- },
- {
- id: '#TR-8918',
- transactionId: 'ch_1GHI789ABC123DEF456XYZ',
- org: 'Westminster Agency',
- date: '2026-05-06',
- time: '16:22:08',
- amount: '£349',
- status: 'Completed',
- method: 'Stripe',
- provider: 'Visa',
- cardLast4: '4242',
- sender: 'Westminster Agency Ltd',
- receiver: 'Elite Pic CMS Account',
- notes: 'Visa sponsorship documentation fee - Doc ID: DOC-2024-05612'
- },
- {
- id: '#TR-8917',
- transactionId: 'ch_1JKL012MNO345PQR678STU',
- org: 'Bridge UK Immigration',
- date: '2026-05-06',
- time: '11:05:51',
- amount: '£799',
- status: 'Processing',
- method: 'Stripe',
- provider: 'Mastercard',
- cardLast4: '5555',
- sender: 'Bridge UK Immigration Services',
- receiver: 'Elite Pic CMS Account',
- notes: 'Premium visa application package - Order ID: ORD-2024-09876'
- },
- ];
+  const currentData = transactions.filter(t => {
+    if (activeTab === 'Transactions') return t.status !== 'refunded';
+    if (activeTab === 'Payouts') return false;
+    if (activeTab === 'Refunds') return t.status === 'refunded';
+    return true;
+  });
 
- const payouts = [
- {
- id: '#PO-7821',
- payoutId: 'po_1ABC123DEF456GHI789JKL',
- org: 'Elite Visa Solutions',
- date: '2026-05-08',
- time: '14:32:15',
- amount: '£12,450',
- status: 'Completed',
- method: 'Bank Transfer',
- bankName: 'HSBC UK',
- accountLast4: '8842',
- sender: 'Elite Pic CMS Account',
- receiver: 'Elite Visa Solutions Ltd',
- notes: 'Monthly revenue payout - Period: May 2026'
- },
- {
- id: '#PO-7820',
- payoutId: 'po_1XYZ789ABC123DEF456GHI',
- org: 'Global Migrate Pro',
- date: '2026-05-07',
- time: '10:15:43',
- amount: '£8,320',
- status: 'Completed',
- method: 'Bank Transfer',
- bankName: 'Barclays UK',
- accountLast4: '5521',
- sender: 'Elite Pic CMS Account',
- receiver: 'Global Migrate Pro Inc',
- notes: 'Monthly revenue payout - Period: May 2026'
- },
- {
- id: '#PO-7819',
- payoutId: 'po_1DEF456GHI789ABC123XYZ',
- org: 'London Legal Partners',
- date: '2026-05-07',
- time: '09:45:22',
- amount: '£5,670',
- status: 'Pending',
- method: 'Bank Transfer',
- bankName: 'Lloyds Bank',
- accountLast4: '3345',
- sender: 'Elite Pic CMS Account',
- receiver: 'London Legal Partners LLP',
- notes: 'Monthly revenue payout - Period: May 2026 - Awaiting bank confirmation'
- },
- {
- id: '#PO-7818',
- payoutId: 'po_1GHI789ABC123DEF456XYZ',
- org: 'Westminster Agency',
- date: '2026-05-06',
- time: '16:22:08',
- amount: '£9,890',
- status: 'Completed',
- method: 'Bank Transfer',
- bankName: 'NatWest',
- accountLast4: '7763',
- sender: 'Elite Pic CMS Account',
- receiver: 'Westminster Agency Ltd',
- notes: 'Monthly revenue payout - Period: April 2026'
- },
- {
- id: '#PO-7817',
- payoutId: 'po_1JKL012MNO345PQR678STU',
- org: 'Bridge UK Immigration',
- date: '2026-05-06',
- time: '11:05:51',
- amount: '£15,230',
- status: 'Processing',
- method: 'Bank Transfer',
- bankName: 'HSBC UK',
- accountLast4: '8842',
- sender: 'Elite Pic CMS Account',
- receiver: 'Bridge UK Immigration Services',
- notes: 'Monthly revenue payout - Period: May 2026 - Processing'
- },
- ];
+  const handleViewTransaction = async (txn) => {
+    try {
+      const res = await fetchTransactionById(txn.id);
+      if (res.ok) {
+        setSelectedTransaction(res.data);
+        setIsTransactionDetailOpen(true);
+      }
+    } catch (e) {
+      toast.error('Failed to load transaction details');
+    }
+  };
 
- const refunds = [
- {
- id: '#RF-6521',
- refundId: 're_1ABC123DEF456GHI789JKL',
- org: 'Elite Visa Solutions',
- date: '2026-05-08',
- time: '14:32:15',
- amount: '£799',
- status: 'Completed',
- method: 'Stripe',
- provider: 'Visa',
- cardLast4: '4242',
- sender: 'Elite Pic CMS Account',
- receiver: 'Elite Visa Solutions Ltd',
- reason: 'Service cancellation - Refund requested by customer',
- originalTransactionId: '#TR-8921'
- },
- {
- id: '#RF-6520',
- refundId: 're_1XYZ789ABC123DEF456GHI',
- org: 'Global Migrate Pro',
- date: '2026-05-07',
- time: '10:15:43',
- amount: '£349',
- status: 'Completed',
- method: 'Stripe',
- provider: 'Mastercard',
- cardLast4: '5555',
- sender: 'Elite Pic CMS Account',
- receiver: 'Global Migrate Pro Inc',
- reason: 'Duplicate payment - Refund processed automatically',
- originalTransactionId: '#TR-8920'
- },
- {
- id: '#RF-6519',
- refundId: 're_1DEF456GHI789ABC123XYZ',
- org: 'London Legal Partners',
- date: '2026-05-07',
- time: '09:45:22',
- amount: '£149',
- status: 'Pending',
- method: 'Stripe',
- provider: 'Visa',
- cardLast4: '4111',
- sender: 'Elite Pic CMS Account',
- receiver: 'London Legal Partners LLP',
- reason: 'Service not delivered - Awaiting approval',
- originalTransactionId: '#TR-8919'
- },
- {
- id: '#RF-6518',
- refundId: 're_1GHI789ABC123DEF456XYZ',
- org: 'Westminster Agency',
- date: '2026-05-06',
- time: '16:22:08',
- amount: '£349',
- status: 'Failed',
- method: 'Stripe',
- provider: 'Visa',
- cardLast4: '4242',
- sender: 'Elite Pic CMS Account',
- receiver: 'Westminster Agency Ltd',
- reason: 'Card expired - Refund failed',
- originalTransactionId: '#TR-8918'
- },
- {
- id: '#RF-6517',
- refundId: 're_1JKL012MNO345PQR678STU',
- org: 'Bridge UK Immigration',
- date: '2026-05-06',
- time: '11:05:51',
- amount: '£799',
- status: 'Processing',
- method: 'Stripe',
- provider: 'Mastercard',
- cardLast4: '5555',
- sender: 'Elite Pic CMS Account',
- receiver: 'Bridge UK Immigration Services',
- reason: 'Customer dispute - Under review',
- originalTransactionId: '#TR-8917'
- },
- ];
-
-  const currentData = activeTab === 'Transactions' ? transactions : activeTab === 'Payouts' ? payouts : refunds;
-
-  const gateways = [
-    { name: 'Stripe Connect', status: 'Connected', lastSync: '2 mins ago', icon: RiSecurePaymentLine, type: 'Card / ACH' },
-  ];
+  const handleSaveGatewayConfig = async () => {
+    try {
+      await saveGatewayConfig(gatewayConfig);
+      toast.success('Gateway configuration saved');
+      setIsGatewayModalOpen(false);
+      fetchGatewayStatus();
+    } catch (e) {
+      toast.error('Failed to save gateway configuration');
+    }
+  };
 
   return (
     <div className="space-y-4 pb-4">
@@ -331,9 +137,13 @@ const SuperadminPayments = () => {
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        {stats.map((stat, idx) => (
-          <StatCard key={idx} {...stat} delay={idx * 0.05} />
-        ))}
+        {statsLoading ? (
+          <div className="col-span-4 text-center py-10 text-gray-400">Loading stats...</div>
+        ) : (
+          stats.map((stat, idx) => (
+            <StatCard key={idx} {...stat} delay={idx * 0.05} />
+          ))
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -386,26 +196,35 @@ const SuperadminPayments = () => {
                 </tr>
               </thead>
  <tbody className="divide-y divide-gray-50/50">
- {currentData.map((tr) => (
+ {transactionsLoading ? (
+ <tr>
+ <td colSpan={6} className="px-4 py-10 text-center text-gray-400">Loading transactions...</td>
+ </tr>
+ ) : currentData.length === 0 ? (
+ <tr>
+ <td colSpan={6} className="px-4 py-10 text-center text-gray-400">No transactions found</td>
+ </tr>
+ ) : (
+ currentData.map((tr) => (
  <tr key={tr.id} className="hover:bg-gray-50 transition-all group cursor-pointer">
  <td className="px-4 py-2.5">
  <motion.span 
  className="font-bold text-secondary text-sm bg-gray-100 px-3 py-1 rounded-lg border border-gray-200 group-hover:text-primary group-hover:bg-primary/10 transition-all cursor-pointer"
  whileHover={{ scale: 1.05 }}
  >
- {tr.id}
+ {tr.reference}
  </motion.span>
  </td>
  <td className="px-4 py-2.5">
- <p className="font-bold text-secondary text-sm block leading-tight mb-1">{tr.org}</p>
- <p className="text-sm text-gray-500 font-semibold">{tr.date}</p>
+ <p className="font-bold text-secondary text-sm block leading-tight mb-1">{tr.organisation?.name || '—'}</p>
+ <p className="text-sm text-gray-500 font-semibold">{new Date(tr.createdAt).toLocaleDateString()}</p>
  </td>
  <td className="px-4 py-2.5 text-center">
  <motion.span 
  className="font-semibold text-secondary text-base"
  whileHover={{ scale: 1.1 }}
  >
- {tr.amount}
+ £{tr.amount}
  </motion.span>
  </td>
  <td className="px-4 py-2.5">
@@ -417,20 +236,20 @@ const SuperadminPayments = () => {
  className="w-8 h-8 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center text-secondary group-hover:border-primary group-hover:bg-primary/10"
  whileHover={{ rotate: 10 }}
  >
- {tr.provider === 'Visa' ? <RiVisaLine size={16} /> : tr.provider === 'Mastercard' ? <RiMastercardLine size={16} /> : <RiBankCardLine size={16} />}
+ <RiBankCardLine size={16} />
  </motion.div>
  <div>
- <p className="text-sm font-bold text-secondary">{tr.method || 'N/A'}</p>
- <p className="text-sm text-gray-600 font-semibold">{tr.provider || 'Card'}</p>
+ <p className="text-sm font-bold text-secondary">{tr.gateway || 'N/A'}</p>
+ <p className="text-sm text-gray-600 font-semibold">{tr.payment_method || 'Card'}</p>
  </div>
  </motion.div>
  </td>
  <td className="px-4 py-2.5 text-center">
  <span 
  className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold border ${
- tr.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-100' :
- tr.status === 'Processing' ? 'bg-blue-50 text-blue-700 border-blue-100' :
- tr.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+ tr.status === 'completed' ? 'bg-green-50 text-green-700 border-green-100' :
+ tr.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+ tr.status === 'refunded' ? 'bg-amber-50 text-amber-700 border-amber-100' :
  'bg-red-50 text-red-700 border-red-100'
  }`}
  >
@@ -439,17 +258,14 @@ const SuperadminPayments = () => {
  </td>
  <td className="px-4 py-2.5 text-right">
  <button
- onClick={() => {
- setSelectedTransaction(tr);
- setIsTransactionDetailOpen(true);
- }}
+ onClick={() => handleViewTransaction(tr)}
  className="p-1.5 text-gray-400 hover:text-secondary hover:bg-gray-100 rounded-lg transition-all"
  title="View Details"
  >
  <RiEyeLine size={16} />
  </button>
  <button
- onClick={() => alert('Downloading receipt for ' + tr.id)}
+ onClick={() => toast.success('Downloading receipt for ' + tr.reference)}
  className="p-1.5 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-lg transition-all"
  title="Download Receipt"
  >
@@ -457,7 +273,8 @@ const SuperadminPayments = () => {
  </button>
  </td>
  </tr>
- ))}
+ ))
+ )}
  </tbody>
 
  </table>
@@ -478,36 +295,39 @@ const SuperadminPayments = () => {
           </div>
 
           <div className="space-y-3 flex-1">
-            {gateways.map((gw) => (
+            {gatewayLoading ? (
+              <div className="text-center py-10 text-gray-400">Loading gateway status...</div>
+            ) : gatewayStatus ? (
               <div 
-                key={gw.name} 
                 className="p-4 bg-gray-50/50 rounded-xl border border-gray-100 group transition-all"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 bg-white rounded-lg border border-gray-100 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                      <gw.icon size={18} />
+                      <RiSecurePaymentLine size={18} />
                     </div>
                     <div>
-                      <p className="text-sm font-black text-secondary tracking-tight">{gw.name}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{gw.type}</p>
+                      <p className="text-sm font-black text-secondary tracking-tight">{gatewayStatus.name}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Card / ACH</p>
                     </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all ${
-                    gw.status === 'Connected' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'
+                    gatewayStatus.status === 'Connected' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'
                   }`}>
-                    {gw.status}
+                    {gatewayStatus.status}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-[10px] font-bold text-gray-400">
                   <span>Last Sync</span>
-                  <span className="text-secondary">{gw.lastSync}</span>
+                  <span className="text-secondary">{gatewayStatus.lastSync ? new Date(gatewayStatus.lastSync).toLocaleString() : 'Never'}</span>
                 </div>
               </div>
-            ))}
+            ) : (
+              <div className="text-center py-10 text-gray-400">No gateway configured</div>
+            )}
           </div>
   <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden mt-3">
-    <div className="h-full bg-green-500 w-full" />
+    <div className={`h-full ${gatewayStatus?.status === 'Connected' ? 'bg-green-500' : 'bg-red-500'} w-full`} />
   </div>
 
 
@@ -703,7 +523,7 @@ const SuperadminPayments = () => {
  footer={
  <div className="flex justify-end gap-2 w-full">
  <Button variant="secondary"onClick={() => setIsGatewayModalOpen(false)} className="px-5 py-2 text-sm font-bold">Close</Button>
- <Button onClick={() => setIsGatewayModalOpen(false)} className="px-6 py-2 text-sm font-bold shadow-sm">Save Changes</Button>
+ <Button onClick={handleSaveGatewayConfig} className="px-6 py-2 text-sm font-bold shadow-sm">Save Changes</Button>
  </div>
  }
  >
@@ -721,9 +541,26 @@ const SuperadminPayments = () => {
  </div>
  </div>
  <div className="space-y-4">
- <Input label="Publishable Key"defaultValue="pk_live_..."className="font-mono text-sm"/>
- <Input label="Secret Key"type="password"defaultValue="sk_live_..."className="font-mono text-sm"/>
- <Input label="Webhook Secret"type="password"defaultValue="whsec_..."className="font-mono text-sm"/>
+ <Input 
+ label="Publishable Key"
+ value={gatewayConfig.publishable_key}
+ onChange={(e) => setGatewayConfig({...gatewayConfig, publishable_key: e.target.value})}
+ className="font-mono text-sm"
+ />
+ <Input 
+ label="Secret Key"
+ type="password"
+ value={gatewayConfig.secret_key}
+ onChange={(e) => setGatewayConfig({...gatewayConfig, secret_key: e.target.value})}
+ className="font-mono text-sm"
+ />
+ <Input 
+ label="Webhook Secret"
+ type="password"
+ value={gatewayConfig.webhook_secret}
+ onChange={(e) => setGatewayConfig({...gatewayConfig, webhook_secret: e.target.value})}
+ className="font-mono text-sm"
+ />
  </div>
  </div>
 

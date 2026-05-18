@@ -12,38 +12,37 @@ import {
   Package,
 } from "lucide-react";
 
-/** Simplified layman-friendly Candidate portal sidebar navigation */
 export const candidateNavSections = [
   {
     standalone: true,
     items: [
-      { to: "/candidate/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/candidate/dashboard", label: "Dashboard", icon: LayoutDashboard, moduleKey: "candidate.dashboard" },
     ],
   },
   {
     title: "My Application",
     items: [
-      { to: "/candidate/application",          label: "Application Form",    icon: ClipboardList },
-      { to: "/candidate/document-checklist",   label: "Document Checklist",  icon: FileCheck },
-      { to: "/candidate/data-capture-sheet",   label: "Data Capture Sheet",  icon: ClipboardList },
-      { to: "/candidate/ccl",                  label: "Client Care Letter",  icon: FileSignature },
-      { to: "/candidate/upload-documents",     label: "Upload Documents",    icon: Upload },
-      { to: "/candidate/application-status",   label: "Track My Progress",   icon: BarChart3 },
+      { to: "/candidate/application",        label: "Application Form",   icon: ClipboardList,  moduleKey: "candidate.application" },
+      { to: "/candidate/document-checklist", label: "Document Checklist", icon: FileCheck,      moduleKey: "candidate.document-checklist" },
+      { to: "/candidate/data-capture-sheet", label: "Data Capture Sheet", icon: ClipboardList,  moduleKey: "candidate.application" },
+      { to: "/candidate/ccl",                label: "Client Care Letter", icon: FileSignature,  moduleKey: "candidate.application" },
+      { to: "/candidate/upload-documents",   label: "Upload Documents",   icon: Upload,         moduleKey: "candidate.document-checklist" },
+      { to: "/candidate/application-status", label: "Track My Progress",  icon: BarChart3,      moduleKey: "candidate.application-status" },
     ],
   },
   {
     title: "Communication",
     items: [
-      { to: "/candidate/messages",       label: "Messages",       icon: MessageSquare },
-      { to: "/candidate/notifications",  label: "Notifications",  icon: BellRing },
-      { to: "/candidate/calendar",       label: "Appointments",   icon: Calendar },
+      { to: "/candidate/messages",      label: "Messages",      icon: MessageSquare, moduleKey: "candidate.messages" },
+      { to: "/candidate/notifications", label: "Notifications", icon: BellRing,      moduleKey: "candidate.dashboard" },
+      { to: "/candidate/calendar",      label: "Appointments",  icon: Calendar,      moduleKey: "candidate.calendar" },
     ],
   },
   {
     title: "Account",
     items: [
-      { to: "/candidate/payments", label: "Payments",    icon: DollarSign },
-      { to: "/candidate/account",  label: "My Account",  icon: Package },
+      { to: "/candidate/payments", label: "Payments",   icon: DollarSign, moduleKey: "candidate.payments" },
+      { to: "/candidate/account",  label: "My Account", icon: Package,    moduleKey: "candidate.account" },
     ],
   },
 ];

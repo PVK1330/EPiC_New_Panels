@@ -59,7 +59,7 @@ const useTwoFactor = () => {
     setError('');
     try {
       const res = await verifyTwoFactor({ email, password, token });
-      const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
+      const { user: userData, token: jwtToken, allowedModules } = getAuthUserAndToken(res);
       if (!userData || !jwtToken) {
         throw new Error(res?.message || 'Invalid 2FA response');
       }
@@ -71,6 +71,7 @@ const useTwoFactor = () => {
           organisation_id: userData.organisation_id ?? null,
         },
         token: jwtToken,
+        allowedModules,
       }));
       sessionStorage.removeItem('pending_2fa_email');
       sessionStorage.removeItem('pending_2fa_password');
