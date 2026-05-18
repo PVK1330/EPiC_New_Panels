@@ -60,6 +60,7 @@ import AdminWorkload from "../pages/admin/AdminWorkload";
 import AdminDocuments from "../pages/admin/AdminDocuments";
 import AdminMessages from "../pages/admin/AdminMessages";
 import AdminLicenceApplications from "../pages/admin/AdminLicenceApplications";
+import AdminEnquiryInbox from "../pages/admin/AdminEnquiryInbox";
 import BusinessLayout from "../layouts/BusinessLayout";
 
 // Business Pages
@@ -161,6 +162,7 @@ const AppRoutes = () => {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="cases" element={<AdminCases />} />
+        <Route path="enquiries" element={<AdminEnquiryInbox />} />
         <Route path="businesses" element={<AdminBusinesses />} />
         <Route path="candidates" element={<AdminCandidates />} />
         <Route path="caseworkers" element={<AdminCaseworkers />} />
@@ -219,6 +221,8 @@ const AppRoutes = () => {
         <Route path="activity-log" element={<ActivityLog />} />
         <Route path="application-status" element={<ApplicationStatus />} />
         <Route path="data-capture-sheet" element={<DataCaptureSheet />} />
+        <Route path="data-capture" element={<Navigate to="/candidate/data-capture-sheet" replace />} />
+        <Route path="ccl" element={<CandidateCCL />} />
         <Route
           path="timeline"
           element={

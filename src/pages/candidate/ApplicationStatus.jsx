@@ -78,13 +78,10 @@ const ApplicationStatus = () => {
       ? [
           {
             prio: "high",
-            title: "Upload signed Client Care Letter",
+            title: "Review and accept your Client Care Letter",
             tag: "CCL",
             due: "Required to proceed",
-            cta: {
-              label: "Upload CCL",
-              to: "/candidate/upload-documents?documentType=Client%20Care%20Letter&documentName=Signed%20Client%20Care%20Letter",
-            },
+            cta: { label: "Review CCL", to: "/candidate/ccl" },
           },
         ]
       : []),

@@ -20,6 +20,7 @@ import CandidateNotifications from '../pages/candidate/CandidateNotifications';
 import ActivityLog from '../pages/candidate/ActivityLog';
 import ApplicationStatus from '../pages/candidate/ApplicationStatus';
 import DataCaptureSheet from '../pages/candidate/DataCaptureSheet';
+import CandidateCCL from '../pages/candidate/CandidateCCL';
 import CandidateAccount from '../pages/candidate/CandidateAccount';
 
 import CaseworkerDashboard from '../pages/caseworker/CaseworkerDashboard';
@@ -59,6 +60,7 @@ import AdminDocuments from '../pages/admin/AdminDocuments';
 import AdminMessages from '../pages/admin/AdminMessages';
 import AdminCalendar from '../pages/admin/AdminCalendar';
 import AdminLicenceApplications from '../pages/admin/AdminLicenceApplications';
+import AdminEnquiryInbox from '../pages/admin/AdminEnquiryInbox';
 
 import BusinessDashboard from '../pages/business/BusinessDashboard';
 import BussinessProfile from '../pages/business/BusinessProfile'; import CandidateCalendar from '../pages/candidate/CandidateCalendar';
@@ -169,6 +171,7 @@ const AppRouter = () => {
         >
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="enquiries" element={<AdminEnquiryInbox />} />
           <Route path="cases" element={<AdminCases />} />
           <Route path="businesses" element={<AdminBusinesses />} />
           <Route path="candidates" element={<AdminCandidates />} />
@@ -221,6 +224,8 @@ const AppRouter = () => {
           <Route path="activity-log" element={<ActivityLog />} />
           <Route path="application-status" element={<ApplicationStatus />} />
           <Route path="data-capture-sheet" element={<DataCaptureSheet />} />
+          <Route path="data-capture" element={<Navigate to="/candidate/data-capture-sheet" replace />} />
+          <Route path="ccl" element={<CandidateCCL />} />
           <Route path="timeline" element={<Navigate to="/candidate/application-status?tab=timeline" replace />} />
           <Route path="pending-actions" element={<Navigate to="/candidate/application-status?tab=actions" replace />} />
           <Route path="account" element={<CandidateAccount />} />

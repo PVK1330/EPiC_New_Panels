@@ -24,10 +24,12 @@ import messagingApi from "../../services/messagingApi";
 import { MOCK_RECENT_MESSAGES, MOCK_NOTIFICATIONS } from "../../data/adminDashboardMock";
 import CaseWorkflowProgress from "../../components/case/CaseWorkflowProgress";
 import Button from "../../components/Button";
+import { Link } from "react-router-dom";
 import {
   resolveCaseStage,
   getStepById,
   DEFAULT_CASE_STAGE,
+  getCandidateNextAction,
 } from "../../constants/immigrationCaseProcess";
 
 const getStatusColor = (status) => {
@@ -85,6 +87,7 @@ const CandidateDashboard = () => {
     status: caseStatus,
   });
   const currentStep = getStepById(caseStage) || getStepById(DEFAULT_CASE_STAGE);
+  const nextAction = getCandidateNextAction(caseStage);
   const needsEnquiry = appStatus === "draft" && !myApplication?.visaType;
 
   const widgets = [
@@ -162,6 +165,29 @@ const CandidateDashboard = () => {
           </span>
         </div>
       </section>
+
+      {!needsEnquiry && (
+        <section className="rounded-2xl border border-gray-100 bg-white p-4 md:p-5 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-widest text-gray-400">
+            Next step for you
+          </p>
+          {nextAction.calm ? (
+            <p className="text-sm font-bold text-gray-600 mt-2">{nextAction.text}</p>
+          ) : (
+            <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm font-black text-secondary">{nextAction.text}</p>
+              {nextAction.to && (
+                <Link
+                  to={nextAction.to}
+                  className="inline-flex items-center gap-1 text-xs font-black text-primary hover:underline shrink-0"
+                >
+                  Go <ArrowRight size={14} />
+                </Link>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {widgets.map(

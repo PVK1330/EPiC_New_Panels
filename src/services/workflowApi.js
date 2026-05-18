@@ -32,3 +32,8 @@ export const issueCcl = (caseId, payload) =>
 
 export const getCclStatus = (caseId) =>
   api.get(`${BASE}/cases/${encodeURIComponent(caseId)}/ccl`);
+
+export const getDataCapture = (caseId) =>
+  api.get(`${BASE}/cases/${encodeURIComponent(caseId)}/data-capture`);
+
+export const acceptCcl = () => api.post(`${BASE}/ccl/accept`);

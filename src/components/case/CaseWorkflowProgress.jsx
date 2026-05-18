@@ -52,10 +52,14 @@ export default function CaseWorkflowProgress({ caseRecord, compact = false }) {
             <li
               key={step.id}
               className={`flex gap-2 text-xs py-1 px-2 rounded-lg ${
-                active ? "bg-primary/10 text-primary font-bold" : done ? "text-gray-400" : "text-gray-600"
+                active ? "bg-primary/10 text-primary font-bold step-current" : done ? "text-gray-400" : "text-gray-600"
               }`}
             >
-              <span className="tabular-nums w-5 shrink-0">{step.order}.</span>
+              <span
+                className={`tabular-nums w-5 shrink-0 ${active ? "inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white text-[10px] step-current" : ""}`}
+              >
+                {step.order}.
+              </span>
               <span className="truncate">{step.title}</span>
             </li>
           );

@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { getPipelineCases } from "../../services/caseApi";
 import { motion } from "framer-motion";
 import { logout } from "../../store/slices/authSlice";
 import {
@@ -28,6 +30,7 @@ import {
   RiContactsLine,
   RiExchangeLine,
   RiHistoryLine,
+  RiInboxLine,
 } from "react-icons/ri";
 import eliteLogo from "../../assets/elitepic_logo.png";
 
@@ -49,6 +52,7 @@ const navSections = [
   {
     label: "Cases & Workflow",
     items: [
+      { to: "/admin/enquiries",         label: "Enquiries",        icon: RiInboxLine, badgeKey: "enquiries" },
       { to: "/admin/cases",             label: "All Cases",        icon: RiFolderOpenLine },
       { to: "/admin/pipeline",          label: "Pipeline",         icon: RiExchangeLine },
       { to: "/admin/case-process",      label: "Case Process",     icon: RiGitBranchLine },
@@ -89,6 +93,16 @@ const AdminSidebar = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
+  const [enquiryCount, setEnquiryCount] = useState(0);
+
+  useEffect(() => {
+    getPipelineCases()
+      .then((res) => {
+        const pipeline = res.data?.data || {};
+        setEnquiryCount((pipeline.client_enquiry || []).length);
+      })
+      .catch(() => setEnquiryCount(0));
+  }, []);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -188,6 +202,9 @@ const AdminSidebar = ({ isOpen, onClose }) => {
                             }`}
                         />
                         <span className="truncate tracking-tight">{item.label}</span>
+                        {item.badgeKey === "enquiries" && enquiryCount > 0 && (
+                          <span className="ml-auto flex h-2 w-2 rounded-full bg-red-500 shrink-0" title={`${enquiryCount} new enquiries`} />
+                        )}
                         {isActive && (
                           <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-white rounded-r-full" />
                         )}

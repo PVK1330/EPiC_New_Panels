@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { INITIAL_CASES } from "../../data/casesData";
 import {
   Briefcase,
   X,
@@ -60,15 +59,6 @@ const TABLE_COLS = [
   "Actions",
 ];
 
-/** Mock caseworkers — ID selects name automatically */
-const CASE_WORKERS = [
-  { id: "CW-301", name: "Emily Davis" },
-  { id: "CW-302", name: "Mark Lee" },
-  { id: "CW-303", name: "Priya Sharma" },
-  { id: "CW-304", name: "Sarah Chen" },
-  { id: "CW-305", name: "James Okoye" },
-];
-
 const emptyForm = {
   candidateName: "",
   candidateId: "",
@@ -90,7 +80,7 @@ const emptyForm = {
   notes: "",
 };
 
-function caseworkerNamesFromIds(ids, options = CASE_WORKERS) {
+function caseworkerNamesFromIds(ids, options = []) {
   return ids
     .map((id) => options.find((w) => w.id === id)?.name)
     .filter(Boolean);
@@ -490,7 +480,7 @@ function CaseFormModal({
                       id: c.id,
                       name: `${c.first_name} ${c.last_name}`,
                     }))
-                    : CASE_WORKERS
+                    : []
                 }
                 value={formData.assignedCaseworkerIds || []}
                 onChange={onCaseworkerIdsChange}
@@ -572,7 +562,7 @@ function CaseFormModal({
 
 export default function AdminCases() {
   const navigate = useNavigate();
-  const [cases, setCases] = useState(INITIAL_CASES);
+  const [cases, setCases] = useState([]);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
@@ -710,8 +700,7 @@ export default function AdminCases() {
       } catch (err) {
         console.error("Error fetching cases:", err);
         setError("Failed to load cases. Please try again.");
-        // Fallback to demo data on error
-        setCases([...INITIAL_CASES]);
+        setCases([]);
       } finally {
         setLoading(false);
       }

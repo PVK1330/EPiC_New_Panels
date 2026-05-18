@@ -1,281 +1,225 @@
-# Standard Immigration Case Process — Feasibility Analysis
+# EPiC — Standard Immigration Case Process
 
-**Date:** May 2026  
-**Repos:** `EPiC_API` (backend), `EPiC_New_Panels` (frontend)  
-**Official spec:** `EPiC_API/Standard Immigration Case Process.docx`  
-**Question:** Can this process be supported for cases in EPiC?
-
----
-
-## Executive summary
-
-| Verdict | Detail |
-|--------|--------|
-| **Possible?** | **Yes** — the Word document defines **16 steps**; the codebase implements the **same 16 steps** in `immigrationCaseProcess.js` (1:1 on wording and order). |
-| **Ready today?** | **Partially** — pipeline Kanban, `caseStage` on cases, timeline, documents, payments, messaging, and application-pack downloads exist. |
-| **Main gaps** | No first-class **Data Capture Sheet** or **CCL** artifacts; **no automatic stage progression** from events; candidate **Application Status** still uses legacy 8-step `status` labels; step-specific **email automation** is not wired. |
-
-**Recommendation:** Use the **docx / `IMMIGRATION_CASE_STEPS`** as the single source of truth. Optionally group steps into ~9 phases for a simpler candidate UI without changing `caseStage` ids.
+**Repos:** `EPiC_API` (backend) · `EPiC_Frontend` (frontend)  
+**Source of truth:** `Standard Immigration Case Process.docx` (drive-download folder)  
+**Code mirror:** `src/constants/immigrationCaseProcess.js` (keep API + frontend identical)
 
 ---
 
-## Official document (`Standard Immigration Case Process.docx`)
+## 1. Executive summary
 
-The docx is the firm’s canonical process. Extracted text (16 sentences, in order):
+| Question | Answer |
+|----------|--------|
+| Can EPiC run this process? | **Yes** — 16 workflow steps are defined in code and match the docx 1:1. |
+| Is it production-ready end-to-end? | **Partially** — pipeline, documents, DCS, CCL APIs, automation hooks, and candidate progress exist. **Admin enquiry intake** and a few **gates/UI polish** items remain. |
+| Multi-tenant? | **Yes** — platform DB per deployment + **one PostgreSQL database per organisation** (`epic_{slug}`). All case APIs are tenant-scoped via `req.tenantDb`. |
 
-1. Client contacts us with an immigration query.
-2. Initial consultation is conducted to assess eligibility and visa options.
-3. Data Capture Sheet sent by visa category; mandatory docs requested (Passport, BRP/eVisa, Driving licence if applicable).
-4. Once documents and Data Capture Sheet are received, application form preparation begins.
-5. Caseworker reviews documents and identifies missing information or additional documents required.
-6. Further information/documents are requested from the client where necessary.
-7. Draft application form prepared and sent to the client for review and confirmation.
-8. After client approval of the draft, the Client Care Letter (CCL) is issued.
-9. Signed CCL and required payments are received from the client.
-10. Final application is submitted to the Home Office.
-11. Biometrics appointment is booked.
-12. Biometrics confirmation email/instructions sent to the client.
-13. Supporting documents uploaded prior to the biometrics appointment.
-14. Application status monitored while awaiting Home Office decision.
-15. Approval/refusal email and decision documents sent to the client.
-16. Final case closure email is issued.
-
-### Docx ↔ code alignment (verified)
-
-| # | Docx (summary) | `caseStage` id | Code title | Match |
-|---|----------------|----------------|------------|-------|
-| 1 | Client enquiry | `client_enquiry` | Client Enquiry | ✅ |
-| 2 | Initial consultation | `initial_consultation` | Initial Consultation | ✅ |
-| 3 | Data Capture + mandatory docs | `data_capture_initial_docs` | Data Capture & Initial Documents | ✅ |
-| 4 | Application preparation begins | `application_preparation` | Application Preparation | ✅ |
-| 5 | Caseworker document review | `document_review` | Document Review | ✅ |
-| 6 | Further info/documents requested | `further_information_request` | Further Information Request | ✅ |
-| 7 | Draft sent for client review | `draft_application_review` | Draft Application Review | ✅ |
-| 8 | CCL issued after draft approval | `ccl_issued` | Client Care Letter Issued | ✅ |
-| 9 | Signed CCL + payments received | `ccl_payment_received` | CCL & Payment Received | ✅ |
-| 10 | Submitted to Home Office | `application_submitted` | Application Submitted | ✅ |
-| 11 | Biometrics booked | `biometrics_booked` | Biometrics Booked | ✅ |
-| 12 | Biometrics confirmation sent | `biometrics_confirmation_sent` | Biometrics Confirmation Sent | ✅ |
-| 13 | Docs uploaded before biometrics | `documents_uploaded` | Documents Uploaded | ✅ |
-| 14 | Awaiting decision | `awaiting_decision` | Awaiting Decision | ✅ |
-| 15 | Decision communicated | `decision_communicated` | Decision Communicated | ✅ |
-| 16 | Case closure email | `case_closure` | Case Closure | ✅ |
-
-Constants live in (keep in sync when the docx changes):
-
-| File |
-|------|
-| `EPiC_API/src/constants/immigrationCaseProcess.js` |
-| `EPiC_New_Panels/src/constants/immigrationCaseProcess.js` |
-
-### Optional: 9-phase grouping (for simpler candidate UI only)
-
-| Phase | Docx steps | `caseStage` ids |
-|-------|------------|-----------------|
-| Contact & consultation | 1–2 | `client_enquiry`, `initial_consultation` |
-| Onboarding & documents | 3 | `data_capture_initial_docs` |
-| Preparation & review | 4–6 | `application_preparation`, `document_review`, `further_information_request` |
-| Draft review | 7 | `draft_application_review` |
-| CCL & payment | 8–9 | `ccl_issued`, `ccl_payment_received` |
-| Submission | 10 | `application_submitted` |
-| Biometrics | 11–13 | `biometrics_booked`, `biometrics_confirmation_sent`, `documents_uploaded` |
-| Decision | 14–15 | `awaiting_decision`, `decision_communicated` |
-| Closure | 16 | `case_closure` |
-
-Legacy `cases.status` is a coarser filter; `caseStage` should drive workflow UI per the docx.
+**Design principle:** Keep **16 internal `caseStage` ids** for caseworker pipeline granularity. Show candidates a **simpler 9-phase journey** (grouped steps) so the UI feels like industry SaaS (Clio, Docketwise-style), not a 16-column spreadsheet.
 
 ---
 
-## Backend analysis (`EPiC_API`)
-
-### What exists
-
-| Area | Implementation | Notes |
-|------|----------------|-------|
-| **Case workflow field** | `cases.caseStage` (VARCHAR 64), default `client_enquiry` | Migration: `tenant_001_workflow_and_documents.sql`, `006_core_business_tables.sql` |
-| **Legacy status** | `cases.status` ENUM (Lead, Docs Pending, Drafting, Submitted, …) | Mapped ↔ `caseStage` via `LEGACY_STATUS_TO_STAGE` / `STAGE_TO_LEGACY_STATUS` |
-| **Stage constants** | `IMMIGRATION_CASE_STEPS` (16 items) | Single source of truth for valid stages |
-| **Pipeline API** | `GET` pipeline grouped by stage; `PATCH /api/cases/:id/stage` | `case.controller.js` — `updatePipelineStage` updates `caseStage` + syncs legacy `status` + timeline |
-| **Case detail updates** | `PATCH` case detail with `caseStage`, dates | `caseDetail.controller.js` — `biometricsDate`, `submissionDate`, `decisionDate` |
-| **Timeline** | `case_timeline` table + `caseTimeline.service.js` | Actions: `status_changed`, `document_uploaded`, `document_reviewed`, `payment_received`, communications, etc. |
-| **Documents** | Upload, review (approve/reject), checklist by visa type | `document.controller.js`, `document_checklists` table |
-| **Payments** | `totalAmount`, `paidAmount`, `amountStatus` on case | Supports CCL/payment tracking at data level, not CCL document type |
-| **Candidate application pack** | PDF/ZIP download endpoints | `candidateApplication.routes.js` — filled form PDF, case summary PDF, supporting docs ZIP |
-| **Onboarding** | New cases get `caseStage: client_enquiry` | `candidateOnboarding.service.js`, admin/caseworker case create |
-| **Email templates (tenant)** | `email_templates` — keys: `payment`, `doc`, `opened`, `expiry`, `welcome` | Admin-editable; not mapped to workflow steps |
-
-### Gaps / not implemented on backend
-
-| Gap | Impact on docx steps |
-|-----|------------------------|
-| **No `data_capture_sheets` table or API** | Step 2 — “send Data Capture Sheet by visa category” is manual/off-system |
-| **No CCL entity** (unsigned/signed CCL, version, e-sign) | Step 5 — only generic documents + payments |
-| **No automatic `caseStage` transitions** | Moving stages requires caseworker/admin action (pipeline drag or case detail) |
-| **No step-triggered emails** | Biometrics confirmation, decision, closure emails are not fired by stage change |
-| **Email templates not aligned to 16 steps** | Only 5 generic templates seeded |
-| **Consultation scheduling** | No consultation appointment model; visa enquiry creates lead-style flow only |
-| **`further_information_request` not auto-set** | Rejected/missing docs do not move stage automatically |
-| **Sponsor worker `caseStage: 'Initial'`** | Invalid stage id — should use `client_enquiry` or valid constant |
-
-### Key backend files
+## 2. Multi-tenant SaaS architecture (how a case lives)
 
 ```
-EPiC_API/src/constants/immigrationCaseProcess.js
-EPiC_API/src/models/tenant/case.model.js
-EPiC_API/src/modules/Admin/case.controller.js          # pipeline + PATCH stage
-EPiC_API/src/modules/Admin/Dashboard/caseDetail.controller.js
-EPiC_API/src/services/caseTimeline.service.js
-EPiC_API/src/controllers/document.controller.js          # shared document ops
-EPiC_API/src/modules/Candidate/Application/candidateApplication.controller.js
-EPiC_API/src/migrations/tenants/tenant_001_workflow_and_documents.sql
-EPiC_API/src/migrations/tenants/20260430130000-create-case-timeline.sql
-EPiC_API/src/migrations/tenants/20260427170000-create-document-checklist.sql
+┌─────────────────────────────────────────────────────────────────┐
+│  SUPERADMIN (platform DB: epic / epic_dev)                       │
+│  • Create organisation → provisions tenant DB epic_{slug}        │
+│  • Plans, billing, global users (superadmin only)                │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+┌────────────────────────────▼────────────────────────────────────┐
+│  TENANT = one immigration firm (subdomain: {slug}.yourdomain.com) │
+│  Platform registry: organisations, users, database_name          │
+│  Tenant DB: cases, documents, workflow, messages, templates      │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+     Admin / Caseworker / Candidate (JWT + organisation_id)
+                             │
+                    cases.caseStage (16 steps)
+                    cases.status (legacy Kanban filter)
+                    case_timeline (audit trail)
 ```
 
+| Role | Primary surfaces | Tenant boundary |
+|------|------------------|-----------------|
+| **Superadmin** | Organisations, plans | Platform DB only |
+| **Admin** | Cases, pipeline, assign, settings | One org’s tenant DB |
+| **Caseworker** | Pipeline, case drawer, documents | Same tenant DB |
+| **Candidate** | Enquiry, DCS, documents, CCL, status | Own case in same tenant DB |
+| **Sponsor** | Workers (separate flow) | Same tenant DB |
+
 ---
 
-## Frontend analysis (`EPiC_New_Panels`)
+## 3. The standard process (docx → code)
 
-### What exists
+Official process = **16 numbered steps** in the Word doc. Each maps to `caseStage`:
 
-| Area | Where | Fit to docx flow |
-|------|--------|-------------------|
-| **16-step constants + UI helpers** | `src/constants/immigrationCaseProcess.js` | Mirrors API; `resolveCaseStage`, progress %, pipeline cards |
-| **Caseworker pipeline (live API)** | `src/pages/caseworker/Pipeline.jsx` | Drag-and-drop Kanban → `updatePipelineStage` |
-| **Admin pipeline** | `src/pages/admin/AdminPipeline.jsx` | Same pattern |
-| **Case workflow on detail** | `CaseWorkflowPanel`, `CaseWorkflowProgress`, `CaseStageSelect`, `CaseWorkflowBadge` | Used on admin/caseworker case detail |
-| **Candidate dashboard progress** | `CandidateDashboard.jsx` | Shows 16-step progress from `caseStage` / `status` |
-| **Visa enquiry (step 1 entry)** | `CandidateVisaEnquiry.jsx` | Creates enquiry; copy references standard process |
-| **Documents & checklist** | `DocumentChecklist.jsx`, `UploadDocuments.jsx`, caseworker docs | Steps 2–3, 7 (uploads) |
-| **Application pack downloads** | `CandidateAccount.jsx` → `useDownloads` / `downloadApi.js` | Filled PDF, ZIP, case summary — **wired to API** |
-| **Messages / comms** | Caseworker `Cases.jsx` CommsTab, candidate messages | Supports consultation and ongoing comms (manual) |
-| **Payments UI** | Candidate payments + admin billing | Step 5 (payment leg) |
-| **Admin process reference (mock)** | `AdminImmigrationProcess.jsx` + `immigrationProcessMock.js` | **Demo/mock** per-step actions & doc lists — not production data |
+| # | Business step | `caseStage` |
+|---|---------------|-------------|
+| 1 | Client enquiry | `client_enquiry` |
+| 2 | Initial consultation | `initial_consultation` |
+| 3 | Data capture + mandatory docs | `data_capture_initial_docs` |
+| 4 | Application preparation | `application_preparation` |
+| 5 | Document review | `document_review` |
+| 6 | Further information | `further_information_request` |
+| 7 | Draft review | `draft_application_review` |
+| 8 | CCL issued | `ccl_issued` |
+| 9 | CCL signed + payment | `ccl_payment_received` |
+| 10 | Home Office submission | `application_submitted` |
+| 11 | Biometrics booked | `biometrics_booked` |
+| 12 | Biometrics confirmation sent | `biometrics_confirmation_sent` |
+| 13 | Docs before biometrics | `documents_uploaded` |
+| 14 | Awaiting decision | `awaiting_decision` |
+| 15 | Decision communicated | `decision_communicated` |
+| 16 | Case closure | `case_closure` |
 
-### Gaps / inconsistencies on frontend
+**Never rename these ids** — pipeline columns, emails, and migrations depend on them.
 
-| Gap | Detail |
-|-----|--------|
-| **`ApplicationStatus.jsx` uses 8 legacy stages** | Driven by `caseData.status` only — **does not use `caseStage` or 16-step config**. Misaligned with dashboard workflow bar. |
-| **Application pack “final documents”** | `FINAL_ITEMS` hardcoded `available: false` — decision letter / BRP not tied to `decision_communicated` or real files |
-| **No Data Capture Sheet UI** | No send/fill/upload flow for visa-specific capture sheet |
-| **No CCL workflow UI** | No dedicated issue → sign → payment gate before submission |
-| **No biometrics scheduling UI** | `biometricsDate` on case exists in API model but limited candidate-facing surfacing |
-| **Stage change is manual** | No “advance to next step” wizard tied to checklist completion |
-| **Sidebar “Application Pack”** | Routes to `/candidate/account` (downloads tab); naming vs `tab` query param is implicit |
+---
 
-### Key frontend files
+## 4. Simple flow (industry SaaS view)
+
+### 4.1 Candidate-facing: 9 phases
+
+Use `PUBLIC_PHASES` (add to constants if not present) — map many internal stages to one label:
+
+| Phase | What the candidate sees | Internal `caseStage` ids |
+|-------|-------------------------|---------------------------|
+| **1. Enquiry** | “We received your enquiry” | `client_enquiry` |
+| **2. Consultation** | “Your caseworker is reviewing eligibility” | `initial_consultation` |
+| **3. Onboarding** | “Complete your form & upload documents” | `data_capture_initial_docs` |
+| **4. Preparation** | “We’re preparing your application” | `application_preparation`, `document_review`, `further_information_request` |
+| **5. Draft review** | “Review your draft application” | `draft_application_review` |
+| **6. CCL & payment** | “Review and sign your Client Care Letter” | `ccl_issued`, `ccl_payment_received` |
+| **7. Submission** | “Submitted to the Home Office” | `application_submitted` |
+| **8. Biometrics** | “Biometrics and supporting documents” | `biometrics_booked` … `documents_uploaded` |
+| **9. Decision & closure** | “Decision and final documents” | `awaiting_decision` … `case_closure` |
+
+`ApplicationStatus.jsx` and `CandidateDashboard.jsx` should always use `resolveCaseStage()` + `buildStepStates()` (16-step) or a thin wrapper that collapses to 9 phases for display only.
+
+### 4.2 End-to-end swimlane (who does what)
 
 ```
-EPiC_New_Panels/src/constants/immigrationCaseProcess.js
-EPiC_New_Panels/src/pages/caseworker/Pipeline.jsx
-EPiC_New_Panels/src/pages/candidate/ApplicationStatus.jsx      # needs alignment
-EPiC_New_Panels/src/pages/candidate/CandidateDashboard.jsx
-EPiC_New_Panels/src/pages/candidate/CandidateAccount.jsx
-EPiC_New_Panels/src/components/case/CaseWorkflowProgress.jsx
-EPiC_New_Panels/src/data/immigrationProcessMock.js             # reference only
+CANDIDATE          ADMIN                    CASEWORKER              SYSTEM
+─────────          ─────                    ──────────              ──────
+Submit visa        See enquiry in           —                       caseStage =
+enquiry (form)     pipeline OR              —                       client_enquiry
+                   dedicated inbox
+                   Assign caseworker ──────► Case appears in        → initial_consultation
+                   (assign + stage)         pipeline
+                                            Send DCS ─────────────► email (optional)
+Fill DCS +         —                        Review response
+upload docs                                 Advance stages
+                                            Issue CCL ─────────────► email (optional)
+Review/sign CCL    —                        Confirm payment
+Pay fees           —                        Gate: CCL + paid
+                                            Submit to HO ──────────► application_submitted
+Attend biometrics  —                        Book + confirm email
+Wait               —                        Monitor HO
+Download decision  —                        Upload decision docs   Unlock downloads
 ```
 
----
-
-## Step-by-step: can EPiC do it today?
-
-| Step | Possible? | Today | To reach full automation |
-|------|-----------|-------|---------------------------|
-| **1. Contact & consultation** | Yes | Visa enquiry, messages, `client_enquiry` → `initial_consultation` manual | Consultation entity, calendar, auto-advance on enquiry accept |
-| **2. Onboarding & docs** | Yes | Document checklist by visa type, upload, caseworker review | Data Capture Sheet template per visa + “send to candidate” action |
-| **3. Preparation & gaps** | Yes | Docs + messages + stages `application_preparation` / `document_review` / `further_information_request` | Auto stage on all required docs approved; task list from mock → real |
-| **4. Draft review** | Yes | Stage `draft_application_review`; draft PDF in application pack | Client approve/reject draft + audit trail |
-| **5. CCL & payment** | Partial | Payments on case; stage `ccl_*`; no CCL doc type | CCL template, e-sign, block submission until paid + signed |
-| **6. Submission** | Yes | Stage + `submissionDate` field | Hook to external HO submission (if needed) |
-| **7. Biometrics** | Partial | Three substages + `biometricsDate` | Booking integration, templated confirmation email, pre-bio upload checklist |
-| **8. Monitoring & decision** | Yes | `awaiting_decision`, notifications prefs, timeline | Decision doc upload unlocks candidate final downloads |
-| **9. Closure** | Yes | `case_closure` stage + timeline `case_closed` | Automated closure email from template |
+**Single write path for stage changes:** `PATCH /api/cases/:id/stage` → `updatePipelineStage` → `applyCaseStageChange` (timeline + optional email).
 
 ---
 
-## Architecture (current vs target)
+## 5. What is already built (verified in repo)
 
-```mermaid
-flowchart LR
-  subgraph today [Current]
-    A[Manual stage change] --> B[cases.caseStage]
-    B --> C[Legacy status sync]
-    C --> D[Timeline entry]
-    E[Documents / Payments] -.->|no auto link| B
-  end
-
-  subgraph target [Target]
-    F[Events: doc approved, paid, dates set] --> G[Stage rules engine]
-    G --> B2[cases.caseStage]
-    G --> H[Step emails]
-    G --> I[Candidate 9-step UI]
-  end
-```
+| Capability | Location | Notes |
+|------------|----------|-------|
+| 16-step constants + guidance | `immigrationCaseProcess.js` | `STAGE_GUIDANCE`, `buildStepStates` |
+| Pipeline Kanban | `Pipeline.jsx`, `AdminPipeline.jsx` | Live API |
+| Stage update + legacy status sync | `case.controller.js` | `updatePipelineStage` |
+| Stage automation (docs/payment events) | `caseStageAutomation.service.js` | Forward-only rules |
+| Workflow emails on stage change | `workflowEmail.service.js` | Keys: `data_capture_request`, `ccl_issued`, `biometrics_confirmation`, etc. |
+| Data capture (templates + submission) | `workflow.controller.js`, `DataCaptureSheet.jsx` | Tenant tables `data_capture_*` |
+| CCL issue + status | `issueCcl`, `getCclStatus`, `CaseWorkflowActions` | Candidate confirms via upload flow |
+| Candidate pending actions | `ApplicationStatus.jsx` | Links to DCS, documents |
+| Case assignment API | `PATCH /api/cases/:id/assign` | Used by `AdminAssign.jsx` |
+| Admin cases list (API) | `AdminCases.jsx` | Fetches `getCases()`; **still falls back to mock on error** |
+| Superadmin org provisioning | `superadminOrganisation.controller.js` | Tenant DB per org |
+| Timeline audit | `caseTimeline.service.js` | All stage changes logged |
 
 ---
 
-## Recommended implementation plan
+## 6. Gaps to close (priority order)
 
-### Phase 1 — Align UX (low effort, high value)
-
-1. Refactor `ApplicationStatus.jsx` to use `resolveCaseStage` + a **9-step display config** (group the 16 ids).
-2. Show same progress component as `CandidateDashboard` (`CaseWorkflowProgress`).
-3. Fix sponsor `caseStage: 'Initial'` → valid stage in API.
-
-### Phase 2 — Operational artifacts (medium effort)
-
-1. **Data Capture Sheet:** `data_capture_templates` (visa_type_id, fields JSON) + candidate form submission API.
-2. **CCL:** document type `client_care_letter` + status workflow (issued → signed) + payment gate flag on case.
-3. Expand `email_templates` seeds: `ccl_issued`, `biometrics_confirmation`, `decision`, `case_closure`.
-
-### Phase 3 — Automation (medium–high effort)
-
-1. **Stage rules** (config or code): e.g. all required checklist docs approved → suggest/advance to `application_preparation`.
-2. On `PATCH .../stage`, optional email dispatch from template key per stage.
-3. Unlock `FINAL_ITEMS` when `caseStage` is `decision_communicated` and decision documents exist.
-
-### Phase 4 — Caseworker guidance (optional)
-
-1. Replace `immigrationProcessMock.js` usage in admin with live case context (actions/docs per stage from checklist + templates).
-2. Per-stage task checklist on case detail drawer.
+| Priority | Gap | Why it matters | Suggested fix |
+|----------|-----|----------------|---------------|
+| **P0** | No **Admin Enquiry Inbox** (`client_enquiry` filter + assign in one action) | New leads are buried in full case list | `AdminEnquiryInbox.jsx` + sidebar badge; reuse `assignCase` + `updatePipelineStage` |
+| **P0** | `AdminCases.jsx` fallback to `INITIAL_CASES` mock | Wrong data on API failure | Empty state + toast only; remove mock fallback |
+| **P0** | Mock `CASE_WORKERS` array still in `AdminCases.jsx` | Stale assign dropdown | Use `getCaseworkers()` only |
+| **P1** | **CCL gate** before `application_submitted` | Compliance risk | API guard in `updatePipelineStage`: require CCL signed + `amountStatus === 'paid'` |
+| **P1** | **Final downloads** tied to stage | Candidate can’t get decision letter | `CandidateAccount.jsx`: unlock by `caseStage` + real document types |
+| **P2** | Sponsor `caseStage: 'Initial'` | Invalid pipeline column | Migration + fix create paths → `client_enquiry` |
+| **P2** | Email templates empty on new tenant | Automation silent | Seed tenant `email_templates` on org provision |
+| **P3** | Stronger auto-advance rules | Less manual dragging | Extend `evaluateCaseStageAfterEvent` (DCS submitted → `application_preparation`, all docs approved → suggest next) |
 
 ---
 
-## Effort estimate (rough)
+## 7. Implementation roadmap (simple phases)
 
-| Phase | Backend | Frontend | Total |
-|-------|---------|----------|-------|
-| Phase 1 — UX alignment | 0.5 d | 1–2 d | **1.5–2.5 d** |
-| Phase 2 — DCS + CCL + templates | 3–5 d | 2–3 d | **5–8 d** |
-| Phase 3 — Automation + emails | 4–6 d | 1–2 d | **5–8 d** |
-| Phase 4 — Guided caseworker UI | 1–2 d | 2–3 d | **3–5 d** |
+Work in this order. Each phase is independently shippable.
 
-**Full docx-aligned production flow (automation + DCS + CCL):** ~**15–23 developer-days** depending on e-sign, email provider, and how strict payment/submission gates must be.
+### Phase A — Intake (1–2 days)
+- Admin Enquiry Inbox + assign → `initial_consultation`
+- Remove mock data from `AdminCases.jsx`
+- Enquiry count badge on admin nav
 
----
+### Phase B — Compliance gates (1–2 days)
+- Block `application_submitted` without CCL + payment
+- Clear error messages in `CaseWorkflowActions` when advance fails
+- Unlock decision/BRP downloads at `decision_communicated` / `case_closure`
 
-## Answer: “Can we add cases for this flow?”
+### Phase C — Automation polish (1–2 days)
+- Ensure tenant email templates seeded (5 workflow keys)
+- On DCS submit: auto-advance + timeline (verify `saveDataCaptureSubmission`)
+- Document checklist → suggest stage (use existing `evaluateCaseStageAfterEvent`)
 
-**Yes.** New cases already receive `caseStage: client_enquiry` and can be moved through all stages via:
+### Phase D — UX consistency (1 day)
+- Candidate 9-phase summary card on dashboard (wrapper over 16 steps)
+- Admin: link enquiry inbox from dashboard widget
+- Align `immigrationProcessMock.js` usage — reference only, not production data
 
-- Caseworker/admin **pipeline** (drag-and-drop), or  
-- **Case detail** workflow selector / status PATCH.
-
-You do **not** need a new case type table — you need:
-
-1. **Consistent UI** (candidate status = same model as pipeline).  
-2. **Missing artifacts** (Data Capture Sheet, CCL).  
-3. **Optional automation** so the process does not rely entirely on manual stage updates.
-
----
-
-## Maintenance note
-
-Keep `EPiC_API` and `EPiC_New_Panels` copies of `immigrationCaseProcess.js` in sync when adding or renaming stages. If you collapse to a strict **9-step** public API, add a `BUSINESS_STEPS` array that groups the 16 ids rather than deleting internal substages (pipeline columns depend on granularity).
+**Total estimate:** ~5–8 developer-days for production-grade intake + gates (not 15–23 — much backend already exists).
 
 ---
 
-## Related docs in repo
+## 8. Rules for all future work
 
-- `EPiC_New_Panels/src/docs/NotificationSystem.md` — in-app notifications (complements email gaps above).
+1. **One stage API:** `updatePipelineStage(caseId, stageId)` — never bypass for workflow moves.
+2. **Sync constants:** `EPiC_API` and `EPiC_Frontend` `immigrationCaseProcess.js` must match after any change.
+3. **Emails are best-effort:** never fail a stage update because email failed.
+4. **Every stage change → timeline entry** (audit / SOC2-friendly).
+5. **Tenant isolation:** all case/document/workflow queries use `req.tenantDb`, not platform DB.
+6. **No new UI libraries** — Tailwind, lucide-react, existing components.
+
+---
+
+## 9. Cursor / AI usage
+
+When implementing a phase, attach only the files listed for that feature. Prefer **one phase per chat**. Start from section 6 priorities (P0 first).
+
+**Key file map:**
+
+| Area | Backend | Frontend |
+|------|---------|----------|
+| Stages | `Server/src/constants/immigrationCaseProcess.js` | `EPiC_Frontend/src/constants/immigrationCaseProcess.js` |
+| Pipeline | `Server/src/modules/Admin/case.controller.js` | `pages/admin/AdminPipeline.jsx`, `pages/caseworker/Pipeline.jsx` |
+| Workflow | `Server/src/modules/Shared/Workflow/` | `services/workflowApi.js`, `components/case/CaseWorkflowActions.jsx` |
+| Candidate | `candidateApplication.controller.js` | `pages/candidate/ApplicationStatus.jsx`, `DataCaptureSheet.jsx` |
+| Assign | `case.controller.js` (`assign`) | `pages/admin/AdminAssign.jsx`, `services/caseApi.js` |
+
+---
+
+## 10. Related assets
+
+| Asset | Path |
+|-------|------|
+| Official docx (extracted) | `EPiC_Frontend/drive-download-20260515T072032Z-3-001/` |
+| SaaS tenant audit | `Server/docs/SAAS_AUDIT_REPORT.md` |
+| Mock reference (non-prod) | `EPiC_Frontend/src/data/immigrationProcessMock.js` |
+
+---
+
+*Last updated: May 2026 — reflects `EPiC_Frontend` + `EPiC_API` on branch `dev` after workflow/DCS/CCL additions.*
