@@ -17,6 +17,7 @@ import Appointments from '../pages/candidate/Appointments';
 import Application from '../pages/candidate/Application';
 import CandidateMessages from '../pages/candidate/CandidateMessages';
 import CandidateNotifications from '../pages/candidate/CandidateNotifications';
+import CandidateTasks from '../pages/candidate/CandidateTasks';
 import ActivityLog from '../pages/candidate/ActivityLog';
 import ApplicationStatus from '../pages/candidate/ApplicationStatus';
 import DataCaptureSheet from '../pages/candidate/DataCaptureSheet';
@@ -222,6 +223,7 @@ const AppRouter = () => {
           <Route path="communication" element={<Communication />} />
           <Route path="messages" element={<CandidateMessages />} />
           <Route path="notifications" element={<CandidateNotifications />} />
+          <Route path="tasks" element={<CandidateTasks />} />
           <Route path="appointments" element={<Appointments />} />
           <Route path="calendar" element={<CandidateCalendar />} />
           <Route path="activity-log" element={<ActivityLog />} />

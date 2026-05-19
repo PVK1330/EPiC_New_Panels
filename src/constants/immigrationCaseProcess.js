@@ -239,7 +239,7 @@ export function buildStepStates(caseRecord) {
 /** Candidate-facing actions per workflow stage (Standard Immigration Case Process). */
 export const CANDIDATE_STAGE_ACTIONS = {
   data_capture_initial_docs: [
-    { text: "Complete your Data Capture Sheet", to: "/candidate/data-capture-sheet" },
+    { text: "Complete your Data Capture Sheet", to: "/candidate/tasks" },
     { text: "Upload: Passport, BRP/eVisa", to: "/candidate/document-checklist" },
   ],
   draft_application_review: [

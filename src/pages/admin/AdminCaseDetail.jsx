@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiArrowLeft, FiFlag, FiSave, FiDownload, FiChevronDown, FiFileText, FiTable } from "react-icons/fi";
+import { FiArrowLeft, FiFlag, FiDownload, FiChevronDown, FiFileText, FiTable } from "react-icons/fi";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
@@ -10,17 +10,19 @@ import CaseDetailOverview from "../../components/caseDetail/CaseDetailOverview";
 import CaseDetailDocuments from "../../components/caseDetail/CaseDetailDocuments";
 import CaseDetailTasks from "../../components/caseDetail/CaseDetailTasks";
 import CaseDetailPayments from "../../components/caseDetail/CaseDetailPayments";
+import ManualPaymentForm from "../../components/caseDetail/ManualPaymentForm";
 import CaseDetailTimeline from "../../components/caseDetail/CaseDetailTimeline";
 import CaseDetailCommunication from "../../components/caseDetail/CaseDetailCommunication";
 import CaseDetailNotes from "../../components/caseDetail/CaseDetailNotes";
-import CaseDetailAuditLog from "../../components/caseDetail/CaseDetailAuditLog";
 import { CASE_DETAIL_TABS, TAB_IDS, DEFAULT_CASE_DETAIL } from "../../components/caseDetail/caseDetailData";
-import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
 import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
-import PrintClientApplicationButton from "../../components/CandidateApplicationForm/PrintClientApplicationButton";
+import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
+import CandidateApplicationReadonly from "../../components/CandidateApplicationForm/CandidateApplicationReadonly";
+import { getCandidateById } from "../../services/candidateApi";
+import { useToast } from "../../context/ToastContext";
 import { 
   getCaseDetails,
-  updateCaseStatus as updateCaseDetailStatus,
+  updateCaseStatus,
   getDocumentsByCaseId, 
   uploadCaseDocument, 
   updateCaseDocumentStatus, 
@@ -61,6 +63,7 @@ const TIMELINE_DOT = {
 };
 
 const AdminCaseDetail = () => {
+  const { showToast } = useToast();
   const { caseId } = useParams();
   const [tab, setTab] = useState(TAB_IDS.overview);
   const [flagOpen, setFlagOpen] = useState(false);
@@ -78,6 +81,7 @@ const AdminCaseDetail = () => {
   const [notesLoading, setNotesLoading] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
+  const [appData, setAppData] = useState(null);
 
   const cleanId = caseId ? caseId.replace(/^#/, "") : "";
 
@@ -213,6 +217,17 @@ const AdminCaseDetail = () => {
     fetchNotes(cleanId);
     fetchDocuments(cleanId);
   }, [caseId, cleanId, fetchCaseDetail, fetchTasks, fetchNotes, fetchDocuments]);
+
+  useEffect(() => {
+    const candidateId = caseData?.candidate?.id;
+    if (!candidateId) {
+      setAppData(null);
+      return;
+    }
+    getCandidateById(candidateId)
+      .then((r) => setAppData(r.data?.data?.candidate ?? r.data?.data ?? null))
+      .catch(() => setAppData(null));
+  }, [caseData?.candidate?.id]);
 
   // Map tasks from hook to component-expected shape
   const mappedTasks = useMemo(
@@ -399,9 +414,11 @@ const AdminCaseDetail = () => {
       // Real tasks from separate /api/tasks/case/:id endpoint
       tasks: mappedTasks,
       payments: {
-        total: `$${totalFee.toLocaleString()}`,
-        paid: `$${totalPaid.toLocaleString()}`,
-        balance: `$${outstanding.toLocaleString()}`,
+        total: `£${totalFee.toLocaleString()}`,
+        paid: `£${totalPaid.toLocaleString()}`,
+        balance: `£${outstanding.toLocaleString()}`,
+        totalAmount: totalFee,
+        paidAmount: totalPaid,
         history: paymentHistory,
         invoiceId: financial?.payments?.[0]?.invoiceNumber || "N/A",
         amountStatus: financial?.amountStatus || "Not Submitted",
@@ -457,16 +474,18 @@ const AdminCaseDetail = () => {
     }
   };
 
-  // ── Flag handler ───────────────────────────────────────────────────────────
   const handleWorkflowStageChange = async (caseStage) => {
     if (!cleanId) return;
     setStageSaving(true);
     try {
-      await updateCaseDetailStatus(cleanId, { caseStage });
+      await updateCaseStatus(cleanId, { caseStage });
       await fetchCaseDetail(cleanId);
     } catch (err) {
       console.error("Failed to update workflow stage:", err);
-      alert(err?.response?.data?.message || "Failed to update workflow stage");
+      showToast({
+        variant: "danger",
+        message: err?.response?.data?.message || "Failed to update workflow stage",
+      });
     } finally {
       setStageSaving(false);
     }
@@ -553,6 +572,11 @@ const AdminCaseDetail = () => {
 
   const panels = {
     [TAB_IDS.overview]: <CaseDetailOverview data={data} />,
+    [TAB_IDS.application]: appData ? (
+      <CandidateApplicationReadonly candidate={appData} />
+    ) : (
+      <p className="text-sm text-gray-500 p-6">Loading application…</p>
+    ),
     [TAB_IDS.documents]: (
       <CaseDetailDocuments
         documents={data.documents}
@@ -570,11 +594,18 @@ const AdminCaseDetail = () => {
         onDelete={handleDeleteTask}
       />
     ),
-    [TAB_IDS.payments]: <CaseDetailPayments payments={data.payments} onReload={() => fetchCaseDetail(cleanId)} />,
-    [TAB_IDS.timeline]: <CaseDetailTimeline items={data.timeline} />,
-    [TAB_IDS.communication]: (
-      <CaseDetailCommunication threads={data.threads} messages={data.messages} />
+    [TAB_IDS.payments]: (
+      <div className="space-y-6">
+        <ManualPaymentForm
+          caseId={cleanId}
+          totalAmount={data.payments?.totalAmount ?? 0}
+          paidAmount={data.payments?.paidAmount ?? 0}
+          onSuccess={() => fetchCaseDetail(cleanId)}
+        />
+        <CaseDetailPayments payments={data.payments} onReload={() => fetchCaseDetail(cleanId)} />
+      </div>
     ),
+    [TAB_IDS.timeline]: <CaseDetailTimeline items={data.timeline} />,
     [TAB_IDS.notes]: (
       <CaseDetailNotes
         notes={data.internalNotes}
@@ -583,7 +614,6 @@ const AdminCaseDetail = () => {
         onDelete={handleDeleteNote}
       />
     ),
-    [TAB_IDS.audit]: <CaseDetailAuditLog rows={data.audit} />,
   };
 
   return (
@@ -684,14 +714,6 @@ const AdminCaseDetail = () => {
                   <FiFlag size={14} />
                   Flag
                 </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  className="rounded-xl shadow-md shadow-primary/20"
-                >
-                  <FiFlag size={14} style={{ display: "none" }} />
-                  Save Changes
-                </Button>
               </div>
             </div>
           </div>
@@ -704,15 +726,6 @@ const AdminCaseDetail = () => {
             onStageChange={handleWorkflowStageChange}
             saving={stageSaving}
           />
-
-          <div className="flex flex-wrap items-center gap-2">
-            {caseData?.candidate?.id && (
-              <PrintClientApplicationButton
-                candidateId={caseData.candidate.id}
-                label="Print / PDF application"
-              />
-            )}
-          </div>
 
           <CaseWorkflowActions
             caseId={cleanId}

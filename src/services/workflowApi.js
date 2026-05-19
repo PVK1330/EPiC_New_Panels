@@ -24,6 +24,12 @@ export const confirmCclSigned = (body) =>
 export const getCandidatePaymentSchedule = () =>
   api.get("/api/workflow/payments/schedule").then((res) => res.data?.data ?? res.data);
 
+export const getCandidateTasks = () =>
+  api.get("/api/workflow/my-tasks").then(unwrap);
+
+export const completeCandidateTask = (taskId) =>
+  api.patch(`/api/workflow/my-tasks/${taskId}/complete`).then(unwrap);
+
 // ── Staff (admin / caseworker) ───────────────────────────────────────────────
 export const getCaseWorkflowBundle = (caseId) =>
   api.get(`/api/workflow/cases/${caseId}/bundle`).then(unwrap);

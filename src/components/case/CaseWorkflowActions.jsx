@@ -88,8 +88,8 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
         getCaseWorkflowBundle(caseId),
         getDataCapture(caseId).catch(() => null),
       ]);
-      setBundle(bundleRes.data?.data);
-      setDcsDetail(dcsRes?.data?.data || null);
+      setBundle(bundleRes);
+      setDcsDetail(dcsRes || null);
     } catch (e) {
       showToast({ variant: "danger", message: apiErrorMessage(e) });
     } finally {

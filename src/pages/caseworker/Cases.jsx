@@ -28,13 +28,14 @@ import { getCaseAuditLogs } from "../../services/auditApi";
 import { getCaseChecklist } from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
 import { updateCaseFinance } from "../../services/caseDetailApi";
+import ManualPaymentForm from "../../components/caseDetail/ManualPaymentForm";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
 import CaseWorkflowGuidance from "../../components/case/CaseWorkflowGuidance";
 import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
 import CclFeeProposalModal from "../../components/case/CclFeeProposalModal";
 import PrintClientApplicationButton from "../../components/CandidateApplicationForm/PrintClientApplicationButton";
-import { updatePipelineStage } from "../../services/caseApi";
+import { updatePipelineStage, assignCase } from "../../services/caseApi";
 import { proposeCclFees, getCclStatus } from "../../services/workflowApi";
 
 const PAGE_SIZE = 7;
@@ -855,7 +856,7 @@ const Cases = () => {
     setReassignForm(emptyReassignForm());
   }, []);
 
-  const submitReassign = useCallback(() => {
+  const submitReassign = useCallback(async () => {
     const err = {};
     if (!reassignForm.caseworkerIds || reassignForm.caseworkerIds.length === 0)
       err.caseworkerIds = "Please select at least one caseworker";
@@ -868,22 +869,43 @@ const Cases = () => {
     setReassignErrors(err);
     if (Object.keys(err).length) return;
 
-    const caseworkers = reassignForm.caseworkerIds.map(id => caseworkers.find((w) => w.id === id)).filter(Boolean);
+    const selectedCaseworkers = reassignForm.caseworkerIds
+      .map((id) => caseworkers.find((w) => w.id === id))
+      .filter(Boolean);
     const reason =
       reassignForm.reasonPreset === "Other"
         ? reassignForm.reasonCustom.trim()
         : reassignForm.reasonPreset;
 
-    setReassignments((prev) => ({
-      ...prev,
-      [reassignCaseId]: {
-        caseworkers: caseworkers.map(cw => ({ name: `${cw.first_name} ${cw.last_name}`, role: cw.role || "Caseworker" })),
+    try {
+      await assignCase(reassignCaseId, {
+        assignTo: reassignForm.caseworkerIds,
         reason,
-        at: new Date(),
-      },
-    }));
-    closeReassign();
-  }, [reassignCaseId, reassignForm, closeReassign, caseworkers]);
+        assignToName: selectedCaseworkers
+          .map((cw) => `${cw.first_name} ${cw.last_name}`)
+          .join(", "),
+      });
+      setReassignments((prev) => ({
+        ...prev,
+        [reassignCaseId]: {
+          caseworkers: selectedCaseworkers.map((cw) => ({
+            name: `${cw.first_name} ${cw.last_name}`,
+            role: cw.role || "Caseworker",
+          })),
+          reason,
+          at: new Date(),
+        },
+      }));
+      showToast({ message: "Case reassigned successfully." });
+      closeReassign();
+    } catch (e) {
+      console.error("Reassign error:", e);
+      showToast({
+        variant: "danger",
+        message: e?.response?.data?.message || "Failed to reassign case.",
+      });
+    }
+  }, [reassignCaseId, reassignForm, closeReassign, caseworkers, showToast]);
   // ───────────────────────────────────────────────────────────────────────────
 
   // Filtering is now handled by the API, so we use cases directly
@@ -2387,10 +2409,8 @@ const Cases = () => {
                 { id: "documents", label: "Documents" },
                 { id: "tasks", label: "Tasks" },
                 { id: "payments", label: "Payments" },
-                { id: "comms", label: "Communication" },
                 { id: "notes", label: "Notes" },
                 { id: "timeline", label: "Timeline" },
-                 { id: "auditlogs", label: "Audit Logs" },
               ].map((t) => (
                 <button
                   key={t.id}
@@ -2434,9 +2454,6 @@ const Cases = () => {
                   }}
                 />
               )}
-              {detailTab === "comms" && (
-                <CommsTab candidate={detailCase.candidate} caseId={detailCase.caseId} />
-              )}
               {detailTab === "notes" && (
                 <NotesTab
                   caseId={detailCase?.id}
@@ -2445,9 +2462,6 @@ const Cases = () => {
               )}
               {detailTab === "timeline" && (
                 <CaseTimeline caseId={detailCase?.id} currentUser={user} />
-              )}
-              {detailTab === "auditlogs" && (
-                <AuditLogsTab caseId={detailCase?.id} />
               )}
             </div>
           </>
@@ -3775,7 +3789,7 @@ function TasksTab({ caseId }) {
 }
 
 function PaymentsTab({ caseDetail, onUpdate }) {
-  const toast = useToast();
+  const { showToast } = useToast();
   const [totalAmount, setTotalAmount] = useState(caseDetail?.totalAmount || 0);
   const [amountNotes, setAmountNotes] = useState(caseDetail?.amountNotes || "");
   const [loading, setLoading] = useState(false);
@@ -3806,10 +3820,13 @@ function PaymentsTab({ caseDetail, onUpdate }) {
       };
       await updateCaseFinance(caseDetail.id, payload);
       onUpdate?.(payload);
-      toast?.showSuccess?.("Financial details saved successfully.");
+      showToast({ message: "Financial details saved successfully." });
     } catch (err) {
       console.error("Finance update error:", err);
-      toast?.showError?.(err?.response?.data?.message || "Failed to update financial details.");
+      showToast({
+        variant: "danger",
+        message: err?.response?.data?.message || "Failed to update financial details.",
+      });
     } finally {
       setLoading(false);
     }
@@ -3827,14 +3844,19 @@ function PaymentsTab({ caseDetail, onUpdate }) {
         amountStatus: "Pending Approval",
         caseStage: "ccl_fee_admin_review",
       });
-      toast?.showSuccess?.(
-        "Fee proposal submitted. Admins have been notified and a review task was created.",
-      );
+      showToast({
+        message:
+          "Fee proposal submitted. Admins have been notified and a review task was created.",
+      });
     } catch (err) {
       console.error("CCL propose error:", err);
-      toast?.showError?.(
-        err?.response?.data?.message || "Failed to submit fee proposal for approval.",
-      );
+      const apiMsg = err?.response?.data?.message;
+      showToast({
+        variant: "danger",
+        message: apiMsg?.includes("Fees can only be proposed")
+          ? `${apiMsg} Ask admin to open the case and set workflow step to “CCL Fee Proposal” (or complete draft review first). You can also change stage on the Overview tab.`
+          : apiMsg || "Failed to submit fee proposal for approval.",
+      });
     } finally {
       setLoading(false);
     }
@@ -3851,15 +3873,21 @@ function PaymentsTab({ caseDetail, onUpdate }) {
   const paid = parseFloat(caseDetail?.paidAmount) || 0;
   const total = parseFloat(caseDetail?.totalAmount) || 0;
   const outstanding = Math.max(0, total - paid);
+  const stage = caseDetail?.caseStage || "";
   const awaitingAdmin =
     currentStatus === "Pending Approval" ||
-    caseDetail?.caseStage === "ccl_fee_admin_review" ||
+    stage === "ccl_fee_admin_review" ||
     cclMeta?.status === "fee_proposed";
+  const canProposeByStage =
+    ["draft_application_review", "ccl_fee_proposal", "application_preparation", "document_review"].includes(
+      stage,
+    ) || cclMeta?.status === "fee_rejected";
   const canSubmit =
     currentStatus !== "Approved" &&
     cclMeta?.status !== "issued" &&
     cclMeta?.status !== "signed" &&
-    !awaitingAdmin;
+    !awaitingAdmin &&
+    canProposeByStage;
 
   return (
     <div className="space-y-6">
@@ -3933,6 +3961,17 @@ function PaymentsTab({ caseDetail, onUpdate }) {
           </p>
         )}
 
+        {!canProposeByStage && !awaitingAdmin && (
+          <p className="text-xs font-bold text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            Fee proposals are only allowed when the case is at{" "}
+            <strong>Draft Application Review</strong>, <strong>CCL Fee Proposal</strong>,{" "}
+            <strong>Application Preparation</strong>, or <strong>Document Review</strong> (current
+            step: <span className="font-mono">{stage || "unknown"}</span>). Use the{" "}
+            <strong>Overview</strong> tab to move the workflow step, or ask admin:{" "}
+            <strong>Cases → open case → Immigration workflow → “CCL Fee Proposal”</strong>.
+          </p>
+        )}
+
         {canSubmit && (
           <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-gray-50">
             <button
@@ -3963,6 +4002,18 @@ function PaymentsTab({ caseDetail, onUpdate }) {
         initialPlan={cclMeta?.installmentPlan || cclMeta?.installment_plan}
         initialNotes={amountNotes || cclMeta?.notes}
         onSubmit={handleSubmitProposal}
+      />
+
+      <ManualPaymentForm
+        caseId={caseDetail?.caseId || caseDetail?.id}
+        totalAmount={total}
+        paidAmount={paid}
+        onSuccess={(data) => {
+          onUpdate?.({
+            paidAmount: data?.paidAmount ?? paid,
+            totalAmount: data?.totalFee ?? total,
+          });
+        }}
       />
 
       {/* Summary Grid */}
