@@ -22,6 +22,7 @@ import ActivityLog from '../pages/candidate/ActivityLog';
 import ApplicationStatus from '../pages/candidate/ApplicationStatus';
 import DataCaptureSheet from '../pages/candidate/DataCaptureSheet';
 import CandidateCCL from '../pages/candidate/CandidateCCL';
+import CandidateBiometricAvailability from '../pages/candidate/CandidateBiometricAvailability';
 import CandidateAccount from '../pages/candidate/CandidateAccount';
 
 import CaseworkerDashboard from '../pages/caseworker/CaseworkerDashboard';
@@ -231,6 +232,7 @@ const AppRouter = () => {
           <Route path="data-capture-sheet" element={<DataCaptureSheet />} />
           <Route path="data-capture" element={<Navigate to="/candidate/data-capture-sheet" replace />} />
           <Route path="ccl" element={<CandidateCCL />} />
+          <Route path="biometric-availability" element={<CandidateBiometricAvailability />} />
           <Route path="timeline" element={<Navigate to="/candidate/application-status?tab=timeline" replace />} />
           <Route path="pending-actions" element={<Navigate to="/candidate/application-status?tab=actions" replace />} />
           <Route path="account" element={<CandidateAccount />} />

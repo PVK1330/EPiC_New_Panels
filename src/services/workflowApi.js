@@ -36,6 +36,18 @@ export const getCandidateTasks = () =>
 export const completeCandidateTask = (taskId) =>
   api.patch(`/api/workflow/my-tasks/${taskId}/complete`).then(unwrap);
 
+export const getDraftReviewState = () =>
+  api.get("/api/workflow/draft-review").then(unwrap);
+
+export const submitDraftReviewResponse = (approved) =>
+  api.post("/api/workflow/draft-review", { approved }).then(unwrap);
+
+export const getBiometricAvailability = () =>
+  api.get("/api/workflow/biometric-availability").then(unwrap);
+
+export const submitBiometricAvailability = (body) =>
+  api.post("/api/workflow/biometric-availability", body).then(unwrap);
+
 // ── Staff (admin / caseworker) ───────────────────────────────────────────────
 export const getCaseWorkflowBundle = (caseId) =>
   api.get(`/api/workflow/cases/${caseId}/bundle`).then(unwrap);
@@ -60,3 +72,9 @@ export const reviewCclFees = (caseId, body) =>
 
 export const getPendingCclFeeApprovals = () =>
   api.get("/api/workflow/ccl/pending-approvals").then(unwrap);
+
+export const confirmBiometricSlot = (caseId, body) =>
+  api.post(`/api/workflow/cases/${caseId}/biometric-slot`, body).then(unwrap);
+
+export const recordVisaPortalUpdate = (caseId, body) =>
+  api.post(`/api/workflow/cases/${caseId}/visa-portal-update`, body).then(unwrap);

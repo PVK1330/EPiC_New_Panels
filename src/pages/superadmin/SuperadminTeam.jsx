@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
+import * as teamService from '../../services/superadminTeam.service';
 import {
  RiShieldUserLine,
  RiAddLine,
@@ -23,17 +25,13 @@ import {
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/Input';
+import {
+  PLATFORM_MODULES_FALLBACK,
+  PLATFORM_MODULE_COUNT,
+  formatPlatformRoleName,
+} from '../../constants/platformModules';
 
-const modules = [
- { id: 'dashboard', label: 'Dashboard', description: 'Business intelligence and KPIs' },
- { id: 'organizations', label: 'Organisations', description: 'Tenant and user management' },
- { id: 'plans', label: 'Subscription Plans', description: 'Pricing and tier configuration' },
- { id: 'payments', label: 'Financial Hub', description: 'Stripe and revenue tracking' },
- { id: 'billing', label: 'Invoicing', description: 'Invoices and usage credits' },
- { id: 'audit-logs', label: 'Audit Logs', description: 'System and security events' },
- { id: 'team', label: 'Team Management', description: 'Admin roles and permissions' },
- { id: 'settings', label: 'System Settings', description: 'Global platform configuration' },
-];
+const MODULE_COUNT = PLATFORM_MODULE_COUNT;
 
 const SuperadminTeam = () => {
  const [activeTab, setActiveTab] = useState('Members');
@@ -44,21 +42,53 @@ const SuperadminTeam = () => {
  const [editingRole, setEditingRole] = useState(null);
  const [selectedPermissions, setSelectedPermissions] = useState({});
  const [revokeTarget, setRevokeTarget] = useState(null);
- const [disabledUsers, setDisabledUsers] = useState(new Set());
  const [searchQuery, setSearchQuery] = useState('');
+ const [loading, setLoading] = useState(true);
+ const [saving, setSaving] = useState(false);
+ const [modules, setModules] = useState([]);
+ const [roleFormName, setRoleFormName] = useState('');
+ const [inviteForm, setInviteForm] = useState({
+   first_name: '',
+   last_name: '',
+   email: '',
+   role_id: '',
+ });
 
- const [team, setTeam] = useState([
- { id: 1, name: 'Alex Thompson', role: 'Super Admin', modules: 8, email: 'alex@epic.com', status: 'Active', lastActive: '2 mins ago', mfa: true },
- { id: 2, name: 'Sarah Chen', role: 'Security Admin', modules: 3, email: 'sarah@epic.com', status: 'Active', lastActive: '1 hour ago', mfa: true },
- { id: 3, name: 'James Wilson', role: 'Billing Admin', modules: 2, email: 'james@epic.com', status: 'Inactive', lastActive: '2 days ago', mfa: false },
- ]);
+ const [team, setTeam] = useState([]);
+ const [roles, setRoles] = useState([]);
+ const [stats, setStats] = useState({ total: 0, active: 0, mfa_enabled: 0 });
+ const [loadError, setLoadError] = useState(null);
 
- const [roles, setRoles] = useState([
- { id: 1, name: 'Super Admin', modules: 8, members: 1, type: 'System', perms: ['dashboard', 'organizations', 'plans', 'payments', 'billing', 'audit-logs', 'team', 'settings'] },
- { id: 2, name: 'Support Agent', modules: 2, members: 4, type: 'Custom', perms: ['dashboard', 'organizations'] },
- { id: 3, name: 'Billing Manager', modules: 3, members: 1, type: 'Custom', perms: ['billing', 'payments', 'audit-logs'] },
- { id: 4, name: 'Compliance Officer', modules: 2, members: 0, type: 'Custom', perms: ['audit-logs', 'settings'] },
- ]);
+ const loadData = useCallback(async () => {
+   try {
+     setLoading(true);
+     setLoadError(null);
+     const [teamRes, rolesRes, modRes] = await Promise.all([
+       teamService.fetchTeamMembers(),
+       teamService.fetchPlatformRoles(),
+       teamService.fetchPlatformModules(),
+     ]);
+     const teamPayload = teamRes.data?.data ?? teamRes.data;
+     const rolesPayload = rolesRes.data?.data ?? rolesRes.data;
+     setTeam(teamPayload?.members ?? []);
+     setStats(teamPayload?.stats ?? { total: 0, active: 0, mfa_enabled: 0 });
+     setRoles(rolesPayload?.roles ?? []);
+     const modPayload = modRes.data?.data ?? modRes.data;
+     const loadedModules = modPayload?.modules ?? [];
+     setModules(loadedModules.length ? loadedModules : PLATFORM_MODULES_FALLBACK);
+   } catch (e) {
+     const msg = e?.response?.data?.message || e.message || 'Failed to load team';
+     setLoadError(msg);
+     setModules(PLATFORM_MODULES_FALLBACK);
+     toast.error(msg);
+   } finally {
+     setLoading(false);
+   }
+ }, []);
+
+ useEffect(() => {
+   loadData();
+ }, [loadData]);
 
  const handleTogglePermission = (moduleId) => {
  setSelectedPermissions(prev => ({
@@ -72,51 +102,131 @@ const SuperadminTeam = () => {
  setIsRevokeModalOpen(true);
  };
 
- const confirmRevokeAccess = () => {
- if (revokeTarget) {
- setDisabledUsers(prev => new Set([...prev, revokeTarget.id]));
- setTeam(prev => prev.map(m => 
- m.id === revokeTarget.id ? { ...m, status: 'Inactive' } : m
- ));
- setIsRevokeModalOpen(false);
- setRevokeTarget(null);
- }
+ const confirmRevokeAccess = async () => {
+   if (!revokeTarget) return;
+   try {
+     setSaving(true);
+     await teamService.updateTeamMember(revokeTarget.id, { status: 'inactive' });
+     toast.success('Access revoked');
+     setIsRevokeModalOpen(false);
+     setRevokeTarget(null);
+     await loadData();
+   } catch (e) {
+     toast.error(e?.response?.data?.message || e.message || 'Failed to revoke access');
+   } finally {
+     setSaving(false);
+   }
  };
 
- const handleRestoreAccess = (member) => {
- setDisabledUsers(prev => {
- const newSet = new Set(prev);
- newSet.delete(member.id);
- return newSet;
- });
- setTeam(prev => prev.map(m => 
- m.id === member.id ? { ...m, status: 'Active' } : m
- ));
+ const handleRestoreAccess = async (member) => {
+   try {
+     setSaving(true);
+     await teamService.updateTeamMember(member.id, { status: 'active' });
+     toast.success('Access restored');
+     await loadData();
+   } catch (e) {
+     toast.error(e?.response?.data?.message || e.message || 'Failed to restore access');
+   } finally {
+     setSaving(false);
+   }
  };
 
  const handleEditRole = (role) => {
- setEditingRole(role);
- const perms = {};
- role.perms.forEach(p => perms[p] = true);
- setSelectedPermissions(perms);
- setIsRoleModalOpen(true);
+   setEditingRole(role);
+   const perms = {};
+   (role.perms || role.moduleIds || []).forEach((p) => { perms[p] = true; });
+   setSelectedPermissions(perms);
+   setRoleFormName(role.name?.replace(/^platform_/, '').replace(/_/g, ' ') || role.name);
+   setIsRoleModalOpen(true);
  };
 
  const handleCreateRole = () => {
- setEditingRole(null);
- setSelectedPermissions({});
- setIsRoleModalOpen(true);
+   setEditingRole(null);
+   setSelectedPermissions({});
+   setRoleFormName('');
+   setIsRoleModalOpen(true);
  };
 
  const confirmDeleteRole = (role) => {
- setEditingRole(role);
- setIsDeleteModalOpen(true);
+   setEditingRole(role);
+   setIsDeleteModalOpen(true);
  };
 
- const handleDeleteRole = () => {
- setRoles(prev => prev.filter(r => r.id !== editingRole.id));
- setIsDeleteModalOpen(false);
- setEditingRole(null);
+ const handleDeleteRole = async () => {
+   if (!editingRole) return;
+   try {
+     setSaving(true);
+     await teamService.deletePlatformRole(editingRole.id);
+     toast.success('Role deleted');
+     setIsDeleteModalOpen(false);
+     setEditingRole(null);
+     await loadData();
+   } catch (e) {
+     toast.error(e?.response?.data?.message || e.message || 'Failed to delete role');
+   } finally {
+     setSaving(false);
+   }
+ };
+
+ const handleSaveRole = async () => {
+   const moduleIds = Object.keys(selectedPermissions).filter((k) => selectedPermissions[k]);
+   try {
+     setSaving(true);
+     if (editingRole) {
+       await teamService.updatePlatformRole(editingRole.id, { moduleIds });
+       toast.success('Role updated');
+     } else {
+       if (!roleFormName.trim()) {
+         toast.error('Role name is required');
+         return;
+       }
+       await teamService.createPlatformRole({
+         name: roleFormName.trim(),
+         moduleIds,
+       });
+       toast.success('Role created');
+     }
+     setIsRoleModalOpen(false);
+     setEditingRole(null);
+     await loadData();
+   } catch (e) {
+     toast.error(e?.response?.data?.message || e.message || 'Failed to save role');
+   } finally {
+     setSaving(false);
+   }
+ };
+
+ const handleInviteSubmit = async () => {
+   if (!inviteForm.email?.trim() || !inviteForm.first_name?.trim() || !inviteForm.last_name?.trim() || !inviteForm.role_id) {
+     toast.error('Please fill in all required fields');
+     return;
+   }
+   try {
+     setSaving(true);
+     const res = await teamService.inviteTeamMember({
+       email: inviteForm.email.trim(),
+       first_name: inviteForm.first_name.trim(),
+       last_name: inviteForm.last_name.trim(),
+       role_id: Number(inviteForm.role_id),
+     });
+     const data = res.data?.data ?? res.data;
+     const welcome = data?.welcome_email;
+     const tempPw = data?.temporary_password;
+     if (welcome?.sent) {
+       toast.success('Invitation sent with login details');
+     } else if (tempPw) {
+       toast.success(`Member created. Temporary password: ${tempPw}`, { duration: 14000 });
+     } else {
+       toast.success('Team member created');
+     }
+     setIsInviteModalOpen(false);
+     setInviteForm({ first_name: '', last_name: '', email: '', role_id: '' });
+     await loadData();
+   } catch (e) {
+     toast.error(e?.response?.data?.message || e.message || 'Failed to invite member');
+   } finally {
+     setSaving(false);
+   }
  };
 
  const filteredTeam = team.filter(member => 
@@ -141,6 +251,15 @@ const SuperadminTeam = () => {
           </Button>
  </div>
  </div>
+
+ {loadError && (
+   <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+     <span>{loadError} — ensure EPIC_API is running, then retry.</span>
+     <Button variant="outline" onClick={loadData} className="text-xs font-bold uppercase tracking-widest">
+       Retry
+     </Button>
+   </div>
+ )}
 
  {/* Tabs with Modern Styling */}
       <div className="flex bg-gray-50 p-1 rounded-lg border border-gray-100 w-fit shadow-sm">
@@ -179,7 +298,9 @@ const SuperadminTeam = () => {
             </div>
             <div>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">MFA Compliance</p>
-              <h4 className="text-2xl font-black text-secondary tracking-tight">100%</h4>
+              <h4 className="text-2xl font-black text-secondary tracking-tight">
+                {stats.total ? Math.round((stats.mfa_enabled / stats.total) * 100) : 0}%
+              </h4>
             </div>
           </motion.div>
 
@@ -194,9 +315,7 @@ const SuperadminTeam = () => {
             </div>
             <div>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Admins</p>
-              <h4 className="text-2xl font-black text-secondary tracking-tight">
-                {team.filter(m => m.status === 'Active').length}
-              </h4>
+              <h4 className="text-2xl font-black text-secondary tracking-tight">{stats.active}</h4>
             </div>
           </motion.div>
 
@@ -211,7 +330,7 @@ const SuperadminTeam = () => {
             </div>
             <div>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Roles</p>
-              <h4 className="text-2xl font-black text-secondary tracking-tight">04</h4>
+              <h4 className="text-2xl font-black text-secondary tracking-tight">{String(roles.length).padStart(2, '0')}</h4>
             </div>
           </motion.div>
 
@@ -262,6 +381,22 @@ const SuperadminTeam = () => {
               </tr>
             </thead>
  <tbody className="divide-y divide-gray-100">
+ {loading ? (
+   <tr>
+     <td colSpan={5} className="px-4 py-10 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
+       Loading team…
+     </td>
+   </tr>
+ ) : filteredTeam.length === 0 ? (
+   <tr>
+     <td colSpan={5} className="px-4 py-12 text-center">
+       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">No platform staff yet</p>
+       <Button onClick={() => setIsInviteModalOpen(true)} className="text-[10px] font-bold uppercase tracking-widest">
+         <RiAddLine size={16} /> Invite your first team member
+       </Button>
+     </td>
+   </tr>
+ ) : (
  <AnimatePresence>
  {filteredTeam.map((member, idx) => (
  <motion.tr 
@@ -294,7 +429,9 @@ const SuperadminTeam = () => {
  ? 'bg-green-50 border-green-100 text-green-700' 
  : 'bg-gray-100 border-gray-200 text-gray-600'
  }`}>
- {member.status === 'Active' ? member.role : 'INACTIVE'}
+ {member.status === 'Active'
+   ? formatPlatformRoleName(member.role, member.role_id)
+   : 'INACTIVE'}
  </span>
  </td>
  <td className="px-4 py-2.5 text-center">
@@ -302,12 +439,12 @@ const SuperadminTeam = () => {
  <span className={`text-sm font-semibold ${
  member.status === 'Active' ? 'text-secondary' : 'text-gray-400'
  }`}>
- {member.status === 'Active' ? `${member.modules} / 8` : 'Disabled'}
+ {member.status === 'Active' ? `${member.modules} / ${MODULE_COUNT}` : 'Disabled'}
  </span>
  <div className="w-16 h-1 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
  <div 
  className={`h-full transition-all ${member.status === 'Active' ? 'bg-primary' : 'bg-gray-300'}`} 
- style={{ width: member.status === 'Active' ? `${(member.modules / 8) * 100}%` : '0%' }} 
+ style={{ width: member.status === 'Active' ? `${(member.modules / MODULE_COUNT) * 100}%` : '0%' }} 
  />
  </div>
  </div>
@@ -317,7 +454,9 @@ const SuperadminTeam = () => {
  <div className={`w-2 h-2 rounded-full animate-pulse ${
  member.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'
  }`} />
- <span className="text-sm font-bold text-gray-400">{member.lastActive}</span>
+ <span className="text-sm font-bold text-gray-400">
+   {member.lastActive ? new Date(member.lastActive).toLocaleString() : '—'}
+ </span>
  </div>
  </td>
  <td className="px-4 py-2.5 text-right">
@@ -342,6 +481,7 @@ const SuperadminTeam = () => {
  </motion.tr>
  ))}
  </AnimatePresence>
+ )}
  </tbody>
  </table>
  </div>
@@ -360,7 +500,9 @@ const SuperadminTeam = () => {
  <RiShieldUserLine size={20} />
  </div>
  <div>
- <h4 className="text-sm font-semibold text-secondary">{role.name}</h4>
+ <h4 className="text-sm font-semibold text-secondary">
+   {role.display_name || formatPlatformRoleName(role.name, role.id)}
+ </h4>
  <span className={`text-xs font-bold px-2 py-0.5 rounded-full block mt-1 border ${role.type === 'System' ? 'bg-primary/5 text-primary border-primary/10' : 'bg-secondary/5 text-secondary border-secondary/10'}`}>{role.type} Role</span>
  </div>
  </div>
@@ -417,8 +559,8 @@ const SuperadminTeam = () => {
  footer={
  <div className="flex justify-end gap-2 w-full">
  <Button variant="secondary"onClick={() => setIsRoleModalOpen(false)} className="px-6 py-2 text-sm font-bold">Cancel</Button>
- <Button onClick={() => setIsRoleModalOpen(false)} className="px-8 py-2 text-sm font-bold shadow-sm">
- {editingRole ?"Update Role":"Save Role Definition"}
+ <Button disabled={saving} onClick={handleSaveRole} className="px-8 py-2 text-sm font-bold shadow-sm">
+ {saving ? 'Saving…' : editingRole ? 'Update Role' : 'Save Role Definition'}
  </Button>
  </div>
  }
@@ -428,7 +570,8 @@ const SuperadminTeam = () => {
  <Input 
  label="Role Name"
  placeholder="e.g. Regional Support Lead"
- defaultValue={editingRole?.name}
+ value={roleFormName}
+ onChange={(e) => setRoleFormName(e.target.value)}
  disabled={editingRole?.type === 'System'}
  />
  <div className="flex items-center justify-between border-b border-gray-100 pb-2">
@@ -506,8 +649,9 @@ const SuperadminTeam = () => {
  >
  Cancel
  </Button>
- <Button 
- onClick={confirmRevokeAccess} 
+ <Button
+ disabled={saving}
+ onClick={confirmRevokeAccess}
  className="px-6 py-2 text-sm font-bold bg-red-600 border-red-600 hover:bg-red-700 shadow-sm flex items-center gap-2"
  >
  <RiLockLine size={14} />
@@ -543,19 +687,25 @@ const SuperadminTeam = () => {
  footer={
  <div className="flex justify-end gap-2 w-full">
  <Button variant="secondary"onClick={() => setIsInviteModalOpen(false)} className="px-5 py-2 text-sm font-bold">Cancel</Button>
- <Button onClick={() => setIsInviteModalOpen(false)} className="px-6 py-2 text-sm font-bold shadow-sm">Send Invitation</Button>
+ <Button disabled={saving} onClick={handleInviteSubmit} className="px-6 py-2 text-sm font-bold shadow-sm">
+   {saving ? 'Sending…' : 'Send Invitation'}
+ </Button>
  </div>
  }
  >
  <div className="space-y-6 py-1">
  <div className="space-y-4">
- <Input label="Full Name"placeholder="e.g. Sarah Connor"/>
- <Input label="Work Email"type="email"placeholder="sarah@epic.com"/>
+ <motion.div className="grid grid-cols-2 gap-3">
+   <Input label="First name" value={inviteForm.first_name} onChange={(e) => setInviteForm((p) => ({ ...p, first_name: e.target.value }))} />
+   <Input label="Last name" value={inviteForm.last_name} onChange={(e) => setInviteForm((p) => ({ ...p, last_name: e.target.value }))} />
+ </motion.div>
+ <Input label="Work Email" type="email" value={inviteForm.email} onChange={(e) => setInviteForm((p) => ({ ...p, email: e.target.value }))} placeholder="sarah@epic.com" />
  <div className="space-y-1">
  <label className="text-sm font-bold text-gray-400 ml-1">Assign Role</label>
- <select className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-secondary outline-none focus:ring-1 focus:ring-primary/20 appearance-none">
- {roles.map(role => (
- <option key={role.id}>{role.name}</option>
+ <select value={inviteForm.role_id} onChange={(e) => setInviteForm((p) => ({ ...p, role_id: e.target.value }))} className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-secondary outline-none focus:ring-1 focus:ring-primary/20 appearance-none">
+ <option value="">Select role</option>
+ {roles.map((role) => (
+ <option key={role.id} value={role.id}>{role.display_name || formatPlatformRoleName(role.name, role.id)}</option>
  ))}
  </select>
  </div>

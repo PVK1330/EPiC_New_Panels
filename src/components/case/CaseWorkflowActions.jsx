@@ -4,6 +4,7 @@ import { Loader2, X } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
 import Button from "../Button";
 import CclFeeProposalModal from "./CclFeeProposalModal";
+import CaseBiometricWorkflow from "./CaseBiometricWorkflow";
 import {
   getCaseWorkflowBundle,
   getDataCapture,
@@ -151,9 +152,16 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
   const adminCanReview = isAdmin && ccl?.status === "fee_proposed";
 
   const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
+  const workflowMeta = bundle?.workflowMeta || {};
 
   return (
     <>
+      <CaseBiometricWorkflow
+        caseId={caseId}
+        workflowMeta={workflowMeta}
+        caseStage={stage}
+        onRefresh={load}
+      />
       <div className="rounded-xl border border-primary/15 bg-white p-4 space-y-3">
         <p className="text-[10px] font-black uppercase tracking-widest text-primary">
           Process actions

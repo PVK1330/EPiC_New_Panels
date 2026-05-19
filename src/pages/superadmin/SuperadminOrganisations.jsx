@@ -444,10 +444,10 @@ const SuperadminOrganisations = () => {
                 </tr>
               ) : (
               filteredOrgs.map((org) => (
-                <tr key={org.id} className="hover:bg-gray-50/50 transition-colors group">
+                <tr key={org.id} className="hover:bg-gray-50/50 transition-colors group/row">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded flex items-center justify-center text-gray-400 font-black text-[9px] group-hover:bg-primary group-hover:text-white transition-all">
+                      <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded flex items-center justify-center text-gray-400 font-black text-[9px] group-hover/row:bg-primary group-hover/row:text-white transition-all">
                         {org.name.charAt(0)}
                       </div>
                       <div>

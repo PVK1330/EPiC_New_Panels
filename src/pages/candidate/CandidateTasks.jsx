@@ -19,6 +19,7 @@ function taskActionPath(task) {
   if (/upload|document/i.test(task.title || "")) return "/candidate/upload-documents";
   if (/checklist/i.test(task.title || "")) return "/candidate/document-checklist";
   if (/client care|ccl|fee|payment/i.test(task.title || "")) return "/candidate/ccl";
+  if (/biometric|availability/i.test(task.title || "")) return "/candidate/biometric-availability";
   return "/candidate/application";
 }
 
