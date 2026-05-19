@@ -4,6 +4,7 @@ import { Loader2, X } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
 import Button from "../Button";
 import CclFeeProposalModal from "./CclFeeProposalModal";
+import CaseWorkflowPostCcl from "./CaseWorkflowPostCcl";
 import {
   getCaseWorkflowBundle,
   getDataCapture,
@@ -58,7 +59,7 @@ function cclStatusLabel(ccl, caseStage) {
   if (!ccl) return "not started";
   if (ccl.status === "signed") return "Accepted by client ✓";
   if (ccl.status === "issued") return "With client — awaiting acceptance";
-  if (ccl.status === "fee_proposed" || caseStage === "ccl_fee_admin_review") {
+  if (ccl.status === "fee_proposed") {
     return "Awaiting admin fee approval";
   }
   if (ccl.status === "fee_rejected") return "Returned by admin — revise proposal";
@@ -88,8 +89,8 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
         getCaseWorkflowBundle(caseId),
         getDataCapture(caseId).catch(() => null),
       ]);
-      setBundle(bundleRes.data?.data);
-      setDcsDetail(dcsRes?.data?.data || null);
+      setBundle(bundleRes);
+      setDcsDetail(dcsRes || null);
     } catch (e) {
       showToast({ variant: "danger", message: apiErrorMessage(e) });
     } finally {
@@ -140,22 +141,27 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
     ccl?.status !== "issued" &&
     ccl?.status !== "signed" &&
     ccl?.status !== "fee_proposed" &&
-    stage !== "ccl_fee_admin_review" &&
     ([
       "draft_application_review",
-      "ccl_fee_proposal",
+      "client_care_letter",
       "application_preparation",
       "document_review",
     ].includes(stage) ||
       ccl?.status === "fee_rejected");
 
-  const adminCanReview =
-    isAdmin && (stage === "ccl_fee_admin_review" || ccl?.status === "fee_proposed");
+  const adminCanReview = isAdmin && ccl?.status === "fee_proposed";
 
   const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
+  const workflowMeta = bundle?.workflowMeta || {};
 
   return (
     <>
+      <CaseBiometricWorkflow
+        caseId={caseId}
+        workflowMeta={workflowMeta}
+        caseStage={stage}
+        onRefresh={load}
+      />
       <div className="rounded-xl border border-primary/15 bg-white p-4 space-y-3">
         <p className="text-[10px] font-black uppercase tracking-widest text-primary">
           Process actions
@@ -293,6 +299,13 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
             </span>
           </p>
         </div>
+
+        <CaseWorkflowPostCcl
+          caseId={caseId}
+          caseStage={stage}
+          workflowState={bundle?.workflowState}
+          onRefresh={load}
+        />
       </div>
 
       <CclFeeProposalModal

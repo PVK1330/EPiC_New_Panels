@@ -220,6 +220,10 @@ const AppRoutes = () => {
 
         <Route path="activity-log" element={<ActivityLog />} />
         <Route path="application-status" element={<ApplicationStatus />} />
+        <Route
+          path="track-progress"
+          element={<Navigate to="/candidate/application-status" replace />}
+        />
         <Route path="data-capture-sheet" element={<DataCaptureSheet />} />
         <Route path="data-capture" element={<Navigate to="/candidate/data-capture-sheet" replace />} />
         <Route path="ccl" element={<CandidateCCL />} />

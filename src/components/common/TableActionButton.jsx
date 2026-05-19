@@ -1,5 +1,6 @@
 /**
  * Icon action with hover tooltip for data tables.
+ * Uses a named Tailwind group so row-level `group` does not show every tooltip at once.
  */
 export default function TableActionButton({
   label,
@@ -15,7 +16,7 @@ export default function TableActionButton({
   };
 
   return (
-    <div className="relative group">
+    <div className="relative group/action">
       <button
         type="button"
         onClick={onClick}
@@ -27,7 +28,7 @@ export default function TableActionButton({
       </button>
       <span
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-md transition-opacity group-hover/action:opacity-100 group-focus-within/action:opacity-100"
       >
         {label}
       </span>

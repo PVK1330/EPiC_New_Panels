@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   APPLICATION_STEP_LABELS,
@@ -12,6 +12,9 @@ import {
   candidateRowToApplicationForm,
 } from "./applicationFormMapping";
 import useCandidate from "../../hooks/useCandidate";
+import { submitDraftReview } from "../../services/workflowApi";
+import { resolveCaseStage } from "../../constants/immigrationCaseProcess";
+import { useToast } from "../../context/ToastContext";
 import { getCaseworkers } from "../../services/caseWorker";
 import { getVisaTypesDropdown } from "../../services/settingsService";
 
@@ -210,7 +213,7 @@ const fallbackVisaTypeOptions = [
   { value: "Other", label: "Other" },
 ];
 
-/** All DATE-type fields — empty strings must be converted to null before the API call. */
+/** All DATE-type fields â€” empty strings must be converted to null before the API call. */
 const DATE_FIELDS = [
   "dob",
   "issueDate",
@@ -344,6 +347,7 @@ export default function CandidateApplicationForm({
   containerClassName,
 }) {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const {
     submitApplication,
     saveApplicationDraft,
@@ -365,6 +369,9 @@ export default function CandidateApplicationForm({
   // Locked application state
   const [isLocked, setIsLocked] = useState(false);
   const [submittedAt, setSubmittedAt] = useState(null);
+  const [caseStage, setCaseStage] = useState(null);
+  const [draftReviewConfirmed, setDraftReviewConfirmed] = useState(null);
+  const [draftReviewBusy, setDraftReviewBusy] = useState(false);
   // Banner state: null = hidden, string = message to show
   const [apiError, setApiError] = useState(null);
   const [showSubmitWarning, setShowSubmitWarning] = useState(true);
@@ -381,7 +388,7 @@ export default function CandidateApplicationForm({
   const formData = isControlled ? controlledFormData : internalForm;
   const setFormData = isControlled ? setControlledFormData : setInternalForm;
 
-  // ── Load saved draft on mount (candidate, uncontrolled form only) ──────────
+  // â”€â”€ Load saved draft on mount (candidate, uncontrolled form only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (variant !== "candidate" || isControlled) return;
 
@@ -397,14 +404,53 @@ export default function CandidateApplicationForm({
         if (result.ok && result.application) {
           const app = result.application;
 
-          // If already submitted and locked, show the locked screen instead
+          const caseData = app._relatedData?.cases?.[0];
+          const stage = caseData ? resolveCaseStage(caseData) : null;
+          const ws = caseData?.workflowState;
+          const draftConfirmed = ws?.draftReview?.confirmed ?? null;
+          setCaseStage(stage);
+          setDraftReviewConfirmed(draftConfirmed);
+
+          // Draft review: locked form with Yes/No (unless candidate chose No)
+          if (
+            app.status === "submitted" &&
+            app.isLocked === true &&
+            stage === "draft_application_review" &&
+            draftConfirmed === null
+          ) {
+            setIsLocked(true);
+            setSubmittedAt(app.submittedAt ?? null);
+            const restored = candidateRowToApplicationForm({
+              first_name: app.firstName ?? "",
+              last_name: app.lastName ?? "",
+              email: app.email ?? "",
+              country_code: "",
+              mobile: app.contactNumber ?? "",
+              application: app,
+            });
+            setInternalForm(restored);
+            if (restored.parent2Name) setShowSecondParent(true);
+            return;
+          }
+
+          // Submitted and locked â€” show read-only form with status banner
           if (app.status === "submitted" && app.isLocked === true) {
             setIsLocked(true);
             setSubmittedAt(app.submittedAt ?? null);
-            return; // finally block clears draftLoading
+            const restored = candidateRowToApplicationForm({
+              first_name: app.firstName ?? "",
+              last_name: app.lastName ?? "",
+              email: app.email ?? "",
+              country_code: "",
+              mobile: app.contactNumber ?? "",
+              application: app,
+            });
+            setInternalForm(restored);
+            if (restored.parent2Name) setShowSecondParent(true);
+            return;
           }
 
-          // Use the existing mapper: it normalises null→"", ISO dates→YYYY-MM-DD
+          // Use the existing mapper: it normalises nullâ†’"", ISO datesâ†’YYYY-MM-DD
           const restored = candidateRowToApplicationForm({
             first_name: app.firstName ?? "",
             last_name: app.lastName ?? "",
@@ -420,7 +466,7 @@ export default function CandidateApplicationForm({
             setDraftRestored(true);
           }
         } else {
-          // API ok but no record yet — try localStorage fallback
+          // API ok but no record yet â€” try localStorage fallback
           tryLocalStorageFallback();
         }
       } catch {
@@ -621,10 +667,10 @@ export default function CandidateApplicationForm({
       return;
     }
 
-    // Candidate variant — required fields relaxed to allow fluid navigation and submission
+    // Candidate variant â€” required fields relaxed to allow fluid navigation and submission
     setFormErrors({});
 
-    // Sanitize date fields — convert empty strings to null
+    // Sanitize date fields â€” convert empty strings to null
     const payload = sanitizeForApi(cleaned);
 
     setIsSubmitting(true);
@@ -709,50 +755,39 @@ export default function CandidateApplicationForm({
     containerClassName ??
     "mx-auto max-w-5xl rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6 md:p-8";
 
-  // ── Locked / submitted screen ────────────────────────────────────────────
-  if (isLocked && variant === "candidate") {
-    return (
-      <div className={embedded ? "w-full" : outerClass}>
-        <div className="flex flex-col items-center gap-6 py-16 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary/10">
-            <svg
-              className="h-8 w-8 text-secondary"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-2xl font-black tracking-tight text-gray-900">
-              Application Submitted
-            </h2>
-            <p className="mt-1 text-sm font-bold text-gray-400">
-              Submitted on: {formatDate(submittedAt)}
-            </p>
-          </div>
-          <p className="max-w-md text-sm font-bold leading-relaxed text-gray-600">
-            Your application is currently under review. This process takes up to
-            7 working days. You will be notified by your caseworker if any
-            changes are required.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate("/candidate/dashboard")}
-            className="rounded-xl bg-secondary px-8 py-3 text-sm font-black text-white shadow-md shadow-secondary/20 transition-colors hover:bg-secondary-dark"
-          >
-            Back to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const draftReviewPending =
+    variant === "candidate" &&
+    isLocked &&
+    caseStage === "draft_application_review" &&
+    draftReviewConfirmed === null;
+
+  const handleDraftReview = async (confirmed) => {
+    setDraftReviewBusy(true);
+    setApiError(null);
+    try {
+      const data = await submitDraftReview(confirmed);
+      setDraftReviewConfirmed(confirmed);
+      if (!confirmed) {
+        setIsLocked(false);
+        showToast({ message: "You can now edit your application." });
+      } else {
+        showToast({ message: "Thank you â€” your draft is confirmed." });
+        navigate("/candidate/application-status");
+      }
+      if (data?.caseStage) setCaseStage(data.caseStage);
+    } catch (e) {
+      setApiError(
+        e?.response?.data?.message || "Could not save your response. Please try again.",
+      );
+    } finally {
+      setDraftReviewBusy(false);
+    }
+  };
+
+  const submittedReadOnly =
+    variant === "candidate" && isLocked && !draftReviewPending;
+  const formDisabled = draftReviewPending || submittedReadOnly;
+
 
   return (
     <div className={embedded ? "w-full" : outerClass}>
@@ -762,8 +797,9 @@ export default function CandidateApplicationForm({
             Application form
           </h1>
           <p className="mt-2 text-sm font-bold text-gray-500">
-            Complete each section. Your progress is stepped so the form stays
-            easy to follow.
+            {submittedReadOnly
+              ? "Review your submitted application below. Editing is disabled until your caseworker requests changes."
+              : "Complete each section. Your progress is stepped so the form stays easy to follow."}
           </p>
         </>
       )}
@@ -773,6 +809,75 @@ export default function CandidateApplicationForm({
           Same application fields as the candidate portal. Data is saved to the
           client record using one shared structure.
         </p>
+      )}
+
+      {submittedReadOnly && (
+        <div className="mb-6 rounded-2xl border border-secondary/20 bg-secondary/5 p-5 md:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white border border-secondary/20 shadow-sm">
+              <svg
+                className="h-6 w-6 text-secondary"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <h2 className="text-lg font-black text-secondary">Application Submitted</h2>
+              <p className="mt-1 text-sm font-bold text-gray-500">
+                Submitted on: {formatDate(submittedAt)}
+              </p>
+              <p className="mt-3 text-sm font-bold leading-relaxed text-gray-600">
+                Your application is currently under review. This process takes up to 7 working
+                days. You will be notified by your caseworker if any changes are required.
+              </p>
+              <p className="mt-2 text-xs font-bold text-gray-500">
+                Your submitted details are shown below (read-only). Use the steps to review each
+                section.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {draftReviewPending && (
+        <div className="mb-6 rounded-2xl border-2 border-secondary/30 bg-secondary/5 p-5 space-y-4">
+          <h2 className="text-lg font-black text-secondary">Draft application review</h2>
+          <p className="text-sm font-bold text-gray-600">
+            Your caseworker has prepared a draft application for your review. The form
+            below is read-only. Please confirm whether the details are correct.
+          </p>
+          {apiError && (
+            <p className="text-xs font-bold text-red-600 bg-red-50 rounded-lg px-3 py-2">
+              {apiError}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={draftReviewBusy}
+              onClick={() => handleDraftReview(true)}
+              className="rounded-xl bg-secondary px-6 py-3 text-sm font-black text-white shadow-md disabled:opacity-60"
+            >
+              {draftReviewBusy ? "Savingâ€¦" : "Yes â€” details are correct"}
+            </button>
+            <button
+              type="button"
+              disabled={draftReviewBusy}
+              onClick={() => handleDraftReview(false)}
+              className="rounded-xl border-2 border-gray-300 bg-white px-6 py-3 text-sm font-black text-gray-700 hover:border-primary disabled:opacity-60"
+            >
+              No â€” I need to make changes
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Loading skeleton shown while fetching saved draft */}
@@ -798,7 +903,7 @@ export default function CandidateApplicationForm({
               d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
             />
           </svg>
-          Restoring your saved progress…
+          Restoring your saved progressâ€¦
         </div>
       )}
 
@@ -903,7 +1008,10 @@ export default function CandidateApplicationForm({
             </div>
           )}
 
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            className={`space-y-8 ${formDisabled ? "pointer-events-none opacity-60 select-none" : ""}`}
+          >
             {step === 0 && (
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
                 {show("applicationType") && (
@@ -1688,7 +1796,7 @@ export default function CandidateApplicationForm({
               </div>
             )}
 
-            {/* Amber warning banner — only on final step, candidate form, before submit */}
+            {/* Amber warning banner â€” only on final step, candidate form, before submit */}
             {step >= lastStep &&
               variant === "candidate" &&
               showSubmitWarning && (
@@ -1734,6 +1842,7 @@ export default function CandidateApplicationForm({
                 </div>
               )}
 
+            {!formDisabled && (
             <div className="flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="flex flex-col gap-2 sm:flex-row">
                 {variant === "candidate" ||
@@ -1750,10 +1859,10 @@ export default function CandidateApplicationForm({
                   >
                     {variant === "candidate"
                       ? applicationLoading
-                        ? "Saving…"
+                        ? "Savingâ€¦"
                         : "Save draft"
                       : adminDraftSaving
-                        ? "Saving…"
+                        ? "Savingâ€¦"
                         : "Save draft"}
                   </button>
                 ) : null}
@@ -1821,9 +1930,9 @@ export default function CandidateApplicationForm({
                       </svg>
                     ) : null}
                     {variant === "admin" && adminSubmitBusy
-                      ? "Saving…"
+                      ? "Savingâ€¦"
                       : isSubmitting
-                        ? "Submitting…"
+                        ? "Submittingâ€¦"
                         : variant === "admin"
                           ? "Save client"
                           : "Submit application"}
@@ -1831,6 +1940,7 @@ export default function CandidateApplicationForm({
                 )}
               </div>
             </div>
+            )}
           </form>
         </> // closes {!draftLoading && (
       )}

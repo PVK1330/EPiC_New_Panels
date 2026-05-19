@@ -22,6 +22,12 @@ import {
 } from "../../services/reportingApi";
 import { getVisaTypes } from "../../services/settingsService";
 import { getDepartments } from "../../services/caseWorker";
+import MockDataBanner from "../../components/admin/MockDataBanner";
+import {
+  MOCK_REPORT_CASE_TYPES,
+  MOCK_REPORT_WORKLOAD,
+  MOCK_REPORT_FINANCE,
+} from "../../data/adminMockData";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -1082,6 +1088,7 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
   const [financeLoading, setFinanceLoading] = useState(false);
   const [financeError, setFinanceError] = useState(null);   
   const [financeSearch, setFinanceSearch] = useState("");
+  const [usingMockData, setUsingMockData] = useState(false);
   const apiLoading = caseTypesLoading || workloadLoading || financeLoading;
 
   // Tab visibility tracking for lazy loading
@@ -1113,7 +1120,9 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
       }
     } catch (err) {
       console.error("Error fetching case type report:", err);
-      setCaseTypesError("Failed to load case type data");
+      setCaseTypes(MOCK_REPORT_CASE_TYPES);
+      setCaseTypesError(null);
+      setUsingMockData(true);
     } finally {
       setCaseTypesLoading(false);
     }
@@ -1143,7 +1152,9 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
       }
     } catch (err) {
       console.error("Error fetching workload report:", err);
-      setWorkloadError("Failed to load workload data");
+      setWorkload(MOCK_REPORT_WORKLOAD);
+      setWorkloadError(null);
+      setUsingMockData(true);
     } finally {
       setWorkloadLoading(false);
     }
@@ -1162,7 +1173,14 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
       }
     } catch (err) {
       console.error("Error fetching financial reports:", err);
-      setFinanceError("Failed to load financial data");
+      setRevenueByVisa(
+        MOCK_REPORT_FINANCE.byVisaType.map((v) => ({ visa_type: v.name, total_amount: v.total })),
+      );
+      setRevenueBySponsor(
+        MOCK_REPORT_FINANCE.bySponsor.map((s) => ({ sponsor_name: s.name, total_amount: s.total })),
+      );
+      setFinanceError(null);
+      setUsingMockData(true);
     } finally {
       setFinanceLoading(false);
     }
@@ -1263,6 +1281,8 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
           </div>
         </div>
       )}
+
+      {usingMockData && <MockDataBanner />}
 
       {/* ── Header ── */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">

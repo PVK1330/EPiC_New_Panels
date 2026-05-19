@@ -108,12 +108,12 @@ export function getNotificationRoute(notification, user = null) {
         return '/candidate/ccl';
       }
       if (actionType === 'data_capture_request' || actionType === 'data_capture_rejected') {
-        return '/candidate/data-capture-sheet';
+        return '/candidate/document-checklist';
       }
       if (notification?.metadata?.nextStage === 'draft_application_review') {
         return '/candidate/application';
       }
-      return '/candidate/track-progress';
+      return '/candidate/application-status';
     }
     if (role === 'business') {
       return '/business/cases';
@@ -123,7 +123,7 @@ export function getNotificationRoute(notification, user = null) {
   if (notification?.entityType === 'task' && caseRef) {
     if (role === 'admin') return `/admin/case-detail/${encodeURIComponent(String(caseRef))}`;
     if (role === 'caseworker') return '/caseworker/cases';
-    if (role === 'candidate') return '/candidate/track-progress';
+    if (role === 'candidate') return '/candidate/application-status?tab=actions';
   }
 
   if (notification?.entityType === 'document' && caseRef && role === 'admin') {

@@ -1,23 +1,21 @@
 export const TAB_IDS = {
   overview: "overview",
+  application: "application",
   documents: "documents",
   tasks: "tasks",
   payments: "payments",
   timeline: "timeline",
-  communication: "communication",
   notes: "notes",
-  audit: "audit",
 };
 
 export const CASE_DETAIL_TABS = [
   { id: TAB_IDS.overview, label: "Overview" },
+  { id: TAB_IDS.application, label: "Application Form" },
   { id: TAB_IDS.documents, label: "Documents" },
   { id: TAB_IDS.tasks, label: "Tasks" },
   { id: TAB_IDS.payments, label: "Payments" },
   { id: TAB_IDS.timeline, label: "Timeline" },
-  { id: TAB_IDS.communication, label: "Communication" },
   { id: TAB_IDS.notes, label: "Notes (Internal)" },
-  { id: TAB_IDS.audit, label: "Audit Log" },
 ];
 
 export const DEFAULT_CASE_DETAIL = {

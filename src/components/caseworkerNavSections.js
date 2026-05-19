@@ -13,6 +13,7 @@ import {
   UserCircle,
   CalendarClock,
   ShieldCheck,
+  Bell,
 } from "lucide-react";
 
 export const caseworkerNavSections = (taskCount = 0) => [
@@ -25,17 +26,17 @@ export const caseworkerNavSections = (taskCount = 0) => [
   {
     title: "Cases",
     items: [
-      { to: "/caseworker/cases",    label: "All Cases",  icon: Briefcase,   moduleKey: "caseworker.cases" },
-      { to: "/caseworker/tasks",    label: "Tasks",      icon: ListChecks,  moduleKey: "caseworker.tasks", badge: taskCount || null },
-      { to: "/caseworker/calendar", label: "Calendar",   icon: Calendar,    moduleKey: "caseworker.calendar" },
+      { to: "/caseworker/cases",    label: "All Cases", icon: Briefcase,  moduleKey: "caseworker.cases" },
+      { to: "/caseworker/tasks",    label: "Tasks",     icon: ListChecks, moduleKey: "caseworker.tasks", badge: taskCount || null },
+      { to: "/caseworker/calendar", label: "Calendar",  icon: Calendar,   moduleKey: "caseworker.calendar" },
     ],
   },
   {
     title: "Contacts",
     items: [
-      { to: "/caseworker/people/candidates",  label: "Candidates",      icon: User,        moduleKey: "caseworker.people" },
-      { to: "/caseworker/people/sponsors",    label: "Sponsors",        icon: Users,       moduleKey: "caseworker.people" },
-      { to: "/caseworker/licence-reviews",    label: "Licence Reviews", icon: ShieldCheck, moduleKey: "caseworker.licence-reviews" },
+      { to: "/caseworker/people/candidates", label: "Candidates",      icon: User,        moduleKey: "caseworker.people" },
+      { to: "/caseworker/people/sponsors",   label: "Sponsors",        icon: Users,       moduleKey: "caseworker.people" },
+      { to: "/caseworker/licence-reviews",   label: "Licence Reviews", icon: ShieldCheck, moduleKey: "caseworker.licence-reviews" },
     ],
   },
   {
@@ -47,21 +48,22 @@ export const caseworkerNavSections = (taskCount = 0) => [
   {
     title: "Analytics",
     items: [
-      { to: "/caseworker/pipeline",    label: "Pipeline",    icon: BarChart3,    moduleKey: "caseworker.pipeline" },
-      { to: "/caseworker/finance",     label: "Finance",     icon: DollarSign,   moduleKey: "caseworker.finance" },
-      { to: "/caseworker/performance", label: "Performance", icon: Activity,     moduleKey: "caseworker.performance" },
+      { to: "/caseworker/pipeline",    label: "Pipeline",    icon: BarChart3,  moduleKey: "caseworker.pipeline" },
+      { to: "/caseworker/finance",     label: "Finance",     icon: DollarSign, moduleKey: "caseworker.finance" },
+      { to: "/caseworker/performance", label: "Performance", icon: Activity,   moduleKey: "caseworker.performance" },
     ],
   },
   {
     title: "Inbox",
     items: [
-      { to: "/caseworker/messages", label: "Messages", icon: MessageSquare, moduleKey: "caseworker.messages" },
+      { to: "/caseworker/messages",      label: "Messages",      icon: MessageSquare, moduleKey: "caseworker.messages" },
+      { to: "/caseworker/notifications", label: "Notifications", icon: Bell,          moduleKey: "caseworker.dashboard" },
     ],
   },
   {
     title: "Account",
     items: [
-      { to: "/caseworker/my-account",      label: "My Account",      icon: UserCircle,   moduleKey: "caseworker.dashboard" },
+      { to: "/caseworker/my-account",      label: "My Account",      icon: UserCircle,    moduleKey: "caseworker.dashboard" },
       { to: "/caseworker/reschedule-form", label: "Reschedule Form", icon: CalendarClock, moduleKey: "caseworker.calendar" },
     ],
   },

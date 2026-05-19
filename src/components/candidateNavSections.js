@@ -10,6 +10,7 @@ import {
   Calendar,
   DollarSign,
   Package,
+  ListChecks,
 } from "lucide-react";
 
 export const candidateNavSections = [
@@ -24,10 +25,15 @@ export const candidateNavSections = [
     items: [
       { to: "/candidate/application",        label: "Application Form",   icon: ClipboardList,  moduleKey: "candidate.application" },
       { to: "/candidate/document-checklist", label: "Document Checklist", icon: FileCheck,      moduleKey: "candidate.document-checklist" },
-      { to: "/candidate/data-capture-sheet", label: "Data Capture Sheet", icon: ClipboardList,  moduleKey: "candidate.application" },
-      { to: "/candidate/ccl",                label: "Client Care Letter", icon: FileSignature,  moduleKey: "candidate.application" },
       { to: "/candidate/upload-documents",   label: "Upload Documents",   icon: Upload,         moduleKey: "candidate.document-checklist" },
+      { to: "/candidate/ccl",                label: "Client Care Letter", icon: FileSignature,  moduleKey: "candidate.application" },
       { to: "/candidate/application-status", label: "Track My Progress",  icon: BarChart3,      moduleKey: "candidate.application-status" },
+    ],
+  },
+  {
+    title: "Tasks",
+    items: [
+      { to: "/candidate/tasks", label: "My Tasks", icon: ListChecks, moduleKey: "candidate.application" },
     ],
   },
   {

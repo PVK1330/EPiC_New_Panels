@@ -12,6 +12,10 @@ export const updateCaseStatus = (id, data) =>
 export const updateCaseFinance = (id, data) =>
   api.patch(`/api/case-details/${id}/finance`, data);
 
+// POST /api/case-details/:id/payments/manual
+export const recordManualCasePayment = (id, data) =>
+  api.post(`/api/case-details/${id}/payments/manual`, data);
+
 // Export
 export const exportCaseCSV = (id) =>
   api.get(`/api/case-details/${id}/export/csv`, { responseType: "blob" });

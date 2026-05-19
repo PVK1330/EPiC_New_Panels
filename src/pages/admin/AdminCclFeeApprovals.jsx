@@ -25,7 +25,7 @@ export default function AdminCclFeeApprovals() {
     setLoading(true);
     try {
       const res = await getPendingCclFeeApprovals();
-      setCases(res.data?.data?.cases || []);
+      setCases(res?.cases || []);
     } catch (err) {
       showToast({
         variant: "danger",

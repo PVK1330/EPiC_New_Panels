@@ -27,11 +27,20 @@ function formatDate(value) {
   });
 }
 
+function parseCaseworkersResponse(res) {
+  const data = res?.data?.data;
+  if (!data) return [];
+  if (Array.isArray(data.caseworker)) return data.caseworker;
+  if (Array.isArray(data.caseworkers)) return data.caseworkers;
+  if (Array.isArray(data)) return data;
+  return [];
+}
+
 function enquiryFromCase(c) {
   const candidate = c.candidate || {};
   return {
     id: c.id,
-    caseId: c.caseId || `#C-${c.id}`,
+    caseId: c.caseId || `CAS-${c.id}`,
     candidateName: `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() || "Unknown",
     visaType: c.visaType?.name || "—",
     nationality: c.nationality || "—",
@@ -58,13 +67,12 @@ export default function AdminEnquiryInbox() {
     try {
       const [pipeRes, cwRes] = await Promise.all([
         getPipelineCases(),
-        getCaseworkers(),
+        getCaseworkers({ limit: 999 }),
       ]);
       const pipeline = pipeRes.data?.data || {};
       const list = pipeline.client_enquiry || [];
       setEnquiries(list.map(enquiryFromCase));
-      const cwList = cwRes.data?.data?.caseworkers || cwRes.data?.data || [];
-      setCaseworkers(Array.isArray(cwList) ? cwList : []);
+      setCaseworkers(parseCaseworkersResponse(cwRes));
     } catch (err) {
       showToast({
         variant: "danger",
@@ -100,15 +108,20 @@ export default function AdminEnquiryInbox() {
   const closeAssign = () => setSelected(null);
 
   const handleAssign = async () => {
-    if (!selected?.caseId || !caseworkerId) {
+    if (!caseworkerId) {
       showToast({ variant: "danger", message: "Select a caseworker" });
+      return;
+    }
+    if (!selected?.caseId && selected?.id == null) {
+      showToast({ variant: "danger", message: "Invalid enquiry — refresh and try again" });
       return;
     }
     setSubmitting(true);
     try {
+      const caseRef = selected.caseId || String(selected.id);
       const cw = caseworkers.find((c) => String(c.id) === String(caseworkerId));
       const cwName = cw ? `${cw.first_name || ""} ${cw.last_name || ""}`.trim() : "";
-      await assignCase(selected.caseId, {
+      await assignCase(caseRef, {
         caseworkerId,
         assignTo: [caseworkerId],
         assignToName: cwName,
@@ -116,8 +129,8 @@ export default function AdminEnquiryInbox() {
         notes: internalNote,
         reason: "Assigned from enquiry inbox — consultation started",
       });
-      await updatePipelineStage(selected.caseId, "initial_consultation");
-      showToast({ message: "Caseworker assigned and consultation started" });
+      await updatePipelineStage(caseRef, "admin_assignment");
+      showToast({ message: "Caseworker assigned — case moved to Admin Assignment" });
       closeAssign();
       await load();
     } catch (err) {
@@ -287,11 +300,16 @@ export default function AdminEnquiryInbox() {
                     <option value="">Select caseworker…</option>
                     {filteredCaseworkers.map((cw) => (
                       <option key={cw.id} value={cw.id}>
-                        {`${cw.first_name || ""} ${cw.last_name || ""}`.trim()}
+                        {`${cw.first_name || ""} ${cw.last_name || ""}`.trim() || cw.email || `Caseworker #${cw.id}`}
                         {cw.email ? ` (${cw.email})` : ""}
                       </option>
                     ))}
                   </select>
+                  {!loading && caseworkers.length === 0 && (
+                    <p className="mt-2 text-xs font-bold text-amber-700">
+                      No caseworkers found. Add users with the Caseworker role under Admin → Caseworkers.
+                    </p>
+                  )}
                 </div>
 
                 <motion.div>

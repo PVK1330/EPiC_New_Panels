@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   IdCard,
@@ -14,8 +14,8 @@ import {
   Download
 } from "lucide-react";
 import Modal from "../../components/Modal";
-import useCandidate from "../../hooks/useCandidate";
 import { downloadDocument, triggerDownload } from "../../services/documentApi";
+import { getMyDocumentChecklist } from "../../services/candidateDocumentApi";
 import { useToast } from "../../context/ToastContext";
 
 const FILTERS = [
@@ -65,74 +65,95 @@ const DocumentChecklist = () => {
   const [filter, setFilter] = useState("all");
   const [viewDoc, setViewDoc] = useState(null);
   const [downloading, setDownloading] = useState(false);
-  const { myApplication, applicationLoading, getMyApplication } = useCandidate();
+  const [checklistData, setChecklistData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const { showToast } = useToast();
 
-  useEffect(() => {
-    getMyApplication();
-  }, [getMyApplication]);
+  const loadChecklist = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const res = await getMyDocumentChecklist();
+      const data = res.data?.data ?? res.data;
+      setChecklistData(data);
+    } catch (err) {
+      setLoadError(
+        err?.response?.data?.message || "Could not load your document checklist.",
+      );
+      setChecklistData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  // Combine documentSettings (requirements) and actual uploaded documents
+  useEffect(() => {
+    loadChecklist();
+  }, [loadChecklist]);
+
+  useEffect(() => {
+    const onFocus = () => loadChecklist();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [loadChecklist]);
+
   const docs = useMemo(() => {
-    if (!myApplication) return [];
-    
-    const settings = myApplication._relatedData?.documentSettings || [];
-    const uploads = myApplication._relatedData?.documents || [];
+    const grouped = checklistData?.checklist;
+    if (!grouped || typeof grouped !== "object") return [];
 
     const combinedList = [];
-
-    // 1. First map all the configured required document fields
-    settings.forEach((setting) => {
-      // Find if user uploaded a file matching this setting
-      const uploadedFile = uploads.find(u => u.documentType === setting.field_key || u.documentType === setting.field_label);
-      
-      combinedList.push({
-        id: uploadedFile ? uploadedFile.id : `req-${setting.id}`,
-        sectionKey: setting.field_key.includes("passport") || setting.field_key.includes("id") ? "identity" : "general",
-        sectionLabel: setting.field_key.includes("passport") || setting.field_key.includes("id") ? "Identity documents" : "Required documents",
-        SectionIcon: FileText,
-        name: setting.field_label,
-        mandatory: setting.is_required,
-        note: `Required for your application.`,
-        status: uploadedFile ? uploadedFile.status : "missing",
-        icon: FileText,
-        fileData: uploadedFile || null
-      });
-    });
-
-    // 2. Add any other documents the user uploaded that aren't specifically mapped to a setting
-    uploads.forEach((upload) => {
-      const alreadyAdded = combinedList.some(item => item.fileData?.id === upload.id);
-      if (!alreadyAdded) {
+    for (const [category, items] of Object.entries(grouped)) {
+      if (!Array.isArray(items)) continue;
+      for (const item of items) {
         combinedList.push({
-          id: upload.id,
-          sectionKey: "other",
-          sectionLabel: "Other uploaded documents",
+          id: item.documentId || `chk-${item.id}`,
+          checklistItemId: item.id,
+          documentType: item.documentType,
+          sectionKey: category || "general",
+          sectionLabel: category || "Required documents",
           SectionIcon: FileText,
-          name: upload.userFileName || upload.documentName,
-          mandatory: false,
-          note: upload.documentType,
-          status: upload.status,
+          name: item.documentName || item.documentType,
+          mandatory: Boolean(item.isRequired),
+          note: item.description || "Required for your visa application.",
+          status: item.status || "missing",
           icon: FileText,
-          fileData: upload
+          fileData: item.documentId
+            ? {
+                id: item.documentId,
+                documentType: item.documentType,
+                documentName: item.documentName,
+                userFileName: item.documentName,
+                status: item.status,
+              }
+            : null,
         });
       }
-    });
-
+    }
     return combinedList;
-  }, [myApplication]);
+  }, [checklistData]);
 
   const stats = useMemo(() => {
     const approved = docs.filter((d) => d.status === "approved").length;
-    const uploaded = docs.filter((d) => d.status === "uploaded" || d.status === "under_review").length;
+    const uploaded = docs.filter(
+      (d) => d.status === "uploaded" || d.status === "under_review",
+    ).length;
     const required = docs.filter((d) => d.mandatory && (d.status === "missing" || d.status === "rejected")).length;
     const totalMandatory = docs.filter((d) => d.mandatory).length;
-    const doneMandatory = docs.filter((d) => d.mandatory && (d.status === "approved" || d.status === "uploaded" || d.status === "under_review")).length;
+    const doneMandatory = docs.filter(
+      (d) =>
+        d.mandatory &&
+        ["approved", "uploaded", "under_review"].includes(d.status),
+    ).length;
     
-    const pct = totalMandatory > 0 ? Math.round((doneMandatory / totalMandatory) * 100) : 100;
-    
+    const pct =
+      typeof checklistData?.completionPercentage === "number"
+        ? checklistData.completionPercentage
+        : totalMandatory > 0
+          ? Math.round((doneMandatory / totalMandatory) * 100)
+          : 0;
+
     return { approved, uploaded, required, pct };
-  }, [docs]);
+  }, [docs, checklistData]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return docs;
@@ -174,7 +195,7 @@ const DocumentChecklist = () => {
     }
   };
 
-  if (applicationLoading && !myApplication) {
+  if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-secondary" />
@@ -193,6 +214,27 @@ const DocumentChecklist = () => {
           Track the status of all required documents for your visa application.
         </p>
       </header>
+
+      {loadError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800 flex items-start gap-2">
+          <AlertCircle size={18} className="shrink-0 mt-0.5" />
+          {loadError}
+        </div>
+      )}
+
+      {!loadError && docs.length === 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-6 text-center">
+          <p className="text-sm font-black text-amber-900">No checklist items yet</p>
+          <p className="text-xs font-bold text-amber-800 mt-2 max-w-md mx-auto">
+            Your caseworker will assign a visa type and document requirements to your case.
+            You can still upload files from{" "}
+            <Link to="/candidate/upload-documents" className="text-primary underline">
+              Upload Documents
+            </Link>
+            .
+          </p>
+        </div>
+      )}
 
       <section className="rounded-2xl border border-gray-200 bg-white p-4 md:p-5 shadow-sm flex flex-col lg:flex-row lg:items-center gap-4">
         <div className="grid grid-cols-3 gap-3 shrink-0 text-center">
@@ -255,7 +297,8 @@ const DocumentChecklist = () => {
         ))}
       </div>
 
-      {bySection.length === 0 ? (
+      {docs.length > 0 &&
+        (bySection.length === 0 ? (
         <p className="text-center py-12 text-sm font-bold text-gray-400">
           No documents in this filter.
         </p>
@@ -327,7 +370,7 @@ const DocumentChecklist = () => {
                       
                       {(doc.status === "missing" || doc.status === "rejected") && (
                         <Link
-                          to={`/candidate/upload-documents?documentType=${encodeURIComponent(doc.fileData?.documentType || doc.name)}&documentName=${encodeURIComponent(doc.fileData?.userFileName || doc.name)}`}
+                          to={`/candidate/upload-documents?documentType=${encodeURIComponent(doc.documentType || doc.fileData?.documentType || doc.name)}&documentName=${encodeURIComponent(doc.fileData?.userFileName || doc.name)}`}
                           className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-black text-primary hover:bg-primary hover:text-white transition-colors"
                         >
                           <Upload size={14} />
@@ -341,7 +384,7 @@ const DocumentChecklist = () => {
             </div>
           </section>
         ))
-      )}
+      ))}
 
       {/* Document View Modal */}
       <Modal

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getPipelineCases } from "../../services/caseApi";
+import { getPendingCclFeeApprovals } from "../../services/workflowApi";
 import { motion } from "framer-motion";
 import { logout } from "../../store/slices/authSlice";
 import useModuleAccess from "../../hooks/useModuleAccess";
@@ -54,6 +55,7 @@ const navSections = [
   {
     label: "Cases & Workflow",
     items: [
+<<<<<<< HEAD
       { to: "/admin/enquiries",         label: "Enquiries",         icon: RiInboxLine,             badgeKey: "enquiries", moduleKey: "admin.enquiries" },
       { to: "/admin/ccl-fee-approvals", label: "CCL fee approvals", icon: RiMoneyPoundCircleLine,  badgeKey: "cclFees",   moduleKey: "admin.cases" },
       { to: "/admin/cases",             label: "All Cases",         icon: RiFolderOpenLine,                               moduleKey: "admin.cases" },
@@ -62,6 +64,15 @@ const navSections = [
       { to: "/admin/calendar",          label: "Calendar",          icon: RiCalendarLine,                                 moduleKey: "admin.calendar" },
       { to: "/admin/escalations",       label: "Escalations",       icon: RiAlarmWarningLine,                             moduleKey: "admin.escalations" },
       { to: "/admin/licence-requests",  label: "Licence Requests",  icon: RiShieldCheckLine,                              moduleKey: "admin.licence-requests" },
+=======
+      { to: "/admin/enquiries",         label: "Enquiries",        icon: RiInboxLine, badgeKey: "enquiries" },
+      { to: "/admin/ccl-fee-approvals", label: "CCL fee approvals", icon: RiMoneyPoundCircleLine, badgeKey: "cclFees" },
+      { to: "/admin/cases",             label: "All Cases",        icon: RiFolderOpenLine },
+      { to: "/admin/pipeline",          label: "Pipeline",         icon: RiExchangeLine },
+      { to: "/admin/calendar",          label: "Calendar",         icon: RiCalendarLine },
+      { to: "/admin/escalations",       label: "Escalations",      icon: RiAlarmWarningLine },
+      { to: "/admin/licence-requests",  label: "Licence Requests", icon: RiShieldCheckLine },
+>>>>>>> 75a73e53ccad832112e5e8fd8c48c638c83e99f2
     ],
   },
   {
@@ -101,11 +112,11 @@ const AdminSidebar = ({ isOpen, onClose }) => {
   const [cclApprovalCount, setCclApprovalCount] = useState(0);
 
   useEffect(() => {
-    getPipelineCases()
-      .then((res) => {
-        const pipeline = res.data?.data || {};
+    Promise.all([getPipelineCases(), getPendingCclFeeApprovals().catch(() => null)])
+      .then(([pipeRes, cclRes]) => {
+        const pipeline = pipeRes.data?.data || {};
         setEnquiryCount((pipeline.client_enquiry || []).length);
-        setCclApprovalCount((pipeline.ccl_fee_admin_review || []).length);
+        setCclApprovalCount(cclRes?.data?.data?.cases?.length ?? 0);
       })
       .catch(() => {
         setEnquiryCount(0);

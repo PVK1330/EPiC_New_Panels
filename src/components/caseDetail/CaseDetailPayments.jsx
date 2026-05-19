@@ -15,7 +15,7 @@ const METHODS = [
 ];
 
 const CaseDetailPayments = ({ payments, onReload }) => {
-  const toast = useToast();
+  const { showToast } = useToast();
   const [method, setMethod] = useState("Card");
   const [loading, setLoading] = useState(false);
   const [ccl, setCcl] = useState(null);
@@ -33,9 +33,7 @@ const CaseDetailPayments = ({ payments, onReload }) => {
 
   const currentStatus = payments?.amountStatus || "Not Submitted";
   const cclPending =
-    ccl?.status === "fee_proposed" ||
-    caseStage === "ccl_fee_admin_review" ||
-    currentStatus === "Pending Approval";
+    ccl?.status === "fee_proposed" || currentStatus === "Pending Approval";
 
   const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
 
@@ -47,19 +45,22 @@ const CaseDetailPayments = ({ payments, onReload }) => {
         action,
         reviewNotes: reviewNotes.trim() || undefined,
       });
-      toast?.showSuccess?.(
-        action === "approve"
-          ? "Fees approved — Client Care Letter sent to candidate."
-          : "Proposal returned to caseworker.",
-      );
+      showToast({
+        message:
+          action === "approve"
+            ? "Fees approved — Client Care Letter sent to candidate."
+            : "Proposal returned to caseworker.",
+      });
       setReviewNotes("");
       onReload?.();
     } catch (err) {
       console.error("CCL review error:", err);
-      toast?.showError?.(
-        err?.response?.data?.message ||
+      showToast({
+        variant: "danger",
+        message:
+          err?.response?.data?.message ||
           `Failed to ${action === "approve" ? "approve" : "reject"} fee proposal.`,
-      );
+      });
     } finally {
       setLoading(false);
     }
@@ -71,11 +72,14 @@ const CaseDetailPayments = ({ payments, onReload }) => {
     const targetStatus = approved ? "Approved" : "Rejected";
     try {
       await updateCaseFinance(payments.caseId, { amountStatus: targetStatus });
-      toast?.showSuccess?.(`Financial request has been ${targetStatus.toLowerCase()}.`);
+      showToast({ message: `Financial request has been ${targetStatus.toLowerCase()}.` });
       onReload?.();
     } catch (err) {
       console.error("Approval action error:", err);
-      toast?.showError?.(`Failed to ${approved ? "approve" : "reject"} financial request.`);
+      showToast({
+        variant: "danger",
+        message: `Failed to ${approved ? "approve" : "reject"} financial request.`,
+      });
     } finally {
       setLoading(false);
     }
@@ -85,6 +89,7 @@ const CaseDetailPayments = ({ payments, onReload }) => {
     "Not Submitted": "bg-gray-100 text-gray-700 border-gray-200",
     "Pending Approval": "bg-amber-50 text-amber-800 border-amber-200",
     Approved: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    Paid: "bg-blue-50 text-blue-800 border-blue-200",
     Rejected: "bg-red-50 text-red-800 border-red-200",
   };
 
@@ -268,14 +273,14 @@ const CaseDetailPayments = ({ payments, onReload }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {payments.history.length === 0 ? (
+                {(payments?.history?.length ?? 0) === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-400">
                       No payment records yet.
                     </td>
                   </tr>
                 ) : (
-                  payments.history.map((row, i) => (
+                  (payments?.history || []).map((row, i) => (
                     <tr key={i} className="hover:bg-gray-50/80">
                       <td className="px-4 py-2.5 text-gray-600">{row.date}</td>
                       <td className="px-4 py-2.5 text-green-600 font-bold">{row.amount}</td>

@@ -105,7 +105,13 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
       await onSubmit({ ...formData, slug });
       onClose();
     } catch (e) {
-      toast.error(e?.response?.data?.message || e.message || 'Request failed');
+      const isTimeout =
+        e?.code === 'ECONNABORTED' || /timeout/i.test(String(e?.message || ''));
+      toast.error(
+        isTimeout
+          ? 'Provisioning is taking longer than expected. Check the organisations list — the org may already have been created.'
+          : e?.response?.data?.message || e.message || 'Request failed',
+      );
     } finally {
       setSubmitting(false);
     }

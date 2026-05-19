@@ -60,8 +60,37 @@ const ApplicationStatus = () => {
   const docSettings = myApplication?._relatedData?.documentSettings || [];
   const dcsStatus = myApplication?._relatedData?.dataCaptureSubmission?.status;
   const cclStatus = myApplication?._relatedData?.cclRecord?.status;
+  const workflowState = caseData.workflowState;
+  const draftReviewPending =
+    stageId === "draft_application_review" &&
+    workflowState?.draftReview?.confirmed === null;
+  const biometricAvailabilityNeeded =
+    ["application_submitted", "biometrics_booked"].includes(stageId) &&
+    !workflowState?.biometrics?.availability;
 
   const PENDING_ACTIONS = [
+    ...(draftReviewPending
+      ? [
+          {
+            prio: "high",
+            title: "Review your draft application",
+            tag: "Draft review",
+            due: "Yes or No required",
+            cta: { label: "Open application", to: "/candidate/application" },
+          },
+        ]
+      : []),
+    ...(biometricAvailabilityNeeded
+      ? [
+          {
+            prio: "high",
+            title: "Provide biometrics appointment availability",
+            tag: "Biometrics",
+            due: "Location, date & time",
+            cta: { label: "Submit availability", to: "/candidate/biometric-availability" },
+          },
+        ]
+      : []),
     ...(stageId === "data_capture_initial_docs" &&
     (!dcsStatus || dcsStatus === "draft" || dcsStatus === "rejected")
       ? [
@@ -70,12 +99,14 @@ const ApplicationStatus = () => {
             title: "Complete Data Capture Sheet",
             tag: "Required",
             due: "Action Required",
-            cta: { label: "Open form", to: "/candidate/data-capture-sheet" },
+            cta: { label: "Open checklist", to: "/candidate/document-checklist" },
           },
         ]
       : []),
-    ...(cclStatus === "issued" &&
-    !["ccl_fee_proposal", "ccl_fee_admin_review"].includes(stageId)
+    ...((cclStatus === "issued" ||
+      (["Approved", "Paid"].includes(caseData.amountStatus) &&
+        stageId === "client_care_letter")) &&
+      stageId === "client_care_letter"
       ? [
           {
             prio: "high",
@@ -83,6 +114,22 @@ const ApplicationStatus = () => {
             tag: "CCL",
             due: "Required to proceed",
             cta: { label: "Review CCL", to: "/candidate/ccl" },
+          },
+        ]
+      : []),
+    ...(cclStatus !== "signed" &&
+    ["Approved", "Paid"].includes(caseData.amountStatus) &&
+    ["ccl_issued", "ccl_payment_received"].includes(stageId) &&
+    !["paid", "Paid"].includes(caseData.amountStatus) &&
+    Number(caseData.totalAmount) > 0 &&
+    (Number(caseData.paidAmount) || 0) < Number(caseData.totalAmount) - 0.02
+      ? [
+          {
+            prio: "high",
+            title: "Pay your approved case fees",
+            tag: "Payment",
+            due: "Required to proceed",
+            cta: { label: "Pay now", to: "/candidate/payments" },
           },
         ]
       : []),

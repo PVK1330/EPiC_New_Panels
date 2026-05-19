@@ -12,16 +12,19 @@ const BASE = "/api/documents";
  */
 export const uploadDocuments = (files, meta, onProgress) => {
   const formData = new FormData();
-  files.forEach((f) => formData.append("documents", f));
-  formData.append("userId", meta.userId);
+  // Server multer expects field name "files" (see upload.middleware.js)
+  files.forEach((f) => formData.append("files", f));
+  formData.append("userId", String(meta.userId));
   formData.append("documentType", meta.documentType || "General");
   formData.append("documentCategory", meta.documentCategory || "candidate");
-  if (meta.caseId) formData.append("caseId", meta.caseId);
+  if (meta.caseId != null && meta.caseId !== "") {
+    formData.append("caseId", String(meta.caseId));
+  }
   if (meta.userFileName) formData.append("userFileName", meta.userFileName);
   if (meta.expiryDate) formData.append("expiryDate", meta.expiryDate);
 
   return api.post(`${BASE}/upload`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+    timeout: 120000,
     onUploadProgress: (e) => {
       if (onProgress && e.total) {
         onProgress(Math.round((e.loaded / e.total) * 100));
