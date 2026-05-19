@@ -89,6 +89,7 @@ const CaseDetailPayments = ({ payments, onReload }) => {
     "Not Submitted": "bg-gray-100 text-gray-700 border-gray-200",
     "Pending Approval": "bg-amber-50 text-amber-800 border-amber-200",
     Approved: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    Paid: "bg-blue-50 text-blue-800 border-blue-200",
     Rejected: "bg-red-50 text-red-800 border-red-200",
   };
 

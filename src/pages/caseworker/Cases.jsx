@@ -28,7 +28,6 @@ import { getCaseAuditLogs } from "../../services/auditApi";
 import { getCaseChecklist } from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
 import { updateCaseFinance } from "../../services/caseDetailApi";
-import ManualPaymentForm from "../../components/caseDetail/ManualPaymentForm";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
 import CaseWorkflowGuidance from "../../components/case/CaseWorkflowGuidance";
@@ -3334,18 +3333,45 @@ function DocumentsTab({ caseId, candidateId }) {
                         Add
                       </button>
                     ) : item.documentId ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const doc = documents.find(d => d.id === item.documentId);
-                          if (doc && doc.documentUrl) {
-                            window.open(doc.documentUrl, "_blank");
-                          }
-                        }}
-                        className="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-black text-gray-600 hover:bg-gray-50 transition-colors"
-                      >
-                        View
-                      </button>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const doc = documents.find((d) => d.id === item.documentId);
+                            if (doc?.documentUrl) {
+                              window.open(doc.documentUrl, "_blank");
+                            }
+                          }}
+                          className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-black text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                          View
+                        </button>
+                        {(item.status === "uploaded" ||
+                          item.status === "under_review") && (
+                          <>
+                            <button
+                              type="button"
+                              disabled={statusUpdatingId === item.documentId}
+                              onClick={() =>
+                                handleDocumentStatusChange(item.documentId, "approved")
+                              }
+                              className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-800 disabled:opacity-50"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              disabled={statusUpdatingId === item.documentId}
+                              onClick={() =>
+                                handleDocumentStatusChange(item.documentId, "rejected")
+                              }
+                              className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
                     ) : null}
                   </div>
                 ))}
@@ -3390,6 +3416,11 @@ function DocumentsTab({ caseId, candidateId }) {
                   Uploaded {new Date(doc.uploadedAt).toLocaleDateString()} ·{" "}
                   {doc.documentType}
                 </p>
+                {doc.reviewNotes && doc.status === "rejected" && (
+                  <p className="text-[11px] font-bold text-red-600 mt-1">
+                    {doc.reviewNotes}
+                  </p>
+                )}
               </div>
               <span
                 className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${getBadgeColor(doc.status)}`}
@@ -3403,7 +3434,9 @@ function DocumentsTab({ caseId, candidateId }) {
               >
                 View
               </button>
-              {(doc.status === "uploaded" || doc.status === "under_review") && (
+              {(doc.status === "uploaded" ||
+                doc.status === "under_review" ||
+                doc.status === "rejected") && (
                 <>
                   <button
                     type="button"
@@ -3413,14 +3446,16 @@ function DocumentsTab({ caseId, candidateId }) {
                   >
                     Approve
                   </button>
-                  <button
-                    type="button"
-                    disabled={statusUpdatingId === doc.id}
-                    onClick={() => handleDocumentStatusChange(doc.id, "rejected")}
-                    className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 disabled:opacity-50"
-                  >
-                    Reject
-                  </button>
+                  {(doc.status === "uploaded" || doc.status === "under_review") && (
+                    <button
+                      type="button"
+                      disabled={statusUpdatingId === doc.id}
+                      onClick={() => handleDocumentStatusChange(doc.id, "rejected")}
+                      className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -3838,6 +3873,8 @@ function PaymentsTab({ caseDetail, onUpdate }) {
     try {
       await proposeCclFees(caseRef, payload);
       setFeeModalOpen(false);
+      const cclRes = await getCclStatus(caseRef).catch(() => null);
+      if (cclRes?.ccl) setCclMeta(cclRes.ccl);
       onUpdate?.({
         totalAmount: payload.feeAmount,
         amountNotes: payload.notes,
@@ -3865,8 +3902,9 @@ function PaymentsTab({ caseDetail, onUpdate }) {
   const statusColors = {
     "Not Submitted": "bg-gray-100 text-gray-700 border-gray-200",
     "Pending Approval": "bg-amber-50 text-amber-800 border-amber-200",
-    "Approved": "bg-emerald-50 text-emerald-800 border-emerald-200",
-    "Rejected": "bg-red-50 text-red-800 border-red-200",
+    Approved: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    Paid: "bg-blue-50 text-blue-800 border-blue-200",
+    Rejected: "bg-red-50 text-red-800 border-red-200",
   };
 
   const currentStatus = caseDetail?.amountStatus || "Not Submitted";
@@ -3881,12 +3919,25 @@ function PaymentsTab({ caseDetail, onUpdate }) {
     ["draft_application_review", "client_care_letter", "application_preparation", "document_review"].includes(
       stage,
     ) || cclMeta?.status === "fee_rejected";
+  const feesLocked =
+    currentStatus === "Approved" ||
+    currentStatus === "Paid" ||
+    cclMeta?.status === "issued" ||
+    cclMeta?.status === "signed";
   const canSubmit =
-    currentStatus !== "Approved" &&
-    cclMeta?.status !== "issued" &&
-    cclMeta?.status !== "signed" &&
+    !feesLocked &&
     !awaitingAdmin &&
-    canProposeByStage;
+    currentStatus !== "Pending Approval";
+  const showStageHint =
+    stage &&
+    ![
+      "draft_application_review",
+      "client_care_letter",
+      "application_preparation",
+      "document_review",
+    ].includes(stage) &&
+    cclMeta?.status !== "fee_rejected" &&
+    canSubmit;
 
   return (
     <div className="space-y-6">
@@ -3922,7 +3973,7 @@ function PaymentsTab({ caseDetail, onUpdate }) {
               type="number"
               value={totalAmount}
               onChange={(e) => setTotalAmount(e.target.value)}
-              disabled={currentStatus === "Approved" || loading}
+              disabled={feesLocked || loading}
               placeholder="e.g. 2400"
               className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-secondary focus:bg-white transition-all disabled:opacity-60"
             />
@@ -3948,7 +3999,7 @@ function PaymentsTab({ caseDetail, onUpdate }) {
             rows={3}
             value={amountNotes}
             onChange={(e) => setAmountNotes(e.target.value)}
-            disabled={currentStatus === "Approved" || loading}
+            disabled={feesLocked || loading}
             placeholder="Itemize application fees, legal assistance, or IHS surcharge coverage..."
             className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm font-bold text-gray-800 outline-none focus:border-secondary focus:bg-white transition-all resize-none disabled:opacity-60"
           />
@@ -3960,14 +4011,23 @@ function PaymentsTab({ caseDetail, onUpdate }) {
           </p>
         )}
 
-        {!canProposeByStage && !awaitingAdmin && (
+        {currentStatus === "Paid" && (
+          <p className="text-xs font-bold text-blue-800 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+            Payment has been received. Only an administrator can update payment records.
+          </p>
+        )}
+
+        {currentStatus === "Approved" && !awaitingAdmin && (
+          <p className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+            Fees approved — the candidate can pay via their portal. You cannot change amounts here.
+          </p>
+        )}
+
+        {showStageHint && (
           <p className="text-xs font-bold text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-            Fee proposals are only allowed when the case is at{" "}
-            <strong>Draft Application Review</strong>, <strong>CCL Fee Proposal</strong>,{" "}
-            <strong>Application Preparation</strong>, or <strong>Document Review</strong> (current
-            step: <span className="font-mono">{stage || "unknown"}</span>). Use the{" "}
-            <strong>Overview</strong> tab to move the workflow step, or ask admin:{" "}
-            <strong>Cases → open case → Immigration workflow → “CCL Fee Proposal”</strong>.
+            Current workflow step: <span className="font-mono">{stage}</span>. You can still
+            submit fees for admin approval; consider moving the case to{" "}
+            <strong>CCL Fee Proposal</strong> on the Overview tab if admin requests it.
           </p>
         )}
 
@@ -3987,7 +4047,9 @@ function PaymentsTab({ caseDetail, onUpdate }) {
               disabled={loading || !totalAmount}
               className="rounded-xl bg-secondary px-4 py-2 text-xs font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90 transition-all disabled:opacity-50"
             >
-              Submit CCL fees for approval
+              {cclMeta?.status === "fee_rejected" || currentStatus === "Rejected"
+                ? "Resubmit CCL fees for approval"
+                : "Submit CCL fees for approval"}
             </button>
           </div>
         )}
@@ -4001,18 +4063,6 @@ function PaymentsTab({ caseDetail, onUpdate }) {
         initialPlan={cclMeta?.installmentPlan || cclMeta?.installment_plan}
         initialNotes={amountNotes || cclMeta?.notes}
         onSubmit={handleSubmitProposal}
-      />
-
-      <ManualPaymentForm
-        caseId={caseDetail?.caseId || caseDetail?.id}
-        totalAmount={total}
-        paidAmount={paid}
-        onSuccess={(data) => {
-          onUpdate?.({
-            paidAmount: data?.paidAmount ?? paid,
-            totalAmount: data?.totalFee ?? total,
-          });
-        }}
       />
 
       {/* Summary Grid */}

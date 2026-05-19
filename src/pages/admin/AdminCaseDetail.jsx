@@ -11,6 +11,7 @@ import CaseDetailDocuments from "../../components/caseDetail/CaseDetailDocuments
 import CaseDetailTasks from "../../components/caseDetail/CaseDetailTasks";
 import CaseDetailPayments from "../../components/caseDetail/CaseDetailPayments";
 import ManualPaymentForm from "../../components/caseDetail/ManualPaymentForm";
+import AdminPaymentStatusControl from "../../components/caseDetail/AdminPaymentStatusControl";
 import CaseDetailTimeline from "../../components/caseDetail/CaseDetailTimeline";
 import CaseDetailCommunication from "../../components/caseDetail/CaseDetailCommunication";
 import CaseDetailNotes from "../../components/caseDetail/CaseDetailNotes";
@@ -281,6 +282,7 @@ const AdminCaseDetail = () => {
       actions: doc.status === "under_review" ? "review" : null,
       rawStatus: doc.status,
       documentUrl: doc.documentUrl,
+      reviewNotes: doc.reviewNotes || null,
     }));
   }, [documents, caseData]);
 
@@ -547,10 +549,12 @@ const AdminCaseDetail = () => {
     await fetchDocuments(cleanId);
   };
 
-  const handleChangeDocumentStatus = async (docId, status) => {
-    await changeDocumentStatusHandler(docId, { status });
+  const handleChangeDocumentStatus = async (docId, payload) => {
+    const body =
+      typeof payload === "string" ? { status: payload } : payload;
+    await changeDocumentStatusHandler(docId, body);
     const cleanId = caseId.replace(/^#/, "");
-    await fetchDocuments(cleanId);
+    await Promise.all([fetchDocuments(cleanId), fetchCaseDetail(cleanId)]);
   };
 
   const handleDownloadDocument = async (docId) => {
@@ -596,6 +600,13 @@ const AdminCaseDetail = () => {
     ),
     [TAB_IDS.payments]: (
       <div className="space-y-6">
+        <AdminPaymentStatusControl
+          caseId={cleanId}
+          amountStatus={data.payments?.amountStatus}
+          totalAmount={data.payments?.totalAmount ?? 0}
+          paidAmount={data.payments?.paidAmount ?? 0}
+          onSuccess={() => fetchCaseDetail(cleanId)}
+        />
         <ManualPaymentForm
           caseId={cleanId}
           totalAmount={data.payments?.totalAmount ?? 0}

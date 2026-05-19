@@ -15,7 +15,7 @@ function formatDue(dateStr) {
 }
 
 function taskActionPath(task) {
-  if (task.isDataCapture) return "/candidate/data-capture-sheet";
+  if (task.isDataCapture) return "/candidate/document-checklist";
   if (/upload|document/i.test(task.title || "")) return "/candidate/upload-documents";
   if (/checklist/i.test(task.title || "")) return "/candidate/document-checklist";
   if (/client care|ccl|fee|payment/i.test(task.title || "")) return "/candidate/ccl";
@@ -111,7 +111,7 @@ export default function CandidateTasks() {
                         </p>
                         {task.isDataCapture && (
                           <p className="text-xs font-bold text-primary mt-1">
-                            Open the form your caseworker sent, then submit when complete.
+                            Complete your document checklist and upload the required files.
                           </p>
                         )}
                       </div>

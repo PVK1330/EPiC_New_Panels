@@ -15,6 +15,12 @@ export const submitDataCapture = (body) =>
 export const getDecisionDocuments = () =>
   api.get("/api/workflow/decision-documents").then(unwrap);
 
+export const getCandidateCcl = () =>
+  api.get("/api/workflow/ccl").then(unwrap);
+
+export const downloadCandidateCcl = () =>
+  api.get("/api/workflow/ccl/download", { responseType: "blob" });
+
 export const acceptCcl = () =>
   api.post("/api/workflow/ccl/accept").then(unwrap);
 

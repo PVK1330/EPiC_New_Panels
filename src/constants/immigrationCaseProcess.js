@@ -220,7 +220,7 @@ export function buildStepStates(caseRecord) {
 
 export const CANDIDATE_STAGE_ACTIONS = {
   data_capture_initial_docs: [
-    { text: "Complete your Data Capture Sheet", to: "/candidate/tasks" },
+    { text: "Complete your Data Capture Sheet", to: "/candidate/document-checklist" },
     { text: "Upload: Passport, BRP/eVisa", to: "/candidate/document-checklist" },
   ],
   draft_application_review: [

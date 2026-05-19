@@ -1,37 +1,79 @@
-import { useEffect, useState } from "react";
-import { FileCheck, Loader2, CheckCircle2 } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
+import { FileCheck, Loader2, CheckCircle2, Download, PoundSterling } from "lucide-react";
 import Button from "../../components/Button";
 import { useToast } from "../../context/ToastContext";
 import useCandidate from "../../hooks/useCandidate";
-import { acceptCcl } from "../../services/workflowApi";
-import { resolveCaseStage } from "../../constants/immigrationCaseProcess";
+import { acceptCcl, getCandidateCcl, downloadCandidateCcl } from "../../services/workflowApi";
+import { resolveCaseStage, getStepById } from "../../constants/immigrationCaseProcess";
 
 const FIRM_NAME = import.meta.env.VITE_FIRM_NAME || "Your immigration firm";
+const CCL_VISIBLE_MIN_ORDER = 10;
+
+function isPaidCase(caseData) {
+  const total = Number(caseData?.totalAmount) || 0;
+  const paid = Number(caseData?.paidAmount) || 0;
+  return (
+    ["paid", "Paid"].includes(caseData?.amountStatus) ||
+    (total > 0 && paid >= total - 0.02)
+  );
+}
 
 export default function CandidateCCL() {
   const { showToast } = useToast();
   const { myApplication, getMyApplication } = useCandidate();
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [cclBundle, setCclBundle] = useState(null);
+  const [loadingCcl, setLoadingCcl] = useState(true);
 
-  const caseData = myApplication?._relatedData?.cases?.[0] || {};
-  const ccl = myApplication?._relatedData?.cclRecord || null;
+  const caseFromApp = myApplication?._relatedData?.cases?.[0] || {};
+  const cclFromApp = myApplication?._relatedData?.cclRecord || null;
+
+  const caseData = cclBundle?.case || caseFromApp;
+  const ccl = cclBundle?.ccl || cclFromApp;
+  const issuedDocument = cclBundle?.issuedDocument || null;
+  const templateMeta = cclBundle?.template || null;
+
   const stageId = resolveCaseStage({
     caseStage: caseData.caseStage,
     status: caseData.status,
   });
-  const loading = !myApplication;
+  const stageOrder = getStepById(stageId)?.order ?? 0;
+
+  const loadCcl = useCallback(async () => {
+    setLoadingCcl(true);
+    try {
+      const data = await getCandidateCcl();
+      setCclBundle(data);
+    } catch (err) {
+      console.error("getCandidateCcl:", err);
+    } finally {
+      setLoadingCcl(false);
+    }
+  }, []);
 
   useEffect(() => {
     getMyApplication();
-  }, [getMyApplication]);
+    loadCcl();
+  }, [getMyApplication, loadCcl]);
 
-  const accepted = ccl?.status === "signed";
-  const issuedToClient = ccl?.status === "issued" || accepted;
+  const accepted = ccl?.status === "signed" || ccl?.status === "accepted";
+  const feesApproved =
+    caseData.amountStatus === "Approved" || caseData.amountStatus === "Paid";
   const fee = Number(caseData.totalAmount) || Number(ccl?.feeAmount) || 0;
-  const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
+  const issuedToClient =
+    cclBundle?.releasedToClient === true ||
+    cclBundle?.stageVisible === true ||
+    stageOrder >= CCL_VISIBLE_MIN_ORDER ||
+    ccl?.status === "issued" ||
+    accepted ||
+    (feesApproved && fee > 0);
   const awaitingAdmin =
     stageId === "client_care_letter" && ccl?.status === "fee_proposed";
+  const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
+  const paid = isPaidCase(caseData);
+  const balance = Math.max(0, fee - (Number(caseData.paidAmount) || 0));
 
   const handleAccept = async () => {
     if (!agreed) {
@@ -42,7 +84,7 @@ export default function CandidateCCL() {
     try {
       await acceptCcl();
       showToast({ message: "Client Care Letter accepted" });
-      await getMyApplication();
+      await Promise.all([getMyApplication(), loadCcl()]);
     } catch (err) {
       showToast({
         variant: "danger",
@@ -53,7 +95,26 @@ export default function CandidateCCL() {
     }
   };
 
-  if (loading) {
+  const handleDownloadLetter = async () => {
+    try {
+      const res = await downloadCandidateCcl();
+      const fileName =
+        issuedDocument?.userFileName ||
+        issuedDocument?.documentName ||
+        templateMeta?.fileName ||
+        "client-care-letter.docx";
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      showToast({ variant: "danger", message: "Could not download Client Care Letter" });
+    }
+  };
+
+  if (loadingCcl && !myApplication) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -78,20 +139,32 @@ export default function CandidateCCL() {
 
   if (accepted) {
     return (
-      <div className="max-w-xl mx-auto rounded-2xl border border-green-100 bg-green-50/50 p-8 text-center">
-        <CheckCircle2 className="mx-auto text-green-600 mb-4" size={44} />
-        <h1 className="text-xl font-black text-secondary">Client Care Letter accepted</h1>
-        <p className="text-sm font-bold text-gray-600 mt-2">
-          You accepted the Client Care Letter
-          {ccl?.signedAt
-            ? ` on ${new Date(ccl.signedAt).toLocaleDateString("en-GB")}`
-            : ""}
-          .
-        </p>
-        {caseData.amountStatus !== "paid" && fee > 0 && (
-          <p className="text-sm font-bold text-amber-700 mt-4">
-            Payment is still outstanding. Please complete payment to allow submission of your application.
+      <div className="max-w-xl mx-auto space-y-4">
+        <div className="rounded-2xl border border-green-100 bg-green-50/50 p-8 text-center">
+          <CheckCircle2 className="mx-auto text-green-600 mb-4" size={44} />
+          <h1 className="text-xl font-black text-secondary">Client Care Letter accepted</h1>
+          <p className="text-sm font-bold text-gray-600 mt-2">
+            You accepted the Client Care Letter
+            {ccl?.signedAt
+              ? ` on ${new Date(ccl.signedAt).toLocaleDateString("en-GB")}`
+              : ""}
+            .
           </p>
+          {!paid && fee > 0 && (
+            <p className="text-sm font-bold text-amber-700 mt-4">
+              Payment is still outstanding (£{balance.toLocaleString()}). Please complete payment
+              to allow submission of your application.
+            </p>
+          )}
+        </div>
+        {!paid && fee > 0 && (
+          <Link
+            to="/candidate/payments"
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-black text-white shadow-md"
+          >
+            <PoundSterling size={18} />
+            Pay £{balance.toLocaleString()}
+          </Link>
         )}
       </div>
     );
@@ -102,19 +175,53 @@ export default function CandidateCCL() {
       <div>
         <h1 className="text-3xl font-black text-secondary tracking-tight">Client Care Letter</h1>
         <p className="text-sm font-bold text-gray-500 mt-1">
-          Review the summary below and confirm acceptance to proceed.
+          Review the summary below, accept the terms, then pay your approved fees.
         </p>
       </div>
 
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-secondary">
+            Your Client Care Letter is ready
+            {templateMeta?.label ? ` (${templateMeta.label})` : ""}
+            {caseData.visaTypeName ? ` — ${caseData.visaTypeName}` : ""}.
+          </p>
+          <p className="text-xs font-bold text-gray-500 mt-1">
+            Download the letter, review the fee summary below, then accept and pay.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleDownloadLetter}
+          className="inline-flex items-center gap-2 rounded-xl bg-secondary px-4 py-2 text-xs font-black text-white shrink-0"
+        >
+          <Download size={16} />
+          Download letter
+        </button>
+      </div>
+
+      {!paid && fee > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <p className="text-sm font-bold text-amber-950">
+            Outstanding balance: <strong>£{balance.toLocaleString()}</strong>
+          </p>
+          <Link
+            to="/candidate/payments"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-black text-white shrink-0"
+          >
+            <PoundSterling size={16} />
+            Pay now
+          </Link>
+        </div>
+      )}
+
       <article className="rounded-2xl border border-primary/15 bg-white p-6 shadow-sm space-y-4">
-        <p className="text-xs font-black uppercase tracking-widest text-primary">
-          {FIRM_NAME}
-        </p>
+        <p className="text-xs font-black uppercase tracking-widest text-primary">{FIRM_NAME}</p>
         <h2 className="text-lg font-black text-secondary">Client Care Letter summary</h2>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
-            <dt className="text-gray-400 font-bold">Visa type</dt>
-            <dd className="font-black text-secondary">{myApplication?.visaType || "—"}</dd>
+            <dt className="text-gray-400 font-bold">Case reference</dt>
+            <dd className="font-black text-secondary">{caseData.caseId || "—"}</dd>
           </div>
           <div>
             <dt className="text-gray-400 font-bold">Total fee</dt>
@@ -149,7 +256,8 @@ export default function CandidateCCL() {
         )}
 
         <p className="text-sm text-gray-600 leading-relaxed border-t border-gray-100 pt-4">
-          By accepting, you agree to the firm&apos;s terms and authorise the visa application to proceed.
+          By accepting, you agree to the firm&apos;s terms and authorise the visa application to
+          proceed.
           {ccl?.notes && (
             <span className="block mt-2 font-medium text-gray-700">{ccl.notes}</span>
           )}
