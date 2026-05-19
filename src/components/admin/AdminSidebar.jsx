@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getPipelineCases } from "../../services/caseApi";
+import { getPendingCclFeeApprovals } from "../../services/workflowApi";
 import { motion } from "framer-motion";
 import { logout } from "../../store/slices/authSlice";
 import {
@@ -98,11 +99,11 @@ const AdminSidebar = ({ isOpen, onClose }) => {
   const [cclApprovalCount, setCclApprovalCount] = useState(0);
 
   useEffect(() => {
-    getPipelineCases()
-      .then((res) => {
-        const pipeline = res.data?.data || {};
+    Promise.all([getPipelineCases(), getPendingCclFeeApprovals().catch(() => null)])
+      .then(([pipeRes, cclRes]) => {
+        const pipeline = pipeRes.data?.data || {};
         setEnquiryCount((pipeline.client_enquiry || []).length);
-        setCclApprovalCount((pipeline.ccl_fee_admin_review || []).length);
+        setCclApprovalCount(cclRes?.data?.data?.cases?.length ?? 0);
       })
       .catch(() => {
         setEnquiryCount(0);

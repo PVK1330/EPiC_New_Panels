@@ -129,8 +129,8 @@ export default function AdminEnquiryInbox() {
         notes: internalNote,
         reason: "Assigned from enquiry inbox — consultation started",
       });
-      await updatePipelineStage(caseRef, "initial_consultation");
-      showToast({ message: "Caseworker assigned and consultation started" });
+      await updatePipelineStage(caseRef, "admin_assignment");
+      showToast({ message: "Caseworker assigned — case moved to Admin Assignment" });
       closeAssign();
       await load();
     } catch (err) {

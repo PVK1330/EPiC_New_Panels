@@ -166,8 +166,7 @@ export default function CandidateCCL() {
     accepted ||
     (feesApproved && fee > 0);
   const awaitingAdmin =
-    ["ccl_fee_proposal", "ccl_fee_admin_review"].includes(stageId) ||
-    ccl?.status === "fee_proposed";
+    stageId === "client_care_letter" && ccl?.status === "fee_proposed";
   const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
   const paid = isPaidCase(caseData);
   const balance = Math.max(0, fee - (Number(caseData.paidAmount) || 0));

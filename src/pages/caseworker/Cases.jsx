@@ -3879,7 +3879,7 @@ function PaymentsTab({ caseDetail, onUpdate }) {
         totalAmount: payload.feeAmount,
         amountNotes: payload.notes,
         amountStatus: "Pending Approval",
-        caseStage: "ccl_fee_admin_review",
+        caseStage: "client_care_letter",
       });
       showToast({
         message:
@@ -3914,8 +3914,11 @@ function PaymentsTab({ caseDetail, onUpdate }) {
   const stage = caseDetail?.caseStage || "";
   const awaitingAdmin =
     currentStatus === "Pending Approval" ||
-    stage === "ccl_fee_admin_review" ||
     cclMeta?.status === "fee_proposed";
+  const canProposeByStage =
+    ["draft_application_review", "client_care_letter", "application_preparation", "document_review"].includes(
+      stage,
+    ) || cclMeta?.status === "fee_rejected";
   const feesLocked =
     currentStatus === "Approved" ||
     currentStatus === "Paid" ||
@@ -3929,7 +3932,7 @@ function PaymentsTab({ caseDetail, onUpdate }) {
     stage &&
     ![
       "draft_application_review",
-      "ccl_fee_proposal",
+      "client_care_letter",
       "application_preparation",
       "document_review",
     ].includes(stage) &&

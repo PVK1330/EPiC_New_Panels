@@ -1,11 +1,18 @@
 /**
- * Standard UK immigration case workflow — mirrors Server/src/constants/immigrationCaseProcess.js
+ * Standard UK immigration case workflow (16 steps) — mirrors EPIC_API.
  */
 export const DEFAULT_CASE_STAGE = "client_enquiry";
 
+export const DEPRECATED_STAGE_TO_CANONICAL = {
+  ccl_fee_proposal: "client_care_letter",
+  ccl_fee_admin_review: "client_care_letter",
+  ccl_issued: "client_care_letter",
+  ccl_payment_received: "client_care_letter",
+};
+
 export const LEGACY_STATUS_TO_STAGE = {
   Lead: "client_enquiry",
-  Pending: "initial_consultation",
+  Pending: "admin_assignment",
   "In Progress": "application_preparation",
   "Docs Pending": "data_capture_initial_docs",
   Drafting: "draft_application_review",
@@ -24,16 +31,14 @@ export const LEGACY_STATUS_TO_STAGE = {
 const STAGE_UI = [
   { accent: "border-t-slate-400", dot: "bg-slate-400", header: "bg-slate-50 border-slate-200", titleClass: "text-slate-700", countClass: "bg-slate-200/80 text-slate-700" },
   { accent: "border-t-slate-500", dot: "bg-slate-500", header: "bg-slate-50 border-slate-200", titleClass: "text-slate-700", countClass: "bg-slate-200/80 text-slate-700" },
+  { accent: "border-t-slate-600", dot: "bg-slate-600", header: "bg-slate-50 border-slate-200", titleClass: "text-slate-700", countClass: "bg-slate-200/80 text-slate-700" },
   { accent: "border-t-amber-400", dot: "bg-amber-400", header: "bg-amber-50 border-amber-100", titleClass: "text-amber-800", countClass: "bg-amber-100 text-amber-800" },
   { accent: "border-t-amber-500", dot: "bg-amber-500", header: "bg-amber-50 border-amber-100", titleClass: "text-amber-800", countClass: "bg-amber-100 text-amber-800" },
   { accent: "border-t-yellow-500", dot: "bg-yellow-500", header: "bg-yellow-50 border-yellow-100", titleClass: "text-yellow-800", countClass: "bg-yellow-100 text-yellow-800" },
   { accent: "border-t-orange-400", dot: "bg-orange-400", header: "bg-orange-50 border-orange-100", titleClass: "text-orange-800", countClass: "bg-orange-100 text-orange-800" },
   { accent: "border-t-blue-400", dot: "bg-blue-400", header: "bg-blue-50 border-blue-100", titleClass: "text-blue-800", countClass: "bg-blue-100 text-blue-800" },
-  { accent: "border-t-blue-500", dot: "bg-blue-500", header: "bg-blue-50 border-blue-100", titleClass: "text-blue-800", countClass: "bg-blue-100 text-blue-800" },
   { accent: "border-t-indigo-500", dot: "bg-indigo-500", header: "bg-indigo-50 border-indigo-100", titleClass: "text-indigo-800", countClass: "bg-indigo-100 text-indigo-800" },
-  { accent: "border-t-violet-500", dot: "bg-violet-500", header: "bg-violet-50 border-violet-100", titleClass: "text-violet-800", countClass: "bg-violet-100 text-violet-800" },
   { accent: "border-t-purple-500", dot: "bg-purple-500", header: "bg-purple-50 border-purple-100", titleClass: "text-purple-800", countClass: "bg-purple-100 text-purple-800" },
-  { accent: "border-t-purple-600", dot: "bg-purple-600", header: "bg-purple-50 border-purple-100", titleClass: "text-purple-800", countClass: "bg-purple-100 text-purple-800" },
   { accent: "border-t-fuchsia-500", dot: "bg-fuchsia-500", header: "bg-fuchsia-50 border-fuchsia-100", titleClass: "text-fuchsia-800", countClass: "bg-fuchsia-100 text-fuchsia-800" },
   { accent: "border-t-orange-500", dot: "bg-orange-500", header: "bg-orange-50 border-orange-100", titleClass: "text-orange-800", countClass: "bg-orange-100 text-orange-800" },
   { accent: "border-t-emerald-500", dot: "bg-emerald-500", header: "bg-emerald-50 border-emerald-100", titleClass: "text-emerald-800", countClass: "bg-emerald-100 text-emerald-800" },
@@ -44,23 +49,21 @@ const STAGE_UI = [
 
 export const IMMIGRATION_CASE_STEPS = [
   { id: "client_enquiry", order: 1, title: "Client Enquiry", shortTitle: "Enquiry", description: "Client contacts the firm with an immigration query." },
-  { id: "initial_consultation", order: 2, title: "Initial Consultation", shortTitle: "Consultation", description: "Initial consultation to assess eligibility and visa options." },
-  { id: "data_capture_initial_docs", order: 3, title: "Data Capture & Initial Documents", shortTitle: "Data & Docs", description: "Data Capture Sheet sent; passport, BRP/eVisa, driving licence requested." },
-  { id: "application_preparation", order: 4, title: "Application Preparation", shortTitle: "Preparation", description: "Application form preparation begins once documents received." },
-  { id: "document_review", order: 5, title: "Document Review", shortTitle: "Doc Review", description: "Caseworker reviews documents and identifies gaps." },
-  { id: "further_information_request", order: 6, title: "Further Information Request", shortTitle: "Further Info", description: "Further information or documents requested from client." },
-  { id: "draft_application_review", order: 7, title: "Draft Application Review", shortTitle: "Draft App", description: "Draft application sent to client for review and confirmation." },
-  { id: "ccl_fee_proposal", order: 8, title: "CCL Fee Proposal", shortTitle: "CCL Fees", description: "Caseworker proposes fees and instalment schedule." },
-  { id: "ccl_fee_admin_review", order: 9, title: "CCL Fee — Admin Review", shortTitle: "Fee Review", description: "Admin reviews and approves fees before CCL is sent to client." },
-  { id: "ccl_issued", order: 10, title: "Client Care Letter Issued", shortTitle: "CCL Issued", description: "Approved CCL and fee schedule sent to client." },
-  { id: "ccl_payment_received", order: 11, title: "CCL & Payment Received", shortTitle: "CCL & Pay", description: "Signed CCL and payments received." },
-  { id: "application_submitted", order: 12, title: "Application Submitted", shortTitle: "Submitted", description: "Final application submitted to the Home Office." },
-  { id: "biometrics_booked", order: 13, title: "Biometrics Booked", shortTitle: "Bio Booked", description: "Biometrics appointment booked." },
-  { id: "biometrics_confirmation_sent", order: 14, title: "Biometrics Confirmation Sent", shortTitle: "Bio Confirm", description: "Biometrics confirmation and instructions sent to client." },
-  { id: "documents_uploaded", order: 15, title: "Documents Uploaded", shortTitle: "Uploaded", description: "Supporting documents uploaded before biometrics." },
-  { id: "awaiting_decision", order: 16, title: "Awaiting Decision", shortTitle: "Decision", description: "Monitoring application while awaiting Home Office decision." },
-  { id: "decision_communicated", order: 17, title: "Decision Communicated", shortTitle: "Decided", description: "Approval or refusal communicated to client." },
-  { id: "case_closure", order: 18, title: "Case Closure", shortTitle: "Closed", description: "Final case closure email issued." },
+  { id: "admin_assignment", order: 2, title: "Admin Assignment", shortTitle: "Assignment", description: "Admin assigns caseworker and sets priority." },
+  { id: "initial_consultation", order: 3, title: "Initial Consultation", shortTitle: "Consultation", description: "Initial consultation to assess eligibility and visa options." },
+  { id: "data_capture_initial_docs", order: 4, title: "Data Capture & Documents", shortTitle: "Data & Docs", description: "Data Capture Sheet sent; passport, BRP/eVisa, driving licence requested." },
+  { id: "application_preparation", order: 5, title: "Application Preparation", shortTitle: "Preparation", description: "Application form preparation begins once documents received." },
+  { id: "document_review", order: 6, title: "Document Review", shortTitle: "Doc Review", description: "Caseworker reviews documents and identifies gaps." },
+  { id: "further_information_request", order: 7, title: "Further Information", shortTitle: "Further Info", description: "Further information or documents requested from client." },
+  { id: "draft_application_review", order: 8, title: "Draft Application Review", shortTitle: "Draft App", description: "Draft application sent to the client for review and confirmation." },
+  { id: "client_care_letter", order: 9, title: "Client Care Letter", shortTitle: "CCL", description: "CCL issued; candidate accepts and pays fees." },
+  { id: "application_submitted", order: 10, title: "Application Submitted", shortTitle: "Submitted", description: "Final application submitted to the Home Office." },
+  { id: "biometrics_booked", order: 11, title: "Biometrics Booked", shortTitle: "Bio Booked", description: "Biometrics appointment booked." },
+  { id: "biometrics_confirmation_sent", order: 12, title: "Confirmation Sent", shortTitle: "Bio Confirm", description: "Biometrics confirmation and instructions sent to the client." },
+  { id: "documents_uploaded", order: 13, title: "Documents Uploaded", shortTitle: "Uploaded", description: "Supporting documents uploaded before biometrics." },
+  { id: "awaiting_decision", order: 14, title: "Awaiting Decision", shortTitle: "Decision", description: "Monitoring application while awaiting Home Office decision." },
+  { id: "decision_communicated", order: 15, title: "Decision Communicated", shortTitle: "Decided", description: "Decision communicated to the client." },
+  { id: "case_closure", order: 16, title: "Case Closure", shortTitle: "Closed", description: "Final case closure email issued." },
 ];
 
 const STEP_BY_ID = new Map(IMMIGRATION_CASE_STEPS.map((s) => [s.id, s]));
@@ -70,17 +73,24 @@ export const PIPELINE_STAGES = IMMIGRATION_CASE_STEPS.map((step, index) => ({
   ...STAGE_UI[index],
 }));
 
+export function normalizeCaseStage(stageId) {
+  if (!stageId) return null;
+  return DEPRECATED_STAGE_TO_CANONICAL[stageId] ?? stageId;
+}
+
 export function isValidCaseStage(stageId) {
-  return STEP_BY_ID.has(stageId);
+  return STEP_BY_ID.has(normalizeCaseStage(stageId));
 }
 
 export function getStepById(stageId) {
-  return STEP_BY_ID.get(stageId) ?? null;
+  return STEP_BY_ID.get(normalizeCaseStage(stageId)) ?? null;
 }
 
 export function resolveCaseStage(caseRecord) {
-  if (caseRecord?.caseStage && isValidCaseStage(caseRecord.caseStage)) {
-    return caseRecord.caseStage;
+  const raw = caseRecord?.caseStage;
+  if (raw) {
+    const normalized = normalizeCaseStage(raw);
+    if (STEP_BY_ID.has(normalized)) return normalized;
   }
   const fromStatus = LEGACY_STATUS_TO_STAGE[caseRecord?.status];
   if (fromStatus) return fromStatus;
@@ -137,16 +147,10 @@ export function buildStagesFromPipelineData(pipelineData) {
   }));
 }
 
-/** Per-step caseworker actions and documents (Standard Immigration Case Process.docx). */
 export const STAGE_GUIDANCE = {
-  client_enquiry: {
-    actions: ["Log enquiry", "Assign caseworker", "Schedule consultation"],
-    docs: [],
-  },
-  initial_consultation: {
-    actions: ["Assess eligibility", "Confirm visa route", "Send fee estimate"],
-    docs: [],
-  },
+  client_enquiry: { actions: ["Review enquiry", "Assign caseworker"], docs: [] },
+  admin_assignment: { actions: ["Confirm caseworker", "Set priority", "Start consultation"], docs: [] },
+  initial_consultation: { actions: ["Assess eligibility", "Confirm visa route"], docs: [] },
   data_capture_initial_docs: {
     actions: ["Send Data Capture Sheet", "Request mandatory documents"],
     docs: ["Passport", "BRP / eVisa", "Driving licence (if applicable)"],
@@ -164,33 +168,18 @@ export const STAGE_GUIDANCE = {
     docs: ["As identified in review"],
   },
   draft_application_review: {
-    actions: ["Send draft to client", "Collect written approval", "Propose CCL fees & instalments"],
+    actions: ["Send draft to client", "Collect written approval", "Propose CCL fees"],
     docs: ["Draft application PDF"],
   },
-  ccl_fee_proposal: {
-    actions: ["Set total fee", "Define instalment schedule", "Submit to admin for approval"],
-    docs: ["Fee breakdown", "Instalment plan"],
-  },
-  ccl_fee_admin_review: {
-    actions: ["Review proposed fees", "Approve or return to caseworker", "Release CCL to client when approved"],
-    docs: ["Proposed fee schedule"],
-  },
-  ccl_issued: {
-    actions: ["Monitor client acceptance", "Track instalment payments"],
-    docs: ["Client Care Letter (issued to client)"],
-  },
-  ccl_payment_received: {
-    actions: ["Collect signed CCL", "Confirm payment cleared"],
-    docs: ["Signed CCL", "Payment receipt"],
+  client_care_letter: {
+    actions: ["Propose fees", "Admin approve & issue CCL", "Monitor acceptance and payment"],
+    docs: ["Client Care Letter", "Signed CCL", "Payment receipt"],
   },
   application_submitted: {
     actions: ["Submit to Home Office", "Record UAN / reference"],
     docs: ["Submission confirmation"],
   },
-  biometrics_booked: {
-    actions: ["Book appointment", "Add to case calendar"],
-    docs: ["Appointment letter"],
-  },
+  biometrics_booked: { actions: ["Book appointment", "Add to case calendar"], docs: ["Appointment letter"] },
   biometrics_confirmation_sent: {
     actions: ["Email client instructions", "Confirm attendance"],
     docs: ["Biometrics confirmation email"],
@@ -199,22 +188,16 @@ export const STAGE_GUIDANCE = {
     actions: ["Upload supporting docs", "Pre-biometrics checklist"],
     docs: ["Supporting evidence bundle"],
   },
-  awaiting_decision: {
-    actions: ["Monitor Home Office status", "Log correspondence"],
-    docs: [],
-  },
+  awaiting_decision: { actions: ["Monitor Home Office status", "Log correspondence"], docs: [] },
   decision_communicated: {
     actions: ["Send decision email", "Attach decision documents"],
     docs: ["Approval or refusal letter"],
   },
-  case_closure: {
-    actions: ["Send case closure email", "Archive case file"],
-    docs: [],
-  },
+  case_closure: { actions: ["Send case closure email", "Archive case file"], docs: [] },
 };
 
 export function getStageGuidance(stageId) {
-  return STAGE_GUIDANCE[stageId] ?? { actions: [], docs: [] };
+  return STAGE_GUIDANCE[normalizeCaseStage(stageId)] ?? { actions: [], docs: [] };
 }
 
 export function getNextStageId(stageId) {
@@ -223,7 +206,6 @@ export function getNextStageId(stageId) {
   return IMMIGRATION_CASE_STEPS[step.order]?.id ?? null;
 }
 
-/** Build 18-step list with done/current/pending state for candidate tracking UI. */
 export function buildStepStates(caseRecord) {
   const stageId = resolveCaseStage(caseRecord);
   const current = getStepById(stageId);
@@ -236,7 +218,6 @@ export function buildStepStates(caseRecord) {
   });
 }
 
-/** Candidate-facing actions per workflow stage (Standard Immigration Case Process). */
 export const CANDIDATE_STAGE_ACTIONS = {
   data_capture_initial_docs: [
     { text: "Complete your Data Capture Sheet", to: "/candidate/document-checklist" },
@@ -248,18 +229,9 @@ export const CANDIDATE_STAGE_ACTIONS = {
       to: "/candidate/application",
     },
   ],
-  ccl_fee_proposal: [
-    { text: "Your caseworker is preparing your fee proposal — no action needed from you.", calm: true },
-  ],
-  ccl_fee_admin_review: [
-    { text: "Fees are being reviewed by the firm — you will receive your Client Care Letter shortly.", calm: true },
-  ],
-  ccl_issued: [
+  client_care_letter: [
     { text: "Review and accept your Client Care Letter", to: "/candidate/ccl" },
     { text: "Pay your approved case fees", to: "/candidate/payments" },
-  ],
-  ccl_payment_received: [
-    { text: "Ensure your payment has been received", to: "/candidate/payments" },
   ],
   biometrics_booked: [
     { text: "Attend your biometrics appointment on the scheduled date", to: "/candidate/appointments" },
@@ -267,9 +239,7 @@ export const CANDIDATE_STAGE_ACTIONS = {
   documents_uploaded: [
     { text: "Ensure all supporting documents have been uploaded", to: "/candidate/upload-documents" },
   ],
-  awaiting_decision: [
-    { text: "No action needed — monitoring Home Office decision", calm: true },
-  ],
+  awaiting_decision: [{ text: "No action needed — monitoring Home Office decision", calm: true }],
   decision_communicated: [
     { text: "Download your decision letter from Application Pack", to: "/candidate/account?tab=downloads" },
   ],
@@ -284,7 +254,7 @@ const DEFAULT_CANDIDATE_ACTION = {
 };
 
 export function getCandidateStageActions(stageId) {
-  return CANDIDATE_STAGE_ACTIONS[stageId] ?? [DEFAULT_CANDIDATE_ACTION];
+  return CANDIDATE_STAGE_ACTIONS[normalizeCaseStage(stageId)] ?? [DEFAULT_CANDIDATE_ACTION];
 }
 
 export function getCandidateNextAction(stageId) {

@@ -33,9 +33,7 @@ const CaseDetailPayments = ({ payments, onReload }) => {
 
   const currentStatus = payments?.amountStatus || "Not Submitted";
   const cclPending =
-    ccl?.status === "fee_proposed" ||
-    caseStage === "ccl_fee_admin_review" ||
-    currentStatus === "Pending Approval";
+    ccl?.status === "fee_proposed" || currentStatus === "Pending Approval";
 
   const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
 
