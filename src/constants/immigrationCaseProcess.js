@@ -256,6 +256,7 @@ export const CANDIDATE_STAGE_ACTIONS = {
   ],
   ccl_issued: [
     { text: "Review and accept your Client Care Letter", to: "/candidate/ccl" },
+    { text: "Pay your approved case fees", to: "/candidate/payments" },
   ],
   ccl_payment_received: [
     { text: "Ensure your payment has been received", to: "/candidate/payments" },

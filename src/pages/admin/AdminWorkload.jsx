@@ -7,6 +7,12 @@ import { Loader2 } from "lucide-react";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
+import MockDataBanner from "../../components/admin/MockDataBanner";
+import {
+  MOCK_WORKLOAD_TEAM,
+  MOCK_WORKLOAD_TASKS,
+  MOCK_WORKLOAD_DEADLINES,
+} from "../../data/adminMockData";
 
 const WORKLOAD_PATH = "/api/workload";
 
@@ -63,6 +69,7 @@ const AdminWorkload = () => {
   const [exporting, setExporting] = useState(false);
   const [pendingTasks, setPendingTasks] = useState([]);
   const [cases, setCases] = useState([]);
+  const [usingMockData, setUsingMockData] = useState(false);
 
   // Map API data to UI format
  const mappedTeamRows = (workloadData || []).map((item, index) => {
@@ -173,11 +180,13 @@ const AdminWorkload = () => {
     setLoading(true);
     try {
       const response = await api.get(`${WORKLOAD_PATH}/team-workload`);
-     const {caseworkers}= response.data.data
-     setWorkloadData(caseworkers || []);     
+     const { caseworkers } = response.data.data;
+     setWorkloadData(caseworkers || []);
+     setUsingMockData(false);
     } catch (e) {
       console.error("Failed to fetch workload data:", e);
-      setWorkloadData([]);
+      setWorkloadData(MOCK_WORKLOAD_TEAM);
+      setUsingMockData(true);
     } finally {
       setLoading(false);
     }
@@ -210,7 +219,8 @@ const AdminWorkload = () => {
       }
     } catch (e) {
       console.error("Failed to fetch pending tasks:", e);
-      setPendingTasks([]);
+      setPendingTasks(MOCK_WORKLOAD_TASKS);
+      setUsingMockData(true);
     }
   };
 
@@ -229,7 +239,8 @@ const AdminWorkload = () => {
       }
     } catch (e) {
       console.error("Failed to fetch deadline monitor:", e);
-      setCases([]);
+      setCases(MOCK_WORKLOAD_DEADLINES);
+      setUsingMockData(true);
     }
   };
 
@@ -272,6 +283,7 @@ const AdminWorkload = () => {
 
   return (
     <motion.div className="space-y-6 pb-10" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      {usingMockData && <MockDataBanner />}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="mt-1 p-2.5 rounded-2xl bg-white border border-gray-100 shadow-sm">

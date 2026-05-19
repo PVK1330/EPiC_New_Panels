@@ -7,116 +7,76 @@ import {
   CheckCircle2,
   Clock,
   Lock,
-  ExternalLink,
   ArrowRight,
   ShieldCheck,
 } from "lucide-react";
 import Modal from "../../components/Modal";
 import { getCandidatePaymentSchedule } from "../../services/workflowApi";
+import {
+  createCaseCheckoutSession,
+  verifyCheckoutSession,
+} from "../../services/candidatePaymentApi";
 
 const CASE_ID_FALLBACK = "—";
-
-const LS_BALANCE_PAID = "elitepic_candidate_balance_paid";
-const LS_FINAL_PAY_DATE = "elitepic_candidate_final_pay_date";
-
-function loadSavedPaymentState() {
-  try {
-    const settled = localStorage.getItem(LS_BALANCE_PAID) === "1";
-    const paidAt = localStorage.getItem(LS_FINAL_PAY_DATE) || "";
-    return { settled, paidAt };
-  } catch {
-    return { settled: false, paidAt: "" };
-  }
-}
-
-function savePaymentSettled(paidAtLabel) {
-  try {
-    localStorage.setItem(LS_BALANCE_PAID, "1");
-    localStorage.setItem(LS_FINAL_PAY_DATE, paidAtLabel);
-  } catch {
-    /* ignore */
-  }
-}
-
-function buildHistoryRows(settled, finalPayDateLabel) {
-  const base = [
-    {
-      id: "1",
-      date: "8 Apr 2026",
-      description: "First payment (Visa fee + Healthcare surcharge)",
-      amount: "£1,200",
-      amountClass: "text-gray-900 font-bold",
-      method: "Stripe",
-      status: "Paid",
-      receipt: true,
-    },
-    {
-      id: "2",
-      date: "5 Apr 2026",
-      description: "Account setup fee",
-      amount: "£400",
-      amountClass: "text-gray-900 font-bold",
-      method: "Stripe",
-      status: "Paid",
-      receipt: true,
-    },
-  ];
-  if (settled && finalPayDateLabel) {
-    base.push({
-      id: "3",
-      date: finalPayDateLabel,
-      description: "Final remaining balance",
-      amount: "£800",
-      amountClass: "text-gray-900 font-bold",
-      method: "Stripe",
-      status: "Paid",
-      receipt: true,
-    });
-  } else {
-    base.push({
-      id: "3",
-      date: "—",
-      description: "Final remaining balance",
-      amount: "£800",
-      amountClass: "text-amber-600 font-bold",
-      method: "Stripe",
-      status: "Left to pay",
-      receipt: false,
-    });
-  }
-  return base;
-}
 
 const Payments = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [payOpen, setPayOpen] = useState(false);
-  const [paymentSnapshot, setPaymentSnapshot] = useState(loadSavedPaymentState);
   const [schedule, setSchedule] = useState(null);
   const [scheduleLoading, setScheduleLoading] = useState(true);
   const [scheduleError, setScheduleError] = useState("");
-  const balanceSettled = paymentSnapshot.settled;
-  const finalPayDate = paymentSnapshot.paidAt;
-
+  const [payError, setPayError] = useState("");
   const [redirectState, setRedirectState] = useState("idle");
 
+  const loadSchedule = useCallback(async () => {
+    try {
+      setScheduleLoading(true);
+      setScheduleError("");
+      const data = await getCandidatePaymentSchedule();
+      setSchedule(data);
+    } catch (e) {
+      setScheduleError(e?.response?.data?.message || e.message || "Failed to load payment schedule");
+    } finally {
+      setScheduleLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
+    loadSchedule();
+  }, [loadSchedule]);
+
+  useEffect(() => {
+    const paymentResult = searchParams.get("payment");
+    const sessionId = searchParams.get("session_id");
+    if (paymentResult !== "success" || !sessionId) return;
+
     let cancelled = false;
     (async () => {
+      setPayOpen(true);
+      setRedirectState("redirecting");
       try {
-        setScheduleLoading(true);
-        const res = await getCandidatePaymentSchedule();
-        const data = res.data?.data ?? res.data;
-        if (!cancelled) setSchedule(data);
+        await verifyCheckoutSession(sessionId);
+        if (!cancelled) {
+          setRedirectState("paid");
+          await loadSchedule();
+        }
       } catch (e) {
-        if (!cancelled) setScheduleError(e.message || "Failed to load payment schedule");
+        if (!cancelled) {
+          setPayError(e?.response?.data?.message || e.message || "Could not verify payment");
+          setRedirectState("idle");
+          setPayOpen(false);
+        }
       } finally {
-        if (!cancelled) setScheduleLoading(false);
+        if (!cancelled) {
+          setSearchParams({}, { replace: true });
+        }
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [searchParams, setSearchParams, loadSchedule]);
 
   const paymentsVisible = schedule?.visible === true;
   const caseId = schedule?.caseId || CASE_ID_FALLBACK;
@@ -125,29 +85,35 @@ const Payments = () => {
   const balanceFromApi = Number(schedule?.balanceDue) ?? Math.max(0, TOTAL - paidFromApi);
 
   const historyRows = useMemo(() => {
-    if (!paymentsVisible || !Array.isArray(schedule?.installments)) {
-      return buildHistoryRows(balanceSettled, finalPayDate);
-    }
-    return schedule.installments.map((row, i) => ({
-      id: String(i + 1),
-      date: row.dueDate
-        ? new Date(row.dueDate).toLocaleDateString("en-GB", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          })
-        : "—",
-      description: row.label || `Instalment ${i + 1}`,
-      amount: `£${Number(row.amount || 0).toLocaleString()}`,
-      amountClass: "text-gray-900 font-bold",
-      method: "—",
-      status: "Due",
-      receipt: false,
-    }));
-  }, [paymentsVisible, schedule, balanceSettled, finalPayDate]);
+    if (!paymentsVisible || !Array.isArray(schedule?.installments)) return [];
+    const paidSoFar = paidFromApi;
+    let allocated = 0;
+    return schedule.installments.map((row, i) => {
+      const amount = Number(row.amount || 0);
+      allocated += amount;
+      const isPaid = paidSoFar >= allocated - 0.02;
+      return {
+        id: String(i + 1),
+        date: row.dueDate
+          ? new Date(row.dueDate).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
+          : "—",
+        description: row.label || `Instalment ${i + 1}`,
+        amount: `£${amount.toLocaleString()}`,
+        amountClass: "text-gray-900 font-bold",
+        method: isPaid ? "Stripe" : "—",
+        status: isPaid ? "Paid" : "Due",
+        receipt: isPaid,
+      };
+    });
+  }, [paymentsVisible, schedule, paidFromApi]);
 
-  const paid = balanceSettled ? TOTAL : paidFromApi || (paymentsVisible ? 0 : 0);
-  const balance = balanceSettled ? 0 : balanceFromApi;
+  const paid = paidFromApi;
+  const balance = balanceFromApi;
+  const balanceSettled = paymentsVisible && balance <= 0.02;
 
   const tab = useMemo(() => {
     return searchParams.get("tab") === "history" ? "history" : "summary";
@@ -164,25 +130,20 @@ const Payments = () => {
     [setSearchParams],
   );
 
-  const handlePayClick = () => {
+  const handlePayClick = async () => {
+    setPayError("");
     setRedirectState("redirecting");
     setPayOpen(true);
-
-    // Actively trigger the browser to open the external Stripe checkout web interface
-    const stripeCheckoutUrl = "https://checkout.stripe.com/pay/cs_live_b1c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9u0";
-    window.open(stripeCheckoutUrl, "_blank");
-
-    // Automatically complete the simulated checkout state after a few seconds
-    setTimeout(() => {
-      setRedirectState("paid");
-      const paidAtLabel = new Date().toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-      savePaymentSettled(paidAtLabel);
-      setPaymentSnapshot({ settled: true, paidAt: paidAtLabel });
-    }, 3000);
+    try {
+      const data = await createCaseCheckoutSession();
+      const url = data?.url;
+      if (!url) throw new Error("Stripe checkout could not be started");
+      window.location.href = url;
+    } catch (e) {
+      setRedirectState("idle");
+      setPayOpen(false);
+      setPayError(e?.response?.data?.message || e.message || "Failed to start payment");
+    }
   };
 
   const closePaymentWindow = () => {
@@ -213,6 +174,9 @@ const Payments = () => {
       )}
       {scheduleError && (
         <p className="text-sm text-red-600 font-bold">{scheduleError}</p>
+      )}
+      {payError && (
+        <p className="text-sm text-red-600 font-bold">{payError}</p>
       )}
       {!scheduleLoading && !paymentsVisible && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex gap-4">
@@ -394,23 +358,12 @@ const Payments = () => {
           <div className="py-8 space-y-4 animate-in fade-in duration-200">
             <div className="w-12 h-12 border-4 border-gray-100 border-t-secondary rounded-full animate-spin mx-auto" />
             <div>
-              <h3 className="text-base font-black text-secondary">Stripe Checkout Launched</h3>
+              <h3 className="text-base font-black text-secondary">Confirming your payment</h3>
               <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
-                Stripe's secure checkout gateway has opened in a new tab to safely collect your payment of <strong>£{balance.toLocaleString()}</strong>.
+                Please wait while we verify your Stripe payment of{" "}
+                <strong>£{balance.toLocaleString()}</strong> with our records.
               </p>
             </div>
-            <div className="pt-2">
-              <a
-                href="https://checkout.stripe.com/pay/cs_live_b1c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9u0"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary hover:underline bg-gray-50 px-3 py-2 rounded-xl border border-gray-200"
-              >
-                <span>Click here to open Stripe if your browser blocked the new tab</span>
-                <ExternalLink size={13} className="text-secondary" />
-              </a>
-            </div>
-            <p className="text-[11px] text-gray-400 italic pt-1">Verifying transaction automatically...</p>
           </div>
         ) : (
           <div className="py-8 space-y-4 animate-in fade-in duration-200">

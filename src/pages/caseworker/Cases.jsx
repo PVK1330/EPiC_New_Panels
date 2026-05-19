@@ -28,7 +28,6 @@ import { getCaseAuditLogs } from "../../services/auditApi";
 import { getCaseChecklist } from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
 import { updateCaseFinance } from "../../services/caseDetailApi";
-import ManualPaymentForm from "../../components/caseDetail/ManualPaymentForm";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
 import CaseWorkflowGuidance from "../../components/case/CaseWorkflowGuidance";
@@ -3865,8 +3864,9 @@ function PaymentsTab({ caseDetail, onUpdate }) {
   const statusColors = {
     "Not Submitted": "bg-gray-100 text-gray-700 border-gray-200",
     "Pending Approval": "bg-amber-50 text-amber-800 border-amber-200",
-    "Approved": "bg-emerald-50 text-emerald-800 border-emerald-200",
-    "Rejected": "bg-red-50 text-red-800 border-red-200",
+    Approved: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    Paid: "bg-blue-50 text-blue-800 border-blue-200",
+    Rejected: "bg-red-50 text-red-800 border-red-200",
   };
 
   const currentStatus = caseDetail?.amountStatus || "Not Submitted";
@@ -3882,12 +3882,12 @@ function PaymentsTab({ caseDetail, onUpdate }) {
     ["draft_application_review", "ccl_fee_proposal", "application_preparation", "document_review"].includes(
       stage,
     ) || cclMeta?.status === "fee_rejected";
-  const canSubmit =
-    currentStatus !== "Approved" &&
-    cclMeta?.status !== "issued" &&
-    cclMeta?.status !== "signed" &&
-    !awaitingAdmin &&
-    canProposeByStage;
+  const feesLocked =
+    currentStatus === "Approved" ||
+    currentStatus === "Paid" ||
+    cclMeta?.status === "issued" ||
+    cclMeta?.status === "signed";
+  const canSubmit = !feesLocked && !awaitingAdmin && canProposeByStage;
 
   return (
     <div className="space-y-6">
@@ -3923,7 +3923,7 @@ function PaymentsTab({ caseDetail, onUpdate }) {
               type="number"
               value={totalAmount}
               onChange={(e) => setTotalAmount(e.target.value)}
-              disabled={currentStatus === "Approved" || loading}
+              disabled={feesLocked || loading}
               placeholder="e.g. 2400"
               className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-secondary focus:bg-white transition-all disabled:opacity-60"
             />
@@ -3949,7 +3949,7 @@ function PaymentsTab({ caseDetail, onUpdate }) {
             rows={3}
             value={amountNotes}
             onChange={(e) => setAmountNotes(e.target.value)}
-            disabled={currentStatus === "Approved" || loading}
+            disabled={feesLocked || loading}
             placeholder="Itemize application fees, legal assistance, or IHS surcharge coverage..."
             className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm font-bold text-gray-800 outline-none focus:border-secondary focus:bg-white transition-all resize-none disabled:opacity-60"
           />
@@ -3958,6 +3958,18 @@ function PaymentsTab({ caseDetail, onUpdate }) {
         {awaitingAdmin && (
           <p className="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
             Awaiting admin approval. Admins have been notified and a review task was created.
+          </p>
+        )}
+
+        {currentStatus === "Paid" && (
+          <p className="text-xs font-bold text-blue-800 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+            Payment has been received. Only an administrator can update payment records.
+          </p>
+        )}
+
+        {currentStatus === "Approved" && !awaitingAdmin && (
+          <p className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+            Fees approved — the candidate can pay via their portal. You cannot change amounts here.
           </p>
         )}
 
@@ -4004,17 +4016,10 @@ function PaymentsTab({ caseDetail, onUpdate }) {
         onSubmit={handleSubmitProposal}
       />
 
-      <ManualPaymentForm
-        caseId={caseDetail?.caseId || caseDetail?.id}
-        totalAmount={total}
-        paidAmount={paid}
-        onSuccess={(data) => {
-          onUpdate?.({
-            paidAmount: data?.paidAmount ?? paid,
-            totalAmount: data?.totalFee ?? total,
-          });
-        }}
-      />
+      <p className="text-xs font-bold text-gray-500 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
+        Recording payments or marking a case as paid is restricted to administrators. Submit your
+        proposed fee above for admin approval.
+      </p>
 
       {/* Summary Grid */}
       <div className="grid grid-cols-3 gap-3">
