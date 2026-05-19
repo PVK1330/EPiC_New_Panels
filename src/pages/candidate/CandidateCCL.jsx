@@ -31,8 +31,7 @@ export default function CandidateCCL() {
   const fee = Number(caseData.totalAmount) || Number(ccl?.feeAmount) || 0;
   const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
   const awaitingAdmin =
-    ["ccl_fee_proposal", "ccl_fee_admin_review"].includes(stageId) ||
-    ccl?.status === "fee_proposed";
+    stageId === "client_care_letter" && ccl?.status === "fee_proposed";
 
   const handleAccept = async () => {
     if (!agreed) {

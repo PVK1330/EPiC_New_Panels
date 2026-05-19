@@ -58,7 +58,7 @@ function cclStatusLabel(ccl, caseStage) {
   if (!ccl) return "not started";
   if (ccl.status === "signed") return "Accepted by client ✓";
   if (ccl.status === "issued") return "With client — awaiting acceptance";
-  if (ccl.status === "fee_proposed" || caseStage === "ccl_fee_admin_review") {
+  if (ccl.status === "fee_proposed") {
     return "Awaiting admin fee approval";
   }
   if (ccl.status === "fee_rejected") return "Returned by admin — revise proposal";
@@ -140,17 +140,15 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
     ccl?.status !== "issued" &&
     ccl?.status !== "signed" &&
     ccl?.status !== "fee_proposed" &&
-    stage !== "ccl_fee_admin_review" &&
     ([
       "draft_application_review",
-      "ccl_fee_proposal",
+      "client_care_letter",
       "application_preparation",
       "document_review",
     ].includes(stage) ||
       ccl?.status === "fee_rejected");
 
-  const adminCanReview =
-    isAdmin && (stage === "ccl_fee_admin_review" || ccl?.status === "fee_proposed");
+  const adminCanReview = isAdmin && ccl?.status === "fee_proposed";
 
   const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
 

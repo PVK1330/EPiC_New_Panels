@@ -75,7 +75,7 @@ const ApplicationStatus = () => {
         ]
       : []),
     ...(cclStatus === "issued" &&
-    !["ccl_fee_proposal", "ccl_fee_admin_review"].includes(stageId)
+    stageId === "client_care_letter"
       ? [
           {
             prio: "high",

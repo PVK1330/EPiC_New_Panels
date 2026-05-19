@@ -12,7 +12,7 @@ export const MOCK_PIPELINE_CARDS = [
   { id: "CAS-104710", caseId: "CAS-104710", name: "Chen Wei", meta: "Global Talent · Innovate Labs", badge: "Preparation", badgeClass: "bg-amber-100 text-amber-800", caseStage: "application_preparation" },
   { id: "CAS-104588", caseId: "CAS-104588", name: "Fatima Hassan", meta: "Family · —", badge: "Doc Review", badgeClass: "bg-yellow-100 text-yellow-800", caseStage: "document_review" },
   { id: "CAS-104431", caseId: "CAS-104431", name: "Lucas Ferreira", meta: "Skilled Worker · BuildRight", badge: "Draft App", badgeClass: "bg-orange-100 text-orange-800", caseStage: "draft_application_review" },
-  { id: "CAS-104319", caseId: "CAS-104319", name: "Elena Popov", meta: "Spouse Visa · —", badge: "CCL Issued", badgeClass: "bg-blue-100 text-blue-800", caseStage: "ccl_issued" },
+  { id: "CAS-104319", caseId: "CAS-104319", name: "Elena Popov", meta: "Spouse Visa · —", badge: "CCL", badgeClass: "bg-blue-100 text-blue-800", caseStage: "client_care_letter" },
   { id: "CAS-104205", caseId: "CAS-104205", name: "David Okonkwo", meta: "Skilled Worker · Meridian Care", badge: "Submitted", badgeClass: "bg-indigo-100 text-indigo-800", caseStage: "application_submitted" },
   { id: "CAS-104112", caseId: "CAS-104112", name: "Sofia Andersson", meta: "Graduate · —", badge: "Bio Booked", badgeClass: "bg-violet-100 text-violet-800", caseStage: "biometrics_booked" },
   { id: "CAS-103998", caseId: "CAS-103998", name: "Raj Patel", meta: "ILR · Self-sponsored", badge: "Decision", badgeClass: "bg-fuchsia-100 text-fuchsia-800", caseStage: "awaiting_decision" },
