@@ -140,14 +140,7 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
     ccl?.status !== "issued" &&
     ccl?.status !== "signed" &&
     ccl?.status !== "fee_proposed" &&
-    stage !== "ccl_fee_admin_review" &&
-    ([
-      "draft_application_review",
-      "ccl_fee_proposal",
-      "application_preparation",
-      "document_review",
-    ].includes(stage) ||
-      ccl?.status === "fee_rejected");
+    stage !== "ccl_fee_admin_review";
 
   const adminCanReview =
     isAdmin && (stage === "ccl_fee_admin_review" || ccl?.status === "fee_proposed");

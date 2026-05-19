@@ -282,6 +282,7 @@ const AdminCaseDetail = () => {
       actions: doc.status === "under_review" ? "review" : null,
       rawStatus: doc.status,
       documentUrl: doc.documentUrl,
+      reviewNotes: doc.reviewNotes || null,
     }));
   }, [documents, caseData]);
 
@@ -548,10 +549,12 @@ const AdminCaseDetail = () => {
     await fetchDocuments(cleanId);
   };
 
-  const handleChangeDocumentStatus = async (docId, status) => {
-    await changeDocumentStatusHandler(docId, { status });
+  const handleChangeDocumentStatus = async (docId, payload) => {
+    const body =
+      typeof payload === "string" ? { status: payload } : payload;
+    await changeDocumentStatusHandler(docId, body);
     const cleanId = caseId.replace(/^#/, "");
-    await fetchDocuments(cleanId);
+    await Promise.all([fetchDocuments(cleanId), fetchCaseDetail(cleanId)]);
   };
 
   const handleDownloadDocument = async (docId) => {

@@ -11,7 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import Modal from "../../components/Modal";
-import { getCandidatePaymentSchedule } from "../../services/workflowApi";
+import { getCandidateCcl, getCandidatePaymentSchedule } from "../../services/workflowApi";
 import {
   createCaseCheckoutSession,
   verifyCheckoutSession,
@@ -33,6 +33,35 @@ const Payments = () => {
       setScheduleLoading(true);
       setScheduleError("");
       const data = await getCandidatePaymentSchedule();
+
+      if (data?.visible === true) {
+        setSchedule(data);
+        return;
+      }
+
+      const cclBundle = await getCandidateCcl().catch(() => null);
+      if (cclBundle?.releasedToClient) {
+        const totalFee =
+          Number(cclBundle.case?.totalAmount) || Number(cclBundle.ccl?.feeAmount) || 0;
+        const instalments = cclBundle.ccl?.installmentPlan || cclBundle.ccl?.installment_plan;
+        if (totalFee > 0) {
+          const paidAmount = Number(cclBundle.case?.paidAmount) || 0;
+          setSchedule({
+            visible: true,
+            caseId: cclBundle.case?.caseId,
+            totalFee,
+            paidAmount,
+            balanceDue: Math.max(0, totalFee - paidAmount),
+            amountStatus: cclBundle.case?.amountStatus,
+            installments:
+              Array.isArray(instalments) && instalments.length > 0
+                ? instalments
+                : [{ label: "Full fee", amount: totalFee, dueDate: null }],
+          });
+          return;
+        }
+      }
+
       setSchedule(data);
     } catch (e) {
       setScheduleError(e?.response?.data?.message || e.message || "Failed to load payment schedule");

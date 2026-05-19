@@ -3333,18 +3333,45 @@ function DocumentsTab({ caseId, candidateId }) {
                         Add
                       </button>
                     ) : item.documentId ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const doc = documents.find(d => d.id === item.documentId);
-                          if (doc && doc.documentUrl) {
-                            window.open(doc.documentUrl, "_blank");
-                          }
-                        }}
-                        className="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-black text-gray-600 hover:bg-gray-50 transition-colors"
-                      >
-                        View
-                      </button>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const doc = documents.find((d) => d.id === item.documentId);
+                            if (doc?.documentUrl) {
+                              window.open(doc.documentUrl, "_blank");
+                            }
+                          }}
+                          className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-black text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                          View
+                        </button>
+                        {(item.status === "uploaded" ||
+                          item.status === "under_review") && (
+                          <>
+                            <button
+                              type="button"
+                              disabled={statusUpdatingId === item.documentId}
+                              onClick={() =>
+                                handleDocumentStatusChange(item.documentId, "approved")
+                              }
+                              className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-800 disabled:opacity-50"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              disabled={statusUpdatingId === item.documentId}
+                              onClick={() =>
+                                handleDocumentStatusChange(item.documentId, "rejected")
+                              }
+                              className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
                     ) : null}
                   </div>
                 ))}
@@ -3389,6 +3416,11 @@ function DocumentsTab({ caseId, candidateId }) {
                   Uploaded {new Date(doc.uploadedAt).toLocaleDateString()} ·{" "}
                   {doc.documentType}
                 </p>
+                {doc.reviewNotes && doc.status === "rejected" && (
+                  <p className="text-[11px] font-bold text-red-600 mt-1">
+                    {doc.reviewNotes}
+                  </p>
+                )}
               </div>
               <span
                 className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${getBadgeColor(doc.status)}`}
@@ -3402,7 +3434,9 @@ function DocumentsTab({ caseId, candidateId }) {
               >
                 View
               </button>
-              {(doc.status === "uploaded" || doc.status === "under_review") && (
+              {(doc.status === "uploaded" ||
+                doc.status === "under_review" ||
+                doc.status === "rejected") && (
                 <>
                   <button
                     type="button"
@@ -3412,14 +3446,16 @@ function DocumentsTab({ caseId, candidateId }) {
                   >
                     Approve
                   </button>
-                  <button
-                    type="button"
-                    disabled={statusUpdatingId === doc.id}
-                    onClick={() => handleDocumentStatusChange(doc.id, "rejected")}
-                    className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 disabled:opacity-50"
-                  >
-                    Reject
-                  </button>
+                  {(doc.status === "uploaded" || doc.status === "under_review") && (
+                    <button
+                      type="button"
+                      disabled={statusUpdatingId === doc.id}
+                      onClick={() => handleDocumentStatusChange(doc.id, "rejected")}
+                      className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -3837,6 +3873,8 @@ function PaymentsTab({ caseDetail, onUpdate }) {
     try {
       await proposeCclFees(caseRef, payload);
       setFeeModalOpen(false);
+      const cclRes = await getCclStatus(caseRef).catch(() => null);
+      if (cclRes?.ccl) setCclMeta(cclRes.ccl);
       onUpdate?.({
         totalAmount: payload.feeAmount,
         amountNotes: payload.notes,
@@ -3878,16 +3916,25 @@ function PaymentsTab({ caseDetail, onUpdate }) {
     currentStatus === "Pending Approval" ||
     stage === "ccl_fee_admin_review" ||
     cclMeta?.status === "fee_proposed";
-  const canProposeByStage =
-    ["draft_application_review", "ccl_fee_proposal", "application_preparation", "document_review"].includes(
-      stage,
-    ) || cclMeta?.status === "fee_rejected";
   const feesLocked =
     currentStatus === "Approved" ||
     currentStatus === "Paid" ||
     cclMeta?.status === "issued" ||
     cclMeta?.status === "signed";
-  const canSubmit = !feesLocked && !awaitingAdmin && canProposeByStage;
+  const canSubmit =
+    !feesLocked &&
+    !awaitingAdmin &&
+    currentStatus !== "Pending Approval";
+  const showStageHint =
+    stage &&
+    ![
+      "draft_application_review",
+      "ccl_fee_proposal",
+      "application_preparation",
+      "document_review",
+    ].includes(stage) &&
+    cclMeta?.status !== "fee_rejected" &&
+    canSubmit;
 
   return (
     <div className="space-y-6">
@@ -3973,14 +4020,11 @@ function PaymentsTab({ caseDetail, onUpdate }) {
           </p>
         )}
 
-        {!canProposeByStage && !awaitingAdmin && (
+        {showStageHint && (
           <p className="text-xs font-bold text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-            Fee proposals are only allowed when the case is at{" "}
-            <strong>Draft Application Review</strong>, <strong>CCL Fee Proposal</strong>,{" "}
-            <strong>Application Preparation</strong>, or <strong>Document Review</strong> (current
-            step: <span className="font-mono">{stage || "unknown"}</span>). Use the{" "}
-            <strong>Overview</strong> tab to move the workflow step, or ask admin:{" "}
-            <strong>Cases → open case → Immigration workflow → “CCL Fee Proposal”</strong>.
+            Current workflow step: <span className="font-mono">{stage}</span>. You can still
+            submit fees for admin approval; consider moving the case to{" "}
+            <strong>CCL Fee Proposal</strong> on the Overview tab if admin requests it.
           </p>
         )}
 
@@ -4000,7 +4044,9 @@ function PaymentsTab({ caseDetail, onUpdate }) {
               disabled={loading || !totalAmount}
               className="rounded-xl bg-secondary px-4 py-2 text-xs font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90 transition-all disabled:opacity-50"
             >
-              Submit CCL fees for approval
+              {cclMeta?.status === "fee_rejected" || currentStatus === "Rejected"
+                ? "Resubmit CCL fees for approval"
+                : "Submit CCL fees for approval"}
             </button>
           </div>
         )}
@@ -4015,11 +4061,6 @@ function PaymentsTab({ caseDetail, onUpdate }) {
         initialNotes={amountNotes || cclMeta?.notes}
         onSubmit={handleSubmitProposal}
       />
-
-      <p className="text-xs font-bold text-gray-500 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
-        Recording payments or marking a case as paid is restricted to administrators. Submit your
-        proposed fee above for admin approval.
-      </p>
 
       {/* Summary Grid */}
       <div className="grid grid-cols-3 gap-3">

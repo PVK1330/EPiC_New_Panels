@@ -108,7 +108,7 @@ export function getNotificationRoute(notification, user = null) {
         return '/candidate/ccl';
       }
       if (actionType === 'data_capture_request' || actionType === 'data_capture_rejected') {
-        return '/candidate/data-capture-sheet';
+        return '/candidate/document-checklist';
       }
       if (notification?.metadata?.nextStage === 'draft_application_review') {
         return '/candidate/application';
