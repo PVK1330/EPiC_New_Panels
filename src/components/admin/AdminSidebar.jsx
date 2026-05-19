@@ -55,24 +55,13 @@ const navSections = [
   {
     label: "Cases & Workflow",
     items: [
-<<<<<<< HEAD
-      { to: "/admin/enquiries",         label: "Enquiries",         icon: RiInboxLine,             badgeKey: "enquiries", moduleKey: "admin.enquiries" },
-      { to: "/admin/ccl-fee-approvals", label: "CCL fee approvals", icon: RiMoneyPoundCircleLine,  badgeKey: "cclFees",   moduleKey: "admin.cases" },
-      { to: "/admin/cases",             label: "All Cases",         icon: RiFolderOpenLine,                               moduleKey: "admin.cases" },
-      { to: "/admin/pipeline",          label: "Pipeline",          icon: RiExchangeLine,                                 moduleKey: "admin.pipeline" },
-      { to: "/admin/case-process",      label: "Case Process",      icon: RiGitBranchLine,                                moduleKey: "admin.cases" },
-      { to: "/admin/calendar",          label: "Calendar",          icon: RiCalendarLine,                                 moduleKey: "admin.calendar" },
-      { to: "/admin/escalations",       label: "Escalations",       icon: RiAlarmWarningLine,                             moduleKey: "admin.escalations" },
-      { to: "/admin/licence-requests",  label: "Licence Requests",  icon: RiShieldCheckLine,                              moduleKey: "admin.licence-requests" },
-=======
-      { to: "/admin/enquiries",         label: "Enquiries",        icon: RiInboxLine, badgeKey: "enquiries" },
-      { to: "/admin/ccl-fee-approvals", label: "CCL fee approvals", icon: RiMoneyPoundCircleLine, badgeKey: "cclFees" },
-      { to: "/admin/cases",             label: "All Cases",        icon: RiFolderOpenLine },
-      { to: "/admin/pipeline",          label: "Pipeline",         icon: RiExchangeLine },
-      { to: "/admin/calendar",          label: "Calendar",         icon: RiCalendarLine },
-      { to: "/admin/escalations",       label: "Escalations",      icon: RiAlarmWarningLine },
-      { to: "/admin/licence-requests",  label: "Licence Requests", icon: RiShieldCheckLine },
->>>>>>> 75a73e53ccad832112e5e8fd8c48c638c83e99f2
+      { to: "/admin/enquiries",         label: "Enquiries",         icon: RiInboxLine,            badgeKey: "enquiries", moduleKey: "admin.enquiries" },
+      { to: "/admin/ccl-fee-approvals", label: "CCL fee approvals", icon: RiMoneyPoundCircleLine, badgeKey: "cclFees",   moduleKey: "admin.cases" },
+      { to: "/admin/cases",             label: "All Cases",         icon: RiFolderOpenLine,                              moduleKey: "admin.cases" },
+      { to: "/admin/pipeline",          label: "Pipeline",          icon: RiExchangeLine,                                moduleKey: "admin.pipeline" },
+      { to: "/admin/calendar",          label: "Calendar",          icon: RiCalendarLine,                                moduleKey: "admin.calendar" },
+      { to: "/admin/escalations",       label: "Escalations",       icon: RiAlarmWarningLine,                            moduleKey: "admin.escalations" },
+      { to: "/admin/licence-requests",  label: "Licence Requests",  icon: RiShieldCheckLine,                             moduleKey: "admin.licence-requests" },
     ],
   },
   {
