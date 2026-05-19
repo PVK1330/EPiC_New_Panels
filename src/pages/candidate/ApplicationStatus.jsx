@@ -60,8 +60,37 @@ const ApplicationStatus = () => {
   const docSettings = myApplication?._relatedData?.documentSettings || [];
   const dcsStatus = myApplication?._relatedData?.dataCaptureSubmission?.status;
   const cclStatus = myApplication?._relatedData?.cclRecord?.status;
+  const workflowState = caseData.workflowState;
+  const draftReviewPending =
+    stageId === "draft_application_review" &&
+    workflowState?.draftReview?.confirmed === null;
+  const biometricAvailabilityNeeded =
+    ["application_submitted", "biometrics_booked"].includes(stageId) &&
+    !workflowState?.biometrics?.availability;
 
   const PENDING_ACTIONS = [
+    ...(draftReviewPending
+      ? [
+          {
+            prio: "high",
+            title: "Review your draft application",
+            tag: "Draft review",
+            due: "Yes or No required",
+            cta: { label: "Open application", to: "/candidate/application" },
+          },
+        ]
+      : []),
+    ...(biometricAvailabilityNeeded
+      ? [
+          {
+            prio: "high",
+            title: "Provide biometrics appointment availability",
+            tag: "Biometrics",
+            due: "Location, date & time",
+            cta: { label: "Submit availability", to: "/candidate/biometric-availability" },
+          },
+        ]
+      : []),
     ...(stageId === "data_capture_initial_docs" &&
     (!dcsStatus || dcsStatus === "draft" || dcsStatus === "rejected")
       ? [

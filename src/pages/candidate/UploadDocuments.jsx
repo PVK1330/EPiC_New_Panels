@@ -60,6 +60,7 @@ const UploadDocuments = () => {
 
   const [docType, setDocType]         = useState(DOC_TYPE_PLACEHOLDER);
   const [dynamicDocTypes, setDynamicDocTypes] = useState(DOC_TYPES);
+  const [checklistTypeOptions, setChecklistTypeOptions] = useState([]);
   const [description, setDescription] = useState("");
   const [file, setFile]               = useState(null);
   const [dragOver, setDragOver]       = useState(false);
@@ -85,12 +86,19 @@ const UploadDocuments = () => {
   const resolvedPrefillType = useMemo(() => {
     if (!prefillDocumentType) return null;
     const normalizedPrefill = prefillDocumentType.trim().toLowerCase();
+    const fromChecklist = checklistTypeOptions.find(
+      (opt) =>
+        opt.value.toLowerCase() === normalizedPrefill ||
+        opt.label.toLowerCase() === normalizedPrefill ||
+        opt.label.toLowerCase().includes(normalizedPrefill),
+    );
+    if (fromChecklist) return fromChecklist.value;
     return (
       dynamicDocTypes.find((type) => type.toLowerCase() === normalizedPrefill) ||
       dynamicDocTypes.find((type) => type.toLowerCase().includes(normalizedPrefill)) ||
-      null
+      prefillDocumentType
     );
-  }, [prefillDocumentType, dynamicDocTypes]);
+  }, [prefillDocumentType, dynamicDocTypes, checklistTypeOptions]);
 
   useEffect(() => {
     if (resolvedPrefillType) {
@@ -131,17 +139,24 @@ const UploadDocuments = () => {
         try {
           const res = await getChecklistByVisaType(visaTypeId);
           const checklistGroups = res.data?.data?.checklist || {};
-          const checklistTypes = [];
-          
-          Object.values(checklistGroups).forEach(group => {
-            group.forEach(item => {
-              // Add documentName if you want human-readable, or documentType
-              checklistTypes.push(item.documentName || item.documentType);
+          const options = [];
+
+          Object.values(checklistGroups).forEach((group) => {
+            group.forEach((item) => {
+              const value = item.documentType || item.documentName;
+              const label = item.documentName || item.documentType;
+              if (value) {
+                options.push({ value, label });
+              }
             });
           });
-          
-          if (checklistTypes.length > 0) {
-            setDynamicDocTypes([DOC_TYPE_PLACEHOLDER, ...new Set(checklistTypes)]);
+
+          if (options.length > 0) {
+            setChecklistTypeOptions(options);
+            setDynamicDocTypes([
+              DOC_TYPE_PLACEHOLDER,
+              ...options.map((o) => o.label),
+            ]);
           }
         } catch (error) {
           console.error("Failed to fetch document checklist:", error);
@@ -215,7 +230,9 @@ const UploadDocuments = () => {
     setUploadSuccess(false);
 
     try {
-      let caseIdToAttach = myApplication?._relatedData?.cases?.[0]?.id;
+      let caseIdToAttach =
+        myApplication?._relatedData?.cases?.[0]?.id ??
+        myApplication?._relatedData?.cases?.[0]?.internalId;
       if (!caseIdToAttach) {
         try {
           const checklistRes = await getMyDocumentChecklist();
@@ -335,11 +352,20 @@ const UploadDocuments = () => {
               onChange={(e) => setDocType(e.target.value)}
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none"
             >
-              {dynamicDocTypes.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
+              <option value={DOC_TYPE_PLACEHOLDER}>{DOC_TYPE_PLACEHOLDER}</option>
+              {checklistTypeOptions.length > 0
+                ? checklistTypeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))
+                : dynamicDocTypes
+                    .filter((t) => t !== DOC_TYPE_PLACEHOLDER)
+                    .map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
             </select>
           </div>
 

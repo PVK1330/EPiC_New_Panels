@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   IdCard,
@@ -70,30 +70,32 @@ const DocumentChecklist = () => {
   const [loadError, setLoadError] = useState("");
   const { showToast } = useToast();
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setLoadError("");
-      try {
-        const res = await getMyDocumentChecklist();
-        const data = res.data?.data ?? res.data;
-        if (!cancelled) setChecklistData(data);
-      } catch (err) {
-        if (!cancelled) {
-          setLoadError(
-            err?.response?.data?.message || "Could not load your document checklist.",
-          );
-          setChecklistData(null);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const loadChecklist = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const res = await getMyDocumentChecklist();
+      const data = res.data?.data ?? res.data;
+      setChecklistData(data);
+    } catch (err) {
+      setLoadError(
+        err?.response?.data?.message || "Could not load your document checklist.",
+      );
+      setChecklistData(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadChecklist();
+  }, [loadChecklist]);
+
+  useEffect(() => {
+    const onFocus = () => loadChecklist();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [loadChecklist]);
 
   const docs = useMemo(() => {
     const grouped = checklistData?.checklist;
@@ -132,10 +134,16 @@ const DocumentChecklist = () => {
 
   const stats = useMemo(() => {
     const approved = docs.filter((d) => d.status === "approved").length;
-    const uploaded = docs.filter((d) => d.status === "uploaded" || d.status === "under_review").length;
+    const uploaded = docs.filter(
+      (d) => d.status === "uploaded" || d.status === "under_review",
+    ).length;
     const required = docs.filter((d) => d.mandatory && (d.status === "missing" || d.status === "rejected")).length;
     const totalMandatory = docs.filter((d) => d.mandatory).length;
-    const doneMandatory = docs.filter((d) => d.mandatory && (d.status === "approved" || d.status === "uploaded" || d.status === "under_review")).length;
+    const doneMandatory = docs.filter(
+      (d) =>
+        d.mandatory &&
+        ["approved", "uploaded", "under_review"].includes(d.status),
+    ).length;
     
     const pct =
       typeof checklistData?.completionPercentage === "number"

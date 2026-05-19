@@ -1,6 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { FileCheck, Loader2, CheckCircle2, Download, PoundSterling } from "lucide-react";
+import {
+  FileCheck,
+  Loader2,
+  CheckCircle2,
+  Download,
+  PoundSterling,
+  Clock,
+  XCircle,
+  Circle,
+} from "lucide-react";
 import Button from "../../components/Button";
 import { useToast } from "../../context/ToastContext";
 import useCandidate from "../../hooks/useCandidate";
@@ -19,6 +28,92 @@ function isPaidCase(caseData) {
   );
 }
 
+function formatStepDate(value) {
+  if (!value) return null;
+  return new Date(value).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function StepIcon({ status }) {
+  if (status === "completed") {
+    return <CheckCircle2 className="text-green-600 shrink-0" size={20} />;
+  }
+  if (status === "rejected") {
+    return <XCircle className="text-red-500 shrink-0" size={20} />;
+  }
+  if (status === "in_progress") {
+    return <Clock className="text-amber-500 shrink-0" size={20} />;
+  }
+  return <Circle className="text-gray-300 shrink-0" size={20} />;
+}
+
+function CclApprovalTimeline({ steps = [] }) {
+  if (!steps.length) return null;
+
+  return (
+    <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+      <h2 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-4">
+        Approval status
+      </h2>
+      <ol className="space-y-4">
+        {steps.map((step) => (
+          <li key={step.id} className="flex gap-3">
+            <StepIcon status={step.status} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-black text-secondary">{step.label}</p>
+              {step.at && (
+                <p className="text-xs font-bold text-gray-400 mt-0.5">{formatStepDate(step.at)}</p>
+              )}
+              {step.detail && (
+                <p
+                  className={`text-xs font-bold mt-1 ${
+                    step.status === "rejected" ? "text-red-700" : "text-gray-500"
+                  }`}
+                >
+                  {step.detail}
+                </p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function CclLetterCard({ templateMeta, caseData, issuedDocument, onDownload }) {
+  const fileLabel =
+    issuedDocument?.userFileName ||
+    issuedDocument?.documentName ||
+    templateMeta?.fileName;
+
+  return (
+    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div>
+        <p className="text-sm font-bold text-secondary">
+          Your Client Care Letter
+          {templateMeta?.label ? ` (${templateMeta.label})` : ""}
+          {caseData?.visaTypeName ? ` — ${caseData.visaTypeName}` : ""}
+        </p>
+        <p className="text-xs font-bold text-gray-500 mt-1">
+          {fileLabel ? `File: ${fileLabel}` : "Download a copy for your records."}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onDownload}
+        className="inline-flex items-center gap-2 rounded-xl bg-secondary px-4 py-2 text-xs font-black text-white shrink-0"
+      >
+        <Download size={16} />
+        Download letter
+      </button>
+    </div>
+  );
+}
+
 export default function CandidateCCL() {
   const { showToast } = useToast();
   const { myApplication, getMyApplication } = useCandidate();
@@ -34,6 +129,7 @@ export default function CandidateCCL() {
   const ccl = cclBundle?.ccl || cclFromApp;
   const issuedDocument = cclBundle?.issuedDocument || null;
   const templateMeta = cclBundle?.template || null;
+  const approvalSteps = cclBundle?.approvalSteps || [];
 
   const stageId = resolveCaseStage({
     caseStage: caseData.caseStage,
@@ -126,21 +222,24 @@ export default function CandidateCCL() {
 
   if (!issuedToClient) {
     return (
-      <div className="max-w-xl mx-auto rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
-        <FileCheck className="mx-auto text-gray-300 mb-4" size={40} />
-        <h1 className="text-xl font-black text-secondary">Client Care Letter</h1>
-        <p className="text-sm font-bold text-gray-500 mt-2">
-          {awaitingAdmin
-            ? "Your fee proposal is being reviewed by the firm. You will receive your Client Care Letter and payment schedule once approved."
-            : "Your Client Care Letter has not been issued yet. Your caseworker will notify you when it is ready."}
-        </p>
+      <div className="max-w-xl mx-auto space-y-6 pb-10">
+        <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+          <FileCheck className="mx-auto text-gray-300 mb-4" size={40} />
+          <h1 className="text-xl font-black text-secondary">Client Care Letter</h1>
+          <p className="text-sm font-bold text-gray-500 mt-2">
+            {awaitingAdmin
+              ? "Your fee proposal is being reviewed by the firm. You will receive your Client Care Letter and payment schedule once approved."
+              : "Your Client Care Letter has not been issued yet. Your caseworker will notify you when it is ready."}
+          </p>
+        </div>
+        <CclApprovalTimeline steps={approvalSteps} />
       </div>
     );
   }
 
   if (accepted) {
     return (
-      <div className="max-w-xl mx-auto space-y-4">
+      <div className="max-w-2xl mx-auto space-y-6 pb-10">
         <div className="rounded-2xl border border-green-100 bg-green-50/50 p-8 text-center">
           <CheckCircle2 className="mx-auto text-green-600 mb-4" size={44} />
           <h1 className="text-xl font-black text-secondary">Client Care Letter accepted</h1>
@@ -158,6 +257,16 @@ export default function CandidateCCL() {
             </p>
           )}
         </div>
+
+        <CclLetterCard
+          templateMeta={templateMeta}
+          caseData={caseData}
+          issuedDocument={issuedDocument}
+          onDownload={handleDownloadLetter}
+        />
+
+        <CclApprovalTimeline steps={approvalSteps} />
+
         {!paid && fee > 0 && (
           <Link
             to="/candidate/payments"
@@ -180,26 +289,14 @@ export default function CandidateCCL() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-bold text-secondary">
-            Your Client Care Letter is ready
-            {templateMeta?.label ? ` (${templateMeta.label})` : ""}
-            {caseData.visaTypeName ? ` — ${caseData.visaTypeName}` : ""}.
-          </p>
-          <p className="text-xs font-bold text-gray-500 mt-1">
-            Download the letter, review the fee summary below, then accept and pay.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={handleDownloadLetter}
-          className="inline-flex items-center gap-2 rounded-xl bg-secondary px-4 py-2 text-xs font-black text-white shrink-0"
-        >
-          <Download size={16} />
-          Download letter
-        </button>
-      </div>
+      <CclApprovalTimeline steps={approvalSteps} />
+
+      <CclLetterCard
+        templateMeta={templateMeta}
+        caseData={caseData}
+        issuedDocument={issuedDocument}
+        onDownload={handleDownloadLetter}
+      />
 
       {!paid && fee > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

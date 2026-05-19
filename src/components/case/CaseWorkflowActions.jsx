@@ -4,6 +4,7 @@ import { Loader2, X } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
 import Button from "../Button";
 import CclFeeProposalModal from "./CclFeeProposalModal";
+import CaseWorkflowPostCcl from "./CaseWorkflowPostCcl";
 import {
   getCaseWorkflowBundle,
   getDataCapture,
@@ -286,6 +287,13 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
             </span>
           </p>
         </div>
+
+        <CaseWorkflowPostCcl
+          caseId={caseId}
+          caseStage={stage}
+          workflowState={bundle?.workflowState}
+          onRefresh={load}
+        />
       </div>
 
       <CclFeeProposalModal

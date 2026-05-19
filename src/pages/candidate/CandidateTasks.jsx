@@ -15,10 +15,13 @@ function formatDue(dateStr) {
 }
 
 function taskActionPath(task) {
+  const title = task.title || "";
   if (task.isDataCapture) return "/candidate/document-checklist";
-  if (/upload|document/i.test(task.title || "")) return "/candidate/upload-documents";
-  if (/checklist/i.test(task.title || "")) return "/candidate/document-checklist";
-  if (/client care|ccl|fee|payment/i.test(task.title || "")) return "/candidate/ccl";
+  if (/biometric|availability/i.test(title)) return "/candidate/biometric-availability";
+  if (/draft application|review draft/i.test(title)) return "/candidate/application";
+  if (/upload|document/i.test(title)) return "/candidate/upload-documents";
+  if (/checklist/i.test(title)) return "/candidate/document-checklist";
+  if (/client care|ccl|fee|payment/i.test(title)) return "/candidate/ccl";
   return "/candidate/application";
 }
 
