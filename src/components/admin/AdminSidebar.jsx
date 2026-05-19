@@ -5,6 +5,7 @@ import { getPipelineCases } from "../../services/caseApi";
 import { getPendingCclFeeApprovals } from "../../services/workflowApi";
 import { motion } from "framer-motion";
 import { logout } from "../../store/slices/authSlice";
+import useModuleAccess from "../../hooks/useModuleAccess";
 import {
   RiDashboardLine,
   RiShieldUserLine,
@@ -39,45 +40,45 @@ import eliteLogo from "../../assets/elitepic_logo.png";
 const navSections = [
   {
     items: [
-      { to: "/admin/dashboard", label: "Dashboard", icon: RiDashboardLine },
+      { to: "/admin/dashboard", label: "Dashboard", icon: RiDashboardLine, moduleKey: "admin.dashboard" },
     ],
   },
   {
     label: "People",
     items: [
-      { to: "/admin/admin-users",  label: "Admin Users",          icon: RiShieldUserLine },
-      { to: "/admin/caseworkers",  label: "Caseworkers",          icon: RiUserStarLine },
-      { to: "/admin/candidates",   label: "Clients",              icon: RiContactsLine },
-      { to: "/admin/businesses",   label: "Sponsors",             icon: RiBuildingLine },
+      { to: "/admin/admin-users",  label: "Admin Users",          icon: RiShieldUserLine,  moduleKey: "admin.dashboard" },
+      { to: "/admin/caseworkers",  label: "Caseworkers",          icon: RiUserStarLine,    moduleKey: "admin.caseworkers" },
+      { to: "/admin/candidates",   label: "Clients",              icon: RiContactsLine,    moduleKey: "admin.candidates" },
+      { to: "/admin/businesses",   label: "Sponsors",             icon: RiBuildingLine,    moduleKey: "admin.businesses" },
     ],
   },
   {
     label: "Cases & Workflow",
     items: [
-      { to: "/admin/enquiries",         label: "Enquiries",        icon: RiInboxLine, badgeKey: "enquiries" },
-      { to: "/admin/ccl-fee-approvals", label: "CCL fee approvals", icon: RiMoneyPoundCircleLine, badgeKey: "cclFees" },
-      { to: "/admin/cases",             label: "All Cases",        icon: RiFolderOpenLine },
-      { to: "/admin/pipeline",          label: "Pipeline",         icon: RiExchangeLine },
-      { to: "/admin/calendar",          label: "Calendar",         icon: RiCalendarLine },
-      { to: "/admin/escalations",       label: "Escalations",      icon: RiAlarmWarningLine },
-      { to: "/admin/licence-requests",  label: "Licence Requests", icon: RiShieldCheckLine },
+      { to: "/admin/enquiries",         label: "Enquiries",         icon: RiInboxLine,            badgeKey: "enquiries", moduleKey: "admin.enquiries" },
+      { to: "/admin/ccl-fee-approvals", label: "CCL fee approvals", icon: RiMoneyPoundCircleLine, badgeKey: "cclFees",   moduleKey: "admin.cases" },
+      { to: "/admin/cases",             label: "All Cases",         icon: RiFolderOpenLine,                              moduleKey: "admin.cases" },
+      { to: "/admin/pipeline",          label: "Pipeline",          icon: RiExchangeLine,                                moduleKey: "admin.pipeline" },
+      { to: "/admin/calendar",          label: "Calendar",          icon: RiCalendarLine,                                moduleKey: "admin.calendar" },
+      { to: "/admin/escalations",       label: "Escalations",       icon: RiAlarmWarningLine,                            moduleKey: "admin.escalations" },
+      { to: "/admin/licence-requests",  label: "Licence Requests",  icon: RiShieldCheckLine,                             moduleKey: "admin.licence-requests" },
     ],
   },
   {
     label: "Analytics & Finance",
     items: [
-      { to: "/admin/workload",  label: "Workload",   icon: RiBarChartLine },
-      { to: "/admin/finance",   label: "Finance",    icon: RiMoneyDollarCircleLine },
-      { to: "/admin/reports",   label: "Reports",    icon: RiLineChartLine },
+      { to: "/admin/workload",  label: "Workload",   icon: RiBarChartLine,          moduleKey: "admin.workload" },
+      { to: "/admin/finance",   label: "Finance",    icon: RiMoneyDollarCircleLine, moduleKey: "admin.finance" },
+      { to: "/admin/reports",   label: "Reports",    icon: RiLineChartLine,         moduleKey: "admin.reports" },
     ],
   },
   {
     label: "System",
     items: [
-      { to: "/admin/notifications", label: "Notifications",icon: RiNotification2Line },
-      { to: "/admin/messages",      label: "Messages",     icon: RiMessage2Line },
-      { to: "/admin/audit-logs",    label: "Audit Log",    icon: RiHistoryLine },
-      { to: "/admin/settings",      label: "Settings",     icon: RiSettings3Line },
+      { to: "/admin/notifications", label: "Notifications", icon: RiNotification2Line, moduleKey: "admin.dashboard" },
+      { to: "/admin/messages",      label: "Messages",      icon: RiMessage2Line,      moduleKey: "admin.messages" },
+      { to: "/admin/audit-logs",    label: "Audit Log",     icon: RiHistoryLine,       moduleKey: "admin.audit-logs" },
+      { to: "/admin/settings",      label: "Settings",      icon: RiSettings3Line,     moduleKey: "admin.settings" },
     ],
   },
 ];
@@ -95,6 +96,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
+  const { canAccess } = useModuleAccess();
   const [enquiryCount, setEnquiryCount] = useState(0);
   const [cclApprovalCount, setCclApprovalCount] = useState(0);
 
@@ -184,7 +186,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
               )}
 
               <div className="space-y-0.5">
-                {section.items.map((item) => (
+                {section.items.filter((item) => canAccess(item.moduleKey)).map((item) => (
                   <NavLink
                     key={item.to}
                     to={item.to}

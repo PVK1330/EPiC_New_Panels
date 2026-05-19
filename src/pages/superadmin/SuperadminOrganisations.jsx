@@ -100,29 +100,41 @@ const SuperadminOrganisations = () => {
       slug: data.slug?.trim() || undefined,
       primaryEmail: data.primaryEmail.trim(),
       country: data.country?.trim() || null,
-      plan: data.plan || 'starter',
+      plan_id: data.plan_id ? parseInt(data.plan_id, 10) : undefined,
       status: 'trial',
     });
     const created = orgRes.data?.data?.organisation ?? orgRes.data?.organisation;
     if (!created?.id) {
       throw new Error(orgRes.data?.message || 'Organisation create failed');
     }
-    const adminRes = await createOrganisationAdmin(created.id, {
-      email: data.adminEmail.trim().toLowerCase(),
-      first_name: data.adminFirstName.trim(),
-      last_name: data.adminLastName.trim(),
-      country_code: (data.adminCountryCode || '+44').trim(),
-      mobile: String(data.adminMobile || '').replace(/\s/g, '') || '0000000001',
-    });
+
+    let adminRes;
+    try {
+      adminRes = await createOrganisationAdmin(created.id, {
+        email: data.adminEmail.trim().toLowerCase(),
+        first_name: data.adminFirstName.trim(),
+        last_name: data.adminLastName.trim(),
+        country_code: (data.adminCountryCode || '+44').trim(),
+        mobile: String(data.adminMobile || '').replace(/\s/g, '') || '0000000001',
+      });
+    } catch (adminErr) {
+      const adminErrMsg = adminErr?.response?.data?.message || adminErr?.message || 'Admin creation failed';
+      toast.success(`Organisation "${created.name}" created successfully.`, { duration: 5000 });
+      toast.error(`Admin account failed: ${adminErrMsg}`, { duration: 10000 });
+      await loadOrgs();
+      return;
+    }
+
     const inner = adminRes.data?.data ?? adminRes.data;
-    const welcome = inner?.welcome_email;
     const tempPw = inner?.temporary_password;
-    if (welcome?.sent) {
-      toast.success(`Organisation created. Login details emailed to ${data.adminEmail.trim().toLowerCase()}`);
-    } else if (tempPw) {
-      toast.success(`Organisation created. Email not configured — admin password: ${tempPw}`, { duration: 14000 });
+
+    if (tempPw) {
+      toast.success(
+        `Organisation created.\n\nAdmin login:\nEmail: ${data.adminEmail.trim().toLowerCase()}\nPassword: ${tempPw}`,
+        { duration: 20000 }
+      );
     } else {
-      toast.success('Organisation and admin created');
+      toast.success(`Organisation and admin created. Login details sent to ${data.adminEmail.trim().toLowerCase()}.`);
     }
     await loadOrgs();
   };

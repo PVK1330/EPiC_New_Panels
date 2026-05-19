@@ -5,6 +5,7 @@ import { LogOut, X } from "lucide-react";
 import eliteLogo from "../assets/elitepic_logo.png";
 import { useMemo } from "react";
 import { candidateNavSections as navSections } from "./candidateNavSections";
+import useModuleAccess from "../hooks/useModuleAccess";
 
 function resolveAccountNavMatch(pathname, search) {
   if (pathname !== "/candidate/account") return null;
@@ -45,6 +46,7 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
+  const { canAccess } = useModuleAccess();
   useMemo(() => navSections, []);
 
   const handleLogout = () => {
@@ -113,7 +115,7 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
               )}
 
               <div className="space-y-0.5">
-                {section.items.map((item) => {
+                {section.items.filter((item) => canAccess(item.moduleKey)).map((item) => {
                   const matched = navLinkMatches(
                     location.pathname,
                     location.search,

@@ -2,31 +2,18 @@ import api from "./api";
 
 export const fetchOrganisations = () => api.get("/api/superadmin/organisations");
 
-export const fetchOrganisationById = (id) =>
-  api.get(`/api/superadmin/organisations/${id}`);
+export const fetchOrganisationById = (id) => api.get(`/api/superadmin/organisations/${id}`);
 
-/** Tenant DB provisioning runs many SQL migrations; default api timeout (10s) is too short. */
-const ORG_PROVISION_TIMEOUT_MS = 600000;
+export const createOrganisation = (data) => api.post("/api/superadmin/organisations", data);
 
-export const createOrganisation = (body) =>
-  api.post("/api/superadmin/organisations", body, { timeout: ORG_PROVISION_TIMEOUT_MS });
+export const updateOrganisation = (id, data) => api.patch(`/api/superadmin/organisations/${id}`, data);
 
-export const createOrganisationAdmin = (organisationId, body) =>
-  api.post(`/api/superadmin/organisations/${organisationId}/admins`, body, {
-    timeout: ORG_PROVISION_TIMEOUT_MS,
-  });
+export const deleteOrganisation = (id) => api.delete(`/api/superadmin/organisations/${id}`);
 
-export const updateOrganisation = (id, body) =>
-  api.patch(`/api/superadmin/organisations/${id}`, body);
+export const suspendOrganisation = (id) => api.post(`/api/superadmin/organisations/${id}/suspend`);
 
-export const deleteOrganisation = (id) =>
-  api.delete(`/api/superadmin/organisations/${id}`);
+export const activateOrganisation = (id) => api.post(`/api/superadmin/organisations/${id}/activate`);
 
-export const suspendOrganisation = (id) =>
-  api.post(`/api/superadmin/organisations/${id}/suspend`);
+export const createOrganisationAdmin = (orgId, data) => api.post(`/api/superadmin/organisations/${orgId}/admins`, data);
 
-export const activateOrganisation = (id) =>
-  api.post(`/api/superadmin/organisations/${id}/activate`);
-
-export const impersonateOrganisation = (organisationId) =>
-  api.post(`/api/superadmin/organisations/${organisationId}/impersonate`);
+export const impersonateOrganisation = (orgId) => api.post(`/api/superadmin/organisations/${orgId}/impersonate`);

@@ -42,6 +42,12 @@ export const getCandidateWorkflowProcess = () =>
 export const submitDraftReview = (confirmed) =>
   api.post("/api/workflow/draft-review", { confirmed }).then(unwrap);
 
+export const getDraftReviewState = () =>
+  api.get("/api/workflow/draft-review").then(unwrap);
+
+export const submitDraftReviewResponse = (approved) =>
+  api.post("/api/workflow/draft-review", { confirmed: approved }).then(unwrap);
+
 export const submitBiometricAvailability = (body) =>
   api.post("/api/workflow/biometric-availability", body).then(unwrap);
 

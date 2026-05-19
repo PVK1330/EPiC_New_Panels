@@ -184,7 +184,7 @@ const Login = () => {
         setPendingLogin({ email: form.email, password: form.password });
         setView(VIEWS.twoFactor);
       } else {
-        const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
+        const { user: userData, token: jwtToken, allowedModules } = getAuthUserAndToken(res);
 
         if (!userData || !jwtToken) {
           throw new Error(res.message || "Invalid credentials or response structure");
@@ -199,6 +199,7 @@ const Login = () => {
               organisation_id: userData.organisation_id ?? null,
             },
             token: jwtToken,
+            allowedModules,
           }),
         );
         navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
@@ -275,7 +276,7 @@ const Login = () => {
         throw new Error("No response received from 2FA server");
       }
 
-      const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
+      const { user: userData, token: jwtToken, allowedModules } = getAuthUserAndToken(res);
 
       if (!userData || !jwtToken) {
         throw new Error(res.message || "Invalid 2FA code or server response");
@@ -290,6 +291,7 @@ const Login = () => {
             organisation_id: userData.organisation_id ?? null,
           },
           token: jwtToken,
+          allowedModules,
         }),
       );
       navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
