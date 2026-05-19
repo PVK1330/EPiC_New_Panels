@@ -62,9 +62,8 @@ export const getCaseworkerCaseDetails = (id) => api.get(`/api/caseworker/cases/$
 // Document APIs
 export const getCaseDocuments = (caseId, params = {}) => api.get(`/api/caseworker/documents/case/${caseId}`, { params });
 
-export const uploadDocument = (formData) => api.post('/api/caseworker/documents/upload', formData, {
-  headers: { 'Content-Type': 'multipart/form-data' }
-});
+export const uploadDocument = (formData) =>
+  api.post("/api/caseworker/documents/upload", formData, { timeout: 120000 });
 
 export const updateDocument = (documentId, data) => api.put(`/api/caseworker/documents/${documentId}`, data);
 

@@ -22,6 +22,7 @@ import {
   triggerDownload,
   getChecklistByVisaType,
 } from "../../services/documentApi";
+import { getMyDocumentChecklist } from "../../services/candidateDocumentApi";
 import useCandidate from "../../hooks/useCandidate";
 import { useToast } from "../../context/ToastContext";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
@@ -55,7 +56,7 @@ const getCandidateStatusLabel = (status) => {
 const UploadDocuments = () => {
   const [searchParams] = useSearchParams();
   const user = useSelector((state) => state.auth.user);
-  const userId = user?.id || user?.userId;
+  const userId = user?.id ?? user?.userId;
 
   const [docType, setDocType]         = useState(DOC_TYPE_PLACEHOLDER);
   const [dynamicDocTypes, setDynamicDocTypes] = useState(DOC_TYPES);
@@ -214,9 +215,15 @@ const UploadDocuments = () => {
     setUploadSuccess(false);
 
     try {
-      // Find active case ID if available
-      const activeCase = myApplication?._relatedData?.cases?.[0];
-      const caseIdToAttach = activeCase ? activeCase.id : undefined;
+      let caseIdToAttach = myApplication?._relatedData?.cases?.[0]?.id;
+      if (!caseIdToAttach) {
+        try {
+          const checklistRes = await getMyDocumentChecklist();
+          caseIdToAttach = checklistRes.data?.data?.caseId ?? null;
+        } catch {
+          /* case optional */
+        }
+      }
 
       const uploadRes = await uploadDocumentsApi(
         [file],
@@ -258,9 +265,12 @@ const UploadDocuments = () => {
       // Refresh document list
       await loadDocuments();
     } catch (err) {
-      setUploadError(
-        err?.response?.data?.message || "Upload failed. Please try again."
-      );
+      const msg =
+        err?.response?.data?.message ||
+        (err?.response?.status === 401
+          ? "Session expired — please log in again."
+          : "Upload failed. Please try again.");
+      setUploadError(msg);
       showToast({
         message: err?.response?.data?.message || "Upload failed. Please try again.",
         variant: "danger",

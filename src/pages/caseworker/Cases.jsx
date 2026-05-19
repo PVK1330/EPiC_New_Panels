@@ -3134,7 +3134,7 @@ function DocumentsTab({ caseId, candidateId }) {
     try {
       setUploading(true);
       const formData = new FormData();
-      formData.append("documents", selectedFile);
+      formData.append("files", selectedFile);
       formData.append("caseId", caseId);
       formData.append("userId", candidateId);
       formData.append("documentType", uploadForm.documentType);

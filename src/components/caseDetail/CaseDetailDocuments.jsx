@@ -56,6 +56,17 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
     }
   };
 
+  const formatStatusLabel = (status) => {
+    const labels = {
+      missing: "Missing",
+      uploaded: "Uploaded",
+      under_review: "Under Review",
+      approved: "Approved",
+      rejected: "Rejected",
+    };
+    return labels[status] || String(status || "").replace(/_/g, " ");
+  };
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'approved':
@@ -129,7 +140,7 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
     try {
       setUploading(true);
       const formData = new FormData();
-      formData.append("documents", selectedFile);
+      formData.append("files", selectedFile);
       formData.append("caseId", caseId);
       formData.append("documentType", uploadForm.documentType);
       formData.append("documentCategory", uploadForm.documentCategory);
@@ -245,7 +256,7 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
                       )}
                       <div className="flex items-center gap-3">
                         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusColor(item.status)}`}>
-                          {item.status.replace('_', ' ')}
+                          {formatStatusLabel(item.status)}
                         </span>
                         {item.expiryDate && (
                           <span className="text-[10px] text-gray-500">
