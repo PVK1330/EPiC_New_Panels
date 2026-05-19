@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 import CandidateApplicationForm from "../../components/CandidateApplicationForm/CandidateApplicationForm";
 import DraftReviewBanner from "../../components/candidate/DraftReviewBanner";
-import { getDraftReviewState } from "../../services/workflowApi";
+import { getCandidateWorkflowProcess } from "../../services/workflowApi";
 
 const Application = () => {
   const [formLocked, setFormLocked] = useState(false);
 
   const refreshLock = useCallback(async () => {
     try {
-      const data = await getDraftReviewState();
-      setFormLocked(Boolean(data?.showDraftReviewPrompt));
+      const data = await getCandidateWorkflowProcess();
+      const inDraftReview = data?.caseStage === "draft_application_review";
+      const confirmed = data?.workflowState?.draftReview?.confirmed;
+      setFormLocked(inDraftReview && confirmed !== false);
     } catch {
       setFormLocked(false);
     }

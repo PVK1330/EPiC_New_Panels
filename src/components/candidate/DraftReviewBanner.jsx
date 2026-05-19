@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { getDraftReviewState, submitDraftReviewResponse } from "../../services/workflowApi";
+import { getCandidateWorkflowProcess, submitDraftReview } from "../../services/workflowApi";
 import { useToast } from "../../context/ToastContext";
 import Button from "../Button";
 
@@ -10,8 +10,12 @@ export default function DraftReviewBanner({ onUnlocked, onResponded }) {
 
   const load = useCallback(async () => {
     try {
-      const data = await getDraftReviewState();
-      setState(data);
+      const data = await getCandidateWorkflowProcess();
+      const inDraftReview = data?.caseStage === "draft_application_review";
+      const confirmed = data?.workflowState?.draftReview?.confirmed;
+      setState({
+        showDraftReviewPrompt: inDraftReview && confirmed === null,
+      });
     } catch {
       setState(null);
     }
@@ -24,8 +28,12 @@ export default function DraftReviewBanner({ onUnlocked, onResponded }) {
   const respond = async (approved) => {
     setBusy(true);
     try {
-      const data = await submitDraftReviewResponse(approved);
-      setState((s) => ({ ...s, ...data, showDraftReviewPrompt: false }));
+      const data = await submitDraftReview(approved);
+      const inDraftReview = data?.caseStage === "draft_application_review";
+      const confirmed = data?.workflowState?.draftReview?.confirmed;
+      setState({
+        showDraftReviewPrompt: inDraftReview && confirmed === null,
+      });
       if (!approved) onUnlocked?.();
       showToast({
         message: approved
