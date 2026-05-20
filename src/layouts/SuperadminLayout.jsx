@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { logout } from "../store/slices/authSlice";
 import SuperadminSidebar from "../components/superadmin/SuperadminSidebar";
+import useIdleTimer from "../hooks/useIdleTimer";
 import {
   RiMenuLine,
   RiHome5Line,
@@ -30,6 +31,9 @@ const SuperadminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
+
+  // ── Inactivity auto-logout (superadmin only) ──────────────────────────────
+  useIdleTimer();
 
   const handleLogout = () => {
     dispatch(logout());
