@@ -1476,7 +1476,7 @@ export default function AdminBusinesses() {
                 ))}
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6">
+              <div className="flex-1 p-4 sm:p-6">
                 {detailTab === "overview" && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
