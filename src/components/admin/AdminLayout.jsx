@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,6 +18,9 @@ import {
 
 import NotificationDropdown from "../Notifications/NotificationDropdown";
 import MessageDropdown from "../notifications/MessageDropdown";
+import eliteLogo from "../../assets/elitepic_logo.png";
+import { getOrganisationBranding } from "../../services/settingsService";
+import { resolveAssetUrl } from "../../utils/assetUrl";
 
 
 
@@ -36,6 +39,24 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
+  const [orgLogoUrl, setOrgLogoUrl] = useState(null);
+
+  const fetchOrganisationBranding = useCallback(async () => {
+    try {
+      const res = await getOrganisationBranding();
+      const url = res.data?.data?.organisation?.logoUrl;
+      setOrgLogoUrl(url ? resolveAssetUrl(url) : null);
+    } catch {
+      setOrgLogoUrl(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOrganisationBranding();
+    const onBrandingUpdated = () => fetchOrganisationBranding();
+    window.addEventListener("organisation-branding-updated", onBrandingUpdated);
+    return () => window.removeEventListener("organisation-branding-updated", onBrandingUpdated);
+  }, [fetchOrganisationBranding]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -84,9 +105,20 @@ const AdminLayout = () => {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* ── Top Bar ── */}
-        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40 shrink-0 shadow-sm">
-          {/* Left: hamburger + breadcrumb */}
+        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40 shrink-0 shadow-sm gap-3">
+          {/* Left: EPiC logo + hamburger + breadcrumb */}
           <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+            <Link
+              to={`/${user?.role || "admin"}/dashboard`}
+              className="shrink-0"
+              aria-label="EPiC home"
+            >
+              <img
+                src={eliteLogo}
+                alt="EPiC"
+                className="h-7 sm:h-8 w-auto object-contain"
+              />
+            </Link>
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
@@ -200,6 +232,16 @@ const AdminLayout = () => {
                 )}
               </AnimatePresence>
             </div>
+
+            {orgLogoUrl && (
+              <div className="flex items-center pl-2 ml-1 border-l border-gray-100 shrink-0">
+                <img
+                  src={orgLogoUrl}
+                  alt="Organisation logo"
+                  className="max-h-8 sm:max-h-10 max-w-[100px] sm:max-w-[140px] object-contain"
+                />
+              </div>
+            )}
           </div>
         </header>
 

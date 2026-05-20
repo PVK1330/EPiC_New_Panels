@@ -13,6 +13,14 @@ export const createVisaType = (data) => api.post("/api/settings/visa-types", dat
 export const updateVisaType = (id, data) => api.patch(`/api/settings/visa-types/${id}`, data);
 export const deleteVisaType = (id) => api.delete(`/api/settings/visa-types/${id}`);
 
+export const uploadCclTemplate = (id, formData) =>
+  api.post(`/api/settings/visa-types/${id}/ccl-template`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+export const deleteCclTemplate = (id) =>
+  api.delete(`/api/settings/visa-types/${id}/ccl-template`);
+
 export const getPetitionTypes = () => api.get("/api/settings/petition-types");
 export const createPetitionType = (data) => api.post("/api/settings/petition-types", data);
 export const updatePetitionType = (id, data) => api.patch(`/api/settings/petition-types/${id}`, data);
@@ -39,3 +47,15 @@ export const updatePaymentSetting = (data) => api.put("/api/settings/payment-set
 export const getSmtpSettings = () => api.get("/api/settings/smtp-settings");
 export const updateSmtpSettings = (data) => api.put("/api/settings/smtp-settings", data);
 export const testSmtpSettings = (data) => api.post("/api/settings/smtp-settings/test", data);
+
+export const getOrganisationBranding = () => api.get("/api/settings/organisation/branding");
+
+export const getOrganisation = () => api.get("/api/settings/organisation");
+
+export const uploadOrganisationLogo = (file) => {
+  const formData = new FormData();
+  formData.append("logo", file);
+  return api.post("/api/settings/organisation/logo", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};

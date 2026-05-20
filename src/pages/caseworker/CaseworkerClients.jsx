@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, X, FileText, Briefcase, Phone, Mail, Calendar, MapPin, User, Building, Check, AlertCircle, Clock } from "lucide-react";
 import api from "../../services/api";
+import { getCaseworkerCases } from "../../services/caseApi";
 
 const TABS = [
   // { id: "candidates", label: "Candidate Profiles", path: "/caseworker/people/candidates" },
@@ -83,6 +84,58 @@ const SponsorCard = ({ code, name, sub, meta, badge = "Compliant", badgeVariant 
   </div>
 );
 
+const CASE_ACCENTS = ["secondary", "primary", "purple", "teal", "amber"];
+
+const getCandidateStatus = (cases = []) => {
+  const statuses = cases.map((c) => c.status || "");
+  if (statuses.includes("Overdue")) return "Overdue";
+  if (statuses.some((s) => ["Pending", "In Progress", "Under Review", "Drafting"].includes(s))) {
+    return "Active";
+  }
+  if (statuses.some((s) => ["Submitted", "Decision"].includes(s))) return "Due Soon";
+  return "On Track";
+};
+
+const buildAssignedCandidates = (cases = []) => {
+  const grouped = new Map();
+  cases.forEach((item) => {
+    const candidate = item?.candidate;
+    if (!candidate?.id) return;
+    if (!grouped.has(candidate.id)) {
+      grouped.set(candidate.id, { candidate, cases: [] });
+    }
+    grouped.get(candidate.id).cases.push(item);
+  });
+
+  return Array.from(grouped.values()).map(({ candidate, cases: candidateCases }, idx) => {
+    const name = `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() || "Unknown Candidate";
+    const initials = `${(candidate.first_name || "").charAt(0)}${(candidate.last_name || "").charAt(0)}`
+      .toUpperCase() || "C";
+    const latestCase = [...candidateCases].sort(
+      (a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0),
+    )[0];
+    const track = latestCase?.visaType?.name || "Visa Case";
+    const code = latestCase?.caseId ? `#${latestCase.caseId}` : `#C-${candidate.id}`;
+    const sub = `${latestCase?.nationality || "Candidate"}${latestCase?.jobTitle ? ` · ${latestCase.jobTitle}` : ""}`;
+
+    return {
+      id: candidate.id,
+      initials,
+      name,
+      sub,
+      status: getCandidateStatus(candidateCases),
+      track,
+      code,
+      accent: CASE_ACCENTS[idx % CASE_ACCENTS.length],
+      email: candidate.email || "",
+      phone: latestCase?.candidate?.mobile || "",
+      location: latestCase?.nationality || "N/A",
+      primaryCase: latestCase,
+      cases: candidateCases,
+    };
+  });
+};
+
 const CaseworkerClients = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -90,7 +143,9 @@ const CaseworkerClients = () => {
   const [candidateActiveTab, setCandidateActiveTab] = useState("overview");
   const [sponsorActiveTab, setSponsorActiveTab] = useState("overview");
   const [sponsors, setSponsors] = useState([]);
+  const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [selectedSponsor, setSelectedSponsor] = useState(null);
 
   const activeTab = useMemo(() => {
@@ -127,6 +182,26 @@ const CaseworkerClients = () => {
 
     fetchSponsors();
   }, []);
+
+  useEffect(() => {
+    const fetchAssignedCandidates = async () => {
+      try {
+        setLoadingCandidates(true);
+        const response = await getCaseworkerCases({ page: 1, limit: 200 });
+        const assignedCases = response?.data?.data?.cases || [];
+        setCandidates(buildAssignedCandidates(assignedCases));
+      } catch (error) {
+        console.error("Error fetching assigned candidates:", error);
+        setCandidates([]);
+      } finally {
+        setLoadingCandidates(false);
+      }
+    };
+
+    if (activeTab === "candidates") {
+      fetchAssignedCandidates();
+    }
+  }, [activeTab]);
 
   const handleSponsorView = async (sponsor) => {
     try {
@@ -203,12 +278,29 @@ const CaseworkerClients = () => {
 
       {activeTab === "candidates" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <CandidateCard initials="AR" name="Ahmed Al-Rashid" sub="Saudi Arabia · Engineer" status="Active" track="Tier 2" code="#C-2401" accent="secondary" onView={(data) => openViewModal('candidate', data)} />
-          <CandidateCard initials="PS" name="Priya Sharma" sub="India · Software Developer" status="Due Soon" track="Skilled" code="#C-2398" accent="purple" onView={(data) => openViewModal('candidate', data)} />
-          <CandidateCard initials="CM" name="Carlos Mendes" sub="Brazil · Project Manager" status="Overdue" track="Intra-Co" code="#C-2391" accent="primary" onView={(data) => openViewModal('candidate', data)} />
-          <CandidateCard initials="MC" name="Mei Lin Chen" sub="China · Data Analyst" status="On Track" track="Graduate" code="#C-2389" accent="teal" onView={(data) => openViewModal('candidate', data)} />
-          <CandidateCard initials="IP" name="Ivan Petrov" sub="Russia · Environmental Eng." status="On Track" track="Tier 2" code="#C-2385" accent="amber" onView={(data) => openViewModal('candidate', data)} />
-          <CandidateCard initials="FA" name="Fatima Al-Zahra" sub="Morocco · Nurse" status="Due Soon" track="H&C" code="#C-2380" accent="secondary" onView={(data) => openViewModal('candidate', data)} />
+          {loadingCandidates ? (
+            <div className="col-span-full text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : candidates.length === 0 ? (
+            <div className="col-span-full text-center py-8 text-sm font-bold text-gray-500">
+              No assigned candidates found
+            </div>
+          ) : (
+            candidates.map((candidate) => (
+              <CandidateCard
+                key={candidate.id}
+                initials={candidate.initials}
+                name={candidate.name}
+                sub={candidate.sub}
+                status={candidate.status}
+                track={candidate.track}
+                code={candidate.code}
+                accent={candidate.accent}
+                onView={() => openViewModal("candidate", candidate)}
+              />
+            ))
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -325,14 +417,14 @@ const CaseworkerClients = () => {
                           <Mail size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">Email</p>
-                            <p className="text-sm font-bold text-gray-900">candidate@example.com</p>
+                            <p className="text-sm font-bold text-gray-900">{viewModal.data.email || "N/A"}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <Phone size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">Phone</p>
-                            <p className="text-sm font-bold text-gray-900">+44 20 7123 4567</p>
+                            <p className="text-sm font-bold text-gray-900">{viewModal.data.phone || "N/A"}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -366,14 +458,22 @@ const CaseworkerClients = () => {
                           <Calendar size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">Application Date</p>
-                            <p className="text-sm font-bold text-gray-900">15 March 2024</p>
+                            <p className="text-sm font-bold text-gray-900">
+                              {viewModal.data.primaryCase?.created_at
+                                ? new Date(viewModal.data.primaryCase.created_at).toLocaleDateString("en-GB")
+                                : "N/A"}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <Clock size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">Expected Decision</p>
-                            <p className="text-sm font-bold text-gray-900">30 April 2024</p>
+                            <p className="text-sm font-bold text-gray-900">
+                              {viewModal.data.primaryCase?.targetSubmissionDate
+                                ? new Date(viewModal.data.primaryCase.targetSubmissionDate).toLocaleDateString("en-GB")
+                                : "N/A"}
+                            </p>
                           </div>
                         </div>
                       </div>

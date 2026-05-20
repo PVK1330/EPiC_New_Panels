@@ -671,7 +671,7 @@ export default function AdminCases() {
           candidateId: c.candidateId,
           sponsorId: c.sponsorId,
           businessId: c.businessId,
-          department: c.department,
+          department: c.departmentId || "",
           sponsor: c.sponsor,
           caseworkerIds: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId : (c.assignedcaseworkerId ? [c.assignedcaseworkerId] : []),
           caseworker:
@@ -808,6 +808,7 @@ export default function AdminCases() {
         nationality: formData.nationality,
         jobTitle: formData.jobTitle,
         department: formData.department,
+        departmentId: parseInt(formData.department) || null,
       };
       await createCase(caseData);
       // Refresh cases from API
@@ -846,7 +847,7 @@ export default function AdminCases() {
           receiptNumber: c.receiptNumber,
           nationality: c.nationality,
           jobTitle: c.jobTitle,
-          department: c.department,
+          department: c.departmentId || "",
           salaryOffered: c.salaryOffered,
           totalAmount: c.totalAmount,
           paidAmount: c.paidAmount,
@@ -883,7 +884,7 @@ export default function AdminCases() {
       candidateId: c.candidateId || "",
       nationality: c.nationality || "",
       jobTitle: c.jobTitle || "",
-      department: c.department || "",
+      department: c.departmentId || c.department || "",
       businessName: c.business,
       businessId: c.businessId || "",
       visaTypeId: c.visaTypeId || "",
@@ -926,6 +927,7 @@ export default function AdminCases() {
         nationality: formData.nationality,
         jobTitle: formData.jobTitle,
         department: formData.department,
+        departmentId: parseInt(formData.department) || null,
       };
       await updateCase(selectedCase.caseId, caseData);
       // Refresh cases from API
@@ -964,7 +966,7 @@ export default function AdminCases() {
           receiptNumber: c.receiptNumber,
           nationality: c.nationality,
           jobTitle: c.jobTitle,
-          department: c.department,
+          department: c.departmentId || "",
           salaryOffered: c.salaryOffered,
           totalAmount: c.totalAmount,
           paidAmount: c.paidAmount,
@@ -1022,7 +1024,7 @@ export default function AdminCases() {
           receiptNumber: c.receiptNumber,
           nationality: c.nationality,
           jobTitle: c.jobTitle,
-          department: c.department,
+          department: c.departmentId || "",
           salaryOffered: c.salaryOffered,
           totalAmount: c.totalAmount,
           paidAmount: c.paidAmount,
@@ -1102,7 +1104,7 @@ export default function AdminCases() {
           receiptNumber: c.receiptNumber,
           nationality: c.nationality,
           jobTitle: c.jobTitle,
-          department: c.department,
+          department: c.departmentId || "",
           salaryOffered: c.salaryOffered,
           totalAmount: c.totalAmount,
           paidAmount: c.paidAmount,

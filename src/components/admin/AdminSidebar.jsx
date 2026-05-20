@@ -105,7 +105,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
       .then(([pipeRes, cclRes]) => {
         const pipeline = pipeRes.data?.data || {};
         setEnquiryCount((pipeline.client_enquiry || []).length);
-        setCclApprovalCount(cclRes?.data?.data?.cases?.length ?? 0);
+        setCclApprovalCount(cclRes?.cases?.length ?? 0);
       })
       .catch(() => {
         setEnquiryCount(0);

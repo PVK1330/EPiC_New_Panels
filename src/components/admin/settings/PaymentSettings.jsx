@@ -159,6 +159,13 @@ export default function PaymentSettings({
                       </div>
                       <Input label="Stripe Public Key" name="stripe_public_key" value={config.stripe_public_key} onChange={(e) => onConfigChange('stripe_public_key', e.target.value)} placeholder="pk_test_..." />
                       <Input label="Stripe Secret Key" name="stripe_secret_key" type="password" value={config.stripe_secret_key} onChange={(e) => onConfigChange('stripe_secret_key', e.target.value)} placeholder="sk_test_..." />
+                      <Input label="Stripe Webhook Secret" name="stripe_webhook_secret" type="password" value={config.stripe_webhook_secret || ""} onChange={(e) => onConfigChange('stripe_webhook_secret', e.target.value)} placeholder="whsec_..." />
+                      <p className="text-[10px] text-gray-400 italic">
+                        Use the same value in Stripe Dashboard → Webhooks for your endpoint URL
+                        {" "}
+                        <code className="text-gray-500">/api/stripe/webhook</code>
+                        . Checkout and subscriptions must send organisationId in metadata (handled automatically).
+                      </p>
                     </div>
                   )}
 

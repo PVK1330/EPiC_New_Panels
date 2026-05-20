@@ -18,6 +18,8 @@ export default function CaseWorkflowPostCcl({
   caseStage,
   workflowState,
   onRefresh,
+  ccl,
+  paid,
 }) {
   const { showToast } = useToast();
   const [busy, setBusy] = useState("");
@@ -53,7 +55,10 @@ export default function CaseWorkflowPostCcl({
   };
 
   const showVisaSubmit =
-    ["ccl_payment_received", "ccl_issued"].includes(caseStage) && !visaSubmitted;
+    (caseStage === "client_care_letter" || ["ccl_payment_received", "ccl_issued"].includes(caseStage)) &&
+    (ccl?.status === "signed" || ccl?.status === "accepted") &&
+    paid &&
+    !visaSubmitted;
   const showBiometricBook =
     ["application_submitted", "biometrics_booked"].includes(caseStage) &&
     availability &&
@@ -80,6 +85,11 @@ export default function CaseWorkflowPostCcl({
             {availability.preferredLocation} — {availability.preferredDate}{" "}
             {availability.preferredTime}
           </p>
+          {availability.preferredTimezone && (
+            <p className="text-[10px] font-black uppercase tracking-wide text-primary/80">
+              Candidate timezone: {availability.preferredTimezone}
+            </p>
+          )}
           {availability.notes && (
             <p className="text-gray-500 font-bold">Notes: {availability.notes}</p>
           )}

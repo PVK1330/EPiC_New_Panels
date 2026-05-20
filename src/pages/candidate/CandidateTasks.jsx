@@ -14,10 +14,15 @@ function formatDue(dateStr) {
   });
 }
 
+function isBiometricAvailabilityTask(task) {
+  const title = task.title || "";
+  return /biometric|availability/i.test(title);
+}
+
 function taskActionPath(task) {
   const title = task.title || "";
   if (task.isDataCapture) return "/candidate/document-checklist";
-  if (/biometric|availability/i.test(title)) return "/candidate/biometric-availability";
+  if (isBiometricAvailabilityTask(task)) return "/candidate/biometric-availability";
   if (/draft application|review draft/i.test(title)) return "/candidate/application";
   if (/upload|document/i.test(title)) return "/candidate/upload-documents";
   if (/checklist/i.test(title)) return "/candidate/document-checklist";
@@ -126,7 +131,7 @@ export default function CandidateTasks() {
                       >
                         Open <ArrowRight size={14} />
                       </Link>
-                      {!task.isDataCapture && (
+                      {!task.isDataCapture && !isBiometricAvailabilityTask(task) && (
                         <Button
                           type="button"
                           variant="outline"

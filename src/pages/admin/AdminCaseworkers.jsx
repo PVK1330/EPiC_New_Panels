@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import {
   FiEdit2,
   FiTrash2,
@@ -26,7 +27,9 @@ import {
   exportCaseworkers,
   bulkImportCaseworkers,
   getDepartments,
+  getCaseworkerById,
 } from "../../services/caseWorker";
+import { getOrganisationSlugFromHost } from "../../utils/organisationHost";
 
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
 
@@ -105,8 +108,52 @@ function departmentLabel(row) {
   return d && String(d).trim() ? d : "—";
 }
 
+function getStageProgress(stage, status) {
+  const s = status || "";
+  if (["Completed", "Approved", "Closed"].includes(s)) {
+    return { percent: 100, color: "hsl(142, 71%, 45%)", label: "Completed" };
+  }
+  if (s === "Drafting" || stage === "draft_application_review") {
+    return { percent: 40, color: "hsl(217, 91%, 60%)", label: s || "Drafting" };
+  }
+  if (["Pending", "Docs Pending", "Lead"].includes(s)) {
+    return { percent: 20, color: "hsl(38, 92%, 50%)", label: s || "Pending" };
+  }
+  if (s === "Overdue") {
+    return { percent: 85, color: "hsl(0, 84%, 60%)", label: "Overdue" };
+  }
+  if (["In Progress", "Under Review", "Submitted"].includes(s)) {
+    return { percent: 60, color: "hsl(217, 91%, 60%)", label: s || "In Progress" };
+  }
+  return { percent: 40, color: "hsl(217, 91%, 55%)", label: s || stage || "In progress" };
+}
+
+function candidateDisplayName(candidate) {
+  if (!candidate) return "—";
+  const name = `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim();
+  return name || "—";
+}
+
+function formatTargetDate(value) {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return "—";
+  }
+}
+
 export default function AdminCaseworkers() {
   const { showToast } = useToast();
+  const authUser = useSelector((state) => state.auth.user);
+  const orgLabel =
+    authUser?.organisation_name ||
+    getOrganisationSlugFromHost() ||
+    (authUser?.organisation_id ? `Organisation #${authUser.organisation_id}` : null);
   const { caseworkers, pagination, loading, fetchCaseworkers } =
     useCaseworker();
 
@@ -125,6 +172,9 @@ export default function AdminCaseworkers() {
 
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [viewingDetails, setViewingDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [caseSearch, setCaseSearch] = useState("");
 
   useEffect(() => {
     fetchDepartments();
@@ -190,6 +240,9 @@ export default function AdminCaseworkers() {
 
   const closeModal = () => {
     setModal({ type: null, data: null });
+    setViewingDetails(null);
+    setLoadingDetails(false);
+    setCaseSearch("");
     setCreateForm(EMPTY_CREATE);
     setEditForm(null);
     setErrors({});
@@ -216,8 +269,28 @@ export default function AdminCaseworkers() {
     setModal({ type: "edit", data: row });
   };
 
-  const openView = (row) => {
+  const openView = async (row) => {
     setModal({ type: "view", data: row });
+    setViewingDetails(row);
+    setCaseSearch("");
+    setLoadingDetails(true);
+    try {
+      const res = await getCaseworkerById(row.id);
+      const payload = res.data?.data;
+      if (payload?.caseworker) {
+        setViewingDetails({
+          ...payload.caseworker,
+          metrics: payload.metrics,
+          candidates: payload.candidates || [],
+          cases: payload.cases || [],
+          performance: payload.metrics || payload.caseworker.performance,
+        });
+      }
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   const openDelete = (row) => {
@@ -531,6 +604,9 @@ export default function AdminCaseworkers() {
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Team performance and case assignment overview
+            {orgLabel ? (
+              <span className="text-primary font-bold"> · {orgLabel}</span>
+            ) : null}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -639,6 +715,7 @@ export default function AdminCaseworkers() {
                   "Name",
                   "Email",
                   "Department",
+                  "Candidates",
                   "Active Cases",
                   "Overdue",
                   "Completed",
@@ -659,7 +736,7 @@ export default function AdminCaseworkers() {
               {!loading && caseworkers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="px-5 py-12 text-center text-sm text-gray-400"
                   >
                     No caseworkers match your search.
@@ -668,6 +745,7 @@ export default function AdminCaseworkers() {
               ) : (
                 caseworkers.map((user, idx) => {
                   const perf = user.performance || {};
+                  const candidateCount = perf.assignedCandidates ?? 0;
                   const activeCases = perf.inProgressCases || 0;
                   const overdue = perf.overdueCases || 0;
                   const completed = perf.completedCases || 0;
@@ -695,6 +773,11 @@ export default function AdminCaseworkers() {
                       </td>
                       <td className="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">{user.email}</td>
                       <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">{departmentLabel(user)}</td>
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-violet-100 text-violet-700">
+                          {candidateCount}
+                        </span>
+                      </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${activeCases >= 20 ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-700"}`}>
                           {activeCases}
@@ -930,40 +1013,234 @@ export default function AdminCaseworkers() {
           <Button variant="ghost" onClick={closeModal} className="rounded-xl">Close</Button>
         }
       >
-        {modal.data && (
+        {viewingDetails && (
           <div className="space-y-6">
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-sm font-black shrink-0 ${AVATAR_COLORS[(modal.data.id || 0) % AVATAR_COLORS.length]}`}>
-                {initialsFrom(modal.data)}
+            <div className="flex items-center gap-4 p-4 rounded-xl border border-white/60 bg-white/70 backdrop-blur-sm shadow-sm">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-sm font-black shrink-0 ${AVATAR_COLORS[(viewingDetails.id || 0) % AVATAR_COLORS.length]}`}>
+                {initialsFrom(viewingDetails)}
               </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-black text-secondary">{fullName(modal.data)}</h3>
-                <p className="text-sm text-gray-600">{displayRoleName(modal.data)} · {departmentLabel(modal.data)}</p>
-                <p className="text-xs text-gray-500 mt-1">{modal.data.email} · {modal.data.country_code} {modal.data.mobile}</p>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-black text-secondary truncate">{fullName(viewingDetails)}</h3>
+                <p className="text-sm text-gray-600">
+                  {displayRoleName(viewingDetails)} · {departmentLabel(viewingDetails)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1 truncate">
+                  {viewingDetails.email} · {viewingDetails.country_code} {viewingDetails.mobile}
+                </p>
               </div>
-              <div className="text-right">
-                <StatusBadge status={formatStatusLabel(modal.data.status)} />
+              <div className="text-right shrink-0">
+                <StatusBadge status={formatStatusLabel(viewingDetails.status)} />
               </div>
             </div>
-            {modal.data.performance && (
-              <div className="grid grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <p className="text-2xl font-black text-blue-600">{modal.data.performance.totalCases || 0}</p>
-                  <p className="text-xs text-gray-600">Active Cases</p>
+
+            {loadingDetails ? (
+              <div className="space-y-4 animate-pulse">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-20 rounded-xl bg-gray-100/80 border border-gray-100" />
+                  ))}
                 </div>
-                <div className="text-center p-3 bg-red-50 rounded-lg">
-                  <p className="text-2xl font-black text-red-600">{modal.data.performance.pendingCases || 0}</p>
-                  <p className="text-xs text-gray-600">Overdue</p>
+                <div className="h-10 rounded-xl bg-gray-100/80 border border-gray-100" />
+                <div className="space-y-3 max-h-[350px]">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-28 rounded-xl bg-gray-100/80 border border-gray-100" />
+                  ))}
                 </div>
-                <div className="text-center p-3 bg-green-50 rounded-lg">
-                  <p className="text-2xl font-black text-green-600">{modal.data.performance.completedCases || 0}</p>
-                  <p className="text-xs text-gray-600">Completed</p>
-                </div>
-                <div className="text-center p-3 bg-purple-50 rounded-lg">
-                  <p className="text-2xl font-black text-purple-600">{parseFloat(modal.data.performance.completionRate || 0).toFixed(0)}%</p>
-                  <p className="text-xs text-gray-600">Performance</p>
+                <div className="flex items-center justify-center py-2 gap-2 text-gray-400">
+                  <Loader2 size={18} className="animate-spin" />
+                  <span className="text-sm font-semibold">Loading assigned cases…</span>
                 </div>
               </div>
+            ) : (
+              <>
+                {(viewingDetails.metrics || viewingDetails.performance) && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      {
+                        label: "Total cases",
+                        value: viewingDetails.metrics?.totalCases ?? viewingDetails.performance?.totalCases ?? 0,
+                        className: "bg-blue-50/80 border-blue-100 text-blue-700",
+                      },
+                      {
+                        label: "In progress",
+                        value: viewingDetails.metrics?.inProgressCases ?? viewingDetails.performance?.inProgressCases ?? 0,
+                        className: "bg-indigo-50/80 border-indigo-100 text-indigo-700",
+                      },
+                      {
+                        label: "Overdue",
+                        value: viewingDetails.metrics?.overdueCases ?? viewingDetails.performance?.overdueCases ?? 0,
+                        className: "bg-red-50/80 border-red-100 text-red-700",
+                      },
+                      {
+                        label: "Completion",
+                        value: `${parseFloat(viewingDetails.metrics?.completionRate ?? viewingDetails.performance?.completionRate ?? 0).toFixed(0)}%`,
+                        className: "bg-emerald-50/80 border-emerald-100 text-emerald-700",
+                      },
+                    ].map((stat) => (
+                      <div
+                        key={stat.label}
+                        className={`text-center p-3 rounded-xl border backdrop-blur-sm ${stat.className}`}
+                      >
+                        <p className="text-2xl font-black">{stat.value}</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wide opacity-80">{stat.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(viewingDetails.candidates?.length > 0 ||
+                  (viewingDetails.metrics?.assignedCandidates ?? 0) > 0) && (
+                  <div className="rounded-xl border border-violet-100/80 bg-violet-50/40 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-violet-800 mb-3">
+                      Assigned candidates (
+                      {viewingDetails.candidates?.length ??
+                        viewingDetails.metrics?.assignedCandidates ??
+                        0}
+                      )
+                    </p>
+                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                      {(viewingDetails.candidates || []).map((cand) => (
+                        <div
+                          key={cand.id}
+                          className="inline-flex flex-col px-3 py-2 rounded-xl bg-white border border-violet-100 shadow-sm min-w-[140px]"
+                        >
+                          <span className="text-xs font-black text-secondary">
+                            {candidateDisplayName(cand)}
+                          </span>
+                          <span className="text-[10px] text-gray-500 truncate max-w-[200px]">
+                            {cand.email || "—"}
+                          </span>
+                          {cand.caseCount > 1 && (
+                            <span className="text-[10px] font-bold text-violet-600 mt-0.5">
+                              {cand.caseCount} cases
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-gray-100/80 bg-white/60 backdrop-blur-sm p-3">
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <input
+                      type="search"
+                      value={caseSearch}
+                      onChange={(e) => setCaseSearch(e.target.value)}
+                      placeholder="Search by candidate, case ID, visa type, or status…"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white/80 text-sm font-medium text-secondary placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
+                    />
+                  </div>
+                </div>
+
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                  Assigned cases
+                </p>
+
+                {(() => {
+                  const q = caseSearch.trim().toLowerCase();
+                  const allCases = viewingDetails.cases || [];
+                  const filteredCases = !q
+                    ? allCases
+                    : allCases.filter((c) => {
+                        const candidateName = candidateDisplayName(c.candidate).toLowerCase();
+                        const email = (c.candidate?.email || "").toLowerCase();
+                        const caseRef = (c.caseId || "").toLowerCase();
+                        const visa = (c.visaType?.name || "").toLowerCase();
+                        const status = (c.status || "").toLowerCase();
+                        const stage = (c.caseStage || "").toLowerCase();
+                        return (
+                          candidateName.includes(q) ||
+                          email.includes(q) ||
+                          caseRef.includes(q) ||
+                          visa.includes(q) ||
+                          status.includes(q) ||
+                          stage.includes(q)
+                        );
+                      });
+
+                  if (filteredCases.length === 0) {
+                    return (
+                      <div className="py-10 text-center rounded-xl border border-dashed border-gray-200 bg-gray-50/50">
+                        <p className="text-sm font-bold text-gray-500">
+                          {allCases.length === 0
+                            ? "No active cases assigned to this caseworker."
+                            : "No cases match your search."}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="max-h-[350px] overflow-y-auto pr-1 space-y-3">
+                      {filteredCases.map((c) => {
+                        const finished = ["Completed", "Approved", "Closed"].includes(c.status);
+                        const showOverdue =
+                          c.isOverdue ||
+                          (c.targetSubmissionDate &&
+                            new Date(c.targetSubmissionDate) < new Date() &&
+                            !finished);
+                        const progress = getStageProgress(
+                          c.caseStage,
+                          showOverdue ? "Overdue" : c.status,
+                        );
+
+                        return (
+                          <div
+                            key={c.id}
+                            className="p-4 rounded-xl border border-gray-100/90 bg-white/75 backdrop-blur-sm shadow-sm hover:border-primary/20 hover:shadow-md transition-all"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-secondary/10 text-secondary text-xs font-black tracking-wide">
+                                {c.caseId || `CASE-${c.id}`}
+                              </span>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {showOverdue && (
+                                  <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-red-100 text-red-700 border border-red-200">
+                                    Overdue
+                                  </span>
+                                )}
+                                <span className="text-[11px] font-bold text-gray-500">
+                                  Due {formatTargetDate(c.targetSubmissionDate)}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="mb-3">
+                              <p className="text-sm font-semibold text-secondary">
+                                {candidateDisplayName(c.candidate)}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                {c.candidate?.email || "—"}
+                              </p>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                              <span className="text-xs font-bold text-gray-600">
+                                {c.visaType?.name || "Visa not set"}
+                              </span>
+                              <span className="text-[11px] font-black text-gray-500 uppercase tracking-wide">
+                                {progress.label}
+                              </span>
+                            </div>
+
+                            <div className="h-2 rounded-full bg-gray-100 overflow-hidden border border-gray-100/80">
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${progress.percent}%`,
+                                  backgroundColor: progress.color,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </>
             )}
           </div>
         )}

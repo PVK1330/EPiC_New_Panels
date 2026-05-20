@@ -15,7 +15,8 @@ import {
   FiCheckCircle,
   FiMenu,
   FiX,
-  FiFileText
+  FiFileText,
+  FiImage,
 } from "react-icons/fi";
 import {
   RiShieldFlashLine,
@@ -41,6 +42,7 @@ import CategorySettings from "../../components/admin/settings/CategorySettings";
 import EmailTemplateEditor from "../../components/admin/settings/EmailTemplateEditor";
 import EmailTemplatePreview from "../../components/admin/settings/EmailTemplatePreview";
 import DocumentChecklistSettings from "../../components/admin/settings/DocumentChecklistSettings";
+import OrganisationSettings from "../../components/admin/settings/OrganisationSettings";
 import RolesAndPermissionsPanel from "../../components/permissions/RolesAndPermissionsPanel";
 import UsersAndRolesPanel from "../../components/permissions/UsersAndRolesPanel";
 import { TAB_IDS, TABS } from "../../components/permissions/permissionsData";
@@ -57,6 +59,8 @@ import {
   createVisaType,
   updateVisaType,
   deleteVisaType,
+  uploadCclTemplate,
+  deleteCclTemplate,
   getPetitionTypes,
   createPetitionType,
   updatePetitionType,
@@ -77,10 +81,13 @@ import {
   getSmtpSettings,
   updateSmtpSettings,
   testSmtpSettings,
+  getOrganisation,
+  uploadOrganisationLogo,
 } from "../../services/settingsService";
 
 const CONFIG_TABS = [
   { id: "account", label: "Account & Profile", icon: <FiUser />, color: "text-blue-500", bg: "bg-blue-50" },
+  { id: "organisation", label: "Organisation", icon: <FiImage />, color: "text-violet-500", bg: "bg-violet-50" },
   { id: "visa", label: "Visa & Petitions", icon: <FiLayers />, color: "text-indigo-500", bg: "bg-indigo-50" },
   { id: "checklist", label: "Document Checklists", icon: <FiFileText />, color: "text-teal-500", bg: "bg-teal-50" },
   { id: "categories", label: "Case Categories", icon: <FiFolder />, color: "text-emerald-500", bg: "bg-emerald-50" },
@@ -125,7 +132,10 @@ export default function AdminSettings() {
   const [categories, setCategories] = useState([]);
   const [emailTemplates, setEmailTemplates] = useState([]);
   const [slaRules, setSlaRules] = useState([]);
-  const [paymentConfig, setPaymentConfig] = useState({ currency: "GBP", pay_bank: true, pay_card: true, pay_cheque: false, bank_details: "Account Name: ElitePic Global Ltd\nSort Code: 20-04-15\nAccount No: 88291044\nBank: Barclays Bank PLC", invoice_prefix: "INV-", stripe_public_key: "", stripe_secret_key: "", paypal_client_id: "", paypal_secret: "", razorpay_key_id: "", razorpay_key_secret: "", active_gateway: "stripe" });
+  const [paymentConfig, setPaymentConfig] = useState({ currency: "GBP", pay_bank: true, pay_card: true, pay_cheque: false, bank_details: "Account Name: ElitePic Global Ltd\nSort Code: 20-04-15\nAccount No: 88291044\nBank: Barclays Bank PLC", invoice_prefix: "INV-", stripe_public_key: "", stripe_secret_key: "", stripe_webhook_secret: "", paypal_client_id: "", paypal_secret: "", razorpay_key_id: "", razorpay_key_secret: "", active_gateway: "stripe" });
+  const [organisation, setOrganisation] = useState(null);
+  const [orgLogoFile, setOrgLogoFile] = useState(null);
+  const [savingOrgLogo, setSavingOrgLogo] = useState(false);
   const [smtpForm, setSmtpForm] = useState({
     enabled: false,
     host: "",
@@ -209,7 +219,12 @@ export default function AdminSettings() {
         setEmailTemplates(res.data?.data?.templates ?? []);
       } else if (configTab === "payment") {
         const res = await getPaymentSetting();
-        if (res.data?.data) setPaymentConfig(res.data.data);
+        const raw = res.data?.data?.setting ?? res.data?.data;
+        if (raw) setPaymentConfig((prev) => ({ ...prev, ...raw }));
+      } else if (configTab === "organisation") {
+        const res = await getOrganisation();
+        setOrganisation(res.data?.data?.organisation ?? null);
+        setOrgLogoFile(null);
       } else if (configTab === "smtp") {
         const res = await getSmtpSettings();
         const d = res.data?.data || {};
@@ -319,6 +334,48 @@ export default function AdminSettings() {
     } catch (e) { setPetitionFormError(getApiError(e)); }
   };
 
+  const CCL_TEMPLATE_MAX_BYTES = 5 * 1024 * 1024;
+
+  const handleUploadCclTemplate = async (visaId, file) => {
+    if (!file) return;
+    if (file.size > CCL_TEMPLATE_MAX_BYTES) {
+      showToast({ variant: "danger", message: "File must be 5 MB or smaller." });
+      return;
+    }
+    const name = file.name.toLowerCase();
+    if (!name.endsWith(".docx") && !name.endsWith(".pdf")) {
+      showToast({ variant: "danger", message: "Only .docx and .pdf files are allowed." });
+      return;
+    }
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      await uploadCclTemplate(visaId, formData);
+      showToast({ message: "CCL template uploaded." });
+      await loadData();
+    } catch (e) {
+      showToast({ variant: "danger", message: getApiError(e) });
+    }
+  };
+
+  const handleDeleteCclTemplate = async (visaId) => {
+    const result = await Swal.fire({
+      title: "Remove CCL template?",
+      text: "Cases for this visa type will use the default template until a new one is uploaded.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Remove",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      await deleteCclTemplate(visaId);
+      showToast({ message: "CCL template removed." });
+      await loadData();
+    } catch (e) {
+      showToast({ variant: "danger", message: getApiError(e) });
+    }
+  };
+
   // Department Handlers
   const submitDepartmentForm = async (e) => {
     e.preventDefault();
@@ -375,6 +432,25 @@ export default function AdminSettings() {
       showToast({ message: "Payment configuration updated." });
     } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
     finally { setSaving(false); }
+  };
+
+  const handleOrganisationLogoSave = async () => {
+    if (!orgLogoFile) return;
+    setSavingOrgLogo(true);
+    try {
+      const res = await uploadOrganisationLogo(orgLogoFile);
+      const org = res.data?.data?.organisation;
+      if (org) {
+        setOrganisation((prev) => ({ ...(prev || {}), ...org }));
+        setOrgLogoFile(null);
+        window.dispatchEvent(new CustomEvent("organisation-branding-updated"));
+      }
+      showToast({ message: "Organisation logo uploaded." });
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSavingOrgLogo(false);
+    }
   };
 
   const handleSmtpSave = async () => {
@@ -557,6 +633,8 @@ export default function AdminSettings() {
                 onAddVisa={() => { setVisaModalMode("add"); setVisaFormName(""); setVisaModalOpen(true); }}
                 onEditVisa={(id) => { const v = visaTypes.find(x => x.id === id); setVisaModalMode("edit"); setEditingVisaId(id); setVisaFormName(v.name); setVisaModalOpen(true); }}
                 onDeleteVisa={async (id) => { const r = await Swal.fire({ title: "Delete Visa Type?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteVisaType(id); loadData(); } }}
+                onUploadCclTemplate={handleUploadCclTemplate}
+                onDeleteCclTemplate={handleDeleteCclTemplate}
                 onAddPetition={() => { setPetitionModalMode("add"); setPetitionFormName(""); setPetitionModalOpen(true); }}
                 onEditPetition={(id) => { const p = petitionTypes.find(x => x.id === id); setPetitionModalMode("edit"); setEditingPetitionId(id); setPetitionFormName(p.name); setPetitionModalOpen(true); }}
                 onDeletePetition={async (id) => { const r = await Swal.fire({ title: "Delete Petition Type?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deletePetitionType(id); loadData(); } }}
@@ -666,6 +744,18 @@ export default function AdminSettings() {
                 onToggle={(key) => setPaymentConfig({...paymentConfig, [key]: !paymentConfig[key]})}
                 onSave={handlePaymentSave}
                 saving={saving}
+                loading={loading}
+                error={error}
+              />
+            )}
+
+            {configTab === "organisation" && (
+              <OrganisationSettings
+                organisation={organisation}
+                logoFile={orgLogoFile}
+                onLogoFileChange={setOrgLogoFile}
+                onSave={handleOrganisationLogoSave}
+                saving={savingOrgLogo}
                 loading={loading}
                 error={error}
               />

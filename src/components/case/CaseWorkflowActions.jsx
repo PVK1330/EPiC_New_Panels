@@ -152,16 +152,9 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
   const adminCanReview = isAdmin && ccl?.status === "fee_proposed";
 
   const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
-  const workflowMeta = bundle?.workflowMeta || {};
 
   return (
     <>
-      <CaseBiometricWorkflow
-        caseId={caseId}
-        workflowMeta={workflowMeta}
-        caseStage={stage}
-        onRefresh={load}
-      />
       <div className="rounded-xl border border-primary/15 bg-white p-4 space-y-3">
         <p className="text-[10px] font-black uppercase tracking-widest text-primary">
           Process actions
@@ -305,6 +298,8 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
           caseStage={stage}
           workflowState={bundle?.workflowState}
           onRefresh={load}
+          ccl={ccl}
+          paid={paid}
         />
       </div>
 

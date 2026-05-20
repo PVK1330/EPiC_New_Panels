@@ -136,7 +136,7 @@ export default function EmailSettings({
             <div>
               <h5 className="text-[11px] font-black text-secondary uppercase tracking-wider mb-1">Developer Note</h5>
               <p className="text-[11px] text-secondary/70 leading-relaxed italic">
-                You can use dynamic placeholders like {"{{first_name}}"}, {"{{case_id}}"}, and {"{{payment_link}}"} in your templates. These will be replaced automatically by the system.
+                Workflow emails support placeholders such as {"{{client_name}}"}, {"{{case_ref}}"}, {"{{visa_type}}"}, {"{{firm_name}}"}, {"{{biometrics_date}}"}, {"{{amount}}"}, {"{{caseworker_name}}"}, and {"{{employer_name}}"} — replaced automatically when a case advances.
               </p>
             </div>
           </div>

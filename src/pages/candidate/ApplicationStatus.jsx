@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Check,
   Loader2,
+  MapPin,
 } from "lucide-react";
 import useCandidate from "../../hooks/useCandidate";
 import CaseWorkflowProgress from "../../components/case/CaseWorkflowProgress";
@@ -61,12 +62,21 @@ const ApplicationStatus = () => {
   const dcsStatus = myApplication?._relatedData?.dataCaptureSubmission?.status;
   const cclStatus = myApplication?._relatedData?.cclRecord?.status;
   const workflowState = caseData.workflowState;
+  const visaPortalSubmitted = Boolean(workflowState?.visaPortal?.submittedAt);
+  const pastBiometricsAvailabilityWindow = [
+    "biometrics_confirmation_sent",
+    "documents_uploaded",
+    "awaiting_decision",
+    "decision_communicated",
+    "case_closure",
+  ].includes(stageId);
   const draftReviewPending =
     stageId === "draft_application_review" &&
     workflowState?.draftReview?.confirmed === null;
   const biometricAvailabilityNeeded =
-    ["application_submitted", "biometrics_booked"].includes(stageId) &&
-    !workflowState?.biometrics?.availability;
+    !pastBiometricsAvailabilityWindow &&
+    !workflowState?.biometrics?.availability &&
+    (["application_submitted", "biometrics_booked"].includes(stageId) || visaPortalSubmitted);
 
   const PENDING_ACTIONS = [
     ...(draftReviewPending
@@ -119,7 +129,7 @@ const ApplicationStatus = () => {
       : []),
     ...(cclStatus !== "signed" &&
     ["Approved", "Paid"].includes(caseData.amountStatus) &&
-    ["ccl_issued", "ccl_payment_received"].includes(stageId) &&
+    ["ccl_issued", "ccl_payment_received", "client_care_letter"].includes(stageId) &&
     !["paid", "Paid"].includes(caseData.amountStatus) &&
     Number(caseData.totalAmount) > 0 &&
     (Number(caseData.paidAmount) || 0) < Number(caseData.totalAmount) - 0.02
@@ -230,6 +240,27 @@ const ApplicationStatus = () => {
 
       {activeTab === "status" && (
         <div className="space-y-6 max-w-4xl">
+          {biometricAvailabilityNeeded && (
+            <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-white p-4 md:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
+                <MapPin size={22} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-black text-secondary">Biometrics — we need your availability</p>
+                <p className="text-xs font-bold text-gray-600 mt-1 leading-relaxed">
+                  Your application is on the visa portal. Before your caseworker can confirm your biometrics
+                  appointment, please tell us your preferred <strong>location</strong> and when you are{" "}
+                  <strong>available</strong> (date and time window).
+                </p>
+              </div>
+              <Link
+                to="/candidate/biometric-availability"
+                className="shrink-0 inline-flex justify-center rounded-xl bg-secondary px-4 py-2.5 text-xs font-black text-white hover:opacity-95 shadow-md shadow-secondary/20"
+              >
+                Open form
+              </Link>
+            </div>
+          )}
           <div className="rounded-2xl border border-gray-100 bg-white p-5 md:p-8 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-xl border border-secondary/20 bg-gradient-to-r from-secondary/[0.08] to-primary/[0.06] mb-6">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white border border-gray-100 shadow-sm text-2xl">
