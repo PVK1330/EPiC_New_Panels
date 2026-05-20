@@ -23,6 +23,8 @@ import {
   RiBuilding4Fill,
   RiNotification3Line,
   RiNotification3Fill,
+  RiMegaphoneLine,
+  RiMegaphoneFill,
 } from "react-icons/ri";
 import eliteLogo from "../../assets/elitepic_logo.png";
 
@@ -53,6 +55,12 @@ const navSections = [
         path: "/superadmin/organisations",
         icon: RiBuilding4Line,
         iconActive: RiBuilding4Fill,
+      },
+      {
+        name: "Announcements",
+        path: "/superadmin/announcements",
+        icon: RiMegaphoneLine,
+        iconActive: RiMegaphoneFill,
       },
     ],
   },

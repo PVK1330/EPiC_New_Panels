@@ -34,6 +34,7 @@ import {
   RiHistoryLine,
   RiInboxLine,
   RiMoneyPoundCircleLine,
+  RiMegaphoneLine,
 } from "react-icons/ri";
 import eliteLogo from "../../assets/elitepic_logo.png";
 
@@ -75,6 +76,7 @@ const navSections = [
   {
     label: "System",
     items: [
+      { to: "/admin/announcements", label: "Announcements", icon: RiMegaphoneLine, moduleKey: "admin.dashboard" },
       { to: "/admin/notifications", label: "Notifications", icon: RiNotification2Line, moduleKey: "admin.dashboard" },
       { to: "/admin/messages",      label: "Messages",      icon: RiMessage2Line,      moduleKey: "admin.messages" },
       { to: "/admin/audit-logs",    label: "Audit Log",     icon: RiHistoryLine,       moduleKey: "admin.audit-logs" },

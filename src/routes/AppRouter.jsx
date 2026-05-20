@@ -65,6 +65,7 @@ import AdminCalendar from '../pages/admin/AdminCalendar';
 import AdminLicenceApplications from '../pages/admin/AdminLicenceApplications';
 import AdminEnquiryInbox from '../pages/admin/AdminEnquiryInbox';
 import AdminCclFeeApprovals from '../pages/admin/AdminCclFeeApprovals';
+import AdminAnnouncements from '../pages/admin/AdminAnnouncements';
 
 import BusinessDashboard from '../pages/business/BusinessDashboard';
 import BussinessProfile from '../pages/business/BusinessProfile'; import CandidateCalendar from '../pages/candidate/CandidateCalendar';
@@ -105,6 +106,7 @@ const SuperadminTeam = lazy(() => import('../pages/superadmin/SuperadminTeam'));
 const SuperadminFrontend = lazy(() => import('../pages/superadmin/SuperadminFrontend'));
 const SuperadminProfile = lazy(() => import('../pages/superadmin/SuperadminProfile'));
 const SuperadminNotifications = lazy(() => import('../pages/superadmin/SuperadminNotifications'));
+const SuperadminAnnouncements = lazy(() => import('../pages/superadmin/SuperadminAnnouncements'));
 
 
 import NotFoundPage from '../pages/NotFoundPage';
@@ -183,6 +185,7 @@ const AppRouter = () => {
           <Route path="caseworkers" element={<AdminCaseworkers />} />
           <Route path="finance" element={<AdminFinance />} />
           <Route path="reports" element={<AdminReports />} />
+          <Route path="announcements" element={<AdminAnnouncements />} />
           <Route path="notifications" element={<AdminNotifications />} />
           <Route path="audit-logs" element={<AdminAuditLogs />} />
           <Route path="settings" element={<AdminSettings />} />
@@ -319,6 +322,7 @@ const AppRouter = () => {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<SuperadminDashboard />} />
           <Route path="organisations" element={<SuperadminOrganisations />} />
+          <Route path="announcements" element={<SuperadminAnnouncements />} />
           <Route path="plans" element={<SuperadminPlans />} />
           <Route path="billing" element={<SuperadminBilling />} />
           <Route path="audit-log" element={<SuperadminAuditLog />} />
