@@ -573,6 +573,10 @@ function CaseFormModal({
   );
 }
 
+function getApiErrorMessage(error, fallback) {
+  return error?.response?.data?.message || error?.message || fallback;
+}
+
 export default function AdminCases() {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -896,9 +900,13 @@ export default function AdminCases() {
     } catch (error) {
       setIsLoading(false);
       console.error("Error creating case:", error);
-      alert(
-        "Error creating case. Please ensure Candidate ID, Business ID, Visa Type, and Petition Type are provided.",
-      );
+      showToast({
+        message: getApiErrorMessage(
+          error,
+          "Error creating case. Please ensure required fields are provided.",
+        ),
+        variant: "danger",
+      });
     }
   };
 
@@ -1015,7 +1023,10 @@ export default function AdminCases() {
     } catch (error) {
       setIsLoading(false);
       console.error("Error editing case:", error);
-      alert("Error editing case.");
+      showToast({
+        message: getApiErrorMessage(error, "Failed to update case."),
+        variant: "danger",
+      });
     }
   };
 
@@ -1069,7 +1080,10 @@ export default function AdminCases() {
       setDeleteId(null);
     } catch (error) {
       console.error("Error deleting case:", error);
-      alert("Error deleting case.");
+      showToast({
+        message: getApiErrorMessage(error, "Failed to delete case."),
+        variant: "danger",
+      });
       setDeleteId(null);
     }
   };
@@ -1153,7 +1167,13 @@ export default function AdminCases() {
     } catch (error) {
       setIsLoading(false);
       console.error(`Error ${approveRejectAction}ing case:`, error);
-      alert(`Error ${approveRejectAction}ing case: ${error.message}`);
+      showToast({
+        message: getApiErrorMessage(
+          error,
+          `Failed to ${approveRejectAction} case.`,
+        ),
+        variant: "danger",
+      });
     }
   };
 
@@ -1186,7 +1206,10 @@ export default function AdminCases() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error exporting cases:", error);
-      alert("Error exporting cases.");
+      showToast({
+        message: getApiErrorMessage(error, "Failed to export cases."),
+        variant: "danger",
+      });
     }
   };
 
@@ -1535,7 +1558,6 @@ export default function AdminCases() {
             caseworkers={caseworkers}
             departments={departments}
             setFormData={setFormData}
-            setErrors={setErrors}
           />
         )}
       </AnimatePresence>
@@ -1565,7 +1587,6 @@ export default function AdminCases() {
             caseworkers={caseworkers}
             departments={departments}
             setFormData={setFormData}
-            setErrors={setErrors}
           />
         )}
       </AnimatePresence>

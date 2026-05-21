@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   RiMailLine, RiUploadCloud2Line,
   RiLoader4Line, RiCheckLine, RiErrorWarningLine,
@@ -18,12 +18,15 @@ const ConnectivityTab = () => {
   const {
     smtp, setSmtp,
     s3,   setS3,
-    loading, saving, testing, testResult,
+    loading, saving, testing, sendingTest, testResult, sendTestResult,
     markDirty,
     fetchConnectivitySettings,
     saveConnectivitySettings,
     runSmtpTest,
+    runSmtpSendTest,
   } = usePlatformConnectivity();
+
+  const [testRecipient, setTestRecipient] = useState('technoweb@gmail.com');
 
   // Fetch on mount
   useEffect(() => {
@@ -58,6 +61,25 @@ const ConnectivityTab = () => {
       toast.success('SMTP connection verified');
     } else {
       toast.error(result.error || 'SMTP connection failed');
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    const to = testRecipient.trim().toLowerCase();
+    if (!to || !to.includes('@')) {
+      toast.error('Enter a valid test recipient email');
+      return;
+    }
+    const result = await runSmtpSendTest(to);
+    if (result.ok) {
+      toast.success(result.message || `Test email sent to ${to}.`);
+    } else if (result.ownerNotified) {
+      toast.error(
+        `${result.error || 'Test email could not be sent'}. A delivery failure notice was sent to your SMTP inbox (check for "Address not found").`,
+        { duration: 12000 },
+      );
+    } else {
+      toast.error(result.error || 'Test email could not be sent');
     }
   };
 
@@ -155,10 +177,50 @@ const ConnectivityTab = () => {
               ? <><RiLoader4Line className="animate-spin inline mr-1" size={13} />Testing…</>
               : 'Test Connection'}
           </Button>
+
+          <div className="pt-2 border-t border-gray-100 space-y-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              Send real test email
+            </p>
+            <Input
+              label="Recipient"
+              value={testRecipient}
+              onChange={(e) => setTestRecipient(e.target.value)}
+              placeholder="technoweb@gmail.com"
+            />
+            {sendTestResult && (
+              <div className={`flex items-start gap-2 p-3 rounded-lg text-xs font-bold border ${
+                sendTestResult.ok
+                  ? 'bg-green-50 text-green-700 border-green-100'
+                  : 'bg-red-50 text-red-700 border-red-100'
+              }`}>
+                {sendTestResult.ok
+                  ? <RiCheckLine size={16} className="shrink-0 mt-0.5" />
+                  : <RiErrorWarningLine size={16} className="shrink-0 mt-0.5" />}
+                <span>
+                  {sendTestResult.ok
+                    ? 'Test message accepted by SMTP server. Check the recipient inbox (and spam).'
+                    : sendTestResult.ownerNotified
+                      ? `Send failed. A delivery failure notice was sent to ${sendTestResult.smtpOwnerInbox || smtp.username || 'your SMTP account'}.`
+                      : (sendTestResult.error || 'Send failed.')}
+                </span>
+              </div>
+            )}
+            <Button
+              variant="primary"
+              onClick={handleSendTestEmail}
+              disabled={sendingTest}
+              className="w-full text-[10px] font-black uppercase tracking-widest"
+            >
+              {sendingTest
+                ? <><RiLoader4Line className="animate-spin inline mr-1" size={13} />Sending…</>
+                : 'Send Test Email'}
+            </Button>
+          </div>
         </div>
 
         {/* ── S3 ───────────────────────────────────────────────────────── */}
-        <div className="p-6 bg-white rounded-xl border border-gray-100 shadow-sm space-y-6">
+        {/* <div className="p-6 bg-white rounded-xl border border-gray-100 shadow-sm space-y-6">
           <div className="flex items-center gap-3">
             <RiUploadCloud2Line className="text-primary" size={20} />
             <h4 className="text-xs font-black text-secondary uppercase tracking-widest">
@@ -199,7 +261,7 @@ const ConnectivityTab = () => {
               placeholder="https://s3.custom-provider.com"
             />
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Save */}

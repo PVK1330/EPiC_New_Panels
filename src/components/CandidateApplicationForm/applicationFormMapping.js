@@ -301,8 +301,8 @@ export function candidateRowToApplicationForm(c) {
       entryDate: formatDateForInput(app.entryDate),
       leaveDate: formatDateForInput(app.leaveDate),
       
-      // Visa & Immigration Status
-      visaType: app.visaType || "",
+      // Visa & Immigration Status (stored as CRM label e.g. "Skilled Worker")
+      visaType: crmVisaToApplication(app.visaType) || app.visaType || "",
       brpNumber: app.brpNumber || "",
       visaEndDate: formatDateForInput(app.visaEndDate),
       niNumber: app.niNumber || "",

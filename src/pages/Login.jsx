@@ -13,12 +13,15 @@ import {
   verifyTwoFactor,
 } from "../services/auth.service";
 import { getAuthUserAndToken, getDashboardRouteForUser, resolveLoginRole } from "../utils/authResponse";
+import { API_BASE_URL } from "../utils/constants";
+import { getOrganisationSlugFromHost } from "../utils/organisationHost";
 
 const VIEWS = {
   login: "login",
   register: "register",
   forgot: "forgot",
   twoFactor: "twoFactor",
+  forceReset: "forceReset",
 };
 
 const COUNTRIES = [
@@ -113,6 +116,11 @@ const Login = () => {
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
   const [pendingLogin, setPendingLogin] = useState(null);
 
+  const [resetPasswordForm, setResetPasswordForm] = useState({ password: "", confirmPassword: "" });
+  const [resetPasswordError, setResetPasswordError] = useState("");
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [pendingResetData, setPendingResetData] = useState(null);
+
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
@@ -195,8 +203,16 @@ const Login = () => {
           role,
           organisation_id: userData.organisation_id ?? null,
         };
-        dispatch(setCredentials({ user, token: jwtToken, allowedModules }));
-        navigate(getDashboardRouteForUser(user));
+        
+        const forceReset = res?.data?.force_password_reset || res?.data?.data?.force_password_reset || res?.force_password_reset;
+        
+        if (forceReset) {
+          setPendingResetData({ user, token: jwtToken, allowedModules });
+          setView(VIEWS.forceReset);
+        } else {
+          dispatch(setCredentials({ user, token: jwtToken, allowedModules }));
+          navigate(getDashboardRouteForUser(user));
+        }
       }
     } catch (err) {
       setErrors({ password: err.message || "Invalid credentials" });
@@ -249,6 +265,47 @@ const Login = () => {
       setForgotError(err.message || "Failed to send reset instructions");
     } finally {
       setForgotLoading(false);
+    }
+  };
+
+  const handleForceResetSubmit = async (e) => {
+    e.preventDefault();
+    setResetPasswordError("");
+    if (!resetPasswordForm.password || resetPasswordForm.password.length < 8) {
+      setResetPasswordError("Password must be at least 8 characters");
+      return;
+    }
+    if (resetPasswordForm.password !== resetPasswordForm.confirmPassword) {
+      setResetPasswordError("Passwords do not match");
+      return;
+    }
+    setResetPasswordLoading(true);
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${pendingResetData.token}`
+      };
+      const orgSlug = getOrganisationSlugFromHost();
+      if (orgSlug) {
+        headers['X-Organisation-Slug'] = orgSlug;
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/user/change-password`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ new_password: resetPasswordForm.password })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || "Failed to update password");
+      }
+      
+      dispatch(setCredentials(pendingResetData));
+      navigate(getDashboardRouteForUser(pendingResetData.user));
+    } catch (err) {
+      setResetPasswordError(err.message || "Failed to update password");
+    } finally {
+      setResetPasswordLoading(false);
     }
   };
 
@@ -638,6 +695,59 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => setView(VIEWS.login)}
+                className="font-black text-secondary hover:text-primary hover:underline"
+              >
+                Back to sign in
+              </button>
+            </p>
+          </>
+        )}
+
+        {view === VIEWS.forceReset && (
+          <>
+            <h1 className="text-lg font-black text-secondary text-center mb-1">
+              Update Password Required
+            </h1>
+            <p className="text-center text-xs font-bold text-gray-500 mb-6">
+              Since this is your first time logging in, please update your password.
+            </p>
+            <form onSubmit={handleForceResetSubmit} className="space-y-4">
+              <Input
+                label="New Password"
+                name="reset-password"
+                type="password"
+                value={resetPasswordForm.password}
+                onChange={(e) => {
+                  setResetPasswordForm((prev) => ({ ...prev, password: e.target.value }));
+                  setResetPasswordError("");
+                }}
+                placeholder="Enter new password"
+                required
+              />
+              <Input
+                label="Confirm Password"
+                name="reset-confirm-password"
+                type="password"
+                value={resetPasswordForm.confirmPassword}
+                onChange={(e) => {
+                  setResetPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }));
+                  setResetPasswordError("");
+                }}
+                placeholder="Confirm new password"
+                error={resetPasswordError}
+                required
+              />
+              <Button type="submit" disabled={resetPasswordLoading} className="w-full">
+                {resetPasswordLoading ? "Updating…" : "Update password"}
+              </Button>
+            </form>
+            <p className="mt-5 text-center text-sm text-gray-600">
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingResetData(null);
+                  setView(VIEWS.login);
+                }}
                 className="font-black text-secondary hover:text-primary hover:underline"
               >
                 Back to sign in

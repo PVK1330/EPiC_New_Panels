@@ -3,6 +3,7 @@ import {
   getConnectivitySettings,
   updateConnectivitySettings,
   testSmtpConnection,
+  sendSmtpTestEmail,
 } from "../services/platformSettingsApi";
 
 const SMTP_DEFAULTS = {
@@ -27,7 +28,9 @@ export default function usePlatformConnectivity() {
   const [loading, setLoading]   = useState(false);
   const [saving, setSaving]     = useState(false);
   const [testing, setTesting]   = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const [testResult, setTestResult] = useState(null); // { ok, error? }
+  const [sendTestResult, setSendTestResult] = useState(null);
   const [error, setError]       = useState(null);
 
   // Dirty flags — prevent sending the mask string back to the server
@@ -114,6 +117,30 @@ export default function usePlatformConnectivity() {
     }
   }, []);
 
+  const runSmtpSendTest = useCallback(async (to) => {
+    setSendingTest(true);
+    setSendTestResult(null);
+    try {
+      const res = await sendSmtpTestEmail(to);
+      const result = res.data?.data ?? { ok: false, error: "No response" };
+      setSendTestResult(result);
+      return {
+        ok: result.ok,
+        error: result.error,
+        ownerNotified: result.ownerNotified,
+        smtpOwnerInbox: result.smtpOwnerInbox,
+        message: res.data?.message,
+        note: result.note,
+      };
+    } catch (e) {
+      const msg = e?.response?.data?.data?.error || e?.response?.data?.message || "Send test failed";
+      setSendTestResult({ ok: false, error: msg });
+      return { ok: false, error: msg };
+    } finally {
+      setSendingTest(false);
+    }
+  }, []);
+
   return {
     smtp,
     setSmtp,
@@ -122,12 +149,15 @@ export default function usePlatformConnectivity() {
     loading,
     saving,
     testing,
+    sendingTest,
     testResult,
+    sendTestResult,
     error,
     dirtyFields,
     markDirty,
     fetchConnectivitySettings,
     saveConnectivitySettings,
     runSmtpTest,
+    runSmtpSendTest,
   };
 }

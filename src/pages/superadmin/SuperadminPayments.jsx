@@ -24,7 +24,7 @@ import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/Input';
 
-const StatCard = ({ title, value, icon: Icon, trend, color, delay }) => (
+const StatCard = ({ title, value, icon: Icon, color, delay }) => (
   <motion.div
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
@@ -35,13 +35,6 @@ const StatCard = ({ title, value, icon: Icon, trend, color, delay }) => (
       <div className={`p-2 rounded-lg bg-${color === 'amber' ? 'amber-50 text-amber-600 border-amber-100' : 'primary/5 text-primary border-primary/10'} border transition-all group-hover:scale-110`}>
         <Icon size={20} />
       </div>
-      {trend && (
-        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border ${
-          trend.startsWith('+') ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'
-        }`}>
-          {trend}
-        </span>
-      )}
     </div>
     <p className="text-xs font-black text-gray-400 uppercase tracking-widest">{title}</p>
     <h3 className="text-2xl font-black text-secondary mt-1 tracking-tight group-hover:text-primary transition-colors">{value}</h3>
@@ -81,10 +74,10 @@ const SuperadminPayments = () => {
  }, [fetchTransactions, fetchGatewayStatus, fetchDashboardStats]);
 
  const stats = [
- { title: 'Gross Volume', value: `£${dashboardStats?.grossVolume || '0'}`, trend: '+12.5%', icon: RiMoneyPoundCircleLine, color: 'primary' },
- { title: 'Net Revenue', value: `£${dashboardStats?.netRevenue || '0'}`, trend: '+10.2%', icon: RiPulseLine, color: 'primary' },
- { title: 'Success Rate', value: `${dashboardStats?.successRate || '0'}%`, trend: '+0.2%', icon: RiShieldCheckLine, color: 'green' },
- { title: 'Refund Rate', value: `${dashboardStats?.refundRate || '0'}%`, trend: '-0.1%', icon: RiExchangeLine, color: 'amber' },
+    { title: 'Gross Volume', value: `£${dashboardStats?.grossVolume || '0'}`, icon: RiMoneyPoundCircleLine, color: 'primary' },
+    { title: 'Net Revenue', value: `£${dashboardStats?.netRevenue || '0'}`, icon: RiPulseLine, color: 'primary' },
+    { title: 'Success Rate', value: `${dashboardStats?.successRate || '0'}%`, icon: RiShieldCheckLine, color: 'green' },
+    { title: 'Refund Rate', value: `${dashboardStats?.refundRate || '0'}%`, icon: RiExchangeLine, color: 'amber' },
  ];
 
   const currentData = transactions.filter(t => {

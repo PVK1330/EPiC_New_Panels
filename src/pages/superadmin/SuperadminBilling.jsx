@@ -39,10 +39,10 @@ const SuperadminBilling = () => {
  }, [fetchInvoices, fetchDashboardStats]);
 
  const stats = [
- { title: 'Monthly Recurring (MRR)', value: `£${dashboardStats?.mrr || '0'}`, trend: '+12.5%', icon: RiPulseLine, color: 'primary' },
- { title: 'Annual Recurring (ARR)', value: `£${dashboardStats?.arr || '0'}`, trend: '+15.2%', icon: RiWallet3Line, color: 'secondary' },
- { title: 'Churn Rate', value: `${dashboardStats?.churnRate || '0'}%`, trend: '-0.4%', icon: RiPieChartLine, color: 'amber' },
- { title: 'Active Subscriptions', value: dashboardStats?.activeSubscriptions || '0', trend: '+5.1%', icon: RiBillLine, color: 'green' },
+ { title: 'Monthly Recurring (MRR)', value: `£${dashboardStats?.mrr || '0'}`, icon: RiPulseLine, color: 'primary' },
+ { title: 'Annual Recurring (ARR)', value: `£${dashboardStats?.arr || '0'}`, icon: RiWallet3Line, color: 'secondary' },
+ { title: 'Churn Rate', value: `${dashboardStats?.churnRate || '0'}%`, icon: RiPieChartLine, color: 'amber' },
+ { title: 'Active Subscriptions', value: dashboardStats?.activeSubscriptions || '0', icon: RiBillLine, color: 'green' },
  ];
 
  const filteredBilling = invoices.filter(item => 
@@ -133,9 +133,6 @@ const SuperadminBilling = () => {
  <p className="text-sm font-semibold text-gray-400 mb-1">{stat.title}</p>
  <div className="flex items-center">
   <span className="text-2xl font-black text-secondary tracking-tight">{stat.value}</span>
-  <span className={`ml-2 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${stat.trend.startsWith('+') ? 'text-green-600 bg-green-50 border border-green-100' : 'text-red-600 bg-red-50 border border-red-100'}`}>
-  {stat.trend}
-  </span>
  </div>
  </div>
  </motion.div>

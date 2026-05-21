@@ -180,7 +180,6 @@ export default function AdminDashboard() {
         {
           label: "Total Cases",
           value: dashboardStats.caseStats?.totalCases?.toString() || "0",
-          trend: "+12.5%",
           icon: RiFolderOpenLine,
           iconColor: "text-blue-600",
           iconBg: "bg-blue-50",
@@ -189,7 +188,6 @@ export default function AdminDashboard() {
         {
           label: "In Progress",
           value: dashboardStats.caseStats?.activeCases?.toString() || "0",
-          trend: "+5.2%",
           icon: RiSettings3Line,
           iconColor: "text-orange-500",
           iconBg: "bg-orange-50",
@@ -197,7 +195,6 @@ export default function AdminDashboard() {
         {
           label: "Delayed",
           value: dashboardStats.caseStats?.pendingCases?.toString() || "0",
-          trend: "-2.1%",
           icon: RiAlarmWarningLine,
           iconColor: "text-red-500",
           iconBg: "bg-red-50",
@@ -206,7 +203,6 @@ export default function AdminDashboard() {
         {
           label: "Completed",
           value: dashboardStats.caseStats?.completedCases?.toString() || "0",
-          trend: "+18.3%",
           icon: RiCheckLine,
           iconColor: "text-green-600",
           iconBg: "bg-green-50",
@@ -214,7 +210,6 @@ export default function AdminDashboard() {
         {
           label: "Caseworkers",
           value: dashboardStats.userStats?.totalCaseworkers?.toString() || "0",
-          trend: "0%",
           icon: RiUserLine,
           iconColor: "text-purple-600",
           iconBg: "bg-purple-50",
@@ -223,7 +218,6 @@ export default function AdminDashboard() {
         {
           label: "Revenue",
           value: `£${(dashboardStats.financeStats?.totalRevenue || 0).toLocaleString()}`,
-          trend: "+10.1%",
           icon: RiMoneyDollarCircleLine,
           iconColor: "text-yellow-600",
           iconBg: "bg-yellow-50",
@@ -232,7 +226,6 @@ export default function AdminDashboard() {
         {
           label: "Visa Alerts",
           value: (dashboardStats.caseStats?.visaExpiryAlerts || 0).toString(),
-          trend: "+3",
           icon: RiErrorWarningLine,
           iconColor: "text-red-500",
           iconBg: "bg-red-50",
@@ -240,7 +233,6 @@ export default function AdminDashboard() {
         {
           label: "Sponsor Alerts",
           value: (dashboardStats.caseStats?.sponsorExpiryAlerts || 0).toString(),
-          trend: "+1",
           icon: RiBuildingLine,
           iconColor: "text-orange-500",
           iconBg: "bg-orange-50",
@@ -305,12 +297,6 @@ export default function AdminDashboard() {
                 </p>
                 <div className="mt-3 flex items-end gap-2">
                   <span className="text-2xl font-black text-secondary tracking-tight leading-none">{card.value}</span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded mb-0.5 ${
-                    card.trend.startsWith('+') ? 'bg-green-50 text-green-700' : 
-                    card.trend.startsWith('-') ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-500'
-                  }`}>
-                    {card.trend}
-                  </span>
                 </div>
                 {card.to && (
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left rounded-b-xl" />

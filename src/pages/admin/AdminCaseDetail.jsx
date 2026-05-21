@@ -233,15 +233,34 @@ const AdminCaseDetail = () => {
   // Map tasks from hook to component-expected shape
   const mappedTasks = useMemo(
     () =>
-      tasks.map((t) => ({
-        id: t.id,
-        title: t.title || "Untitled task",
-        status: t.status || "pending",
-        priority: t.priority || "medium",
-        due: t.due_date || null,
-        assignee: t.assigned_to || null,
-        description: t.description || "",
-      })),
+      tasks.map((t) => {
+        let priorityClass = "bg-gray-100 text-gray-800";
+        if (t.priority?.toLowerCase() === "high") priorityClass = "bg-orange-100 text-orange-800";
+        if (t.priority?.toLowerCase() === "critical") priorityClass = "bg-red-100 text-red-800";
+        if (t.priority?.toLowerCase() === "medium") priorityClass = "bg-amber-100 text-amber-800";
+        if (t.priority?.toLowerCase() === "low") priorityClass = "bg-blue-100 text-blue-800";
+
+        let statusClass = "bg-gray-100 text-gray-600";
+        if (t.status?.toLowerCase() === "done" || t.status?.toLowerCase() === "completed") statusClass = "bg-green-100 text-green-800";
+        if (t.status?.toLowerCase() === "in progress" || t.status?.toLowerCase() === "in-progress") statusClass = "bg-amber-100 text-amber-800";
+        if (t.status?.toLowerCase() === "overdue") statusClass = "bg-red-100 text-red-800";
+
+        let dueClass = "text-gray-500";
+        if (t.due_date && new Date(t.due_date) < new Date() && t.status?.toLowerCase() !== "done" && t.status?.toLowerCase() !== "completed") dueClass = "text-red-500 font-bold";
+
+        return {
+          id: t.id,
+          task: t.title || "Untitled task",
+          status: t.status || "pending",
+          statusClass,
+          priority: t.priority || "medium",
+          priorityClass,
+          due: t.due_date ? new Date(t.due_date).toISOString().split('T')[0] : "N/A",
+          dueClass,
+          assigned: t.assigned_to_name || "Unassigned",
+          description: t.description || "",
+        };
+      }),
     [tasks]
   );
 

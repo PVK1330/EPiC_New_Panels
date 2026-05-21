@@ -9,3 +9,15 @@ export const getAllChecklists = (params = {}) => api.get('/api/admin/document-ch
 export const createChecklistItem = (data) => api.post('/api/admin/document-checklists', data);
 export const updateChecklistItem = (id, data) => api.put(`/api/admin/document-checklists/${id}`, data);
 export const deleteChecklistItem = (id) => api.delete(`/api/admin/document-checklists/${id}`);
+
+export const initializeCaseChecklist = (caseId) =>
+  api.post(`/api/caseworker/documents/checklist/case/${caseId}/initialize`);
+
+export const createCaseChecklistItem = (caseId, data) =>
+  api.post(`/api/caseworker/documents/checklist/case/${caseId}/items`, data);
+
+export const updateCaseChecklistItem = (id, data) =>
+  api.put(`/api/caseworker/documents/checklist/items/${id}`, data);
+
+export const deleteCaseChecklistItem = (id) =>
+  api.delete(`/api/caseworker/documents/checklist/items/${id}`);

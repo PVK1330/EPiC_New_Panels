@@ -227,13 +227,44 @@ const DATE_FIELDS = [
   "visaEndDate",
 ];
 
-/** Replace empty strings with null for every date field so PostgreSQL never
- *  receives the literal string "" or "Invalid date". */
+/** PostgreSQL ENUM columns reject empty strings — must be null or a valid value. */
+const ENUM_FIELDS = [
+  "applicationType",
+  "passportAvailable",
+  "ukLicense",
+  "medicalTreatment",
+  "sameNationality",
+  "parent2SameNationality",
+  "illegalEntry",
+  "overstayed",
+  "breach",
+  "falseInfo",
+  "otherBreach",
+  "refusedVisa",
+  "refusedEntry",
+  "refusedPermission",
+  "refusedAsylum",
+  "deported",
+  "removed",
+  "requiredToLeave",
+  "banned",
+  "visitedOther",
+  "sponsored",
+  "englishProof",
+];
+
+/** Replace empty strings with null for date/enum fields before API calls. */
 function sanitizeForApi(payload) {
   const out = { ...payload };
   for (const key of DATE_FIELDS) {
     const v = out[key];
     if (!v || String(v).trim() === "") {
+      out[key] = null;
+    }
+  }
+  for (const key of ENUM_FIELDS) {
+    const v = out[key];
+    if (v === null || v === undefined || String(v).trim() === "") {
       out[key] = null;
     }
   }

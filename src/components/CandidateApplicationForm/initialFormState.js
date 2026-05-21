@@ -200,6 +200,7 @@ export function getInitialApplicationFormData() {
     niNumber: "",
     sponsored: "",
     englishProof: "",
+    caseworkerId: "",
     /** { [customFieldId]: string } — values for admin-defined fields */
     customResponses: {},
   };

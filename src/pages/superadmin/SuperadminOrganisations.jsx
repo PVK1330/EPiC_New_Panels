@@ -19,10 +19,9 @@ import TableActionButton from '../../components/common/TableActionButton';
 import {
   fetchOrganisations,
   fetchOrganisationById,
-  createOrganisation,
+  createOrganisationWithAdmin,
   updateOrganisation,
   deleteOrganisation,
-  createOrganisationAdmin,
   impersonateOrganisation,
 } from '../../services/superadminOrganisation.service';
 import { getOrganisationSubdomainLabel } from '../../utils/organisationHost';
@@ -95,46 +94,64 @@ const SuperadminOrganisations = () => {
     if (!data.adminFirstName?.trim() || !data.adminLastName?.trim()) {
       throw new Error('Administrator first and last name are required');
     }
-    const orgRes = await createOrganisation({
+
+    const res = await createOrganisationWithAdmin({
       name: data.name.trim(),
       slug: data.slug?.trim() || undefined,
       primaryEmail: data.primaryEmail.trim(),
       country: data.country?.trim() || null,
       plan_id: data.plan_id ? parseInt(data.plan_id, 10) : undefined,
       status: 'trial',
+      adminEmail: data.adminEmail.trim().toLowerCase(),
+      adminFirstName: data.adminFirstName.trim(),
+      adminLastName: data.adminLastName.trim(),
+      adminCountryCode: (data.adminCountryCode || '+44').trim(),
+      adminMobile: String(data.adminMobile || '').replace(/\s/g, '') || '0000000001',
     });
-    const created = orgRes.data?.data?.organisation ?? orgRes.data?.organisation;
-    if (!created?.id) {
-      throw new Error(orgRes.data?.message || 'Organisation create failed');
-    }
 
-    let adminRes;
-    try {
-      adminRes = await createOrganisationAdmin(created.id, {
-        email: data.adminEmail.trim().toLowerCase(),
-        first_name: data.adminFirstName.trim(),
-        last_name: data.adminLastName.trim(),
-        country_code: (data.adminCountryCode || '+44').trim(),
-        mobile: String(data.adminMobile || '').replace(/\s/g, '') || '0000000001',
-      });
-    } catch (adminErr) {
-      const adminErrMsg = adminErr?.response?.data?.message || adminErr?.message || 'Admin creation failed';
-      toast.success(`Organisation "${created.name}" created successfully.`, { duration: 5000 });
-      toast.error(`Admin account failed: ${adminErrMsg}`, { duration: 10000 });
-      await loadOrgs();
-      return;
-    }
+    const payload = res.data?.data ?? res.data;
+    const inner = payload;
+    const apiMessage = res.data?.message;
 
-    const inner = adminRes.data?.data ?? adminRes.data;
+    if (inner?.email_sent === false) {
+      const errDetail = inner?.email_error || "unknown";
+      console.warn("[createOrg] Welcome email not sent:", errDetail, inner);
+    }
     const tempPw = inner?.temporary_password;
+    const emailSent = inner?.email_sent === true;
+    const emailError = inner?.email_error;
+    const ownerNotified = inner?.owner_notified === true;
 
-    if (tempPw) {
+    if (emailSent) {
+      toast.success(
+        `Organisation created. Welcome email sent to ${data.adminEmail.trim().toLowerCase()}.`,
+        { duration: 8000 },
+      );
+    } else if (tempPw) {
       toast.success(
         `Organisation created.\n\nAdmin login:\nEmail: ${data.adminEmail.trim().toLowerCase()}\nPassword: ${tempPw}`,
-        { duration: 20000 }
+        { duration: 20000 },
+      );
+      toast.error(
+        emailError === "mail_not_configured"
+          ? "SMTP is not configured. Set Superadmin → Settings → Connectivity (SMTP), or EMAIL_USER/EMAIL_PASS in .env."
+          : ownerNotified
+            ? `Welcome email could not be delivered${emailError ? ` (${emailError})` : ""}. A failure notice was sent to your SMTP inbox — check ${data.adminEmail.trim().toLowerCase()} and share the password above if needed.`
+            : `Welcome email was not sent${emailError ? `: ${emailError}` : ""}. Share the password above manually.`,
+        { duration: 12000 },
       );
     } else {
-      toast.success(`Organisation and admin created. Login details sent to ${data.adminEmail.trim().toLowerCase()}.`);
+      toast.success(apiMessage || `Organisation and admin created.`);
+      if (!emailSent) {
+        toast.error(
+          emailError === "mail_not_configured"
+            ? "SMTP not configured — admin could not receive credentials by email."
+            : ownerNotified
+              ? `Welcome email failed${emailError ? `: ${emailError}` : ""}. A delivery failure notice was sent to your SMTP inbox.`
+              : `Welcome email failed${emailError ? `: ${emailError}` : ""}.`,
+          { duration: 10000 },
+        );
+      }
     }
     await loadOrgs();
   };
@@ -160,7 +177,7 @@ const SuperadminOrganisations = () => {
     setActionLoading(true);
     try {
       await deleteOrganisation(selectedOrg.id);
-      toast.success('Organisation permanently deleted');
+      toast.success('Organisation deleted. You can recreate it with the same admin email/mobile.');
       await loadOrgs();
       setIsDeleteModalOpen(false);
     } catch (e) {

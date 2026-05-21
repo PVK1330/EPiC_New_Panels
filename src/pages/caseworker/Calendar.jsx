@@ -4,7 +4,8 @@ import MicrosoftConnect from "../../components/MicrosoftConnect";
 import CreateMeetingModal from "../../components/CreateMeetingModal";
 import { getUpcomingMeetings } from "../../services/teamsApi";
 import { getMyAppointments } from "../../services/appointmentApi";
-import api from "../../services/api";
+import { getWorkflowCalendarEvents } from "../../services/calendarApi";
+import { mapWorkflowEventsToCalendar } from "../../utils/calendarWorkflowEvents";
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -18,14 +19,14 @@ const Calendar = () => {
   const [teamsMeetings, setTeamsMeetings] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
-  const [tasks, setTasks] = useState([]);
+  const [workflowEvents, setWorkflowEvents] = useState([]);
 
   const today = new Date();
 
   useEffect(() => {
     fetchTeamsMeetings();
     fetchAppointments();
-    fetchTasks();
+    fetchWorkflowEvents();
   }, []);
 
   const fetchTeamsMeetings = async () => {
@@ -85,40 +86,14 @@ const Calendar = () => {
     }
   };
 
-  const fetchTasks = async () => {
+  const fetchWorkflowEvents = async () => {
     try {
-      const response = await api.get("/api/tasks/assign?filter=all");
-      
-      if (response.data.status === "success") {
-        const apiTasks = response.data.data.tasks || [];
-        
-        const taskEvents = apiTasks.map((task) => {
-          const dueDate = task.due_date ? new Date(task.due_date) : new Date();
-          // Default 1 hour duration for tasks
-          const endDate = new Date(dueDate.getTime() + 60 * 60000);
-          const isCompleted = task.status === "completed";
-          
-          return {
-            id: `task-${task.id}`,
-            title: task.title,
-            date: dueDate,
-            endDate: endDate,
-            type: "task",
-            location: "Task",
-            attendees: [task.assignee_name || "You"],
-            description: `Priority: ${task.priority}`,
-            color: isCompleted ? "bg-gray-400" : task.priority === "high" ? "bg-red-500" : task.priority === "medium" ? "bg-amber-500" : "bg-green-500",
-            completed: isCompleted,
-            caseId: task.case_number || (task.case_id ? `#C-${task.case_id}` : null),
-            isTask: true,
-            taskId: task.id
-          };
-        });
-        
-        setTasks(taskEvents);
-      }
+      const response = await getWorkflowCalendarEvents();
+      const list = response.data?.data?.events || [];
+      setWorkflowEvents(mapWorkflowEventsToCalendar(list));
     } catch (error) {
-      console.error("Failed to fetch tasks:", error);
+      console.error("Failed to fetch workflow calendar events:", error);
+      setWorkflowEvents([]);
     }
   };
 
@@ -151,8 +126,8 @@ const Calendar = () => {
   }));
 
   const allEvents = useMemo(
-    () => [...eventsWithCompletion, ...teamsEvents, ...tasks],
-    [eventsWithCompletion, teamsEvents, tasks]
+    () => [...eventsWithCompletion, ...teamsEvents, ...workflowEvents],
+    [eventsWithCompletion, teamsEvents, workflowEvents]
   );
 
   const [newEvent, setNewEvent] = useState({
@@ -283,6 +258,7 @@ const Calendar = () => {
       case "deadline":return <Clock size={12} />;
       case "teams":   return <Video size={12} />;
       case "task":    return <CheckSquare size={12} />;
+      case "biometric": return <UserCheck size={12} />;
       default:        return <CalendarIcon size={12} />;
     }
   };
@@ -292,8 +268,8 @@ const Calendar = () => {
     const q = searchQuery.toLowerCase();
     return allEvents.filter(
       (e) =>
-        e.title.toLowerCase().includes(q) ||
-        e.description.toLowerCase().includes(q)
+        (e.title || "").toLowerCase().includes(q) ||
+        (e.description || "").toLowerCase().includes(q)
     );
   }, [allEvents, searchQuery]);
 
@@ -782,7 +758,11 @@ const Calendar = () => {
                             ? "bg-amber-100 text-amber-700"
                             : selectedEvent.type === "deadline"
                             ? "bg-red-100 text-red-700"
-                            : "bg-green-100 text-green-700"
+                            : selectedEvent.type === "biometric"
+                            ? "bg-cyan-100 text-cyan-800"
+                            : selectedEvent.type === "task"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-700"
                         }`}
                       >
                         {selectedEvent.type}
@@ -894,7 +874,9 @@ const Calendar = () => {
                     <Edit size={16} />
                     Edit
                   </button>
-                  {!selectedEvent.isTeamsMeeting && (
+                  {!selectedEvent.isTeamsMeeting &&
+                    !selectedEvent.isTask &&
+                    !selectedEvent.isBiometric && (
                     <button
                       onClick={() => handleDeleteEvent(selectedEvent.id)}
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors"

@@ -92,7 +92,7 @@ const AVATAR_COLORS = [
   "bg-teal-500",
 ];
 
-const ROLE_OPTIONS = [{ value: "3", label: "Candidate" }];
+const ROLE_OPTIONS = [{ value: "1", label: "Candidate" }];
 
 const VISA_TYPE_OPTIONS = [
   { value: "Skilled Worker", label: "Skilled Worker" },
@@ -140,7 +140,7 @@ const EMPTY_CREATE = {
   email: "",
   country_code: "+44",
   mobile: "",
-  role_id: "3",
+  role_id: "1",
   password: "",
   confirm_password: "",
 };
@@ -474,7 +474,7 @@ export default function AdminCandidates() {
       email: mapped.userData.email,
       country_code: mapped.userData.country_code || "+44",
       mobile: mapped.userData.mobile,
-      role_id: 3,
+      role_id: 1,
       password: payload.password || "",
       confirm_password: payload.confirmPassword || "",
       
@@ -589,22 +589,27 @@ export default function AdminCandidates() {
         caseworkerId: payloadClean.caseworkerId,
       };
       const res = await updateAdminCandidateApplication(candidateId, body);
+      const updated = res.data?.data?.candidate;
       showToast({
-        message: res.data?.message || "Application updated successfully",
+        message: res.data?.message || "Client updated successfully",
         variant: "success",
       });
+      if (updated) {
+        setApplicationForm(candidateRowToApplicationForm(updated));
+      }
       closeModal();
-      const r = await fetchCandidates(
+      fetchCandidates(
         page,
         limit,
         debouncedSearch.trim(),
         statusParam,
         visaParam,
         payParam,
-      );
-      if (!r.ok) {
-        showToast({ message: getApiError(r.error), variant: "danger" });
-      }
+      ).then((r) => {
+        if (!r.ok) {
+          showToast({ message: getApiError(r.error), variant: "danger" });
+        }
+      });
     } catch (e) {
       console.error("Update application error:", e);
       showToast({ message: getApiError(e), variant: "danger" });

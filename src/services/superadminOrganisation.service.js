@@ -6,6 +6,12 @@ export const fetchOrganisationById = (id) => api.get(`/api/superadmin/organisati
 
 export const createOrganisation = (data) => api.post("/api/superadmin/organisations", data);
 
+/** Org + admin in one request; rolls back if admin email/mobile invalid or creation fails */
+export const createOrganisationWithAdmin = (data) =>
+  api.post("/api/superadmin/organisations/with-admin", data, {
+    timeout: 120000,
+  });
+
 export const updateOrganisation = (id, data) => api.patch(`/api/superadmin/organisations/${id}`, data);
 
 export const deleteOrganisation = (id) => api.delete(`/api/superadmin/organisations/${id}`);

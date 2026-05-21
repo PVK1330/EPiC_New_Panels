@@ -18,6 +18,7 @@ import {
   Clock,
   Table,
   LayoutGrid,
+  Trash2,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
@@ -50,7 +51,13 @@ import {
   exportCases,
 } from "../../services/caseApi";
 import { getCaseAuditLogs } from "../../services/auditApi";
-import { getCaseChecklist } from "../../services/documentChecklistApi";
+import {
+  getCaseChecklist,
+  initializeCaseChecklist,
+  createCaseChecklistItem,
+  updateCaseChecklistItem,
+  deleteCaseChecklistItem,
+} from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
 import { updateCaseFinance } from "../../services/caseDetailApi";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
@@ -3086,6 +3093,21 @@ function DocumentsTab({ caseId, candidateId }) {
   const [viewDocumentUrl, setViewDocumentUrl] = useState("");
   const [uploadingForItem, setUploadingForItem] = useState(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+  const [checklistSaving, setChecklistSaving] = useState(false);
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [editForm, setEditForm] = useState({
+    documentName: "",
+    description: "",
+    isRequired: true,
+  });
+  const [addItemOpen, setAddItemOpen] = useState(false);
+  const [addItemForm, setAddItemForm] = useState({
+    documentType: "Other",
+    documentName: "",
+    description: "",
+    isRequired: true,
+    category: "other",
+  });
   const { showToast } = useToast();
 
   const closeViewDocument = () => {
@@ -3116,6 +3138,117 @@ function DocumentsTab({ caseId, candidateId }) {
   useEffect(() => {
     fetchChecklist();
   }, [fetchChecklist]);
+
+  const handleInitializeChecklist = useCallback(async () => {
+    if (!caseId) return;
+    setChecklistSaving(true);
+    try {
+      await initializeCaseChecklist(caseId);
+      await fetchChecklist();
+      showToast({
+        message: "Checklist customized specifically for this case!",
+        variant: "success",
+      });
+    } catch (error) {
+      showToast({
+        message:
+          error.response?.data?.message || "Failed to customize checklist.",
+        variant: "danger",
+      });
+    } finally {
+      setChecklistSaving(false);
+    }
+  }, [caseId, fetchChecklist, showToast]);
+
+  const handleSaveChecklistItem = useCallback(async () => {
+    if (!caseId || !editingItemId) return;
+    setChecklistSaving(true);
+    try {
+      await updateCaseChecklistItem(editingItemId, editForm);
+      setEditingItemId(null);
+      await fetchChecklist();
+      showToast({ message: "Checklist item updated.", variant: "success" });
+    } catch (error) {
+      showToast({
+        message: error.response?.data?.message || "Failed to update item.",
+        variant: "danger",
+      });
+    } finally {
+      setChecklistSaving(false);
+    }
+  }, [caseId, editingItemId, editForm, fetchChecklist, showToast]);
+
+  const handleDeleteChecklistItem = useCallback(
+    async (itemId) => {
+      if (!caseId || !itemId) return;
+      if (!window.confirm("Remove this document requirement from the case checklist?")) {
+        return;
+      }
+      setChecklistSaving(true);
+      try {
+        await deleteCaseChecklistItem(itemId);
+        await fetchChecklist();
+        showToast({ message: "Checklist item removed.", variant: "success" });
+      } catch (error) {
+        showToast({
+          message: error.response?.data?.message || "Failed to delete item.",
+          variant: "danger",
+        });
+      } finally {
+        setChecklistSaving(false);
+      }
+    },
+    [fetchChecklist, showToast],
+  );
+
+  const handleToggleRequired = useCallback(
+    async (item) => {
+      if (!item?.id) return;
+      setChecklistSaving(true);
+      try {
+        await updateCaseChecklistItem(item.id, {
+          isRequired: !item.isRequired,
+        });
+        await fetchChecklist();
+      } catch (error) {
+        showToast({
+          message: error.response?.data?.message || "Failed to update item.",
+          variant: "danger",
+        });
+      } finally {
+        setChecklistSaving(false);
+      }
+    },
+    [fetchChecklist, showToast],
+  );
+
+  const handleCreateChecklistItem = useCallback(async () => {
+    if (!caseId || !addItemForm.documentName.trim()) return;
+    setChecklistSaving(true);
+    try {
+      await createCaseChecklistItem(caseId, {
+        ...addItemForm,
+        documentName: addItemForm.documentName.trim(),
+      });
+      setAddItemOpen(false);
+      setAddItemForm({
+        documentType: "Other",
+        documentName: "",
+        description: "",
+        isRequired: true,
+        category: "other",
+      });
+      await fetchChecklist();
+      showToast({ message: "Document requirement added.", variant: "success" });
+    } catch (error) {
+      showToast({
+        message: error.response?.data?.message || "Failed to add item.",
+        variant: "danger",
+      });
+    } finally {
+      setChecklistSaving(false);
+    }
+  }, [caseId, addItemForm, fetchChecklist, showToast]);
 
   const getBadgeColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -3311,16 +3444,36 @@ function DocumentsTab({ caseId, candidateId }) {
                 <h4 className="text-sm font-black text-secondary uppercase tracking-wide">
                   Document Completion Progress
                 </h4>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-2xl font-black text-secondary">
                     {checklist.completionPercentage}%
                   </span>
+                  {!checklist.isCustomized && (
+                    <button
+                      type="button"
+                      disabled={checklistSaving}
+                      onClick={handleInitializeChecklist}
+                      className="rounded-xl border border-secondary text-secondary bg-white hover:bg-secondary/5 px-3 py-2 text-xs font-black transition-all disabled:opacity-50"
+                    >
+                      {checklistSaving ? "Setting up…" : "Customize Required Documents"}
+                    </button>
+                  )}
+                  {checklist.isCustomized && (
+                    <button
+                      type="button"
+                      onClick={() => setAddItemOpen(true)}
+                      disabled={checklistSaving}
+                      className="rounded-xl border border-secondary/30 bg-secondary/10 px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/20 transition-all"
+                    >
+                      + Add Required Document
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => openUploadModal()}
                     className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white"
                   >
-                    + Add Document
+                    + Upload Document
                   </button>
                 </div>
               </div>
@@ -3353,13 +3506,58 @@ function DocumentsTab({ caseId, candidateId }) {
                 <div className="divide-y divide-gray-50">
                   {items.map((item, idx) => (
                     <div
-                      key={idx}
-                      className="px-5 py-4 hover:bg-gray-50/50 transition-colors flex items-start gap-4"
+                      key={item.id || idx}
+                      className="px-5 py-4 hover:bg-gray-50/50 transition-all duration-200 flex items-start gap-4 group"
                     >
                       <div className="shrink-0 mt-0.5">
                         {getStatusIcon(item.status)}
                       </div>
                       <div className="flex-1 min-w-0">
+                        {editingItemId === item.id ? (
+                          <div className="space-y-2 mb-2">
+                            <input
+                              type="text"
+                              value={editForm.documentName}
+                              onChange={(e) =>
+                                setEditForm((f) => ({
+                                  ...f,
+                                  documentName: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15"
+                            />
+                            <textarea
+                              value={editForm.description}
+                              onChange={(e) =>
+                                setEditForm((f) => ({
+                                  ...f,
+                                  description: e.target.value,
+                                }))
+                              }
+                              rows={2}
+                              placeholder="Description (optional)"
+                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-secondary/15 resize-none"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                disabled={checklistSaving}
+                                onClick={handleSaveChecklistItem}
+                                className="rounded-lg bg-secondary px-3 py-1.5 text-[11px] font-black text-white"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingItemId(null)}
+                                className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-black text-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-semibold text-gray-900">
                             {item.documentName}
@@ -3379,6 +3577,8 @@ function DocumentsTab({ caseId, candidateId }) {
                           <p className="text-xs text-gray-500 mb-2">
                             {item.description}
                           </p>
+                        )}
+                          </>
                         )}
                         <div className="flex items-center gap-3">
                           <span
@@ -3400,6 +3600,47 @@ function DocumentsTab({ caseId, candidateId }) {
                           )}
                         </div>
                       </div>
+                      {checklist.isCustomized && item.id && editingItemId !== item.id && (
+                        <div className="flex flex-col gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            disabled={checklistSaving}
+                            onClick={() => {
+                              setEditingItemId(item.id);
+                              setEditForm({
+                                documentName: item.documentName || "",
+                                description: item.description || "",
+                                isRequired: Boolean(item.isRequired),
+                              });
+                            }}
+                            className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1"
+                          >
+                            <Pencil size={12} />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            disabled={checklistSaving}
+                            onClick={() => handleToggleRequired(item)}
+                            className={`rounded-full px-2.5 py-1 text-[10px] font-black border transition-all duration-200 ${
+                              item.isRequired
+                                ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                                : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            {item.isRequired ? "Required" : "Optional"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={checklistSaving}
+                            onClick={() => handleDeleteChecklistItem(item.id)}
+                            className="rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-700 hover:bg-red-100 transition-all duration-200"
+                            aria-label="Delete requirement"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
                       {item.status === "missing" ? (
                         <button
                           type="button"
@@ -3551,6 +3792,91 @@ function DocumentsTab({ caseId, candidateId }) {
           ))
         )}
       </div>
+
+      <Modal
+        open={addItemOpen}
+        onClose={() => setAddItemOpen(false)}
+        title="Add custom document requirement"
+        titleId="add-checklist-item-modal-title"
+        maxWidthClass="max-w-lg"
+        bodyClassName="p-4 sm:p-6"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Document name
+            </label>
+            <input
+              type="text"
+              value={addItemForm.documentName}
+              onChange={(e) =>
+                setAddItemForm((f) => ({ ...f, documentName: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15"
+              placeholder="e.g. Employment reference letter"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Document type
+            </label>
+            <select
+              value={addItemForm.documentType}
+              onChange={(e) =>
+                setAddItemForm((f) => ({ ...f, documentType: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15"
+            >
+              {DOCUMENT_TYPE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Description (optional)
+            </label>
+            <textarea
+              value={addItemForm.description}
+              onChange={(e) =>
+                setAddItemForm((f) => ({ ...f, description: e.target.value }))
+              }
+              rows={3}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-secondary/15 resize-none"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-700">
+            <input
+              type="checkbox"
+              checked={addItemForm.isRequired}
+              onChange={(e) =>
+                setAddItemForm((f) => ({ ...f, isRequired: e.target.checked }))
+              }
+              className="accent-secondary rounded"
+            />
+            Required document
+          </label>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setAddItemOpen(false)}
+              className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-black text-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={checklistSaving || !addItemForm.documentName.trim()}
+              onClick={handleCreateChecklistItem}
+              className="rounded-xl bg-secondary px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+            >
+              {checklistSaving ? "Adding…" : "Add requirement"}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={uploadOpen}

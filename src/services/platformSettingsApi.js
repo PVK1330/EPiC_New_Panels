@@ -47,6 +47,10 @@ export const updateConnectivitySettings = (data) =>
 export const testSmtpConnection = () =>
   api.post("/api/superadmin/settings/connectivity/smtp/test");
 
+/** POST /api/superadmin/settings/connectivity/smtp/send-test — delivers a real test message */
+export const sendSmtpTestEmail = (to) =>
+  api.post("/api/superadmin/settings/connectivity/smtp/send-test", { to });
+
 // ---------------------------------------------------------------------------
 // GROUP 3 — Security
 // ---------------------------------------------------------------------------
