@@ -20,6 +20,7 @@ import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
 import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
 import CandidateApplicationReadonly from "../../components/CandidateApplicationForm/CandidateApplicationReadonly";
 import { getCandidateById } from "../../services/candidateApi";
+import { createEscalation } from "../../services/escalationApi";
 import { useToast } from "../../context/ToastContext";
 import { 
   getCaseDetails,
@@ -70,6 +71,7 @@ const AdminCaseDetail = () => {
   const [flagOpen, setFlagOpen] = useState(false);
   const [flagReason, setFlagReason] = useState("");
   const [flagErr, setFlagErr] = useState("");
+  const [flagSubmitting, setFlagSubmitting] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [stageSaving, setStageSaving] = useState(false);
 
@@ -512,14 +514,32 @@ const AdminCaseDetail = () => {
     }
   };
 
-  const submitFlag = () => {
+  const submitFlag = async () => {
     if (!flagReason.trim()) {
       setFlagErr("Reason is required");
       return;
     }
-    setFlagOpen(false);
-    setFlagReason("");
-    setFlagErr("");
+    setFlagSubmitting(true);
+    try {
+      await createEscalation({
+        caseId: data.caseId,
+        candidate: data.candidateName,
+        severity: "High",
+        trigger: flagReason,
+        triggerType: "Other",
+        relatedCaseId: data.internalCaseId,
+        notes: "Manually flagged from case details",
+      });
+      showToast({ variant: "success", message: "Case flagged successfully" });
+      setFlagOpen(false);
+      setFlagReason("");
+      setFlagErr("");
+    } catch (err) {
+      console.error("Failed to flag case:", err);
+      showToast({ variant: "danger", message: err?.response?.data?.message || "Failed to flag case" });
+    } finally {
+      setFlagSubmitting(false);
+    }
   };
 
   // ── Note handlers (passed as props so CaseDetailNotes can wire them up) ───
@@ -804,8 +824,9 @@ const AdminCaseDetail = () => {
                   variant="primary"
                   onClick={submitFlag}
                   className="rounded-xl"
+                  disabled={flagSubmitting}
                 >
-                  Submit flag
+                  {flagSubmitting ? "Submitting..." : "Submit flag"}
                 </Button>
               </>
             }

@@ -92,7 +92,7 @@ const AdminEscalations = () => {
 
   const fetchCases = async () => {
     try {
-      const res = await getCases(1, 1000);
+      const res = await getCases({ page: 1, limit: 1000 });
       if (res.data?.data?.cases) {
         setCases(res.data.data.cases);
       }
