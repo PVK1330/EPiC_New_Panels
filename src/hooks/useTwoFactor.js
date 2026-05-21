@@ -3,8 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { setup2FA, verifySetup2FA, disable2FA, verifyTwoFactor } from '../services/auth.service';
 import { setCredentials } from '../store/slices/authSlice';
-import { ROLE_NAMES, ROLE_ROUTES } from '../utils/constants';
-import { getAuthUserAndToken } from '../utils/authResponse';
+import { getAuthUserAndToken, getDashboardRouteForUser, resolveLoginRole } from '../utils/authResponse';
 
 const useTwoFactor = () => {
   const dispatch = useDispatch();
@@ -63,19 +62,20 @@ const useTwoFactor = () => {
       if (!userData || !jwtToken) {
         throw new Error(res?.message || 'Invalid 2FA response');
       }
-      const role = ROLE_NAMES[userData.role_id] || 'candidate';
+      const role = resolveLoginRole(userData);
+      const user = {
+        ...userData,
+        role,
+        organisation_id: userData.organisation_id ?? null,
+      };
       dispatch(setCredentials({
-        user: {
-          ...userData,
-          role,
-          organisation_id: userData.organisation_id ?? null,
-        },
+        user,
         token: jwtToken,
         allowedModules,
       }));
       sessionStorage.removeItem('pending_2fa_email');
       sessionStorage.removeItem('pending_2fa_password');
-      navigate(ROLE_ROUTES[userData.role_id] || '/candidate/dashboard');
+      navigate(getDashboardRouteForUser(user));
     } catch (err) {
       setError(err.message);
     } finally {

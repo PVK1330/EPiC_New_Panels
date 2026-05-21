@@ -1,7 +1,7 @@
 import api from "./api";
 
-export const getCases = (page = 1, limit = 10, search = "", status = "", priority = "", visaType = "") =>
-  api.get(`/api/cases`, { params: { page, limit, search, status, priority, visaType } });
+export const getCases = (params = {}) =>
+  api.get(`/api/cases`, { params });
 
 // Fetch ALL cases for dropdowns (no pagination limit)
 export const getAllCasesForDropdown = () =>

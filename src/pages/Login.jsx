@@ -12,8 +12,7 @@ import {
   forgotPassword,
   verifyTwoFactor,
 } from "../services/auth.service";
-import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
-import { getAuthUserAndToken } from "../utils/authResponse";
+import { getAuthUserAndToken, getDashboardRouteForUser, resolveLoginRole } from "../utils/authResponse";
 
 const VIEWS = {
   login: "login",
@@ -190,19 +189,14 @@ const Login = () => {
           throw new Error(res.message || "Invalid credentials or response structure");
         }
 
-        const role = ROLE_NAMES[userData.role_id] || "candidate";
-        dispatch(
-          setCredentials({
-            user: {
-              ...userData,
-              role,
-              organisation_id: userData.organisation_id ?? null,
-            },
-            token: jwtToken,
-            allowedModules,
-          }),
-        );
-        navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
+        const role = resolveLoginRole(userData);
+        const user = {
+          ...userData,
+          role,
+          organisation_id: userData.organisation_id ?? null,
+        };
+        dispatch(setCredentials({ user, token: jwtToken, allowedModules }));
+        navigate(getDashboardRouteForUser(user));
       }
     } catch (err) {
       setErrors({ password: err.message || "Invalid credentials" });
@@ -282,19 +276,14 @@ const Login = () => {
         throw new Error(res.message || "Invalid 2FA code or server response");
       }
 
-      const role = ROLE_NAMES[userData.role_id] || "candidate";
-      dispatch(
-        setCredentials({
-          user: {
-            ...userData,
-            role,
-            organisation_id: userData.organisation_id ?? null,
-          },
-          token: jwtToken,
-          allowedModules,
-        }),
-      );
-      navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
+      const role = resolveLoginRole(userData);
+      const user = {
+        ...userData,
+        role,
+        organisation_id: userData.organisation_id ?? null,
+      };
+      dispatch(setCredentials({ user, token: jwtToken, allowedModules }));
+      navigate(getDashboardRouteForUser(user));
     } catch (err) {
       setTwoFactorError(err.message || "Invalid 2FA code");
     } finally {

@@ -21,6 +21,7 @@ import MessageDropdown from "../notifications/MessageDropdown";
 import eliteLogo from "../../assets/elitepic_logo.png";
 import { getOrganisationBranding } from "../../services/settingsService";
 import { resolveAssetUrl } from "../../utils/assetUrl";
+import { getProfileMenuPaths } from "../../utils/authResponse";
 
 
 
@@ -39,6 +40,7 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
+  const profileMenuPaths = getProfileMenuPaths(user);
   const [orgLogoUrl, setOrgLogoUrl] = useState(null);
 
   const fetchOrganisationBranding = useCallback(async () => {
@@ -113,11 +115,11 @@ const AdminLayout = () => {
               className="shrink-0"
               aria-label="EPiC home"
             >
-              <img
+              {/* <img
                 src={eliteLogo}
                 alt="EPiC"
                 className="h-7 sm:h-8 w-auto object-contain"
-              />
+              /> */}
             </Link>
             <button
               type="button"
@@ -212,14 +214,26 @@ const AdminLayout = () => {
                         {user?.email || "admin@elitepic.com"}
                       </p>
                     </div>
-                    <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors">
-                      <RiUserLine size={16} />
-                      My Profile
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors">
-                      <RiSettings3Line size={16} />
-                      Settings
-                    </button>
+                    {profileMenuPaths && (
+                      <>
+                        <Link
+                          to={profileMenuPaths.profile}
+                          onClick={() => setProfileOpen(false)}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors"
+                        >
+                          <RiUserLine size={16} />
+                          My Profile
+                        </Link>
+                        <Link
+                          to={profileMenuPaths.settings}
+                          onClick={() => setProfileOpen(false)}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors"
+                        >
+                          <RiSettings3Line size={16} />
+                          Settings
+                        </Link>
+                      </>
+                    )}
                     <div className="border-t border-gray-100 my-1" />
                     <button
                       onClick={handleLogout}

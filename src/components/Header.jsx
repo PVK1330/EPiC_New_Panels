@@ -12,6 +12,7 @@ import { useState, useRef, useEffect, useMemo } from"react";
 import { useDispatch, useSelector } from"react-redux";
 import { useNavigate, useLocation, Link } from"react-router-dom";
 import { logout } from"../store/slices/authSlice";
+import { getProfileMenuPaths } from "../utils/authResponse";
 import NotificationDropdown from"./Notifications/NotificationDropdown";
 import MessageDropdown from"./notifications/MessageDropdown";
 
@@ -36,14 +37,7 @@ const Header = ({ onMenuClick }) => {
  ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
  :"";
 
- const profileSettingsPath = useMemo(() => {
- if (!user?.role) return null;
- if (user.role ==="candidate") return"/candidate/account?tab=profile";
- if (user.role ==="admin") return"/admin/settings";
- if (user.role ==="caseworker") return"/caseworker/my-account";
- if (user.role ==="business") return"/business/settings";
- return null;
- }, [user?.role]);
+ const profileMenuPaths = useMemo(() => getProfileMenuPaths(user), [user]);
 
  const handleLogout = () => {
  dispatch(logout());
@@ -157,36 +151,26 @@ const Header = ({ onMenuClick }) => {
  {user?.email ||"user@example.com"}
  </p>
  </div>
- {profileSettingsPath ? (
- <button
- type="button"
- onClick={() => {
- navigate(profileSettingsPath);
- setIsProfileOpen(false);
- }}
- className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors"
- >
- <Settings size={18} />
- <span>Profile &amp; settings</span>
- </button>
- ) : (
+ {profileMenuPaths ? (
  <>
- <button
- type="button"
+ <Link
+ to={profileMenuPaths.profile}
+ onClick={() => setIsProfileOpen(false)}
  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors"
  >
  <User size={18} />
  <span>My profile</span>
- </button>
- <button
- type="button"
+ </Link>
+ <Link
+ to={profileMenuPaths.settings}
+ onClick={() => setIsProfileOpen(false)}
  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors"
  >
  <Settings size={18} />
  <span>Settings</span>
- </button>
+ </Link>
  </>
- )}
+ ) : null}
  <div className="border-t border-gray-100 my-2"/>
  <button
  onClick={handleLogout}

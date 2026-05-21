@@ -49,12 +49,85 @@ export function getPasswordResetToken(apiBody) {
 export function getDashboardRouteForUser(user) {
   const normalized = normalizeAuthUser(user);
   if (!normalized) return "/login";
-  const isPlatformStaff = normalized.organisation_id == null || normalized.organisation_id === "";
-  if (isPlatformStaff && normalized.role_id === 5) {
-    return "/superadmin/dashboard";
+  const isPlatformStaff =
+    normalized.organisation_id == null || normalized.organisation_id === "";
+  if (isPlatformStaff) {
+    return ROLE_ROUTES[normalized.role_id] || "/superadmin/dashboard";
   }
   if (ROLE_ROUTES[normalized.role_id]) {
     return ROLE_ROUTES[normalized.role_id];
   }
   return `/${normalized.role_name || normalized.role}/dashboard`;
+}
+
+/** Role string for Redux after login — preserves API-normalized platform panel role. */
+export function resolveLoginRole(userData) {
+  return userData?.role || ROLE_NAMES[userData?.role_id] || "candidate";
+}
+
+/** Profile dropdown routes by role (role_id preferred, then role string). */
+export function getProfileMenuPaths(user) {
+  const roleId = Number(user?.role_id);
+  if (!Number.isNaN(roleId)) {
+    switch (roleId) {
+      case 1:
+        return {
+          profile: "/candidate/account?tab=profile",
+          settings: "/candidate/account",
+        };
+      case 2:
+        return {
+          profile: "/caseworker/my-account",
+          settings: "/caseworker/my-account",
+        };
+      case 3:
+        return { profile: "/admin/settings", settings: "/admin/settings" };
+      case 4:
+        return {
+          profile: "/business/profile",
+          settings: "/business/account",
+        };
+      case 5:
+      case 6:
+      case 7:
+      case 8:
+        return {
+          profile: "/superadmin/profile",
+          settings: "/superadmin/settings",
+        };
+      default:
+        break;
+    }
+  }
+
+  const role = String(user?.role || "").toLowerCase();
+  switch (role) {
+    case "candidate":
+      return {
+        profile: "/candidate/account?tab=profile",
+        settings: "/candidate/account",
+      };
+    case "caseworker":
+      return {
+        profile: "/caseworker/my-account",
+        settings: "/caseworker/my-account",
+      };
+    case "admin":
+      return { profile: "/admin/settings", settings: "/admin/settings" };
+    case "business":
+      return {
+        profile: "/business/profile",
+        settings: "/business/account",
+      };
+    case "superadmin":
+    case "support_agent":
+    case "billing_manager":
+    case "compliance_officer":
+      return {
+        profile: "/superadmin/profile",
+        settings: "/superadmin/settings",
+      };
+    default:
+      return null;
+  }
 }

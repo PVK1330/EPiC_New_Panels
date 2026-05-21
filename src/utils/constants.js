@@ -9,6 +9,9 @@ export const ROLE_NAMES = {
   3: "admin",
   4: "business",
   5: "superadmin",
+  6: "support_agent",
+  7: "billing_manager",
+  8: "compliance_officer",
 };
 
 export const ROLE_ROUTES = {
@@ -17,6 +20,9 @@ export const ROLE_ROUTES = {
   3: "/admin/dashboard",
   4: "/business/dashboard",
   5: "/superadmin/dashboard",
+  6: "/superadmin/dashboard",
+  7: "/superadmin/dashboard",
+  8: "/superadmin/dashboard",
 };
 
 export const DOCUMENT_TYPE_OPTIONS = [

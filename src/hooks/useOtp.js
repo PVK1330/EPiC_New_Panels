@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { verifyOtp, resendOtp, verifyResetOtp, forgotPassword } from "../services/auth.service";
 import { setCredentials } from "../store/slices/authSlice";
-import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
-import { getAuthUserAndToken, getPasswordResetToken } from "../utils/authResponse";
+import { getAuthUserAndToken, getPasswordResetToken, getDashboardRouteForUser, resolveLoginRole } from "../utils/authResponse";
 
 const useOtp = (type = "register") => {
   const navigate = useNavigate();
@@ -42,20 +41,16 @@ const useOtp = (type = "register") => {
       if (type === "register") {
         const res = await verifyOtp({ email, otp });
         sessionStorage.removeItem("pending_otp_email");
-        const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
+        const { user: userData, token: jwtToken, allowedModules } = getAuthUserAndToken(res);
         if (userData && jwtToken) {
-          const role = ROLE_NAMES[userData.role_id] || "candidate";
-          dispatch(
-            setCredentials({
-              user: {
-                ...userData,
-                role,
-                organisation_id: userData.organisation_id ?? null,
-              },
-              token: jwtToken,
-            }),
-          );
-          navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
+          const role = resolveLoginRole(userData);
+          const user = {
+            ...userData,
+            role,
+            organisation_id: userData.organisation_id ?? null,
+          };
+          dispatch(setCredentials({ user, token: jwtToken, allowedModules }));
+          navigate(getDashboardRouteForUser(user));
         } else {
           navigate("/login");
         }

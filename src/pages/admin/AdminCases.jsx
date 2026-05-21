@@ -19,7 +19,20 @@ import {
 import Button from "../../components/Button";
 import CaseWorkflowBadge from "../../components/case/CaseWorkflowBadge";
 import Input from "../../components/Input";
-import { getCases, createCase, updateCase, deleteCase, getVisaTypes, getPetitionTypes, getCandidates, getSponsors, getCaseworkers, updateCaseStatus, exportCases, getAllUsers, getDepartments } from "../../services/caseApi";
+import {
+  getCases,
+  createCase,
+  updateCase,
+  deleteCase,
+  getVisaTypes,
+  getPetitionTypes,
+  getAllUsers,
+  getCaseworkers,
+  updateCaseStatus,
+  exportCases,
+  getDepartments,
+} from "../../services/caseApi";
+import { useToast } from "../../context/ToastContext";
 
 
 
@@ -562,6 +575,7 @@ function CaseFormModal({
 
 export default function AdminCases() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [cases, setCases] = useState([]);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -699,15 +713,18 @@ export default function AdminCases() {
         setError(null);
       } catch (err) {
         console.error("Error fetching cases:", err);
-        setError("Failed to load cases. Please try again.");
+        const msg =
+          err?.response?.data?.message || "Failed to load cases. Please try again.";
+        setError(msg);
         setCases([]);
+        showToast({ message: msg, variant: "danger" });
       } finally {
         setLoading(false);
       }
     };
 
     fetchCasesFromAPI();
-  }, [page, searchQuery, filterType, priorityFilter, visaTypeFilter]);
+  }, [page, searchQuery, filterType, priorityFilter, visaTypeFilter, showToast]);
 
   // Helper function to map payment status
   const mapPaymentStatus = (paid, total) => {
@@ -722,10 +739,11 @@ export default function AdminCases() {
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        const [visaRes, petitionRes, usersRes, deptRes] = await Promise.all([
+        const [visaRes, petitionRes, allUsersRes, caseworkersRes, deptRes] = await Promise.all([
           getVisaTypes(),
           getPetitionTypes(),
           getAllUsers(),
+          getCaseworkers(),
           getDepartments(),
         ]);
 
@@ -739,11 +757,21 @@ export default function AdminCases() {
           setPetitionTypes(petitionRes.data.data.petition_types);
         }
 
-        if (usersRes?.data?.data) {
-          const { candidate, sponsor, caseworker } = usersRes.data.data;
-          setCandidates(candidate || []);
-          setSponsors(sponsor || []);
-          setCaseworkers(caseworker || []);
+        const grouped = allUsersRes?.data?.data;
+        if (grouped && !Array.isArray(grouped)) {
+          setCandidates(grouped.candidate || []);
+          setSponsors(grouped.sponsor || grouped.business || []);
+        }
+
+        const cwPayload = caseworkersRes?.data?.data;
+        if (Array.isArray(cwPayload)) {
+          setCaseworkers(cwPayload);
+        } else if (cwPayload?.caseworker) {
+          setCaseworkers(cwPayload.caseworker);
+        } else if (grouped?.caseworker) {
+          setCaseworkers(grouped.caseworker);
+        } else {
+          setCaseworkers([]);
         }
 
         if (deptRes?.data?.data?.departments) {
@@ -751,6 +779,12 @@ export default function AdminCases() {
         }
       } catch (err) {
         console.error("Error fetching dropdown data:", err);
+        showToast({
+          message:
+            err?.response?.data?.message ||
+            "Failed to load form options. Some dropdowns may be empty.",
+          variant: "danger",
+        });
       }
     };
 
@@ -1265,6 +1299,18 @@ export default function AdminCases() {
           <h3 className="text-lg font-black text-secondary">Recent Cases</h3>
         </div>
 
+        {error && (
+          <div className="mx-6 mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm font-semibold">
+            {error}
+          </div>
+        )}
+
+        {loading && (
+          <div className="px-6 py-8 text-center text-sm text-gray-500 font-semibold">
+            Loading cases…
+          </div>
+        )}
+
         <div className="px-6 py-4 border-b border-gray-100">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
@@ -1317,7 +1363,7 @@ export default function AdminCases() {
               >
                 <option value="all">All Visa Types</option>
                 {visaTypes.map((type) => (
-                  <option key={type.id} value={type.name}>
+                  <option key={type.id} value={type.id}>
                     {type.name}
                   </option>
                 ))}
@@ -1340,6 +1386,13 @@ export default function AdminCases() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
+              {!loading && filteredCases.length === 0 && (
+                <tr>
+                  <td colSpan={TABLE_COLS.length} className="px-6 py-12 text-center text-sm text-gray-500">
+                    {error ? "Unable to display cases." : "No cases match your filters."}
+                  </td>
+                </tr>
+              )}
               {filteredCases.map((c, i) => (
                 <motion.tr
                   key={c.caseId}

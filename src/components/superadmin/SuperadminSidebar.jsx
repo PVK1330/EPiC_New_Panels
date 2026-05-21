@@ -31,6 +31,7 @@ import {
   selectPlatformName,
   selectLogoUrl,
 } from "../../store/slices/platformBrandingSlice";
+import useModuleAccess from "../../hooks/useModuleAccess";
 
 const sidebarVariants = {
   open: {
@@ -48,32 +49,32 @@ const sidebarVariants = {
 const navSections = [
   {
     items: [
-      { name: "Dashboard",     path: "/superadmin/dashboard",     icon: RiDashboardLine,         iconActive: RiDashboardFill         },
-      { name: "Organisations", path: "/superadmin/organisations", icon: RiBuilding4Line,          iconActive: RiBuilding4Fill          },
-      { name: "Announcements", path: "/superadmin/announcements", icon: RiMegaphoneLine,          iconActive: RiMegaphoneFill          },
+      { name: "Dashboard", path: "/superadmin/dashboard", icon: RiDashboardLine, iconActive: RiDashboardFill, moduleKey: "dashboard" },
+      { name: "Organisations", path: "/superadmin/organisations", icon: RiBuilding4Line, iconActive: RiBuilding4Fill, moduleKey: "organizations" },
+      { name: "Announcements", path: "/superadmin/announcements", icon: RiMegaphoneLine, iconActive: RiMegaphoneFill, moduleKey: null },
     ],
   },
   {
     label: "Management",
     items: [
-      { name: "Plans",         path: "/superadmin/plans",         icon: RiFileSettingsLine,       iconActive: RiFileSettingsFill       },
-      { name: "Subscriptions", path: "/superadmin/billing",       icon: RiBillLine,               iconActive: RiBillFill               },
-      { name: "Payments",      path: "/superadmin/payments",      icon: RiMoneyPoundCircleLine,   iconActive: RiMoneyPoundCircleFill   },
+      { name: "Plans", path: "/superadmin/plans", icon: RiFileSettingsLine, iconActive: RiFileSettingsFill, moduleKey: "plans" },
+      { name: "Subscriptions", path: "/superadmin/billing", icon: RiBillLine, iconActive: RiBillFill, moduleKey: "billing" },
+      { name: "Payments", path: "/superadmin/payments", icon: RiMoneyPoundCircleLine, iconActive: RiMoneyPoundCircleFill, moduleKey: "payments" },
     ],
   },
   {
     label: "Security",
     items: [
-      { name: "Activity",      path: "/superadmin/audit-log",     icon: RiHistoryLine,            iconActive: RiHistoryLine            },
-      { name: "Team",          path: "/superadmin/team",          icon: RiShieldUserLine,         iconActive: RiShieldUserFill         },
+      { name: "Activity", path: "/superadmin/audit-log", icon: RiHistoryLine, iconActive: RiHistoryLine, moduleKey: "audit-logs" },
+      { name: "Team", path: "/superadmin/team", icon: RiShieldUserLine, iconActive: RiShieldUserFill, moduleKey: "team" },
     ],
   },
   {
     label: "Platform",
     items: [
-      { name: "Notifications", path: "/superadmin/notifications", icon: RiNotification3Line,      iconActive: RiNotification3Fill      },
-      { name: "Global Settings",path: "/superadmin/settings",     icon: RiSettings4Line,          iconActive: RiSettings4Fill          },
-      { name: "My Account",    path: "/superadmin/profile",       icon: RiShieldKeyholeLine,      iconActive: RiShieldKeyholeFill      },
+      { name: "Notifications", path: "/superadmin/notifications", icon: RiNotification3Line, iconActive: RiNotification3Fill, moduleKey: null },
+      { name: "Global Settings", path: "/superadmin/settings", icon: RiSettings4Line, iconActive: RiSettings4Fill, moduleKey: "settings" },
+      { name: "My Account", path: "/superadmin/profile", icon: RiShieldKeyholeLine, iconActive: RiShieldKeyholeFill, moduleKey: null },
     ],
   },
 ];
@@ -133,7 +134,17 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
   // Use the uploaded logo if available, otherwise fall back to the bundled asset
   const logoSrc = logoUrl || eliteLogo;
 
-  const SidebarContent = () => (
+  const SidebarContent = () => {
+    const { canAccess } = useModuleAccess();
+
+    const visibleSections = navSections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => canAccess(item.moduleKey)),
+      }))
+      .filter((section) => section.items.length > 0);
+
+    return (
     <div className="flex flex-col h-full bg-gradient-to-b from-white via-blue-50/30 to-white border-r border-blue-100/50 shadow-[2px_0_24px_rgba(59,130,246,0.08)]">
 
       {/* ── Brand Header ─────────────────────────────────────────────── */}
@@ -173,7 +184,7 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
 
       {/* ── Navigation ───────────────────────────────────────────────── */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-4 custom-scrollbar">
-        {navSections.map((section, idx) => (
+        {visibleSections.map((section, idx) => (
           <div key={idx}>
             {section.label && (
               <div className="flex items-center gap-2.5 px-4 mb-3">
@@ -229,7 +240,8 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
         </NavLink>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <>

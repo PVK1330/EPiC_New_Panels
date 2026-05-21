@@ -3,8 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { setCredentials, logout } from "../store/slices/authSlice";
 import { loginUser, registerUser, logoutUser } from "../services/auth.service";
-import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
-import { getAuthUserAndToken } from "../utils/authResponse";
+import { getAuthUserAndToken, getDashboardRouteForUser, resolveLoginRole } from "../utils/authResponse";
 
 const useAuth = () => {
   const dispatch = useDispatch();
@@ -22,22 +21,18 @@ const useAuth = () => {
         navigate("/2fa");
         return { twoFactorRequired: true };
       }
-      const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
+      const { user: userData, token: jwtToken, allowedModules } = getAuthUserAndToken(res);
       if (!userData || !jwtToken) {
         throw new Error(res?.message || "Invalid login response");
       }
-      const role = ROLE_NAMES[userData.role_id] || "candidate";
-      dispatch(
-        setCredentials({
-          user: {
-            ...userData,
-            role,
-            organisation_id: userData.organisation_id ?? null,
-          },
-          token: jwtToken,
-        }),
-      );
-      navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
+      const role = resolveLoginRole(userData);
+      const user = {
+        ...userData,
+        role,
+        organisation_id: userData.organisation_id ?? null,
+      };
+      dispatch(setCredentials({ user, token: jwtToken, allowedModules }));
+      navigate(getDashboardRouteForUser(user));
       return { success: true };
     } finally {
       setIsLoading(false);
