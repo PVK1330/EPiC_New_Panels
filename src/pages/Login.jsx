@@ -88,6 +88,7 @@ const Login = () => {
 
 
   const [registerForm, setRegisterForm] = useState({
+    organisationId: "",
     firstName: "",
     middleName: "",
     lastName: "",
@@ -144,6 +145,10 @@ const Login = () => {
 
   const validateRegister = () => {
     const errs = {};
+    if (!registerForm.organisationId.trim())
+      errs.organisationId = "Organisation ID is required";
+    else if (!/^\d+$/.test(registerForm.organisationId.trim()))
+      errs.organisationId = "Organisation ID must be a number";
     if (!registerForm.firstName.trim())
       errs.firstName = "First name is required";
     if (!registerForm.lastName.trim()) errs.lastName = "Last name is required";
@@ -155,8 +160,23 @@ const Login = () => {
       errs.password = "At least 8 characters";
     if (registerForm.password !== registerForm.confirmPassword)
       errs.confirmPassword = "Passwords do not match";
-    if (!registerForm.dob) errs.dob = "Date of birth is required";
+    if (!registerForm.dob) {
+      errs.dob = "Date of birth is required";
+    } else {
+      const dob = new Date(registerForm.dob);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (dob >= today) {
+        errs.dob = "Date of birth cannot be today or a future date";
+      } else {
+        const minAge = new Date(today);
+        minAge.setFullYear(minAge.getFullYear() - 16);
+        if (dob > minAge) errs.dob = "You must be at least 16 years old";
+      }
+    }
     if (!registerForm.phone.trim()) errs.phone = "Phone number is required";
+    else if (!/^\d{7,15}$/.test(registerForm.phone.trim().replace(/\s+/g, "")))
+      errs.phone = "Mobile must be 7–15 digits (numbers only)";
     if (!registerForm.address.trim()) errs.address = "Address is required";
     if (!registerForm.city.trim()) errs.city = "City is required";
     if (!registerForm.state.trim()) errs.state = "State is required";
@@ -228,12 +248,14 @@ const Login = () => {
     setRegisterLoading(true);
     try {
       await registerUser({
+        organisation_id: registerForm.organisationId.trim(),
         first_name: registerForm.firstName.trim(),
         last_name: registerForm.lastName.trim(),
         email: registerForm.email.trim(),
         password: registerForm.password,
         country_code: selectedCountry.code,
-        mobile: registerForm.phone.trim(),
+        mobile: registerForm.phone.trim().replace(/\s+/g, ""),
+        date_of_birth: registerForm.dob || undefined,
         role_id: 1,
       });
       sessionStorage.setItem("pending_otp_email", registerForm.email.trim());
@@ -450,6 +472,24 @@ const Login = () => {
               are invited separately.
             </p>
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              {/* Organisation ID — must be first so the candidate knows which org they're joining */}
+              <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
+                <Input
+                  label="Organisation ID"
+                  name="organisationId"
+                  type="text"
+                  inputMode="numeric"
+                  value={registerForm.organisationId}
+                  onChange={handleRegisterChange}
+                  placeholder="e.g. 3"
+                  error={registerErrors.organisationId}
+                  required
+                />
+                <p className="text-xs text-blue-600 mt-1.5 font-medium">
+                  Your organisation ID is provided by your immigration adviser or administrator.
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Input
                   label="First name"
@@ -486,6 +526,8 @@ const Login = () => {
                   value={registerForm.dob}
                   onChange={handleRegisterChange}
                   error={registerErrors.dob}
+                  max={(() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split("T")[0]; })()}
+                  min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 120); return d.toISOString().split("T")[0]; })()}
                   required
                 />
                 <div>

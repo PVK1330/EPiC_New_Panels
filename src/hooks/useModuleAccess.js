@@ -12,10 +12,9 @@ export default function useModuleAccess() {
   const canAccess = (moduleKey) => {
     if (!moduleKey) return true;
     if (!token) return false;
+    if (isPlatformPanel) return true;
     if (allowedModules.includes('*')) return true;
-    if (!allowedModules || allowedModules.length === 0) {
-      return isPlatformPanel ? false : true;
-    }
+    if (!allowedModules || allowedModules.length === 0) return true;
     return allowedModules.includes(moduleKey);
   };
 
