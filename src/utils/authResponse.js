@@ -24,11 +24,17 @@ export function normalizeAuthUser(user) {
   if (!user) return null;
   const roleId = Number(user.role_id);
   const isPlatformStaff = user.organisation_id == null || user.organisation_id === "";
+
+  // role_id is the source of truth — ROLE_NAMES lookup takes priority over
+  // the API's role_name string which can be stale if the DB roles were ever
+  // seeded out of order.
+  const roleNameFromId = Number.isNaN(roleId) ? null : ROLE_NAMES[roleId];
   const roleName =
+    roleNameFromId ||
     user.role_name ||
     user.role ||
-    (Number.isNaN(roleId) ? null : ROLE_NAMES[roleId]) ||
     "candidate";
+
   const panelRole = isPlatformStaff ? "superadmin" : String(roleName).toLowerCase();
 
   return {
