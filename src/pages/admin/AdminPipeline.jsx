@@ -19,8 +19,11 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { getPipelineCases, updatePipelineStage, getCaseById } from "../../services/caseApi";
+import { sendBiometricSlot } from "../../services/workflowApi";
 import { PIPELINE_STAGES, buildStagesFromPipelineData } from "../../constants/immigrationCaseProcess";
 import CaseWorkflowBadge from "../../components/case/CaseWorkflowBadge";
+import BiometricBookedModal from "../../components/workflow/BiometricBookedModal";
+import { useToast } from "../../context/ToastContext";
 
 const CardContent = ({ card }) => (
   <>
@@ -100,12 +103,16 @@ const colVariant = {
 };
 
 const AdminPipeline = () => {
+  const { showToast } = useToast();
   const [stages, setStages] = useState(() => PIPELINE_STAGES.map((s) => ({ ...s, cards: [] })));
   const [activeCard, setActiveCard] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCase, setSelectedCase] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCaseLoading, setIsCaseLoading] = useState(false);
+  const [biometricModalOpen, setBiometricModalOpen] = useState(false);
+  const [pendingBiometricCard, setPendingBiometricCard] = useState(null);
+  const [stageUpdating, setStageUpdating] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } } ),
@@ -176,6 +183,44 @@ const AdminPipeline = () => {
     );
   };
 
+  const confirmBiometricBooking = async (payload) => {
+    if (!pendingBiometricCard?.card) return;
+    setStageUpdating(true);
+    try {
+      const caseId = pendingBiometricCard.card.caseId;
+      if (pendingBiometricCard.overStageId === "biometrics_confirmation_sent") {
+        // Use dedicated workflow API — sends in-app notification + professional HTML email
+        await sendBiometricSlot(caseId, {
+          location: payload.biometricLocation,
+          appointmentDate: payload.biometricDate,
+          appointmentTime: payload.biometricTime,
+          appointmentDay: payload.biometricDay,
+          instructions: payload.biometricInstructions,
+        });
+        showToast({
+          message: "Confirmation sent — candidate notified by email & in-app",
+          variant: "success",
+        });
+      } else {
+        await updatePipelineStage(caseId, "biometrics_booked", payload);
+        showToast({
+          message: "Biometrics booked — candidate notified",
+          variant: "success",
+        });
+      }
+      await fetchPipelineData();
+      setBiometricModalOpen(false);
+      setPendingBiometricCard(null);
+    } catch (error) {
+      showToast({
+        message: error?.response?.data?.message || "Failed to book biometrics",
+        variant: "danger",
+      });
+    } finally {
+      setStageUpdating(false);
+    }
+  };
+
   const handleDragEnd = async ({ active, over }) => {
     setActiveCard(null);
     if (!over) return;
@@ -189,19 +234,37 @@ const AdminPipeline = () => {
     const overStage = stages.find((s) => s.id === over.id);
     
     if (overStage && activeStage.id !== overStage.id) {
-      // Dropped on a different column - update status
       const card = activeStage.cards.find((c) => c.id === active.id);
       if (card) {
+        // Both biometric stages need the booking form popup
+        if (overStage.id === "biometrics_booked" || overStage.id === "biometrics_confirmation_sent") {
+          setStageUpdating(true);
+          try {
+            const res = await getCaseById(card.caseId);
+            const ws = res?.data?.data?.case?.workflowState;
+            setPendingBiometricCard({ 
+              card, 
+              overStageId: overStage.id,
+              availability: ws?.biometrics?.availability 
+            });
+          } catch (e) {
+            setPendingBiometricCard({ card, overStageId: overStage.id });
+          } finally {
+            setStageUpdating(false);
+          }
+          setBiometricModalOpen(true);
+          return;
+        }
         try {
           await updatePipelineStage(card.caseId, overStage.id);
-          
-          // Refresh pipeline data to reflect the change without page refresh
           await fetchPipelineData();
+          showToast({ message: "Stage updated", variant: "success" });
         } catch (error) {
           console.error("Error updating pipeline stage:", error);
-          alert(`Failed to update status: ${error.message}`);
-          // Revert the change on error
-          setStages((prev) => prev);
+          showToast({
+            message: error?.response?.data?.message || "Failed to update stage",
+            variant: "danger",
+          });
         }
       }
       return;
@@ -452,6 +515,23 @@ const AdminPipeline = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <BiometricBookedModal
+        open={biometricModalOpen}
+        onClose={() => {
+          setBiometricModalOpen(false);
+          setPendingBiometricCard(null);
+        }}
+        onConfirm={confirmBiometricBooking}
+        caseLabel={pendingBiometricCard?.card?.caseId}
+        loading={stageUpdating}
+        initialData={pendingBiometricCard?.availability ? {
+          location: pendingBiometricCard.availability.preferredLocation,
+          date: pendingBiometricCard.availability.preferredDate,
+          time: pendingBiometricCard.availability.preferredTime,
+          instructions: pendingBiometricCard.availability.notes,
+        } : undefined}
+      />
     </DndContext>
   );
 };

@@ -3,17 +3,23 @@ import { motion } from "framer-motion";
 import Input from "../Input";
 import Button from "../Button";
 
-const CaseDetailNotes = ({ notes }) => {
+const CaseDetailNotes = ({ notes, loading, onAdd, onDelete }) => {
   const [body, setBody] = useState("");
   const [err, setErr] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const save = () => {
+  const save = async () => {
     if (!body.trim()) {
       setErr("Note cannot be empty");
       return;
     }
+    setSaving(true);
+    if (onAdd) {
+      await onAdd(body);
+    }
     setBody("");
     setErr("");
+    setSaving(false);
   };
 
   return (
@@ -35,11 +41,18 @@ const CaseDetailNotes = ({ notes }) => {
           <p className="text-sm text-gray-400">No internal notes yet.</p>
         )}
         {notes.map((n, i) => (
-          <div key={i} className="p-4 rounded-xl bg-amber-50/50 border border-amber-100/80 text-sm text-gray-700">
-            <p className="text-xs font-black text-amber-700 mb-1">
-              {n.author} · {n.date}
-            </p>
-            <p className="leading-relaxed">{n.body}</p>
+          <div key={n.id || i} className="p-4 rounded-xl bg-amber-50/50 border border-amber-100/80 text-sm text-gray-700">
+            <div className="flex justify-between items-start mb-2">
+              <p className="text-xs font-black text-amber-700">
+                {n.author} · {n.date}
+              </p>
+              {onDelete && n.id && (
+                <button onClick={() => onDelete(n.id)} className="text-xs text-red-500 hover:text-red-700 font-bold transition-colors">
+                  Delete
+                </button>
+              )}
+            </div>
+            <p className="leading-relaxed whitespace-pre-wrap">{n.body}</p>
           </div>
         ))}
       </div>
@@ -52,8 +65,8 @@ const CaseDetailNotes = ({ notes }) => {
         placeholder="Add a confidential note…"
         error={err}
       />
-      <Button type="button" variant="primary" className="rounded-xl mt-3" onClick={save}>
-        Save Note
+      <Button type="button" variant="primary" className="rounded-xl mt-3" onClick={save} disabled={saving || loading}>
+        {saving ? "Saving..." : "Save Note"}
       </Button>
     </motion.div>
   );

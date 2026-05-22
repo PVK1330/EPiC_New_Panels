@@ -39,6 +39,12 @@ const DocumentItem = ({ doc, onView, onDownload }) => {
           >
             {statusLabel}
           </p>
+          {doc.status === "rejected" && (doc.rejectionReason || doc.reviewNotes) && (
+            <p className="text-xs font-bold text-red-700 mt-2 rounded-lg bg-red-50 border border-red-100 px-3 py-2">
+              <span className="font-black">Rejection reason: </span>
+              {doc.rejectionReason || doc.reviewNotes}
+            </p>
+          )}
         </div>
       </div>
 

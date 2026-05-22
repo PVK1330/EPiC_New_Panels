@@ -15,6 +15,9 @@ export const getRecentActivities = (params = {}) => api.get("/api/dashboard/rece
 // Get Quick Actions
 export const getQuickActions = () => api.get("/api/dashboard/quick-actions");
 
+// Due within 48h and overdue cases/tasks
+export const getDueOverdueTasks = () => api.get("/api/dashboard/due-overdue-tasks");
+
 // Export Dashboard Snapshot
 export const exportDashboardSnapshot = () => api.get("/api/dashboard/export-snapshot", { responseType: 'blob' });
 

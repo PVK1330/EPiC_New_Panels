@@ -21,9 +21,10 @@ const NotificationList = ({ showUnreadOnly = false }) => {
   } = useSelector((state) => state.notifications);
 
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState(showUnreadOnly ? 'unread' : 'all');
   const [filters, setFilters] = useState({
     limit: 20,
-    unread_only: showUnreadOnly
+    unread_only: false
   });
 
   useEffect(() => {
@@ -32,7 +33,7 @@ const NotificationList = ({ showUnreadOnly = false }) => {
   }, [dispatch, page, filters]);
 
   useEffect(() => {
-    setFilters(prev => ({ ...prev, unread_only: showUnreadOnly }));
+    setViewMode(showUnreadOnly ? 'unread' : 'all');
     setPage(1);
   }, [showUnreadOnly]);
 
@@ -53,9 +54,11 @@ const NotificationList = ({ showUnreadOnly = false }) => {
 
   const safeNotifications = notifications || [];
 
-  const filteredNotifications = showUnreadOnly
-    ? safeNotifications.filter(n => !n.isRead)
-    : safeNotifications;
+  const filteredNotifications = safeNotifications.filter(n => {
+    if (viewMode === 'unread') return !n.isRead;
+    if (viewMode === 'read') return n.isRead;
+    return true;
+  });
 
   if (loading && safeNotifications.length === 0) {
     return (
@@ -106,6 +109,28 @@ const NotificationList = ({ showUnreadOnly = false }) => {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 bg-gray-50/50">
+        <button
+          onClick={() => setViewMode('all')}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${viewMode === 'all' ? 'text-blue-600 border-b-2 border-blue-600 bg-white' : 'text-gray-500 hover:text-gray-800'}`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setViewMode('unread')}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${viewMode === 'unread' ? 'text-blue-600 border-b-2 border-blue-600 bg-white' : 'text-gray-500 hover:text-gray-800'}`}
+        >
+          Unread
+        </button>
+        <button
+          onClick={() => setViewMode('read')}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${viewMode === 'read' ? 'text-blue-600 border-b-2 border-blue-600 bg-white' : 'text-gray-500 hover:text-gray-800'}`}
+        >
+          Read
+        </button>
+      </div>
+
       {/* Error */}
       {error && (
         <div className="p-4 bg-red-50 border-l-4 border-red-400">
@@ -127,7 +152,7 @@ const NotificationList = ({ showUnreadOnly = false }) => {
           <div className="p-8 text-center">
             <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">
-              {showUnreadOnly ? 'No unread notifications' : 'No notifications'}
+              {viewMode === 'unread' ? 'No unread notifications' : viewMode === 'read' ? 'No read notifications' : 'No notifications'}
             </p>
           </div>
         ) : (

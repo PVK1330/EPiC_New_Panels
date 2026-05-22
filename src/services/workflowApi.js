@@ -45,6 +45,9 @@ export const submitDraftReview = (confirmed) =>
 export const submitBiometricAvailability = (body) =>
   api.post("/api/workflow/biometric-availability", body).then(unwrap);
 
+export const markBiometricAttended = () =>
+  api.post("/api/workflow/mark-biometric-attended").then(unwrap);
+
 // ── Staff (admin / caseworker) ───────────────────────────────────────────────
 export const getCaseWorkflowBundle = (caseId) =>
   api.get(`/api/workflow/cases/${caseId}/bundle`).then(unwrap);

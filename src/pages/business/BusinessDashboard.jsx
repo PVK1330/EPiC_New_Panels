@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -12,12 +13,18 @@ import {
   ShieldCheck,
   Loader2,
   MessageSquare,
+  Send,
 } from "lucide-react";
 import { getBusinessDashboard, getBusinessCases } from "../../services/businessProfileApi";
 import { getSponsoredWorkers } from "../../services/sponsoredWorkerApi";
 import { getNotifications } from "../../services/notificationApi";
 import messagingApi from "../../services/messagingApi";
-import { MOCK_RECENT_MESSAGES, MOCK_NOTIFICATIONS } from "../../data/adminDashboardMock";
+import {
+  extractConversationsFromResponse,
+  formatLastMessagePreview,
+  sortConversationsByRecent,
+} from "../../utils/messagingConversations";
+import { MOCK_NOTIFICATIONS } from "../../data/adminDashboardMock";
 
 const getStatusIcon = (status) => {
   if (status === "Completed") return <CheckCircle size={16} className="text-green-600" />;
@@ -32,6 +39,7 @@ const getPriorityColor = (priority) => {
 };
 
 export default function BusinessDashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState(null);
   const [cases, setCases] = useState([]);
@@ -57,9 +65,12 @@ export default function BusinessDashboard() {
         setNotifications(
           Array.isArray(notifList) && notifList.length > 0 ? notifList : MOCK_NOTIFICATIONS,
         );
-        const mData = mRes?.data?.conversations || mRes?.data?.data?.conversations || mRes?.data || [];
-        const msgList = Array.isArray(mData) ? mData.slice(0, 5) : [];
-        setMessages(msgList.length > 0 ? msgList : MOCK_RECENT_MESSAGES);
+        const msgList = sortConversationsByRecent(
+          extractConversationsFromResponse(mRes),
+        ).slice(0, 5);
+        setMessages(msgList);
+      } catch {
+        setMessages([]);
       } finally {
         setLoading(false);
       }
@@ -310,23 +321,46 @@ export default function BusinessDashboard() {
             </h3>
             <button
               type="button"
-              onClick={() => window.location.href = '/business/messages'}
+              onClick={() => navigate("/business/messages")}
               className="text-xs font-bold text-primary hover:underline"
             >
               View all
             </button>
+          </div>
+          <div
+            className="p-3 mb-3 rounded-xl border border-gray-100 bg-gray-50/70 cursor-pointer"
+            onClick={() => navigate("/business/messages")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") navigate("/business/messages");
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                placeholder="Type a message..."
+                className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none pointer-events-none"
+              />
+              <span className="rounded-xl bg-primary p-2.5 text-white shadow-md shadow-primary/20 flex items-center justify-center shrink-0">
+                <Send size={16} />
+              </span>
+            </div>
           </div>
           <div className="space-y-3 flex-1">
             {messages.map((item) => {
               const otherUser = item.user || {};
               const lastMsg = item.lastMessage || {};
               const name = `${otherUser.first_name || ""} ${otherUser.last_name || ""}`.trim() || "User";
-              const preview = typeof lastMsg === "object" ? lastMsg?.content : lastMsg;
+              const preview = formatLastMessagePreview(
+                typeof lastMsg === "object" ? lastMsg?.content : lastMsg,
+              );
               const time = String(lastMsg.createdAt || item.lastMessageTime || "").split("T")[0];
               return (
                 <div
                   key={item.id || Math.random()}
-                  onClick={() => window.location.href = '/business/messages'}
+                  onClick={() => navigate("/business/messages")}
                   className="p-3 rounded-xl bg-gray-50/70 border border-gray-100 hover:bg-gray-50 cursor-pointer transition"
                 >
                   <div className="flex items-center justify-between gap-2">

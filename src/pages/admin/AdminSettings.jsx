@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { updateUser } from "../../store/slices/authSlice";
 import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -108,6 +110,7 @@ function getApiError(error) {
 }
 
 export default function AdminSettings() {
+  const dispatch = useDispatch();
   const { showToast } = useToast();
   const [configTab, setConfigTab] = useState("account");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -276,11 +279,14 @@ export default function AdminSettings() {
         dataToSubmit.append('profile_pic', profileFile);
       }
       // Parallel update for performance
-      await Promise.all([
+      const [prefRes, meRes] = await Promise.all([
         updateMePreferences(preferences),
         updateMe(dataToSubmit)
       ]);
       setProfileFile(null);
+      if (meRes?.data?.data?.profile) {
+        dispatch(updateUser(meRes.data.data.profile));
+      }
       showToast({ message: "Profile and preferences updated successfully." });
       loadData(); // Refresh to ensure sync
     } catch (e) {

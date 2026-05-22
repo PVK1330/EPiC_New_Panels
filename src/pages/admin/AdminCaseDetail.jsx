@@ -18,6 +18,9 @@ import CaseDetailNotes from "../../components/caseDetail/CaseDetailNotes";
 import { CASE_DETAIL_TABS, TAB_IDS, DEFAULT_CASE_DETAIL } from "../../components/caseDetail/caseDetailData";
 import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
 import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
+import BiometricBookedModal from "../../components/workflow/BiometricBookedModal";
+import { updatePipelineStage } from "../../services/caseApi";
+import { sendBiometricSlot } from "../../services/workflowApi";
 import CandidateApplicationReadonly from "../../components/CandidateApplicationForm/CandidateApplicationReadonly";
 import { getCandidateById } from "../../services/candidateApi";
 import { createEscalation } from "../../services/escalationApi";
@@ -74,6 +77,8 @@ const AdminCaseDetail = () => {
   const [flagSubmitting, setFlagSubmitting] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [stageSaving, setStageSaving] = useState(false);
+  const [biometricModalOpen, setBiometricModalOpen] = useState(false);
+  const [pendingBiometricStage, setPendingBiometricStage] = useState(null);
 
   // State for data
   const [caseData, setCaseData] = useState(null);
@@ -303,7 +308,8 @@ const AdminCaseDetail = () => {
       actions: doc.status === "under_review" ? "review" : null,
       rawStatus: doc.status,
       documentUrl: doc.documentUrl,
-      reviewNotes: doc.reviewNotes || null,
+      reviewNotes: doc.reviewNotes || doc.rejectionReason || null,
+      rejectionReason: doc.rejectionReason || doc.reviewNotes || null,
     }));
   }, [documents, caseData]);
 
@@ -415,13 +421,18 @@ const AdminCaseDetail = () => {
         dateOpened: keyDates?.submitted || "N/A",
         targetDate: keyDates?.targetSubmissionDate || "N/A",
         visaExpiry: "N/A",
-        paymentStatus: outstanding === 0 ? "Fully Paid" : "Partially Paid",
+        paymentStatus: financial?.amountStatus || (totalFee === 0 ? "Pending" : outstanding === 0 ? "Fully Paid" : "Partially Paid"),
+        biometricsDate: overview?.biometricsDate || keyDates?.biometricsDate,
+        biometricLocation: overview?.biometricLocation,
+        biometricTime: overview?.biometricTime,
+        biometricDay: overview?.biometricDay,
+        proposedAmount: overview?.proposedAmount,
       },
       progress: {
         pct:
-          outstanding === 0
-            ? 100
-            : Math.round((totalPaid / (totalFee || 1)) * 100),
+          totalFee === 0
+            ? 0
+            : Math.round((totalPaid / totalFee) * 100),
         documents: docSummary.total
           ? `${docSummary.approved ?? 0}/${docSummary.total} approved`
           : "0/0 approved",
@@ -499,15 +510,60 @@ const AdminCaseDetail = () => {
 
   const handleWorkflowStageChange = async (caseStage) => {
     if (!cleanId) return;
+    // Both biometrics stages require the booking details popup
+    if (caseStage === "biometrics_booked" || caseStage === "biometrics_confirmation_sent") {
+      setPendingBiometricStage(caseStage);
+      setBiometricModalOpen(true);
+      return;
+    }
     setStageSaving(true);
     try {
       await updateCaseStatus(cleanId, { caseStage });
       await fetchCaseDetail(cleanId);
+      showToast({ message: "Workflow stage updated", variant: "success" });
     } catch (err) {
       console.error("Failed to update workflow stage:", err);
       showToast({
         variant: "danger",
         message: err?.response?.data?.message || "Failed to update workflow stage",
+      });
+    } finally {
+      setStageSaving(false);
+    }
+  };
+
+  const confirmBiometricBooking = async (payload) => {
+    if (!cleanId) return;
+    setStageSaving(true);
+    try {
+      if (pendingBiometricStage === "biometrics_confirmation_sent") {
+        // Use dedicated workflow API — sends in-app notification + professional email
+        await sendBiometricSlot(cleanId, {
+          location: payload.biometricLocation,
+          appointmentDate: payload.biometricDate,
+          appointmentTime: payload.biometricTime,
+          appointmentDay: payload.biometricDay,
+          instructions: payload.biometricInstructions,
+        });
+        showToast({
+          message: "Confirmation sent — candidate notified by email & in-app",
+          variant: "success",
+        });
+      } else {
+        // biometrics_booked — uses pipeline stage API
+        await updatePipelineStage(cleanId, "biometrics_booked", payload);
+        showToast({
+          message: "Biometrics booked — candidate notified",
+          variant: "success",
+        });
+      }
+      await fetchCaseDetail(cleanId);
+      setBiometricModalOpen(false);
+      setPendingBiometricStage(null);
+    } catch (err) {
+      showToast({
+        variant: "danger",
+        message: err?.response?.data?.message || "Failed to book biometrics",
       });
     } finally {
       setStageSaving(false);
@@ -847,6 +903,23 @@ const AdminCaseDetail = () => {
           </Modal>
         </>
       )}
+
+      <BiometricBookedModal
+        open={biometricModalOpen}
+        onClose={() => {
+          setBiometricModalOpen(false);
+          setPendingBiometricStage(null);
+        }}
+        onConfirm={confirmBiometricBooking}
+        caseLabel={data?.caseId || cleanId}
+        loading={stageSaving}
+        initialData={caseData?.workflowState?.biometrics?.availability ? {
+          location: caseData.workflowState.biometrics.availability.preferredLocation,
+          date: caseData.workflowState.biometrics.availability.preferredDate,
+          time: caseData.workflowState.biometrics.availability.preferredTime,
+          instructions: caseData.workflowState.biometrics.availability.notes,
+        } : undefined}
+      />
     </motion.div>
   );
 };

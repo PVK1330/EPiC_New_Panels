@@ -32,6 +32,7 @@ import {
   selectLogoUrl,
 } from "../../store/slices/platformBrandingSlice";
 import useModuleAccess from "../../hooks/useModuleAccess";
+import { resolveAssetUrl } from "../../utils/assetUrl";
 
 const sidebarVariants = {
   open: {

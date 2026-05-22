@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2, ClipboardList, Loader2, ArrowRight } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
-import { completeCandidateTask, getCandidateTasks } from "../../services/workflowApi";
+import {
+  completeCandidateTask,
+  getCandidateTasks,
+  markBiometricAttended,
+} from "../../services/workflowApi";
 import Button from "../../components/Button";
 
 function formatDue(dateStr) {
@@ -15,8 +19,11 @@ function formatDue(dateStr) {
 }
 
 function isBiometricAvailabilityTask(task) {
-  const title = task.title || "";
-  return /biometric|availability/i.test(title);
+  return task.isBiometricAvailability || /biometric.*availability/i.test(task.title || "");
+}
+
+function isBiometricAttendTask(task) {
+  return task.isBiometricAttend || /attend biometrics/i.test(task.title || "");
 }
 
 function taskActionPath(task) {
@@ -26,6 +33,7 @@ function taskActionPath(task) {
   if (/draft application|review draft/i.test(title)) return "/candidate/application";
   if (/upload|document/i.test(title)) return "/candidate/upload-documents";
   if (/checklist/i.test(title)) return "/candidate/document-checklist";
+  if (task.isCclPayment || /pay ccl fee/i.test(title)) return "/candidate/payments";
   if (/client care|ccl|fee|payment/i.test(title)) return "/candidate/ccl";
   return "/candidate/application";
 }
@@ -60,8 +68,15 @@ export default function CandidateTasks() {
     if (task.status === "completed") return;
     setBusyId(task.id);
     try {
-      await completeCandidateTask(task.id);
-      showToast({ message: "Task marked complete." });
+      if (isBiometricAttendTask(task)) {
+        await markBiometricAttended();
+        showToast({
+          message: "Thank you — your caseworker and admin have been notified.",
+        });
+      } else {
+        await completeCandidateTask(task.id);
+        showToast({ message: "Task marked complete." });
+      }
       await load();
     } catch (err) {
       showToast({
@@ -122,24 +137,60 @@ export default function CandidateTasks() {
                             Complete your document checklist and upload the required files.
                           </p>
                         )}
+                        {task.isCclPayment && task.cclFeeAmount > 0 && (
+                          <p className="text-xs font-bold text-emerald-800 mt-1">
+                            Amount due: £
+                            {Number(task.cclFeeAmount).toLocaleString("en-GB", {
+                              minimumFractionDigits: 2,
+                            })}{" "}
+                            — review your Client Care Letter, then pay from Payments.
+                          </p>
+                        )}
+                        {isBiometricAttendTask(task) && task.biometricDetails && (
+                          <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-bold text-secondary space-y-0.5">
+                            <p>
+                              <span className="text-primary">Location:</span>{" "}
+                              {task.biometricDetails.location || "—"}
+                            </p>
+                            <p>
+                              <span className="text-primary">Date:</span>{" "}
+                              {task.biometricDetails.day
+                                ? `${task.biometricDetails.day}, `
+                                : ""}
+                              {task.biometricDetails.date
+                                ? formatDue(task.biometricDetails.date)
+                                : "—"}
+                            </p>
+                            <p>
+                              <span className="text-primary">Time:</span>{" "}
+                              {task.biometricDetails.time || "—"}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 shrink-0">
-                      <Link
-                        to={taskActionPath(task)}
-                        className="inline-flex items-center gap-1 rounded-xl border border-primary/25 bg-primary/10 px-3 py-2 text-xs font-black text-primary hover:bg-primary/15"
-                      >
-                        Open <ArrowRight size={14} />
-                      </Link>
+                      {!isBiometricAttendTask(task) && (
+                        <Link
+                          to={taskActionPath(task)}
+                          className="inline-flex items-center gap-1 rounded-xl border border-primary/25 bg-primary/10 px-3 py-2 text-xs font-black text-primary hover:bg-primary/15"
+                        >
+                          Open <ArrowRight size={14} />
+                        </Link>
+                      )}
                       {!task.isDataCapture && !isBiometricAvailabilityTask(task) && (
                         <Button
                           type="button"
-                          variant="outline"
+                          variant={isBiometricAttendTask(task) ? "primary" : "outline"}
                           className="rounded-xl text-xs"
                           disabled={busyId === task.id}
                           onClick={() => handleComplete(task)}
                         >
-                          {busyId === task.id ? "Savingâ€¦" : "Mark done"}
+                          {busyId === task.id
+                            ? "Saving…"
+                            : isBiometricAttendTask(task)
+                              ? "Mark as attended"
+                              : "Mark done"}
                         </Button>
                       )}
                     </div>

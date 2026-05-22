@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Calendar } from "lucide-react";
 import CaseWorkflowProgress from "../case/CaseWorkflowProgress";
 import CaseWorkflowBadge from "../case/CaseWorkflowBadge";
 
@@ -98,6 +99,22 @@ const CaseDetailOverview = ({ data }) => {
               {k.paymentStatus}
             </span>
           </div>
+          {k.proposedAmount != null && Number(k.proposedAmount) > 0 && (
+            <div className="sm:col-span-2">
+              <p className="text-[10px] font-black uppercase tracking-wider text-emerald-800 mb-1">
+                Admin CCL fee (candidate payment due)
+              </p>
+              <p className="text-lg font-black text-emerald-900">
+                £
+                {Number(k.proposedAmount).toLocaleString("en-GB", {
+                  minimumFractionDigits: 2,
+                })}
+              </p>
+              <p className="text-[10px] font-bold text-emerald-800/80 mt-0.5">
+                Client Care Letter fee set at assignment — this is what the candidate must pay.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -105,6 +122,29 @@ const CaseDetailOverview = ({ data }) => {
         caseRecord={{ caseStage: k.caseStage, status: k.caseStatus }}
         compact
       />
+
+      {(k.biometricLocation || k.biometricsDate || k.biometricTime) && (
+        <div className="bg-white rounded-xl border border-primary/20 shadow-sm p-5 lg:col-span-2">
+          <h3 className="text-xs font-black uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
+            <Calendar size={14} />
+            Biometrics appointment
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Field label="Location">{k.biometricLocation || "—"}</Field>
+            <Field label="Date">
+              {k.biometricsDate
+                ? new Date(k.biometricsDate).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "—"}
+              {k.biometricDay ? ` (${k.biometricDay})` : ""}
+            </Field>
+            <Field label="Time slot">{k.biometricTime || "—"}</Field>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 lg:col-span-2">
         <h3 className="text-xs font-black uppercase tracking-widest text-primary mb-4 pb-2 border-b border-gray-100">

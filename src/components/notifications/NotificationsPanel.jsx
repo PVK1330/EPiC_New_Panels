@@ -1,5 +1,5 @@
-import { Bell, Check, Filter, Trash2 } from "lucide-react";
-import { useMemo } from "react";
+import { Bell, Check, Filter, Trash2, X } from "lucide-react";
+import { useMemo, useState } from "react";
 
 /**
  * Reusable notifications list UI for all portals.
@@ -30,6 +30,8 @@ const NotificationsPanel = ({
           body: n.body ?? n.message ?? "",
           time: n.time ?? n.timestamp ?? "",
           unread,
+          priority: n.priority,
+          metadata: n.metadata,
         };
       }),
     [notifications],
@@ -40,8 +42,11 @@ const NotificationsPanel = ({
   const filtered = useMemo(() => {
     if (filter === "all") return normalized;
     if (filter === "unread") return normalized.filter((n) => n.unread);
+    if (filter === "read") return normalized.filter((n) => !n.unread);
     return normalized.filter((n) => n.type === filter);
   }, [normalized, filter]);
+
+  const [selectedNotification, setSelectedNotification] = useState(null);
 
   const typeStyles = (type) => {
     switch (type) {
@@ -96,6 +101,7 @@ const NotificationsPanel = ({
               >
                 <option value="all">All</option>
                 <option value="unread">Unread</option>
+                <option value="read">Read</option>
                 <option value="alert">Alerts</option>
                 <option value="success">Success</option>
                 <option value="info">Info</option>
@@ -111,14 +117,17 @@ const NotificationsPanel = ({
               <div
                 key={n.id}
                 className={`border rounded-xl p-4 flex items-start gap-4 transition-colors cursor-pointer ${typeStyles(n.type)} ${n.unread ? "border-l-[3px] border-l-secondary" : ""}`}
-                onClick={() => onMarkRead?.(n.id)}
-                role={onMarkRead ? "button" : undefined}
-                tabIndex={onMarkRead ? 0 : undefined}
+                onClick={() => {
+                  onMarkRead?.(n.id);
+                  setSelectedNotification(n);
+                }}
+                role="button"
+                tabIndex={0}
                 onKeyDown={(e) => {
-                  if (!onMarkRead) return;
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    onMarkRead(n.id);
+                    onMarkRead?.(n.id);
+                    setSelectedNotification(n);
                   }
                 }}
               >
@@ -166,6 +175,75 @@ const NotificationsPanel = ({
           )}
         </div>
       </div>
+
+      {/* Notification Details Modal */}
+      {selectedNotification && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
+          <div
+            className="bg-white rounded-xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200"
+          >
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+              <h3 className="text-sm font-black text-secondary">Notification Details</h3>
+              <button
+                onClick={() => setSelectedNotification(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-bold text-secondary">{selectedNotification.title}</h4>
+                {selectedNotification.priority && (
+                  <span className={`px-2 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                    selectedNotification.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                    selectedNotification.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                    selectedNotification.priority === 'low' ? 'bg-gray-100 text-gray-700' :
+                    'bg-blue-100 text-blue-700'
+                  }`}>
+                    {selectedNotification.priority} Priority
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-600 mb-6 whitespace-pre-wrap leading-relaxed">{selectedNotification.body}</p>
+              
+              {selectedNotification.metadata && Object.keys(selectedNotification.metadata).length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
+                  <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Notification Details</h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
+                    {Object.entries(selectedNotification.metadata).map(([key, value]) => (
+                      <div key={key}>
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          {key.replace(/([A-Z])/g, ' $1').trim()}
+                        </div>
+                        <div className="text-sm font-semibold text-secondary mt-0.5 break-words">
+                          {Array.isArray(value) ? value.join(', ') : String(value)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Received: {selectedNotification.time}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button
+                type="button"
+                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors"
+                onClick={() => setSelectedNotification(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

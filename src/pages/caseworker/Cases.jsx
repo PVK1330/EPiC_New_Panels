@@ -64,10 +64,11 @@ import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
 import CaseWorkflowGuidance from "../../components/case/CaseWorkflowGuidance";
 import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
+import BiometricBookedModal from "../../components/workflow/BiometricBookedModal";
 import CclFeeProposalModal from "../../components/case/CclFeeProposalModal";
 import PrintClientApplicationButton from "../../components/CandidateApplicationForm/PrintClientApplicationButton";
 import { updatePipelineStage, assignCase } from "../../services/caseApi";
-import { proposeCclFees, getCclStatus } from "../../services/workflowApi";
+import { proposeCclFees, getCclStatus, sendBiometricSlot } from "../../services/workflowApi";
 import {
   IMMIGRATION_CASE_STEPS,
   resolveCaseStage,
@@ -400,6 +401,8 @@ const Cases = () => {
   const [detailCase, setDetailCase] = useState(null);
   const [detailTab, setDetailTab] = useState("overview");
   const [stageSaving, setStageSaving] = useState(false);
+  const [biometricModalOpen, setBiometricModalOpen] = useState(false);
+  const [pendingBiometricStage, setPendingBiometricStage] = useState(null);
   const { showToast } = useToast();
   const [newCaseOpen, setNewCaseOpen] = useState(false);
   const [newCaseForm, setNewCaseForm] = useState(emptyNewCaseForm);
@@ -560,6 +563,11 @@ const Cases = () => {
   const handleWorkflowStageChange = useCallback(
     async (caseStage) => {
       if (!detailCase?.caseId) return;
+      if (caseStage === "biometrics_booked" || caseStage === "biometrics_confirmation_sent") {
+        setPendingBiometricStage(caseStage);
+        setBiometricModalOpen(true);
+        return;
+      }
       setStageSaving(true);
       try {
         const res = await updatePipelineStage(detailCase.caseId, caseStage);
@@ -590,6 +598,53 @@ const Cases = () => {
     },
     [detailCase?.caseId, showToast],
   );
+
+  const confirmBiometricBooking = async (payload) => {
+    if (!detailCase?.caseId) return;
+    setStageSaving(true);
+    try {
+      const caseId = detailCase.caseId;
+      if (pendingBiometricStage === "biometrics_confirmation_sent") {
+        // Use dedicated workflow API
+        await sendBiometricSlot(caseId, {
+          location: payload.biometricLocation,
+          appointmentDate: payload.biometricDate,
+          appointmentTime: payload.biometricTime,
+          appointmentDay: payload.biometricDay,
+          instructions: payload.biometricInstructions,
+        });
+        showToast({
+          message: "Confirmation sent — candidate notified by email & in-app",
+          variant: "success",
+        });
+      } else {
+        await updatePipelineStage(caseId, "biometrics_booked", payload);
+        showToast({
+          message: "Biometrics booked — candidate notified",
+          variant: "success",
+        });
+      }
+      // Re-fetch detail
+      const res = await getCaseworkerCaseDetails(caseId);
+      const data = res?.data?.data;
+      if (data?.overview) {
+        setDetailCase((prev) =>
+          prev
+            ? { ...prev, caseStage: pendingBiometricStage }
+            : prev,
+        );
+      }
+      setBiometricModalOpen(false);
+      setPendingBiometricStage(null);
+    } catch (err) {
+      showToast({
+        variant: "danger",
+        message: err?.response?.data?.message || "Failed to book biometrics",
+      });
+    } finally {
+      setStageSaving(false);
+    }
+  };
 
   const openDetail = useCallback((c) => {
     setNewCaseOpen(false);
@@ -4996,6 +5051,23 @@ function AuditLogsTab({ caseId }) {
           </table>
         </div>
       </div>
+
+      <BiometricBookedModal
+        open={biometricModalOpen}
+        onClose={() => {
+          setBiometricModalOpen(false);
+          setPendingBiometricStage(null);
+        }}
+        onConfirm={confirmBiometricBooking}
+        caseLabel={detailCase?.caseId}
+        loading={stageSaving}
+        initialData={detailCase?.workflowState?.biometrics?.availability ? {
+          location: detailCase.workflowState.biometrics.availability.preferredLocation,
+          date: detailCase.workflowState.biometrics.availability.preferredDate,
+          time: detailCase.workflowState.biometrics.availability.preferredTime,
+          instructions: detailCase.workflowState.biometrics.availability.notes,
+        } : undefined}
+      />
     </div>
   );
 }

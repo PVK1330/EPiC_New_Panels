@@ -28,6 +28,13 @@ const authSlice = createSlice({
       setUser(user);
       localStorage.setItem('epic_allowed_modules', JSON.stringify(allowedModules));
     },
+    updateUser: (state, action) => {
+      if (state.user) {
+        const updatedUser = { ...state.user, ...action.payload };
+        state.user = updatedUser;
+        setUser(updatedUser);
+      }
+    },
     logout: (state) => {
       state.user = null;
       state.token = null;
@@ -38,6 +45,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, logout } = authSlice.actions;
+export const { setCredentials, logout, updateUser } = authSlice.actions;
 export const selectAllowedModules = (state) => state.auth.allowedModules;
 export default authSlice.reducer;

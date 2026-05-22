@@ -42,6 +42,12 @@ const AdminLayout = () => {
   const user = useSelector((state) => state.auth.user);
   const profileMenuPaths = getProfileMenuPaths(user);
   const [orgLogoUrl, setOrgLogoUrl] = useState(null);
+  
+  const fullName = user?.first_name 
+    ? `${user?.first_name} ${user?.last_name || ''}`.trim() 
+    : user?.name || user?.email?.split('@')[0] || "Admin";
+
+  const profilePicUrl = user?.profile_pic || user?.avatar_url ? resolveAssetUrl(user?.profile_pic || user?.avatar_url) : null;
 
   const fetchOrganisationBranding = useCallback(async () => {
     try {
@@ -186,12 +192,16 @@ const AdminLayout = () => {
                 className={`flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all ${profileOpen ? "bg-gray-100 ring-2 ring-primary/10" : "hover:bg-gray-50"
                   }`}
               >
-                <div className="w-8 h-8 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-sm shrink-0">
-                  {user?.name?.charAt(0) || "A"}
+                <div className="w-8 h-8 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-sm shrink-0 overflow-hidden">
+                  {profilePicUrl ? (
+                    <img src={profilePicUrl} alt={fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    fullName.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div className="text-left hidden sm:block">
                   <p className="text-xs font-black text-secondary leading-none">
-                    {user?.name || "Admin"}
+                    {fullName}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">
                     {user?.role || "Admin"}
@@ -209,7 +219,7 @@ const AdminLayout = () => {
                     className="absolute right-0 mt-2 w-52 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden py-1.5 z-50 origin-top-right"
                   >
                     <div className="px-4 py-3 border-b border-gray-100 mb-1">
-                      <p className="text-sm font-black text-secondary">{user?.name || "Admin"}</p>
+                      <p className="text-sm font-black text-secondary">{fullName}</p>
                       <p className="text-xs text-gray-400 truncate">
                         {user?.email || "admin@elitepic.com"}
                       </p>

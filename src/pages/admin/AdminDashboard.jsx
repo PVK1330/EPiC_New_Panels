@@ -18,19 +18,28 @@ import {
   RiShieldUserLine,
   RiAddLine,
   RiArrowRightSLine,
+  RiSendPlaneLine,
 } from "react-icons/ri";
 import Button from "../../components/Button";
 import {
   getDashboardStats,
   getRecentCases,
   getRecentActivities,
+  getDueOverdueTasks,
 } from "../../services/dashboardApi";
+import DueOverdueTasksWidget from "../../components/dashboard/DueOverdueTasksWidget";
 import { getConversations } from "../../services/messagingApi";
 import {
+  extractConversationsFromResponse,
+  normalizeConversationForDashboard,
+  sortConversationsByRecent,
+} from "../../utils/messagingConversations";
+import { getNotifications, markNotificationAsRead } from "../../services/notificationApi";
+import {
+
   MOCK_DASHBOARD_STATS,
   MOCK_RECENT_CASES,
   MOCK_RECENT_ACTIVITIES,
-  MOCK_RECENT_MESSAGES,
 } from "../../data/adminDashboardMock";
 
 const today = new Date().toLocaleDateString("en-GB", {
@@ -66,34 +75,36 @@ export default function AdminDashboard() {
   const [dashboardFilter, setDashboardFilter] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
   const [usingDemoData, setUsingDemoData] = useState(false);
+  const [dueOverdue, setDueOverdue] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [selectedNotification, setSelectedNotification] = useState(null);
   const dashboardRef = useRef(null);
 
   const applyDemoDashboard = () => {
     setDashboardStats(MOCK_DASHBOARD_STATS);
     setRecentCases(MOCK_RECENT_CASES);
     setRecentActivities(MOCK_RECENT_ACTIVITIES);
-    setRecentMessages(MOCK_RECENT_MESSAGES);
     setUsingDemoData(true);
   };
 
   const normalizeConversations = (conversations) =>
-    (Array.isArray(conversations) ? conversations : []).slice(0, 5).map((conv) => ({
-      ...conv,
-      user: conv.user || {},
-      lastMessage: conv.lastMessage || { content: "", createdAt: null },
-    }));
+    sortConversationsByRecent(conversations)
+      .slice(0, 5)
+      .map(normalizeConversationForDashboard);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
       setUsingDemoData(false);
 
-      const [statsResult, casesResult, activitiesResult, messagesResult] =
+      const [statsResult, casesResult, activitiesResult, messagesResult, dueResult, notifResult] =
         await Promise.allSettled([
           getDashboardStats({ filter: dashboardFilter }),
           getRecentCases({ limit: 5 }),
           getRecentActivities({ limit: 5 }),
           getConversations(),
+          getDueOverdueTasks(),
+          getNotifications({ limit: 5 })
         ]);
 
       let anySuccess = false;
@@ -116,13 +127,25 @@ export default function AdminDashboard() {
         anySuccess = true;
       }
 
-      if (messagesResult.status === "fulfilled" && messagesResult.value?.data) {
-        const conv =
-          messagesResult.value.data.data?.conversations ??
-          messagesResult.value.data.conversations ??
-          [];
+      if (messagesResult.status === "fulfilled") {
+        const conv = extractConversationsFromResponse(messagesResult.value);
         setRecentMessages(normalizeConversations(conv));
         anySuccess = true;
+      } else if (messagesResult.status === "rejected") {
+        setRecentMessages([]);
+      }
+
+      if (dueResult.status === "fulfilled" && dueResult.value?.data?.data) {
+        setDueOverdue(dueResult.value.data.data);
+      } else {
+        setDueOverdue(null);
+      }
+
+      if (notifResult.status === "fulfilled" && notifResult.value?.data?.data) {
+        setNotifications(notifResult.value.data.data.notifications || []);
+        anySuccess = true;
+      } else {
+        setNotifications([]);
       }
 
       if (!anySuccess) {
@@ -142,8 +165,7 @@ export default function AdminDashboard() {
           setUsingDemoData(true);
         }
         if (messagesResult.status === "rejected") {
-          setRecentMessages(MOCK_RECENT_MESSAGES);
-          setUsingDemoData(true);
+          setRecentMessages([]);
         }
       }
 
@@ -173,6 +195,20 @@ export default function AdminDashboard() {
       removeCloneHost(host);
       setIsExporting(false);
     }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead) {
+      try {
+        await markNotificationAsRead(notif.id);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
+        );
+      } catch (err) {
+        console.error("Failed to mark notification as read", err);
+      }
+    }
+    setSelectedNotification(notif);
   };
 
   const kpiCards = dashboardStats
@@ -305,6 +341,14 @@ export default function AdminDashboard() {
             ))}
           </motion.div>
 
+          {dueOverdue && (
+            <DueOverdueTasksWidget
+              data={dueOverdue}
+              casesLink="/admin/cases"
+              tasksLink="/admin/assign"
+            />
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
             {/* Recent Cases */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -408,7 +452,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
               <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-sm font-black text-secondary">Recent Messages</h3>
                 <button
@@ -419,7 +463,7 @@ export default function AdminDashboard() {
                   View All →
                 </button>
               </div>
-              <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto custom-scrollbar">
+              <div className="flex-1 divide-y divide-gray-50 max-h-[350px] overflow-y-auto custom-scrollbar">
                 {recentMessages.length > 0 ? (
                   recentMessages.map((conv) => (
                     <motion.div
@@ -453,7 +497,7 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                         <p className="text-xs text-gray-500 truncate leading-relaxed italic">
-                          {conv.lastMessage?.content || "No message"}
+                          {conv.lastMessage?.preview || "No message"}
                         </p>
                         {conv.case && (
                           <div className="mt-1 flex items-center gap-1.5">
@@ -472,10 +516,148 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
+              <div
+                className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 shrink-0"
+                onClick={() => navigate("/admin/messages")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") navigate("/admin/messages");
+                }}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="flex gap-2 cursor-pointer">
+                  <input
+                    type="text"
+                    readOnly
+                    placeholder="Type a message..."
+                    className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none pointer-events-none"
+                  />
+                  <span className="rounded-xl bg-primary p-2.5 text-white shadow-md shadow-primary/20 flex items-center justify-center">
+                    <RiSendPlaneLine size={18} />
+                  </span>
+                </div>
+              </div>
             </div>
           </motion.div>
+
+          {/* Notifications Section */}
+          <motion.div
+            className="grid grid-cols-1 mt-6"
+            {...fade(0.5)}
+          >
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="text-sm font-black text-secondary">Recent Notifications</h3>
+                <button
+                  type="button"
+                  onClick={() => navigate("/admin/notifications")}
+                  className="text-xs font-bold text-primary hover:underline"
+                >
+                  View All →
+                </button>
+              </div>
+              <div className="flex-1 divide-y divide-gray-50 max-h-[350px] overflow-y-auto custom-scrollbar">
+                {notifications.length > 0 ? (
+                  notifications.map((notif) => (
+                    <motion.div
+                      key={notif.id}
+                      onClick={() => handleNotificationClick(notif)}
+                      className={`flex items-center gap-4 px-6 py-4 transition-colors cursor-pointer group ${notif.isRead ? 'hover:bg-gray-50' : 'bg-blue-50/30 hover:bg-blue-50/50'}`}
+                    >
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <p className={`text-sm font-bold truncate transition-colors ${notif.isRead ? 'text-secondary group-hover:text-primary' : 'text-primary'}`}>
+                            {notif.title}
+                          </p>
+                          <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap ml-2">
+                            {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : ""}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 truncate leading-relaxed">
+                          {notif.message}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="px-6 py-10 text-center text-gray-400 opacity-40">
+                    <RiAlarmWarningLine size={32} className="mx-auto mb-2 opacity-20" />
+                    <p className="text-xs font-bold">No recent notifications</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+
         </motion.div>
       </Skeleton>
+
+      {/* Notification Details Modal */}
+      {selectedNotification && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden"
+          >
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+              <h3 className="text-sm font-black text-secondary">Notification Details</h3>
+              <button
+                onClick={() => setSelectedNotification(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-bold text-secondary">{selectedNotification.title}</h4>
+                {selectedNotification.priority && (
+                  <span className={`px-2 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                    selectedNotification.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                    selectedNotification.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                    selectedNotification.priority === 'low' ? 'bg-gray-100 text-gray-700' :
+                    'bg-blue-100 text-blue-700'
+                  }`}>
+                    {selectedNotification.priority} Priority
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-600 mb-6 whitespace-pre-wrap leading-relaxed">{selectedNotification.message}</p>
+              
+              {selectedNotification.metadata && Object.keys(selectedNotification.metadata).length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
+                  <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Notification Details</h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
+                    {Object.entries(selectedNotification.metadata).map(([key, value]) => (
+                      <div key={key}>
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          {key.replace(/([A-Z])/g, ' $1').trim()}
+                        </div>
+                        <div className="text-sm font-semibold text-secondary mt-0.5 break-words">
+                          {Array.isArray(value) ? value.join(', ') : String(value)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Received: {new Date(selectedNotification.createdAt).toLocaleString()}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <Button variant="primary" onClick={() => setSelectedNotification(null)}>
+                Close
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

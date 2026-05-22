@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
 import Button from "../Button";
+import BiometricBookedModal from "../workflow/BiometricBookedModal";
 import {
   recordVisaPortalSubmission,
   sendBiometricSlot,
@@ -24,12 +25,7 @@ export default function CaseWorkflowPostCcl({
   const { showToast } = useToast();
   const [busy, setBusy] = useState("");
   const [visaRef, setVisaRef] = useState(workflowState?.visaPortal?.reference || "");
-  const [slot, setSlot] = useState({
-    location: workflowState?.biometrics?.bookedSlot?.location || "",
-    appointmentDate: workflowState?.biometrics?.bookedSlot?.appointmentDate || "",
-    appointmentTime: workflowState?.biometrics?.bookedSlot?.appointmentTime || "",
-    instructions: workflowState?.biometrics?.bookedSlot?.instructions || "",
-  });
+  const [biometricModalOpen, setBiometricModalOpen] = useState(false);
   const [visaReply, setVisaReply] = useState(
     workflowState?.biometrics?.visaPortalReply?.summary || "",
   );
@@ -60,9 +56,9 @@ export default function CaseWorkflowPostCcl({
     paid &&
     !visaSubmitted;
   const showBiometricBook =
-    ["application_submitted", "biometrics_booked"].includes(caseStage) &&
-    availability &&
-    !booked?.sentToCandidateAt;
+    ["application_submitted", "biometrics_booked", "biometrics_confirmation_sent"].includes(
+      caseStage,
+    ) && !booked?.sentToCandidateAt;
   const showDocsUpload =
     ["biometrics_confirmation_sent", "biometrics_booked"].includes(caseStage) && !docsUploaded;
   const showVisaReply =
@@ -97,11 +93,22 @@ export default function CaseWorkflowPostCcl({
       )}
 
       {booked?.sentToCandidateAt && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3 text-xs">
-          <p className="font-black text-emerald-800">Slot sent to candidate</p>
+        <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3 text-xs space-y-1">
+          <p className="font-black text-emerald-800">Biometrics booked — candidate notified</p>
           <p className="font-bold text-emerald-900">
-            {booked.location} — {booked.appointmentDate} {booked.appointmentTime}
+            <span className="font-black">Location:</span> {booked.location}
           </p>
+          <p className="font-bold text-emerald-900">
+            <span className="font-black">Date:</span>{" "}
+            {booked.appointmentDay ? `${booked.appointmentDay}, ` : ""}
+            {booked.appointmentDate}
+          </p>
+          <p className="font-bold text-emerald-900">
+            <span className="font-black">Time:</span> {booked.appointmentTime}
+          </p>
+          {booked.instructions && (
+            <p className="font-bold text-emerald-800/90">{booked.instructions}</p>
+          )}
         </div>
       )}
 
@@ -140,46 +147,45 @@ export default function CaseWorkflowPostCcl({
       {showBiometricBook && (
         <div className="space-y-2 border-t border-gray-100 pt-3">
           <p className="text-xs font-bold text-gray-600">
-            Book slot and send confirmation to candidate
+            Book biometrics and send confirmation email to the candidate
           </p>
-          <input
-            type="text"
-            value={slot.location}
-            onChange={(e) => setSlot((s) => ({ ...s, location: e.target.value }))}
-            placeholder="Appointment location"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold"
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <input
-              type="date"
-              value={slot.appointmentDate}
-              onChange={(e) => setSlot((s) => ({ ...s, appointmentDate: e.target.value }))}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold"
-            />
-            <input
-              type="text"
-              value={slot.appointmentTime}
-              onChange={(e) => setSlot((s) => ({ ...s, appointmentTime: e.target.value }))}
-              placeholder="Time (e.g. 10:30 AM)"
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold"
-            />
-          </div>
-          <textarea
-            value={slot.instructions}
-            onChange={(e) => setSlot((s) => ({ ...s, instructions: e.target.value }))}
-            placeholder="Instructions for candidate (optional)"
-            rows={2}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold resize-none"
-          />
-          <Button
-            type="button"
-            disabled={!!busy}
-            onClick={() => run("biometric-slot", () => sendBiometricSlot(caseId, slot))}
-          >
-            {busy === "biometric-slot" ? "Sending…" : "Send slot to candidate"}
+          <Button type="button" disabled={!!busy} onClick={() => setBiometricModalOpen(true)}>
+            Open booking form
           </Button>
         </div>
       )}
+
+      <BiometricBookedModal
+        open={biometricModalOpen}
+        onClose={() => setBiometricModalOpen(false)}
+        caseLabel={caseId}
+        loading={busy === "biometric-slot"}
+        initialData={availability ? {
+          location: availability.preferredLocation,
+          date: availability.preferredDate,
+          time: availability.preferredTime,
+          instructions: availability.notes,
+        } : undefined}
+        onConfirm={async (payload) => {
+          setBusy("biometric-slot");
+          try {
+            await sendBiometricSlot(caseId, {
+              location: payload.biometricLocation,
+              appointmentDate: payload.biometricDate,
+              appointmentTime: payload.biometricTime,
+              appointmentDay: payload.biometricDay,
+              instructions: payload.biometricInstructions,
+            });
+            showToast({ message: "Biometrics booked — candidate notified." });
+            setBiometricModalOpen(false);
+            onRefresh?.();
+          } catch (e) {
+            showToast({ variant: "danger", message: apiErrorMessage(e) });
+          } finally {
+            setBusy("");
+          }
+        }}
+      />
 
       {showDocsUpload && (
         <div className="border-t border-gray-100 pt-3">

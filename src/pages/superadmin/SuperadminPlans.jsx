@@ -340,7 +340,7 @@ const SuperadminPlans = () => {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4 pt-2">
+              {/* <div className="grid grid-cols-3 gap-4 pt-2">
                 <Input
                   label="Users"
                   type="number"
@@ -359,7 +359,7 @@ const SuperadminPlans = () => {
                   value={formData.storage_quota_gb}
                   onChange={(e) => setFormData({ ...formData, storage_quota_gb: e.target.value })}
                 />
-              </div>
+              </div> */}
             </div>
 
             <div className="space-y-5 p-6 bg-primary/5 rounded-2xl border border-primary/10 flex flex-col justify-center">

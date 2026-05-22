@@ -7,11 +7,16 @@ import { caseworkerNavSections } from "./caseworkerNavSections";
 import { useState, useEffect } from "react";
 import api from "../services/api";
 import useModuleAccess from "../hooks/useModuleAccess";
+import { resolveAssetUrl } from "../utils/assetUrl";
 
 const CaseworkerSidebar = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
+  const fullName = user?.first_name 
+    ? `${user?.first_name} ${user?.last_name || ''}`.trim() 
+    : user?.name || user?.email?.split('@')[0] || "User";
+  const profilePicUrl = user?.profile_pic || user?.avatar_url ? resolveAssetUrl(user?.profile_pic || user?.avatar_url) : null;
   const { canAccess } = useModuleAccess();
   const [taskCount, setTaskCount] = useState(0);
 
@@ -148,12 +153,16 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
                 onClose();
               }}
             >
-              <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-sm group-hover:bg-primary group-hover:text-white transition-all shrink-0">
-                {user?.name?.charAt(0) || "C"}
-              </div>
+              <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-sm group-hover:bg-primary group-hover:text-white transition-all shrink-0 overflow-hidden">
+              {profilePicUrl ? (
+                <img src={profilePicUrl} alt={fullName} className="w-full h-full object-cover" />
+              ) : (
+                fullName.charAt(0).toUpperCase()
+              )}
+            </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-black text-secondary truncate">
-                  {user?.name || "Caseworker"}
+                  {fullName}
                 </p>
                 <p className="text-[9px] font-black text-primary tracking-wider">
                   Case Officer

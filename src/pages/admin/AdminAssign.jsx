@@ -19,7 +19,7 @@ const AdminAssign = () => {
   const [caseSearch, setCaseSearch] = useState("");
   const [assignTo, setAssignTo] = useState([]);
   const [reason, setReason] = useState("");
-  const [feeAmount, setFeeAmount] = useState("");
+  const [proposedAmount, setProposedAmount] = useState("");
   const [reasonErr, setReasonErr] = useState("");
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -186,7 +186,7 @@ const AdminAssign = () => {
         assignTo: assignTo,
         assignToName: assignToNames,
         reason: reason,
-        feeAmount: feeAmount ? parseFloat(feeAmount) : undefined,
+        proposedAmount: proposedAmount !== "" ? parseFloat(proposedAmount) : undefined,
       });
       
       showToast({
@@ -209,7 +209,7 @@ const AdminAssign = () => {
       setCaseId("");
       setAssignTo([]);
       setReason("");
-      setFeeAmount("");
+      setProposedAmount("");
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (error) {
@@ -354,21 +354,21 @@ const AdminAssign = () => {
             </div>
 
             <div className="flex flex-col gap-1 mb-4">
-              <label className="text-sm font-medium text-gray-700">Fee Amount (Optional)</label>
+              <label className="text-sm font-medium text-gray-700">CCL fee (£) — amount candidate must pay</label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-gray-400 font-bold">£</span>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder="Enter candidate fee (e.g. 1500)"
-                  value={feeAmount}
-                  onChange={(e) => setFeeAmount(e.target.value)}
+                  placeholder="e.g. 1500.00"
+                  value={proposedAmount}
+                  onChange={(e) => setProposedAmount(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg pl-8 pr-4 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
                 />
               </div>
               <p className="text-xs text-gray-500">
-                If set, the Client Care Letter (CCL) fees will be automatically approved and issued to the candidate immediately.
+                Issues the Client Care Letter to the candidate with this fee. They pay this amount from Payments.
               </p>
             </div>
 

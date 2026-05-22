@@ -112,39 +112,6 @@ export const MOCK_RECENT_ACTIVITIES = [
   },
 ];
 
-export const MOCK_RECENT_MESSAGES = [
-  {
-    id: 1,
-    unreadCount: 2,
-    user: { id: 101, first_name: "Sarah", last_name: "Mitchell" },
-    lastMessage: {
-      content: "Please review the updated passport scan when you have a moment.",
-      createdAt: new Date(Date.now() - 1800000).toISOString(),
-    },
-    case: { caseId: "CAS-105201" },
-  },
-  {
-    id: 2,
-    unreadCount: 0,
-    user: { id: 102, first_name: "James", last_name: "Okonkwo" },
-    lastMessage: {
-      content: "Consultation slot confirmed for Thursday at 2pm.",
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-    },
-    case: { caseId: "CAS-105188" },
-  },
-  {
-    id: 3,
-    unreadCount: 1,
-    user: { id: 103, first_name: "Priya", last_name: "Sharma" },
-    lastMessage: {
-      content: "I've uploaded the bank statements to the portal.",
-      createdAt: new Date(Date.now() - 14400000).toISOString(),
-    },
-    case: { caseId: "CAS-105172" },
-  },
-];
-
 export const MOCK_NOTIFICATIONS = [
   {
     id: 1,

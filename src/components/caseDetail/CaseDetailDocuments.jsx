@@ -56,10 +56,13 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
       if (!changeDocumentStatus) return;
       setStatusUpdatingId(documentId);
       try {
-        await changeDocumentStatus(documentId, {
-          status,
-          reviewNotes: notes || undefined,
-        });
+        const payload = { status };
+        if (status === "rejected") {
+          payload.rejectionReason = notes.trim();
+        } else if (notes?.trim()) {
+          payload.reviewNotes = notes.trim();
+        }
+        await changeDocumentStatus(documentId, payload);
         await fetchChecklist();
         showToast({
           message:
@@ -90,7 +93,15 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
 
   const submitReject = () => {
     if (!rejectTarget) return;
-    runReview(rejectTarget.documentId, "rejected", rejectNotes.trim() || "Please re-upload this document.");
+    const reason = rejectNotes.trim();
+    if (!reason) {
+      showToast({
+        variant: "danger",
+        message: "Rejection reason is required.",
+      });
+      return;
+    }
+    runReview(rejectTarget.documentId, "rejected", reason);
   };
 
   const renderReviewActions = (documentId, rawStatus, label) => {
@@ -374,6 +385,11 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
                             Uploaded: {new Date(item.uploadedAt).toLocaleDateString()}
                           </span>
                         )}
+                        {item.status === "rejected" && item.rejectionReason && (
+                          <p className="text-[10px] font-bold text-red-700 mt-1">
+                            Reason: {item.rejectionReason}
+                          </p>
+                        )}
                       </div>
                     </div>
                     {item.status === 'missing' ? (
@@ -442,6 +458,11 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
               <p className="text-[11px] font-bold text-gray-500">
                 {d.meta}
               </p>
+              {d.rawStatus === "rejected" && d.rejectionReason && (
+                <p className="text-[10px] font-bold text-red-700 mt-0.5">
+                  Rejection: {d.rejectionReason}
+                </p>
+              )}
             </div>
             <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${d.statusClass}`}>{d.status}</span>
             <button
@@ -476,9 +497,11 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
             value={rejectNotes}
             onChange={(e) => setRejectNotes(e.target.value)}
             rows={3}
+            required
             placeholder="e.g. Passport scan is unclear — please upload a full colour copy."
             className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold resize-none"
           />
+          <p className="text-[10px] font-bold text-red-600">Required — shown to the candidate.</p>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setRejectOpen(false)}>
               Cancel

@@ -38,8 +38,6 @@ const mapApiOrgToRow = (o) => ({
   slug: o.slug,
   plan: capitalize(o.plan?.name || o.plan || 'Starter'),
   users: Array.isArray(o.users) ? o.users.length : 0,
-  cases: 0,
-  storage: '—',
   status: capitalize(o.status || 'trial'),
   country: o.country || '—',
   primaryEmail: o.primaryEmail,
@@ -59,6 +57,8 @@ const SuperadminOrganisations = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [orgs, setOrgs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const loadOrgs = useCallback(async () => {
     setLoading(true);
@@ -89,6 +89,13 @@ const SuperadminOrganisations = () => {
                          String(org.country).toLowerCase().includes(searchTerm.toLowerCase());
     return matchesTab && matchesSearch;
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchTerm]);
+
+  const totalPages = Math.ceil(filteredOrgs.length / itemsPerPage);
+  const paginatedOrgs = filteredOrgs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleCreateOrg = async (data) => {
     if (!data.adminFirstName?.trim() || !data.adminLastName?.trim()) {
@@ -378,28 +385,16 @@ const SuperadminOrganisations = () => {
         </div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-             <h1 className="text-3xl font-black text-red-800 mb-2">Organisations</h1>
+             <h1 className="text-3xl font-black text-secondary mb-2">Organisations</h1>
              <p className="text-sm text-gray-500 font-medium">Manage all client organisations and their statuses.</p>
           </div>
           <div className="flex items-center gap-3">
-             <motion.div
-               whileHover={{ scale: 1.05 }}
-               whileTap={{ scale: 0.95 }}
+             <Button 
+                onClick={() => setIsCreateModalOpen(true)}
+                className="px-6 py-2.5 text-sm font-bold shadow-lg shadow-primary/20"
              >
-               
-             </motion.div>
-             <motion.div
-               whileHover={{ scale: 1.05 }}
-               whileTap={{ scale: 0.95 }}
-             >
-               <Button 
-               
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-blue-950 border border-white/30 text-gray-500shadow-lg backdrop-blur-sm"
-               >
-                  <RiAddLine size={18} /> Create Organisation
-               </Button>
-             </motion.div>
+                <RiAddLine size={18} className="inline mr-2" /> Create Organisation
+             </Button>
           </div>
         </div>
       </motion.div>
@@ -442,13 +437,11 @@ const SuperadminOrganisations = () => {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto no-scrollbar">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50/50 text-[9px] uppercase text-gray-400 tracking-widest font-bold border-b border-gray-50">
+            <thead className="bg-gray-50/50 text-[10px] uppercase text-gray-400 tracking-widest font-bold border-b border-gray-50">
               <tr>
                 <th className="px-5 py-3 text-left">Organisation</th>
                 <th className="px-5 py-3 text-left">Tier</th>
                 <th className="px-5 py-3 text-center">Users</th>
-                <th className="px-5 py-3 text-center">Cases</th>
-                <th className="px-5 py-3 text-center">Storage</th>
                 <th className="px-5 py-3 text-left">Status</th>
                 <th className="px-5 py-3 text-right">Action</th>
               </tr>
@@ -456,13 +449,13 @@ const SuperadminOrganisations = () => {
             <tbody className="divide-y divide-gray-50/50">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
+                  <td colSpan={5} className="px-5 py-10 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
                     Loading organisations…
                   </td>
                 </tr>
-              ) : filteredOrgs.length === 0 ? (
+              ) : paginatedOrgs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center">
+                  <td colSpan={5} className="px-5 py-12 text-center">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
                       No organisations yet
                     </p>
@@ -472,32 +465,30 @@ const SuperadminOrganisations = () => {
                   </td>
                 </tr>
               ) : (
-              filteredOrgs.map((org) => (
+              paginatedOrgs.map((org) => (
                 <tr key={org.id} className="hover:bg-gray-50/50 transition-colors group/row">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded flex items-center justify-center text-gray-400 font-black text-[9px] group-hover/row:bg-primary group-hover/row:text-white transition-all">
+                      <div className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-gray-400 font-black text-xs group-hover/row:bg-primary group-hover/row:text-white transition-all">
                         {org.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-bold text-secondary text-xs">{org.name}</p>
-                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">{org.country}</p>
+                        <p className="font-bold text-secondary text-sm">{org.name}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{org.country}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
                       org.plan === 'Enterprise' ? 'bg-primary/5 text-primary border-primary/10' :
                       org.plan === 'Pro' ? 'bg-secondary/5 text-secondary border-secondary/10' : 'bg-gray-50 text-gray-400 border-gray-100'
                     }`}>
                       {org.plan}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-center font-bold text-secondary text-xs">{org.users}</td>
-                  <td className="px-5 py-3 text-center font-bold text-secondary text-xs">{org.cases}</td>
-                  <td className="px-5 py-3 text-center text-[9px] font-bold text-gray-300 uppercase">{org.storage}</td>
+                  <td className="px-5 py-3 text-center font-bold text-secondary text-sm">{org.users}</td>
                   <td className="px-5 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                       org.status === 'Active' ? 'bg-green-50 text-green-700 border-green-100' :
                       org.status === 'Trial' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-red-50 text-red-700 border-red-100'
                     }`}>
@@ -544,11 +535,23 @@ const SuperadminOrganisations = () => {
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{filteredOrgs.length} results</p>
+        <div className="px-5 py-4 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
+          <p className="text-xs font-bold text-gray-400">Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredOrgs.length)} to {Math.min(currentPage * itemsPerPage, filteredOrgs.length)} of {filteredOrgs.length} results</p>
           <div className="flex gap-2">
-            <button disabled className="px-3 py-1 rounded-lg text-[9px] font-bold uppercase bg-white border border-gray-200 text-gray-300">Prev</button>
-            <button className="px-3 py-1 rounded-lg text-[9px] font-bold uppercase bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm">Next</button>
+            <button 
+              disabled={currentPage === 1} 
+              onClick={() => setCurrentPage(p => p - 1)}
+              className="px-4 py-2 rounded-lg text-xs font-bold bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50 disabled:hover:bg-white"
+            >
+              Prev
+            </button>
+            <button 
+              disabled={currentPage === totalPages || totalPages === 0}
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="px-4 py-2 rounded-lg text-xs font-bold bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50 disabled:hover:bg-white"
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>

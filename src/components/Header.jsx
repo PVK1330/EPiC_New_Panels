@@ -15,6 +15,7 @@ import { logout } from"../store/slices/authSlice";
 import { getProfileMenuPaths } from "../utils/authResponse";
 import NotificationDropdown from"./Notifications/NotificationDropdown";
 import MessageDropdown from"./notifications/MessageDropdown";
+import { resolveAssetUrl } from "../utils/assetUrl";
 
 const Header = ({ onMenuClick }) => {
  const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -38,6 +39,8 @@ const Header = ({ onMenuClick }) => {
  :"";
 
  const profileMenuPaths = useMemo(() => getProfileMenuPaths(user), [user]);
+
+ const profilePicUrl = user?.profile_pic || user?.avatar_url ? resolveAssetUrl(user?.profile_pic || user?.avatar_url) : null;
 
  const handleLogout = () => {
  dispatch(logout());
@@ -130,8 +133,12 @@ const Header = ({ onMenuClick }) => {
  :"hover:bg-gray-50"
  }`}
  >
- <div className="w-9 h-9 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold text-sm shadow-inner">
- {fullName.charAt(0).toUpperCase()}
+ <div className="w-9 h-9 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold text-sm shadow-inner overflow-hidden">
+  {profilePicUrl ? (
+    <img src={profilePicUrl} alt={fullName} className="w-full h-full object-cover" />
+  ) : (
+    fullName.charAt(0).toUpperCase()
+  )}
  </div>
  <div className="text-left hidden sm:block">
  <p className="text-sm font-bold text-gray-900 leading-none">

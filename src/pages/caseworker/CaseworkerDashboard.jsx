@@ -3,8 +3,14 @@ import { useSelector, useDispatch } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { CalendarDays, Check, Bell, Send, MessageSquareMore } from "lucide-react";
 import api from "../../services/api";
-import { MOCK_RECENT_MESSAGES } from "../../data/adminDashboardMock";
+import {
+  extractConversationsFromResponse,
+  formatLastMessagePreview,
+  sortConversationsByRecent,
+} from "../../utils/messagingConversations";
 import NotificationList from "../../components/notifications/NotificationList";
+import { getDueOverdueTasks } from "../../services/dashboardApi";
+import DueOverdueTasksWidget from "../../components/dashboard/DueOverdueTasksWidget";
 import { fetchUnreadCount } from "../../store/slices/notificationSlice";
 
 
@@ -45,6 +51,7 @@ const CaseworkerDashboard = () => {
   const [recentCases, setRecentCases] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [recentMessages, setRecentMessages] = useState([]);
+  const [dueOverdue, setDueOverdue] = useState(null);
   const { unreadCount } = useSelector((state) => state.notifications);
 
   const greetingLine = useMemo(() => {
@@ -75,30 +82,37 @@ const CaseworkerDashboard = () => {
     };
 
     const formatConversations = (conversations) =>
-      (Array.isArray(conversations) ? conversations : []).slice(0, 4).map((conv) => ({
-        from: `${conv.user?.first_name || ""} ${conv.user?.last_name || ""}`.trim() || "User",
-        initials: `${conv.user?.first_name?.[0] || "?"}${conv.user?.last_name?.[0] || ""}`.toUpperCase(),
-        text: conv.lastMessage?.content || "No message",
-        time: conv.lastMessage?.createdAt
-          ? new Date(conv.lastMessage.createdAt).toLocaleString()
-          : "",
-        unread: conv.unreadCount > 0,
-      }));
+      sortConversationsByRecent(conversations)
+        .slice(0, 4)
+        .map((conv) => ({
+          id: conv.id,
+          from: `${conv.user?.first_name || ""} ${conv.user?.last_name || ""}`.trim() || "User",
+          initials: `${conv.user?.first_name?.[0] || "?"}${conv.user?.last_name?.[0] || ""}`.toUpperCase(),
+          text:
+            formatLastMessagePreview(conv.lastMessage?.content) || "No message",
+          time: conv.lastMessage?.createdAt
+            ? new Date(conv.lastMessage.createdAt).toLocaleString()
+            : "",
+          unread: conv.unreadCount > 0,
+        }));
 
     const fetchRecentMessages = async () => {
       try {
         const response = await api.get("/api/messages/conversations");
-        const conversations = response.data.data?.conversations || response.data.conversations || [];
+        const conversations = extractConversationsFromResponse(response);
         const formatted = formatConversations(conversations);
-        setRecentMessages(formatted.length > 0 ? formatted : formatConversations(MOCK_RECENT_MESSAGES));
+        setRecentMessages(formatted);
       } catch (error) {
         console.error("Error fetching messages:", error);
-        setRecentMessages(formatConversations(MOCK_RECENT_MESSAGES));
+        setRecentMessages([]);
       }
     };
 
     fetchDashboardData();
     fetchRecentMessages();
+    getDueOverdueTasks()
+      .then((res) => setDueOverdue(res?.data?.data || null))
+      .catch(() => setDueOverdue(null));
     dispatch(fetchUnreadCount());
   }, [dispatch]);
 
@@ -275,6 +289,14 @@ const CaseworkerDashboard = () => {
           ))
         )}
       </div>
+
+      {dueOverdue && (
+        <DueOverdueTasksWidget
+          data={dueOverdue}
+          casesLink="/caseworker/cases"
+          tasksLink="/caseworker/tasks"
+        />
+      )}
 
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
@@ -462,7 +484,7 @@ const CaseworkerDashboard = () => {
           ) : (
             recentMessages.map((m) => (
               <div
-                key={`${m.from}-${m.time}`}
+                key={m.id || `${m.from}-${m.time}`}
                 className="rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-3"
               >
                 <div className="flex items-start gap-3">
@@ -485,11 +507,12 @@ const CaseworkerDashboard = () => {
           )}
         </div>
         <div className="px-5 py-4 border-t border-gray-100">
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={() => navigate('/caseworker/messages')}>
             <input
               type="text"
-              placeholder="Type a message..."
-              className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20"
+              readOnly
+              placeholder="Go to messages to start chatting..."
+              className="flex-1 cursor-pointer rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none"
             />
             <button
               type="button"

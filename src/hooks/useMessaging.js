@@ -17,6 +17,55 @@ const normalizeRoleLabel = (roleName) => {
   return roleName.charAt(0).toUpperCase() + roleName.slice(1).toLowerCase();
 };
 
+const parseMessageContent = (content) => {
+  let contentObj = content;
+  try {
+    if (typeof content === "string" && content.startsWith("{")) {
+      contentObj = JSON.parse(content);
+    }
+  } catch {
+    // plain text
+  }
+  if (typeof contentObj === "object" && contentObj != null) {
+    return {
+      text: contentObj.content || "",
+      attachmentName: contentObj.originalName || null,
+    };
+  }
+  return {
+    text: typeof contentObj === "string" ? contentObj : "",
+    attachmentName: null,
+  };
+};
+
+const threadPreviewFromLastMessage = (lastMsg) => {
+  if (!lastMsg) return "No messages yet";
+  if (lastMsg.messageType === "file") {
+    const { attachmentName } = parseMessageContent(lastMsg.content);
+    return attachmentName ? `📎 ${attachmentName}` : "📎 Attachment";
+  }
+  const { text } = parseMessageContent(lastMsg.content);
+  return text || "No messages yet";
+};
+
+const formatThreadListTime = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString([], { day: "2-digit", month: "short" });
+};
+
+const sortThreadsByRecent = (list) =>
+  [...list].sort((a, b) => {
+    const timeA = a.rawTime ? new Date(a.rawTime).getTime() : 0;
+    const timeB = b.rawTime ? new Date(b.rawTime).getTime() : 0;
+    return timeB - timeA;
+  });
+
 const mapApiMessageToUi = (msg, myId) => {
   let contentObj = msg.content;
   try {
@@ -97,7 +146,7 @@ const useMessaging = (opts = {}) => {
         const caseData = conv.case || {};
 
         const name = `${otherUser.first_name || ""} ${otherUser.last_name || ""}`.trim();
-        const preview = typeof lastMsg === "object" ? lastMsg?.content : lastMsg;
+        const rawTime = lastMsg.createdAt || conv.lastMessageTime || null;
 
         return {
           id: otherUser.id,
@@ -105,16 +154,17 @@ const useMessaging = (opts = {}) => {
           name: name || "Unknown User",
           initials: name?.split(" ").map((n) => n[0]).join("").toUpperCase() || "??",
           role: normalizeRoleLabel(otherUser.role?.name),
-          preview: preview || "No messages yet",
-          time: String(lastMsg.createdAt || conv.lastMessageTime || "").split("T")[0],
-          rawTime: lastMsg.createdAt || conv.lastMessageTime || null,
+          preview: threadPreviewFromLastMessage(lastMsg),
+          time: formatThreadListTime(rawTime),
+          rawTime,
           unread: conv.unreadCount ?? 0,
           caseId: caseData.id,
           caseDisplayId: caseData.caseId,
           avatarClass: "bg-indigo-600",
+          profile_pic: otherUser.profile_pic || otherUser.avatar_url,
         };
       });
-      setThreads(mappedThreads);
+      setThreads(sortThreadsByRecent(mappedThreads));
       setError(null);
     } catch (err) {
       setError("Failed to load conversations");
@@ -201,6 +251,7 @@ const useMessaging = (opts = {}) => {
           email: u.email || "",
           initials: name?.split(" ").map((n) => n[0]).join("").toUpperCase() || "??",
           role: normalizeRoleLabel(u.role?.name),
+          profile_pic: u.profile_pic || u.avatar_url,
         };
       });
       setAvailableUsers(mapped);
@@ -302,21 +353,31 @@ const useMessaging = (opts = {}) => {
       const isIncoming = s !== my;
       const threadOpen = openPartner === other;
 
+      const preview =
+        mappedMsg.attachment
+          ? `📎 ${mappedMsg.attachment}`
+          : mappedMsg.text || "Message";
+      const createdAt = m.createdAt || null;
+
       setThreads((prev) => {
         const idx = prev.findIndex((t) => Number(t.id) === other);
         if (idx === -1) {
           queueMicrotask(() => fetchConversationsRef.current?.());
           return prev;
         }
-        return prev.map((t) => {
+        const updated = prev.map((t) => {
           if (Number(t.id) !== other) return t;
           return {
             ...t,
-            preview: mappedMsg.text,
-            time: String(m.createdAt || "").split("T")[0] || t.time,
-            rawTime: m.createdAt || t.rawTime,
+            preview,
+            time: formatThreadListTime(createdAt) || t.time,
+            rawTime: createdAt || t.rawTime,
+            unread: (isIncoming && !threadOpen)
+              ? (t.unread || 0) + 1
+              : (threadOpen ? 0 : t.unread),
           };
         });
+        return sortThreadsByRecent(updated);
       });
 
       if (threadOpen && isIncoming) {
@@ -336,23 +397,33 @@ const useMessaging = (opts = {}) => {
         ? String(last.createdAt).split("T")[0]
         : "";
 
+      const openPartner = Number(activePartnerRef.current);
+      const openConv = openThreadConvRef.current;
+
       setThreads((prev) => {
         const idx = prev.findIndex((t) => Number(t.conversationId) === Number(cid));
         if (idx === -1) {
           queueMicrotask(() => fetchConversationsRef.current?.());
           return prev;
         }
-        return prev.map((t) =>
-          Number(t.conversationId) === Number(cid)
-            ? {
-                ...t,
-                unread: payload.unreadCount ?? t.unread,
-                preview: preview || t.preview,
-                time: timeStr || t.time,
-                rawTime: last.createdAt || t.rawTime,
-              }
-            : t,
-        );
+        const updated = prev.map((t) => {
+          if (Number(t.conversationId) !== Number(cid)) return t;
+          const threadOpen =
+            openConv != null &&
+            Number(openConv) === Number(cid) &&
+            openPartner === Number(t.id);
+          const serverUnread = payload.unreadCount ?? t.unread;
+          return {
+            ...t,
+            unread: threadOpen ? 0 : serverUnread,
+            preview: preview || t.preview,
+            time: last.createdAt
+              ? formatThreadListTime(last.createdAt)
+              : timeStr || t.time,
+            rawTime: last.createdAt || t.rawTime,
+          };
+        });
+        return sortThreadsByRecent(updated);
       });
     });
 

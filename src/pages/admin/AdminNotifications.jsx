@@ -164,6 +164,7 @@ export default function AdminNotifications() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [stats, setStats] = useState({ total: 0, unread: 0, read: 0 });
+  const [selectedNotif, setSelectedNotif] = useState(null);
 
   const initialPrefs = useMemo(() => Object.fromEntries(preferencesList.map((p) => [p.key, p.on])), []);
   const [prefs, setPrefs] = useState(initialPrefs);
@@ -203,6 +204,8 @@ export default function AdminNotifications() {
           iconKey: getIconKey(n.type),
           userName: viewAll && n.user ? `${n.user.first_name} ${n.user.last_name}` : null,
           userRole: viewAll && n.role ? n.role.name : null,
+          priority: n.priority,
+          metadata: n.metadata,
         }));
         setNotifications(mappedNotifications);
       }
@@ -465,9 +468,13 @@ export default function AdminNotifications() {
             return (
               <motion.div
                 key={item.id}
-                className={`p-6 transition-colors ${
+                className={`p-6 transition-colors cursor-pointer ${
                   item.unread ? "bg-blue-50/80 hover:bg-blue-100/90" : "hover:bg-gray-50"
                 }`}
+                onClick={() => {
+                  if (item.unread) markRead(item.id);
+                  setSelectedNotif(item);
+                }}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: 0.35 + index * 0.07 }}
@@ -502,7 +509,10 @@ export default function AdminNotifications() {
                           {item.unread ? (
                             <button
                               type="button"
-                              onClick={() => markRead(item.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markRead(item.id);
+                              }}
                               className="inline-flex items-center justify-center p-2 rounded-lg text-green-600 hover:bg-green-50 transition-colors"
                               title="Mark as read"
                               aria-label="Mark as read"
@@ -512,7 +522,10 @@ export default function AdminNotifications() {
                           ) : (
                             <button
                               type="button"
-                              onClick={() => markUnread(item.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markUnread(item.id);
+                              }}
                               className="inline-flex items-center justify-center p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
                               title="Mark as unread"
                               aria-label="Mark as unread"
@@ -809,6 +822,71 @@ export default function AdminNotifications() {
           </div>
         </form>
       </Modal>
+
+      {/* Notification Details Modal */}
+      {selectedNotif && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm" onClick={() => setSelectedNotif(null)}>
+          <div
+            className="bg-white rounded-xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+              <h3 className="text-sm font-black text-secondary">Notification Details</h3>
+              <button
+                onClick={() => setSelectedNotif(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <FiAlertCircle size={18} className="hidden" />
+                <span className="text-lg leading-none">&times;</span>
+              </button>
+            </div>
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-bold text-secondary">{selectedNotif.title}</h4>
+                {selectedNotif.priority && (
+                  <span className={`px-2 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                    selectedNotif.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                    selectedNotif.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                    selectedNotif.priority === 'low' ? 'bg-gray-100 text-gray-700' :
+                    'bg-blue-100 text-blue-700'
+                  }`}>
+                    {selectedNotif.priority} Priority
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-600 mb-6 whitespace-pre-wrap leading-relaxed">{selectedNotif.message}</p>
+              
+              {selectedNotif.metadata && Object.keys(selectedNotif.metadata).length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
+                  <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Notification Details</h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
+                    {Object.entries(selectedNotif.metadata).map(([key, value]) => (
+                      <div key={key}>
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          {key.replace(/([A-Z])/g, ' $1').trim()}
+                        </div>
+                        <div className="text-sm font-semibold text-secondary mt-0.5 break-words">
+                          {Array.isArray(value) ? value.join(', ') : String(value)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <FiClock className="w-3 h-3" />
+                Received: {selectedNotif.time}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <Button type="button" variant="secondary" onClick={() => setSelectedNotif(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

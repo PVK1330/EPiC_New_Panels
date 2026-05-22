@@ -17,8 +17,8 @@ export const deleteCase = (id) => api.delete(`/api/cases/${id}`);
 
 export const getPipelineCases = () => api.get(`/api/cases/pipeline`);
 
-export const updatePipelineStage = (id, caseStage) =>
-  api.patch(`/api/cases/${id}/stage`, { caseStage });
+export const updatePipelineStage = (id, caseStage, extra = {}) =>
+  api.patch(`/api/cases/${id}/stage`, { caseStage, ...extra });
 
 export const getCaseWorkflow = () => api.get(`/api/cases/workflow`);
 

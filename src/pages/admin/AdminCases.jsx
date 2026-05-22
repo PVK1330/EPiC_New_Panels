@@ -33,6 +33,7 @@ import {
   getDepartments,
 } from "../../services/caseApi";
 import { useToast } from "../../context/ToastContext";
+import AssignCaseworkerModal from "../../components/admin/AssignCaseworkerModal";
 
 
 
@@ -90,6 +91,7 @@ const emptyForm = {
   salaryOffered: 0,
   totalAmount: 0,
   paidAmount: 0,
+  proposedAmount: "",
   notes: "",
 };
 
@@ -485,6 +487,9 @@ function CaseFormModal({
             <h4 className="text-sm font-black text-secondary mb-4">
               Caseworker Assignment
             </h4>
+            <p className="text-xs font-bold text-gray-500 mb-3 -mt-2">
+              Optional on create — admins receive a task to assign caseworkers if left empty.
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <CaseworkerMultiSelect
                 options={
@@ -533,7 +538,20 @@ function CaseFormModal({
                 onChange={onChange}
                 placeholder="Amount paid so far"
               />
+              <Input
+                label="CCL fee (£) — amount candidate must pay"
+                name="proposedAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.proposedAmount}
+                onChange={onChange}
+                placeholder="e.g. 1500.00"
+              />
             </div>
+            <p className="text-xs font-bold text-blue-800 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mt-2">
+              Sets the Client Care Letter fee issued to the candidate. This is the amount they must pay.
+            </p>
           </div>
 
           <div className="flex flex-col gap-1">
@@ -597,6 +615,8 @@ export default function AdminCases() {
   const [sponsors, setSponsors] = useState([]);
   const [caseworkers, setCaseworkers] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignCaseRow, setAssignCaseRow] = useState(null);
 
   // Create caseworker name map
   const caseworkerNameMap = {};
@@ -816,7 +836,7 @@ export default function AdminCases() {
     if (!formData.businessId) e.businessId = "Required";
     if (!formData.visaTypeId) e.visaTypeId = "Required";
     const n = formData.assignedCaseworkerIds?.length || 0;
-    if (n < 1 || n > 2) e.assignedCaseworkers = "Select 1 or 2 caseworkers";
+    if (n > 2) e.assignedCaseworkers = "Select at most 2 caseworkers";
     if (!formData.targetSubmissionDate) e.targetSubmissionDate = "Required";
     if (formData.totalAmount <= 0) e.totalAmount = "Must be > 0";
     setErrors(e);
@@ -842,6 +862,10 @@ export default function AdminCases() {
         salaryOffered: formData.salaryOffered,
         totalAmount: formData.totalAmount,
         paidAmount: formData.paidAmount,
+        proposedAmount:
+          formData.proposedAmount !== "" && formData.proposedAmount != null
+            ? parseFloat(formData.proposedAmount)
+            : undefined,
         notes: formData.notes,
         nationality: formData.nationality,
         jobTitle: formData.jobTitle,
@@ -1434,12 +1458,20 @@ export default function AdminCases() {
                     {c.business}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700 max-w-[14rem]">
-                    <span className="font-mono text-xs font-semibold text-secondary">
-                      {getCaseworkerNames(c.caseworkerIds)}
-                    </span>
-                    <span className="block text-[11px] text-gray-500 mt-0.5 truncate">
-                      {c.caseworker || "—"}
-                    </span>
+                    {(c.caseworkerIds?.length ?? 0) === 0 ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-black text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                        Unassigned
+                      </span>
+                    ) : (
+                      <>
+                        <span className="font-mono text-xs font-semibold text-secondary">
+                          {getCaseworkerNames(c.caseworkerIds)}
+                        </span>
+                        <span className="block text-[11px] text-gray-500 mt-0.5 truncate">
+                          {c.caseworker || "—"}
+                        </span>
+                      </>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                     {c.visaType}
@@ -1495,11 +1527,10 @@ export default function AdminCases() {
                       </button>
                       <button
                         type="button"
-                        onClick={() =>
-                          navigate(
-                            `/admin/assign?caseId=${encodeURIComponent(c.caseId)}`,
-                          )
-                        }
+                        onClick={() => {
+                          setAssignCaseRow(c);
+                          setAssignModalOpen(true);
+                        }}
                         className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
                         title={
                           (c.caseworkerIds?.length ?? 0) > 0 ||
@@ -1700,6 +1731,61 @@ export default function AdminCases() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AssignCaseworkerModal
+        open={assignModalOpen}
+        onClose={() => {
+          setAssignModalOpen(false);
+          setAssignCaseRow(null);
+        }}
+        caseRow={assignCaseRow}
+        onSuccess={async () => {
+          const response = await getCases();
+          if (response?.data?.data?.cases) {
+            const mappedCases = response.data.data.cases.map((c) => ({
+              caseId: c.caseId || c.id.toString(),
+              candidate: c.candidate
+                ? `${c.candidate.first_name} ${c.candidate.last_name}`
+                : "—",
+              candidateId: c.candidateId,
+              business: c.sponsor
+                ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
+                : "—",
+              businessId: c.sponsorId,
+              visaType: c.visaType?.name || "—",
+              petitionType: c.petitionType?.name || "—",
+              visaTypeId: c.visaTypeId,
+              petitionTypeId: c.petitionTypeId,
+              status: c.status,
+              priority: c.priority,
+              submitted: c.submitted
+                ? new Date(c.submitted).toLocaleDateString()
+                : new Date(c.created_at).toLocaleDateString(),
+              caseworkerIds: Array.isArray(c.assignedcaseworkerId)
+                ? c.assignedcaseworkerId
+                : [],
+              caseworkerId: Array.isArray(c.assignedcaseworkerId)
+                ? c.assignedcaseworkerId.join(", ")
+                : c.assignedcaseworkerId,
+              caseworker: Array.isArray(c.assignedcaseworkerId)
+                ? `${c.assignedcaseworkerId.length} assigned`
+                : "—",
+              targetSubmissionDate: c.targetSubmissionDate,
+              proposedAmount: c.proposedAmount,
+              lcaNumber: c.lcaNumber,
+              receiptNumber: c.receiptNumber,
+              nationality: c.nationality,
+              jobTitle: c.jobTitle,
+              department: c.departmentId || "",
+              salaryOffered: c.salaryOffered,
+              totalAmount: c.totalAmount,
+              paidAmount: c.paidAmount,
+              notes: c.notes,
+            }));
+            setCases(mappedCases);
+          }
+        }}
+      />
     </div>
   );
 }
