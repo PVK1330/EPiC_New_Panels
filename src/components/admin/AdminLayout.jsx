@@ -16,7 +16,7 @@ import {
   RiLogoutBoxRLine,
 } from "react-icons/ri";
 
-import NotificationDropdown from "../Notifications/NotificationDropdown";
+import NotificationDropdown from "../notifications/NotificationDropdown";
 import MessageDropdown from "../notifications/MessageDropdown";
 import eliteLogo from "../../assets/elitepic_logo.png";
 import { getOrganisationBranding } from "../../services/settingsService";
