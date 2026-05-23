@@ -5,6 +5,8 @@ import { LogOut, X } from "lucide-react";
 import eliteLogo from "../assets/elitepic_logo.png";
 import { useMemo } from "react";
 import { candidateNavSections as navSections } from "./candidateNavSections";
+import useModuleAccess from "../hooks/useModuleAccess";
+import { resolveAssetUrl } from "../utils/assetUrl";
 
 function resolveAccountNavMatch(pathname, search) {
   if (pathname !== "/candidate/account") return null;
@@ -45,6 +47,11 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
+  const fullName = user?.first_name 
+    ? `${user?.first_name} ${user?.last_name || ''}`.trim() 
+    : user?.name || user?.email?.split('@')[0] || "User";
+  const profilePicUrl = user?.profile_pic || user?.avatar_url ? resolveAssetUrl(user?.profile_pic || user?.avatar_url) : null;
+  const { canAccess } = useModuleAccess();
   useMemo(() => navSections, []);
 
   const handleLogout = () => {
@@ -113,7 +120,7 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
               )}
 
               <div className="space-y-0.5">
-                {section.items.map((item) => {
+                {section.items.filter((item) => canAccess(item.moduleKey)).map((item) => {
                   const matched = navLinkMatches(
                     location.pathname,
                     location.search,
@@ -159,12 +166,16 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
         {/* Footer */}
         <div className="px-4 py-4 border-t border-gray-100 shrink-0">
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100 transition-all hover:bg-white hover:shadow-md group">
-            <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-sm group-hover:bg-primary group-hover:text-white transition-all shrink-0">
-              {user?.name?.charAt(0) || "U"}
+            <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-sm group-hover:bg-primary group-hover:text-white transition-all shrink-0 overflow-hidden">
+              {profilePicUrl ? (
+                <img src={profilePicUrl} alt={fullName} className="w-full h-full object-cover" />
+              ) : (
+                fullName.charAt(0).toUpperCase()
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-black text-secondary truncate">
-                {user?.name || "User"}
+                {fullName}
               </p>
               <p className="text-[9px] font-black text-primary tracking-wider">
                 Client Portal

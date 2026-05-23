@@ -61,29 +61,92 @@ export const getNotificationActionText = (notification) => {
   return actionTexts[notification.type] || 'View Details';
 };
 
-export const getNotificationRoute = (notification) => {
-  if (notification.entityType === 'message' && notification.metadata?.conversationId) {
+function resolveRoleKey(user) {
+  if (!user) return null;
+  const roleId = Number(user.role_id);
+  if (roleId === 3 || user.role === 'admin') return 'admin';
+  if (roleId === 2 || user.role === 'caseworker') return 'caseworker';
+  if (roleId === 1 || user.role === 'candidate') return 'candidate';
+  if (roleId === 4 || user.role === 'business' || user.role === 'sponsor') return 'business';
+  if (roleId === 5 || user.role === 'superadmin') return 'superadmin';
+  return user.role || null;
+}
+
+/**
+ * Role-aware deep link for in-app notifications.
+ */
+export function getNotificationRoute(notification, user = null) {
+  const role = resolveRoleKey(user);
+  const actionType = notification?.actionType;
+  const caseRef =
+    notification?.metadata?.caseId ||
+    notification?.metadata?.caseRef ||
+    (notification?.entityType === 'case' ? String(notification.entityId) : null);
+
+  if (actionType === 'ccl_fee_review' && role === 'admin') {
+    return '/admin/ccl-fee-approvals';
+  }
+
+  if (notification?.entityType === 'message' && notification?.metadata?.conversationId) {
+    if (role === 'admin') return `/admin/messages?conversation=${notification.metadata.conversationId}`;
+    if (role === 'caseworker') return `/caseworker/messages?conversation=${notification.metadata.conversationId}`;
+    if (role === 'candidate') return `/candidate/messages`;
     return `/messages/${notification.metadata.conversationId}`;
   }
-  
-  if (notification.entityType === 'case' && notification.entityId) {
-    return `/cases/${notification.entityId}`;
+
+  if (caseRef || notification?.entityType === 'case') {
+    const ref = encodeURIComponent(String(caseRef));
+
+    if (role === 'admin') {
+      return `/admin/case-detail/${ref}`;
+    }
+    if (role === 'caseworker') {
+      return '/caseworker/cases';
+    }
+    if (role === 'candidate') {
+      if (actionType === 'ccl_issued' || actionType === 'ccl_fee_approved') {
+        return '/candidate/ccl';
+      }
+      if (actionType === 'data_capture_request' || actionType === 'data_capture_rejected') {
+        return '/candidate/document-checklist';
+      }
+      if (notification?.metadata?.nextStage === 'draft_application_review') {
+        return '/candidate/application';
+      }
+      return '/candidate/application-status';
+    }
+    if (role === 'business') {
+      return '/business/cases';
+    }
   }
-  
-  if (notification.entityType === 'document' && notification.entityId) {
-    return `/documents/${notification.entityId}`;
+
+  if (notification?.entityType === 'task' && caseRef) {
+    if (role === 'admin') return `/admin/case-detail/${encodeURIComponent(String(caseRef))}`;
+    if (role === 'caseworker') return '/caseworker/cases';
+    if (role === 'candidate') return '/candidate/application-status?tab=actions';
   }
-  
-  if (notification.entityType === 'escalation' && notification.entityId) {
-    return `/escalations/${notification.entityId}`;
+
+  if (notification?.entityType === 'document' && caseRef && role === 'admin') {
+    return `/admin/case-detail/${encodeURIComponent(String(caseRef))}`;
   }
-  
-  if (notification.entityType === 'task' && notification.entityId) {
-    return `/tasks/${notification.entityId}`;
-  }
-  
+
+  if (role === 'admin') return '/admin/notifications';
+  if (role === 'caseworker') return '/caseworker/notifications';
+  if (role === 'candidate') return '/candidate/notifications';
+  if (role === 'business') return '/business/notifications';
+  if (role === 'superadmin') return '/superadmin/notifications';
+
   return '/notifications';
-};
+}
+
+/** Caseworker opens case modal via navigation state. */
+export function getCaseworkerOpenCaseState(notification) {
+  const caseRef =
+    notification?.metadata?.caseId ||
+    notification?.metadata?.caseRef ||
+    (notification?.entityType === 'case' ? String(notification.entityId) : null);
+  return caseRef ? { openCaseRef: String(caseRef) } : null;
+}
 
 export const groupNotificationsByDate = (notifications) => {
   const groups = {};
@@ -130,18 +193,15 @@ export const sortNotificationsByPriority = (notifications) => {
   };
 
   return [...notifications].sort((a, b) => {
-    // First sort by unread status
     if (a.isRead !== b.isRead) {
       return a.isRead ? 1 : -1;
     }
     
-    // Then sort by priority
     const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
     if (priorityDiff !== 0) {
       return priorityDiff;
     }
     
-    // Finally sort by date (newest first)
     return new Date(b.sentAt) - new Date(a.sentAt);
   });
 };

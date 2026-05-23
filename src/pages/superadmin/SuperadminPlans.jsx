@@ -3,47 +3,30 @@ import { motion } from 'framer-motion';
 import {
   RiSettings4Line,
   RiCheckLine,
-  RiLayoutMasonryLine,
-  RiMoneyPoundCircleLine,
-  RiGroupLine,
-  RiShieldFlashLine,
-  RiInformationLine,
-  RiDatabase2Line,
-  RiUserFollowLine,
-  RiFileList3Line,
   RiDeleteBin6Line,
   RiArchiveLine,
-  RiEditLine,
   RiStarFill,
-  RiOrganizationChart,
-  RiCalendarEventLine,
-  RiMessage3Line,
   RiErrorWarningLine,
 } from 'react-icons/ri';
-import { Plus } from 'lucide-react';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import Modal from '../../components/common/Modal';
 import * as planService from '../../services/superadminPlan.service';
 import { toast } from 'react-hot-toast';
+import useModules from '../../hooks/useModules';
 
-const AVAILABLE_MODULES = [
-  { id: 'dashboard', name: 'Dashboard', icon: RiLayoutMasonryLine, description: 'Analytics' },
-  { id: 'cases', name: 'Cases', icon: RiShieldFlashLine, description: 'Workflow' },
-  { id: 'clients', name: 'Client Portal', icon: RiUserFollowLine, description: 'Candidate Access' },
-  { id: 'business', name: 'Organisations', icon: RiOrganizationChart, description: 'Company Management' },
-  { id: 'documents', name: 'Documents', icon: RiDatabase2Line, description: 'Document Management' },
-  { id: 'finance', name: 'Billing', icon: RiMoneyPoundCircleLine, description: 'Payments & Invoices' },
-  { id: 'compliance', name: 'Audit Logs', icon: RiFileList3Line, description: 'Compliance' },
-  { id: 'team', name: 'Team', icon: RiGroupLine, description: 'Staff Control' },
-  { id: 'calendar', name: 'Calendar', icon: RiCalendarEventLine, description: 'Global Calendar' },
-  { id: 'messages', name: 'Messaging', icon: RiMessage3Line, description: 'Direct Messaging' },
-];
+const PANEL_LABELS = {
+  admin: 'Admin',
+  caseworker: 'Caseworker',
+  candidate: 'Candidate',
+  business: 'Business',
+};
+
+const PANEL_ORDER = ['admin', 'caseworker', 'candidate', 'business'];
 
 const SuperadminPlans = () => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -53,15 +36,24 @@ const SuperadminPlans = () => {
     description: '',
     price: '',
     interval: 'month',
-    selectedModules: [],
+    selectedModuleIds: [],
     isFeatured: false,
     user_quota: 5,
     case_quota: 50,
-    storage_quota_gb: 1
+    storage_quota_gb: 1,
   });
+
+  const {
+    modules,
+    modulesLoading,
+    fetchAllModules,
+    fetchModulesByPlan,
+    savePlanModules,
+  } = useModules();
 
   useEffect(() => {
     loadPlans();
+    fetchAllModules();
   }, []);
 
   const loadPlans = async () => {
@@ -69,57 +61,60 @@ const SuperadminPlans = () => {
       setLoading(true);
       const res = await planService.fetchPlans();
       if (res.data.status === 'success') {
-        // Map backend features to frontend selectedModules
-        const mappedPlans = res.data.data.plans.map(p => ({
+        const mappedPlans = res.data.data.plans.map((p) => ({
           ...p,
-          modules: p.features || [],
           interval: p.billing_cycle === 'monthly' ? 'month' : 'year',
-          isFeatured: p.is_public // or use a dedicated field if exists
+          isFeatured: p.is_public,
+          assignedModules: (p.modules || []).map((m) => m.key),
+          assignedModuleIds: (p.modules || []).map((m) => m.id),
         }));
         setPlans(mappedPlans);
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load plans');
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleModule = (moduleId) => {
-    setFormData(prev => ({
+  const toggleModuleId = (id) => {
+    setFormData((prev) => ({
       ...prev,
-      selectedModules: prev.selectedModules.includes(moduleId)
-        ? prev.selectedModules.filter(id => id !== moduleId)
-        : [...prev.selectedModules, moduleId]
+      selectedModuleIds: prev.selectedModuleIds.includes(id)
+        ? prev.selectedModuleIds.filter((x) => x !== id)
+        : [...prev.selectedModuleIds, id],
     }));
   };
 
-  const handleOpenModal = (plan = null) => {
+  const handleOpenModal = async (plan = null) => {
     if (plan) {
       setEditingPlan(plan);
+      const res = await fetchModulesByPlan(plan.id);
+      const currentIds = plan.assignedModuleIds || [];
       setFormData({
         name: plan.name,
         description: plan.description || plan.desc || '',
         price: plan.price,
         interval: plan.interval,
-        selectedModules: plan.modules,
+        selectedModuleIds: currentIds,
         isFeatured: plan.isFeatured || false,
         user_quota: plan.user_quota || 5,
         case_quota: plan.case_quota || 50,
-        storage_quota_gb: plan.storage_quota_gb || 1
+        storage_quota_gb: plan.storage_quota_gb || 1,
       });
     } else {
       setEditingPlan(null);
+      const allIds = Object.values(modules).flat().map((m) => m.id);
       setFormData({
         name: '',
         description: '',
         price: '',
         interval: 'month',
-        selectedModules: [],
+        selectedModuleIds: allIds,
         isFeatured: false,
         user_quota: 5,
         case_quota: 50,
-        storage_quota_gb: 1
+        storage_quota_gb: 1,
       });
     }
     setIsModalOpen(true);
@@ -132,20 +127,28 @@ const SuperadminPlans = () => {
         description: formData.description,
         price: parseFloat(formData.price),
         billing_cycle: formData.interval === 'month' ? 'monthly' : 'yearly',
-        features: formData.selectedModules,
+        features: formData.selectedModuleIds,
         is_public: formData.isFeatured,
         user_quota: parseInt(formData.user_quota),
         case_quota: parseInt(formData.case_quota),
         storage_quota_gb: parseInt(formData.storage_quota_gb),
       };
 
+      let planId = editingPlan?.id;
+
       if (editingPlan) {
         await planService.updatePlan(editingPlan.id, payload);
         toast.success('Plan updated successfully');
       } else {
-        await planService.createPlan(payload);
+        const res = await planService.createPlan(payload);
+        planId = res.data?.data?.plan?.id;
         toast.success('Plan created successfully');
       }
+
+      if (planId) {
+        await savePlanModules(planId, formData.selectedModuleIds);
+      }
+
       loadPlans();
       setIsModalOpen(false);
     } catch (err) {
@@ -168,16 +171,17 @@ const SuperadminPlans = () => {
     try {
       const newStatus = plan.status === 'archived' ? 'active' : 'archived';
       await planService.updatePlan(plan.id, { status: newStatus });
-      toast.success(`Plan ${newStatus}d`);
+      toast.success(`Plan ${newStatus === 'archived' ? 'archived' : 'activated'}`);
       loadPlans();
-    } catch (err) {
+    } catch {
       toast.error('Failed to update plan status');
     }
   };
 
+  const allModulesList = Object.values(modules).flat();
+
   return (
     <div className="space-y-6 pb-6">
-      {/* Modern Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
         <div>
           <h1 className="text-2xl font-black text-secondary tracking-tight">Subscription Plans</h1>
@@ -185,7 +189,7 @@ const SuperadminPlans = () => {
         </div>
         <div className="flex items-center gap-3">
           <Button variant="primary" onClick={() => handleOpenModal()} className="px-6 py-2.5 text-sm font-bold shadow-lg shadow-primary/20">
-            <RiSettings4Line size={18} className="inline mr-2"/> Create Plan
+            <RiSettings4Line size={18} className="inline mr-2" /> Create Plan
           </Button>
         </div>
       </div>
@@ -197,95 +201,99 @@ const SuperadminPlans = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {plans.map((plan, idx) => (
-          <motion.div
-            key={plan.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.05 }}
-            whileHover={{ y: -2 }}
-            className={`relative bg-white rounded-2xl border p-4 flex flex-col gap-3 transition-all duration-300 w-full ${
-              plan.isFeatured 
-                ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/10' 
-                : 'border-gray-100 shadow-sm hover:shadow-md'
-            }`}
-          >
-            {plan.isFeatured && (
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-primary-dark text-white text-[10px] font-black uppercase tracking-widest px-6 py-2 rounded-full shadow-xl border border-white/20 whitespace-nowrap z-10">
-                Most Popular
+          {plans.map((plan, idx) => (
+            <motion.div
+              key={plan.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              whileHover={{ y: -2 }}
+              className={`relative bg-white rounded-2xl border p-4 flex flex-col gap-3 transition-all duration-300 w-full ${
+                plan.isFeatured
+                  ? 'border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/10'
+                  : 'border-gray-100 shadow-sm hover:shadow-md'
+              }`}
+            >
+              {plan.isFeatured && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-primary-dark text-white text-[10px] font-black uppercase tracking-widest px-6 py-2 rounded-full shadow-xl border border-white/20 whitespace-nowrap z-10">
+                  Most Popular
+                </div>
+              )}
+
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-black text-secondary tracking-tight">{plan.name}</h3>
+                  <p className="text-sm text-gray-400 font-bold mt-1 uppercase tracking-tighter opacity-80">{plan.description || plan.desc}</p>
+                </div>
+                <span className={`px-3 py-1 text-[10px] font-black rounded-full border uppercase tracking-widest ${
+                  plan.status === 'active' || plan.status === 'Active'
+                    ? 'bg-green-500/10 text-green-600 border-green-500/20'
+                    : 'bg-gray-100 text-gray-400 border-gray-200'
+                }`}>
+                  {plan.status}
+                </span>
               </div>
-            )}
-            
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-xl font-black text-secondary tracking-tight">{plan.name}</h3>
-                <p className="text-sm text-gray-400 font-bold mt-1 uppercase tracking-tighter opacity-80">{plan.description || plan.desc}</p>
+
+              <div className="flex items-baseline gap-2 py-3 border-y border-gray-50/50">
+                <span className="text-3xl font-black text-secondary tracking-tighter">£{plan.price}</span>
+                <span className="text-xs text-gray-400 font-bold opacity-60">/{plan.interval}</span>
               </div>
-              <span className={`px-3 py-1 text-[10px] font-black rounded-full border uppercase tracking-widest ${
-                plan.status === 'active' || plan.status === 'Active' ? 'bg-green-500/10 text-green-600 border-green-500/20' : 'bg-gray-100 text-gray-400 border-gray-200'
-              }`}>
-                {plan.status}
-              </span>
-            </div>
-           
-            <div className="flex items-baseline gap-2 py-3 border-y border-gray-50/50">
-              <span className="text-3xl font-black text-secondary tracking-tighter">£{plan.price}</span>
-              <span className="text-xs text-gray-400 font-bold opacity-60">/{plan.interval}</span>
-            </div>
-           
-            <div className="space-y-3 flex-1">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Modules</p>
-              <div className="space-y-2">
-                {plan.modules.map(m => {
-                  const modInfo = AVAILABLE_MODULES.find(mod => mod.id === m);
-                  return (
-                    <div key={m} className="flex items-center gap-4 group">
-                      <div className="w-8 h-8 rounded-xl bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/10 transition-transform group-hover:scale-110">
-                        {modInfo ? <modInfo.icon size={16} /> : <RiCheckLine size={16} />}
+
+              <div className="space-y-3 flex-1">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Modules ({plan.assignedModules?.length || 0})
+                </p>
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {(plan.assignedModules || []).slice(0, 8).map((key) => (
+                    <div key={key} className="flex items-center gap-2 group">
+                      <div className="w-4 h-4 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <RiCheckLine size={10} />
                       </div>
-                      <span className="text-sm font-bold text-secondary group-hover:text-primary transition-colors">{modInfo?.name || m}</span>
+                      <span className="text-xs font-bold text-secondary truncate">{key}</span>
                     </div>
-                  );
-                })}
+                  ))}
+                  {(plan.assignedModules?.length || 0) > 8 && (
+                    <p className="text-[10px] font-black text-gray-400">+{plan.assignedModules.length - 8} more</p>
+                  )}
+                </div>
               </div>
-            </div>
-           
-            <div className="flex gap-2 pt-4 border-t border-gray-50">
-              <Button 
-                variant={plan.isFeatured ? 'primary' : 'outline'} 
-                className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest shadow-sm ${plan.isFeatured ? 'bg-primary' : ''}`}
-                onClick={() => handleOpenModal(plan)}
-              >
-                Edit Plan
-              </Button>
-              <div className="flex items-center gap-1">
-                <button 
-                  onClick={() => handleArchivePlan(plan)}
-                  className="p-2 text-gray-400 hover:text-secondary hover:bg-gray-50 rounded-lg transition-all"
-                  title={plan.status === 'archived' ? 'Activate' : 'Archive'}
+
+              <div className="flex gap-2 pt-4 border-t border-gray-50">
+                <Button
+                  variant={plan.isFeatured ? 'primary' : 'outline'}
+                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest shadow-sm ${plan.isFeatured ? 'bg-primary' : ''}`}
+                  onClick={() => handleOpenModal(plan)}
                 >
-                  <RiArchiveLine size={18} />
-                </button>
-                <button 
-                  onClick={() => { setSelectedPlan(plan); setIsDeleteModalOpen(true); }}
-                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                  title="Delete"
-                >
-                  <RiDeleteBin6Line size={18} />
-                </button>
+                  Edit Plan
+                </Button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleArchivePlan(plan)}
+                    className="p-2 text-gray-400 hover:text-secondary hover:bg-gray-50 rounded-lg transition-all"
+                    title={plan.status === 'archived' ? 'Activate' : 'Archive'}
+                  >
+                    <RiArchiveLine size={18} />
+                  </button>
+                  <button
+                    onClick={() => { setSelectedPlan(plan); setIsDeleteModalOpen(true); }}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                    title="Delete"
+                  >
+                    <RiDeleteBin6Line size={18} />
+                  </button>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    )}
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingPlan ? 'Edit Subscription Plan' : 'Create Subscription Plan'}
-        subtitle="Define features and pricing for this tier."
-        maxWidth="max-w-4xl"
+        subtitle="Define features, pricing, and module access for this tier."
+        maxWidth="max-w-5xl"
         footer={
           <div className="flex justify-end gap-3 w-full">
             <Button variant="secondary" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 text-sm font-bold">Cancel</Button>
@@ -298,32 +306,32 @@ const SuperadminPlans = () => {
         <div className="space-y-8 py-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-5">
-              <Input 
-                label="Model Name"
+              <Input
+                label="Plan Name"
                 placeholder="e.g. Professional"
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
-              <Input 
+              <Input
                 label="Description"
                 placeholder="Brief description of the tier"
                 value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
               <div className="grid grid-cols-2 gap-4">
-                <Input 
+                <Input
                   label="Price (£)"
                   type="number"
                   value={formData.price}
-                  onChange={(e) => setFormData({...formData, price: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 />
                 <div className="space-y-1.5">
                   <label className="text-sm font-bold text-gray-700 ml-1">Interval</label>
                   <div className="relative">
-                    <select 
+                    <select
                       className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold text-secondary outline-none appearance-none cursor-pointer focus:ring-2 focus:ring-primary/10 transition-all"
                       value={formData.interval}
-                      onChange={(e) => setFormData({...formData, interval: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, interval: e.target.value })}
                     >
                       <option value="month">Monthly</option>
                       <option value="year">Annual</option>
@@ -332,28 +340,28 @@ const SuperadminPlans = () => {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4 pt-2">
-                <Input 
+              {/* <div className="grid grid-cols-3 gap-4 pt-2">
+                <Input
                   label="Users"
                   type="number"
                   value={formData.user_quota}
-                  onChange={(e) => setFormData({...formData, user_quota: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, user_quota: e.target.value })}
                 />
-                <Input 
+                <Input
                   label="Cases"
                   type="number"
                   value={formData.case_quota}
-                  onChange={(e) => setFormData({...formData, case_quota: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, case_quota: e.target.value })}
                 />
-                <Input 
+                <Input
                   label="Storage (GB)"
                   type="number"
                   value={formData.storage_quota_gb}
-                  onChange={(e) => setFormData({...formData, storage_quota_gb: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, storage_quota_gb: e.target.value })}
                 />
-              </div>
+              </div> */}
             </div>
-            
+
             <div className="space-y-5 p-6 bg-primary/5 rounded-2xl border border-primary/10 flex flex-col justify-center">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-primary shadow-sm border border-primary/10">
@@ -366,14 +374,12 @@ const SuperadminPlans = () => {
               </div>
               <div className="mt-2">
                 <label className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 cursor-pointer hover:border-primary/30 transition-all group">
-                  <div className="relative flex items-center">
-                    <input 
-                      type="checkbox"
-                      checked={formData.isFeatured}
-                      onChange={(e) => setFormData({...formData, isFeatured: e.target.checked})}
-                      className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary transition-all cursor-pointer"
-                    />
-                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.isFeatured}
+                    onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                    className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary transition-all cursor-pointer"
+                  />
                   <span className="text-sm font-bold text-secondary group-hover:text-primary transition-colors">Mark as Featured / Most Popular</span>
                 </label>
               </div>
@@ -382,44 +388,90 @@ const SuperadminPlans = () => {
 
           <div className="space-y-5">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-black text-secondary uppercase tracking-widest">Included Modules</p>
-              <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
-                {formData.selectedModules.length} Selected
-              </span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {AVAILABLE_MODULES.map((module) => (
-                <motion.div 
-                  key={module.id}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => toggleModule(module.id)}
-                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4 relative group ${
-                    formData.selectedModules.includes(module.id)
-                      ? 'border-primary bg-primary/5 shadow-lg shadow-primary/5'
-                      : 'border-gray-50 bg-white hover:border-gray-100'
-                  }`}
+              <p className="text-sm font-black text-secondary uppercase tracking-widest">Module Access</p>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
+                  {formData.selectedModuleIds.length} / {allModulesList.length} Selected
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, selectedModuleIds: allModulesList.map((m) => m.id) }))}
+                  className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest"
                 >
-                  <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center border transition-all ${
-                    formData.selectedModules.includes(module.id) ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-gray-50 text-gray-400 border-gray-100'
-                  }`}>
-                    <module.icon size={20} />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className={`font-black text-sm leading-tight uppercase tracking-tight ${formData.selectedModules.includes(module.id) ? 'text-secondary' : 'text-gray-400'}`}>{module.name}</h4>
-                  </div>
-                  {formData.selectedModules.includes(module.id) && (
-                    <div className="absolute top-2 right-2 text-primary">
-                      <RiCheckLine size={16} />
-                    </div>
-                  )}
-                </motion.div>
-              ))}
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, selectedModuleIds: [] }))}
+                  className="text-[10px] font-black text-gray-400 hover:underline uppercase tracking-widest"
+                >
+                  Clear
+                </button>
+              </div>
             </div>
+
+            {modulesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {PANEL_ORDER.filter((panel) => modules[panel]?.length > 0).map((panel) => (
+                  <div key={panel} className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs font-black text-secondary uppercase tracking-widest">{PANEL_LABELS[panel]}</p>
+                      <div className="flex-1 h-px bg-gray-100" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const panelIds = modules[panel].map((m) => m.id);
+                          const allSelected = panelIds.every((id) => formData.selectedModuleIds.includes(id));
+                          setFormData((prev) => ({
+                            ...prev,
+                            selectedModuleIds: allSelected
+                              ? prev.selectedModuleIds.filter((id) => !panelIds.includes(id))
+                              : [...new Set([...prev.selectedModuleIds, ...panelIds])],
+                          }));
+                        }}
+                        className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest"
+                      >
+                        {modules[panel].every((m) => formData.selectedModuleIds.includes(m.id)) ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {modules[panel].map((mod) => {
+                        const selected = formData.selectedModuleIds.includes(mod.id);
+                        return (
+                          <motion.div
+                            key={mod.id}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => toggleModuleId(mod.id)}
+                            className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-3 relative ${
+                              selected
+                                ? 'border-primary bg-primary/5 shadow-sm shadow-primary/10'
+                                : 'border-gray-100 bg-white hover:border-gray-200'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
+                              selected ? 'bg-primary border-primary' : 'border-gray-300'
+                            }`}>
+                              {selected && <RiCheckLine size={10} className="text-white" />}
+                            </div>
+                            <span className={`text-xs font-black truncate ${selected ? 'text-secondary' : 'text-gray-400'}`}>
+                              {mod.label}
+                            </span>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
@@ -444,7 +496,6 @@ const SuperadminPlans = () => {
   );
 };
 
-// Simplified arrow icon for select
 const RiArrowDownSLine = ({ className, size }) => (
   <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="6 9 12 15 18 9"></polyline>

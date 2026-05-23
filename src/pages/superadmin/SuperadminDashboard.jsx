@@ -18,7 +18,7 @@ import {
 } from 'react-icons/ri';
 import Button from '../../components/Button';
 
-const StatCard = ({ title, value, icon: Icon, trend, color, delay }) => (
+const StatCard = ({ title, value, icon: Icon, color, delay }) => (
  <motion.div
  initial={{ opacity: 0, y: 10 }}
  animate={{ opacity: 1, y: 0 }}
@@ -29,13 +29,6 @@ const StatCard = ({ title, value, icon: Icon, trend, color, delay }) => (
  <div className={`p-2.5 rounded-lg bg-primary/5 text-primary border border-primary/10`}>
  <Icon size={20} />
  </div>
- {trend && (
- <div className={`flex items-center gap-1 text-sm font-bold px-2 py-0.5 rounded border ${
- trend.startsWith('+') ? 'text-green-600 bg-green-50 border-green-100' : 'text-red-600 bg-red-50 border-red-100'
- }`}>
- {trend}
- </div>
- )}
  </div>
  <p className="text-gray-400 text-sm font-bold mb-1">{title}</p>
  <h3 className="text-2xl font-semibold text-secondary">{value}</h3>
@@ -97,7 +90,6 @@ const SuperadminDashboard = () => {
  <p className="text-sm font-semibold text-gray-400 mb-1">Monthly Revenue</p>
  <div className="flex items-center">
  <span className="text-2xl font-semibold text-secondary">£84,250</span>
- <span className="ml-2 text-sm font-bold px-1.5 py-0.5 rounded text-green-600 bg-green-50">+12.5%</span>
  </div>
  </div>
  </motion.div>
@@ -117,7 +109,6 @@ const SuperadminDashboard = () => {
  <p className="text-sm font-semibold text-gray-400 mb-1">Active Tenants</p>
  <div className="flex items-center">
  <span className="text-2xl font-semibold text-secondary">124</span>
- <span className="ml-2 text-sm font-bold px-1.5 py-0.5 rounded text-green-600 bg-green-50">+5.2%</span>
  </div>
  </div>
  </motion.div>
@@ -137,7 +128,6 @@ const SuperadminDashboard = () => {
  <p className="text-sm font-semibold text-gray-400 mb-1">Platform Users</p>
  <div className="flex items-center">
  <span className="text-2xl font-semibold text-secondary">4.2k</span>
- <span className="ml-2 text-sm font-bold px-1.5 py-0.5 rounded text-green-600 bg-green-50">+8.4%</span>
  </div>
  </div>
  </motion.div>
@@ -157,7 +147,6 @@ const SuperadminDashboard = () => {
  <p className="text-sm font-semibold text-gray-400 mb-1">Client Retention</p>
  <div className="flex items-center">
  <span className="text-2xl font-semibold text-secondary">104.2%</span>
- <span className="ml-2 text-sm font-bold px-1.5 py-0.5 rounded text-green-600 bg-green-50">+2.1%</span>
  </div>
  </div>
  </motion.div>

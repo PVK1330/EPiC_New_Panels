@@ -4,8 +4,10 @@ import { Plus, Check, Search } from "lucide-react";
 import Modal from "../../components/Modal";
 import { INITIAL_CASES } from "../../data/casesData";
 import api from "../../services/api";
+import { classifyTaskDue } from "../../utils/taskDueStatus";
 
-const TODAY_ISO = "2026-04-07";
+const todayIso = () => new Date().toISOString().split("T")[0];
+const TODAY_ISO = todayIso();
 
 // Default case options (will be filtered by current caseworker)
 const DEFAULT_CASE_OPTIONS = [
@@ -20,14 +22,13 @@ const DEFAULT_CASE_OPTIONS = [
 const emptyCreateForm = (caseOptions) => ({
   name: "",
   caseId: caseOptions?.[0]?.caseId || DEFAULT_CASE_OPTIONS[0].caseId,
-  due: TODAY_ISO,
+  due: todayIso(),
   priority: "medium",
 });
 
-function deriveSection(dueIso) {
-  if (dueIso < TODAY_ISO) return "overdue";
-  if (dueIso === TODAY_ISO) return "today";
-  return "upcoming";
+function deriveSection(dueIso, isCompleted = false) {
+  if (isCompleted) return "completed";
+  return classifyTaskDue(dueIso).section;
 }
 
 function priorityToDisplay(p) {
@@ -68,8 +69,8 @@ function buildNewTask(form, caseOptions) {
 }
 
 const TASK_FILTERS = [
-  { id: "all", label: "All tasks" },
-  { id: "today_due", label: "Due today" },
+  { id: "all", label: "All" },
+  { id: "due_soon", label: "Due" },
   { id: "overdue", label: "Overdue" },
   { id: "completed", label: "Completed" },
 ];
@@ -186,11 +187,13 @@ export default function Tasks() {
           
           // Map API response to local task structure
           const mappedTasks = apiTasks.map((task) => {
-            const dueIso = task.due_date ? task.due_date.split('T')[0] : TODAY_ISO;
-            const section = deriveSection(dueIso);
+            const dueIso = task.due_date ? task.due_date.split("T")[0] : todayIso();
             const isCompleted = task.status === "completed";
-            const overdue = section === "overdue" && !isCompleted;
-            
+            const dueMeta = classifyTaskDue(dueIso);
+            const section = deriveSection(dueIso, isCompleted);
+            const overdue = section === "overdue";
+            const dueSoon = section === "due_soon";
+
             return {
               id: task.id.toString(),
               name: task.title,
@@ -198,11 +201,28 @@ export default function Tasks() {
               candidate: task.candidate_name || task.assignee_name || "Unknown",
               assignedBy: task.assigned_by_name || "Unknown",
               due: dueIso,
-              status: isCompleted ? "Done" : overdue ? "Overdue" : task.status === "in-progress" ? "In progress" : "Pending",
-              statusTone: isCompleted ? "green" : overdue ? "red" : task.status === "in-progress" ? "blue" : "yellow",
+              status: isCompleted
+                ? "Done"
+                : overdue
+                  ? "Overdue"
+                  : dueSoon
+                    ? "Due soon"
+                    : task.status === "in-progress"
+                      ? "In progress"
+                      : "Pending",
+              statusTone: isCompleted
+                ? "green"
+                : overdue
+                  ? "red"
+                  : dueSoon
+                    ? "yellow"
+                    : task.status === "in-progress"
+                      ? "blue"
+                      : "gray",
               priority: priorityToDisplay(task.priority),
               prioTone: priorityToPrioTone(task.priority),
               section,
+              dueTone: dueMeta.tone,
               mine: true,
               done: isCompleted,
               action: isCompleted ? "View" : overdue ? "Escalate" : "Update",
@@ -399,9 +419,8 @@ export default function Tasks() {
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
-      if (filter === "my" && !t.mine) return false;
-      if (filter === "today" && t.due !== TODAY_ISO) return false;
       if (filter === "overdue" && t.section !== "overdue") return false;
+      if (filter === "due_soon" && t.section !== "due_soon") return false;
       if (filter === "completed" && !t.done) return false;
       return true;
     });
@@ -409,15 +428,17 @@ export default function Tasks() {
 
   const grouped = useMemo(() => {
     const overdue = filtered.filter((t) => t.section === "overdue");
-    const today = filtered.filter((t) => t.section === "today");
-    const upcoming = filtered.filter((t) => t.section === "upcoming");
-    return { overdue, today, upcoming };
+    const dueSoon = filtered.filter((t) => t.section === "due_soon");
+    const upcoming = filtered.filter(
+      (t) => t.section === "upcoming" || t.section === "today",
+    );
+    return { overdue, dueSoon, upcoming };
   }, [filtered]);
 
   const stats = useMemo(() => {
-    const dueTodayAll = tasks.filter((t) => t.due === TODAY_ISO).length;
+    const dueSoonN = tasks.filter((t) => t.section === "due_soon" && !t.done).length;
     const overdueN = tasks.filter((t) => t.section === "overdue" && !t.done).length;
-    return { total: tasks.length, dueTodayAll, overdueN };
+    return { total: tasks.length, dueSoonN, overdueN };
   }, [tasks]);
 
   const renderTable = (list) => (
@@ -439,7 +460,16 @@ export default function Tasks() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {list.map((t) => (
-              <tr key={t.id} className="hover:bg-gray-50/80">
+              <tr
+                key={t.id}
+                className={`hover:bg-gray-50/80 ${
+                  t.section === "overdue"
+                    ? "bg-red-50/40 border-l-4 border-l-red-500"
+                    : t.section === "due_soon"
+                      ? "bg-amber-50/40 border-l-4 border-l-amber-500"
+                      : ""
+                }`}
+              >
                 <td className="py-3 px-2 pl-4">
                   <button
                     type="button"
@@ -469,7 +499,7 @@ export default function Tasks() {
                   className={`py-3 px-4 text-sm font-bold tabular-nums ${
                     t.section === "overdue"
                       ? "text-red-600"
-                      : t.due === TODAY_ISO
+                      : t.section === "due_soon"
                         ? "text-amber-600"
                         : "text-gray-600"
                   }`}
@@ -524,7 +554,7 @@ export default function Tasks() {
             Tasks
           </h1>
           <p className="text-sm font-bold text-gray-600 mt-1">
-            {stats.total} tasks · {stats.dueTodayAll} due today · {stats.overdueN} overdue
+            {stats.total} tasks · {stats.dueSoonN} due soon · {stats.overdueN} overdue
           </p>
         </div>
         <button
@@ -813,12 +843,12 @@ export default function Tasks() {
               {renderTable(grouped.overdue)}
             </section>
           )}
-          {grouped.today.length > 0 && (
+          {grouped.dueSoon.length > 0 && (
             <section>
               <p className="text-[11px] font-black uppercase tracking-wider text-amber-700 mb-2">
-                Due today ({grouped.today.length})
+                Due within 48 hours ({grouped.dueSoon.length})
               </p>
-              {renderTable(grouped.today)}
+              {renderTable(grouped.dueSoon)}
             </section>
           )}
           {grouped.upcoming.length > 0 && (

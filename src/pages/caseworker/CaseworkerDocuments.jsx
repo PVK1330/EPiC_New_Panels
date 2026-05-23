@@ -346,11 +346,16 @@ export default function CaseworkerDocuments() {
 
   const handleReject = async () => {
     if (!rejectModal.doc) return;
+    const reason = rejectModal.note?.trim();
+    if (!reason) {
+      showToast({ message: "Rejection reason is required.", variant: "danger" });
+      return;
+    }
 
     try {
       await api.patch(`/api/caseworker/documents/status/${rejectModal.doc.id}`, {
         status: "rejected",
-        reviewNotes: rejectModal.note,
+        rejectionReason: reason,
       });
       setRejectModal({ isOpen: false, doc: null, note: "" });
       fetchReviewDocuments();
@@ -664,6 +669,7 @@ export default function CaseworkerDocuments() {
                     "Type",
                     "Case",
                     "Status",
+                    "Rejection reason",
                     "Uploaded by",
                     "Upload date",
                     "Expiry",
@@ -681,7 +687,7 @@ export default function CaseworkerDocuments() {
               <tbody className="divide-y divide-gray-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center">
+                    <td colSpan={9} className="px-6 py-8 text-center">
                       <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </td>
                   </tr>
@@ -709,6 +715,11 @@ export default function CaseworkerDocuments() {
                         >
                           {d.status || "Uploaded"}
                         </span>
+                      </td>
+                      <td className="py-3 px-4 text-xs font-bold text-red-700 max-w-[200px]">
+                        {String(d.status || "").toLowerCase() === "rejected"
+                          ? d.rejectionReason || "—"
+                          : "—"}
                       </td>
                       <td className="py-3 px-4 text-sm font-bold text-gray-700">{d.uploader ? `${d.uploader.first_name} ${d.uploader.last_name}` : "Unknown"}</td>
                       <td className="py-3 px-4 text-xs font-bold text-gray-500">{formatDate(d.uploadedAt)}</td>
@@ -900,12 +911,13 @@ export default function CaseworkerDocuments() {
               )}
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Reason for rejection
+                  Reason for rejection <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={rejectModal.note}
                   onChange={(e) => setRejectModal({ ...rejectModal, note: e.target.value })}
                   rows={4}
+                  required
                   placeholder="Explain why this document is being rejected…"
                   className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-red-500/15 focus:border-red-500 resize-y min-h-[96px]"
                 />
@@ -921,7 +933,8 @@ export default function CaseworkerDocuments() {
                 <button
                   type="button"
                   onClick={handleReject}
-                  className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-black text-white shadow-md shadow-red-600/20 hover:bg-red-600/90"
+                  disabled={!rejectModal.note?.trim()}
+                  className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-black text-white shadow-md shadow-red-600/20 hover:bg-red-600/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Confirm rejection
                 </button>

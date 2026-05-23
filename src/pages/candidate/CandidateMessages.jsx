@@ -30,6 +30,7 @@ export default function CandidateMessages() {
         email: u.email || "",
         initials: u.initials,
         role: u.role || "User",
+          profile_pic: u.profile_pic || u.avatar_url,
       });
     });
 
@@ -42,6 +43,7 @@ export default function CandidateMessages() {
           email: "",
           initials: t.initials,
           role: t.role || "User",
+            profile_pic: t.profile_pic || t.avatar_url,
         });
       }
     });
@@ -49,13 +51,18 @@ export default function CandidateMessages() {
     const rows = Array.from(byUser.values()).map((u) => {
       const convs = (threads || []).filter((t) => t.id === u.id);
       const primary =
-        [...convs].sort((a, b) => (b.unread || 0) - (a.unread || 0))[0] || null;
+        [...convs].sort((a, b) => {
+          const tA = a.rawTime ? new Date(a.rawTime).getTime() : 0;
+          const tB = b.rawTime ? new Date(b.rawTime).getTime() : 0;
+          return tB - tA;
+        })[0] || null;
       const unreadTotal = convs.reduce((s, t) => s + (t.unread || 0), 0);
       return {
         id: u.id,
         name: u.name,
         initials: u.initials,
         role: u.role || "User",
+          profile_pic: u.profile_pic || u.avatar_url,
         preview:
           primary?.preview ||
           (convs.length ? "Open thread" : "No messages yet — click to start"),

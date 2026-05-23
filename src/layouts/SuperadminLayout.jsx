@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { logout } from "../store/slices/authSlice";
 import SuperadminSidebar from "../components/superadmin/SuperadminSidebar";
+import useIdleTimer from "../hooks/useIdleTimer";
 import {
   RiMenuLine,
   RiHome5Line,
@@ -30,6 +31,9 @@ const SuperadminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
+
+  // ── Inactivity auto-logout (superadmin only) ──────────────────────────────
+  useIdleTimer();
 
   const handleLogout = () => {
     dispatch(logout());
@@ -169,14 +173,22 @@ const SuperadminLayout = () => {
                         {user?.email || "super@epic.com"}
                       </p>
                     </div>
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors text-left">
+                    <Link
+                      to="/superadmin/profile"
+                      onClick={() => setProfileOpen(false)}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors text-left"
+                    >
                       <RiUserLine size={16} />
                       My Profile
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors text-left">
+                    </Link>
+                    <Link
+                      to="/superadmin/settings"
+                      onClick={() => setProfileOpen(false)}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors text-left"
+                    >
                       <RiSettings3Line size={16} />
                       Settings
-                    </button>
+                    </Link>
                     <div className="border-t border-gray-100 my-1" />
                     <button
                       onClick={handleLogout}

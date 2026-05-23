@@ -32,7 +32,8 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
+    const isAuthEndpoint = error.config?.url?.includes('/api/auth/');
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       store.dispatch(logout());
       window.location.href = "/login";
     }

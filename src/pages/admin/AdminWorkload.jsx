@@ -7,6 +7,12 @@ import { Loader2 } from "lucide-react";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
+import MockDataBanner from "../../components/admin/MockDataBanner";
+import {
+  MOCK_WORKLOAD_TEAM,
+  MOCK_WORKLOAD_TASKS,
+  MOCK_WORKLOAD_DEADLINES,
+} from "../../data/adminMockData";
 
 const WORKLOAD_PATH = "/api/workload";
 
@@ -63,30 +69,37 @@ const AdminWorkload = () => {
   const [exporting, setExporting] = useState(false);
   const [pendingTasks, setPendingTasks] = useState([]);
   const [cases, setCases] = useState([]);
+  const [usingMockData, setUsingMockData] = useState(false);
 
   // Map API data to UI format
  const mappedTeamRows = (workloadData || []).map((item, index) => {
-  const name = item.caseworker_name || "Unknown";
+  const name = item.name || item.caseworker_name || "Unknown";
+
+  const workloadScore = item.workloadScore ?? 0;
+  const normalizedWorkloadPct = Math.min(100, Math.round((workloadScore / 30) * 100));
+  
+  const barClass = normalizedWorkloadPct >= 85 ? "bg-red-500" : normalizedWorkloadPct >= 60 ? "bg-yellow-500" : "bg-green-500";
+  const avatarBg = normalizedWorkloadPct >= 85 ? "bg-red-500" : normalizedWorkloadPct >= 60 ? "bg-yellow-500" : "bg-green-500";
 
   return {
-    id: item.caseworker_id || index,
+    id: item.id || item.caseworker_id || index,
     name,
     initials: name.split(" ").map(n => n[0]).join("").toUpperCase(),
-    avatarBg: "bg-green-500",
-    activeCases: item.active_cases || 0,
-    overdue: item.overdue || 0,
+    avatarBg: avatarBg,
+    activeCases: item.metrics?.activeCases ?? item.active_cases ?? 0,
+    overdue: item.metrics?.overdueTasks ?? item.overdue ?? 0,
     overdueChip:
-      item.overdue > 5
+      (item.metrics?.overdueTasks ?? item.overdue ?? 0) > 5
         ? "bg-red-100 text-red-700"
-        : item.overdue > 0
+        : (item.metrics?.overdueTasks ?? item.overdue ?? 0) > 0
         ? "bg-amber-100 text-amber-800"
         : "bg-green-100 text-green-700",
-    tasksPending: item.tasks_pending || 0,
-    avgCompletion: `${((item.avg_completion_time_days || 0) / 20 * 5).toFixed(1)} days`,
-    workloadPct: item.workload_percentage || 0,
-    barClass: "bg-green-500",
-    warn: false,
-    pctTextClass: "text-gray-700",
+    tasksPending: item.metrics?.pendingTasks ?? item.tasks_pending ?? 0,
+    avgCompletion: "N/A",
+    workloadPct: normalizedWorkloadPct,
+    barClass: barClass,
+    warn: normalizedWorkloadPct >= 85,
+    pctTextClass: normalizedWorkloadPct >= 85 ? "text-red-700" : normalizedWorkloadPct >= 60 ? "text-yellow-700" : "text-gray-700",
   };
 });
 
@@ -172,12 +185,14 @@ const AdminWorkload = () => {
   const fetchWorkloadData = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`${WORKLOAD_PATH}/team-workload`);
-     const {caseworkers}= response.data.data
-     setWorkloadData(caseworkers || []);     
+      const response = await api.get(`${WORKLOAD_PATH}/overview`);
+     const { workloadData } = response.data.data;
+     setWorkloadData(workloadData || []);
+     setUsingMockData(false);
     } catch (e) {
       console.error("Failed to fetch workload data:", e);
-      setWorkloadData([]);
+      setWorkloadData(MOCK_WORKLOAD_TEAM);
+      setUsingMockData(true);
     } finally {
       setLoading(false);
     }
@@ -210,7 +225,8 @@ const AdminWorkload = () => {
       }
     } catch (e) {
       console.error("Failed to fetch pending tasks:", e);
-      setPendingTasks([]);
+      setPendingTasks(MOCK_WORKLOAD_TASKS);
+      setUsingMockData(true);
     }
   };
 
@@ -229,14 +245,15 @@ const AdminWorkload = () => {
       }
     } catch (e) {
       console.error("Failed to fetch deadline monitor:", e);
-      setCases([]);
+      setCases(MOCK_WORKLOAD_DEADLINES);
+      setUsingMockData(true);
     }
   };
 
   const handleExport = async () => {
     setExporting(true);
     try {
-      const response = await api.get(`${WORKLOAD_PATH}/export-report`, {
+      const response = await api.get(`${WORKLOAD_PATH}/export`, {
         responseType: "blob",
       });
       
@@ -272,6 +289,7 @@ const AdminWorkload = () => {
 
   return (
     <motion.div className="space-y-6 pb-10" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      {usingMockData && <MockDataBanner />}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="mt-1 p-2.5 rounded-2xl bg-white border border-gray-100 shadow-sm">

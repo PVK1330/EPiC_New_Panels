@@ -4,6 +4,10 @@ import Input from "../../components/Input";
 import Button from "../../components/Button";
 import eliteLogo from "../../assets/elitepic_logo.png";
 import { forgotPassword } from "../../services/auth.service";
+import {
+  getOrganisationSlugFromHost,
+  getOrganisationSubdomainLabel,
+} from "../../utils/organisationHost";
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -11,6 +15,10 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const orgSlug = getOrganisationSlugFromHost();
+  const orgHint = orgSlug
+    ? null
+    : "Organisation users: open your firm’s login URL (e.g. yourfirm.localhost:5173) before resetting your password.";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,8 +33,9 @@ export default function ForgotPasswordPage() {
     }
     setIsLoading(true);
     try {
-      await forgotPassword(email.trim());
-      sessionStorage.setItem("pending_reset_email", email.trim());
+      const normalized = email.trim().toLowerCase();
+      await forgotPassword(normalized);
+      sessionStorage.setItem("pending_reset_email", normalized);
       setSent(true);
     } catch (err) {
       setError(err.message || "Failed to send reset OTP");
@@ -55,6 +64,17 @@ export default function ForgotPasswordPage() {
         <p className="text-center text-xs font-bold text-gray-500 mb-6">
           Enter your email address and we'll send a reset code.
         </p>
+
+        {orgSlug && (
+          <p className="text-center text-[11px] font-bold text-indigo-600 mb-4">
+            Organisation: {getOrganisationSubdomainLabel(orgSlug)}
+          </p>
+        )}
+        {orgHint && (
+          <p className="text-center text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+            {orgHint}
+          </p>
+        )}
 
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm text-center font-medium">

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Search, Settings, Grid3x3, List, Calendar as CalendarIcon, Clock, MapPin, Users, Video, Phone, X, Edit, Trash2, Eye, UserCheck, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Search, Settings, Grid3x3, List, Calendar as CalendarIcon, Clock, MapPin, Users, Video, Phone, X, Edit, Trash2, Eye, UserCheck, CheckCircle2, CheckSquare } from "lucide-react";
 import MicrosoftConnect from "../../components/MicrosoftConnect";
 import CreateMeetingModal from "../../components/CreateMeetingModal";
 import {
@@ -8,6 +8,8 @@ import {
   cancelTeamsMeeting,
 } from "../../services/teamsApi";
 import { getMyAppointments, deleteAppointment } from "../../services/appointmentApi";
+import { getWorkflowCalendarEvents } from "../../services/calendarApi";
+import { mapWorkflowEventsToCalendar } from "../../utils/calendarWorkflowEvents";
 
 export default function CandidateCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -31,12 +33,27 @@ export default function CandidateCalendar() {
     call: "bg-amber-500",
     task: "bg-green-500",
     teams: "bg-purple-500",
+    biometric: "bg-cyan-600",
   };
+
+  const [workflowEvents, setWorkflowEvents] = useState([]);
 
   useEffect(() => {
     fetchTeamsMeetings();
     fetchAppointments();
+    fetchWorkflowEvents();
   }, []);
+
+  const fetchWorkflowEvents = async () => {
+    try {
+      const response = await getWorkflowCalendarEvents();
+      const list = response.data?.data?.events || [];
+      setWorkflowEvents(mapWorkflowEventsToCalendar(list));
+    } catch (error) {
+      console.error("Failed to fetch workflow calendar events:", error);
+      setWorkflowEvents([]);
+    }
+  };
 
   const fetchTeamsMeetings = async () => {
     try {
@@ -131,8 +148,8 @@ export default function CandidateCalendar() {
   });
 
   const allEvents = useMemo(
-    () => [...eventsWithCompletion, ...teamsEvents],
-    [eventsWithCompletion, teamsEvents]
+    () => [...eventsWithCompletion, ...teamsEvents, ...workflowEvents],
+    [eventsWithCompletion, teamsEvents, workflowEvents]
   );
 
   const [newEvent, setNewEvent] = useState({
@@ -294,6 +311,8 @@ export default function CandidateCalendar() {
       case "call":    return <Phone size={12} />;
       case "deadline":return <Clock size={12} />;
       case "teams":   return <Video size={12} />;
+      case "task":    return <CheckSquare size={12} />;
+      case "biometric": return <UserCheck size={12} />;
       default:        return <CalendarIcon size={12} />;
     }
   };
@@ -817,7 +836,11 @@ export default function CandidateCalendar() {
                             ? "bg-red-100 text-red-700"
                             : selectedEvent.type === "teams"
                             ? "bg-purple-100 text-purple-700"
-                            : "bg-green-100 text-green-700"
+                            : selectedEvent.type === "biometric"
+                            ? "bg-cyan-100 text-cyan-800"
+                            : selectedEvent.type === "task"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-700"
                         }`}
                       >
                         {selectedEvent.type}
@@ -947,14 +970,16 @@ export default function CandidateCalendar() {
                     <Edit size={16} />
                     Close
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteEvent(selectedEvent)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                    Delete
-                  </button>
+                  {!selectedEvent.isTask && !selectedEvent.isBiometric && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteEvent(selectedEvent)}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

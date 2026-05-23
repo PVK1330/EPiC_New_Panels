@@ -1,7 +1,7 @@
 import api from "./api";
 
-export const getCases = (page = 1, limit = 10, search = "", status = "", priority = "", visaType = "") =>
-  api.get(`/api/cases`, { params: { page, limit, search, status, priority, visaType } });
+export const getCases = (params = {}) =>
+  api.get(`/api/cases`, { params });
 
 // Fetch ALL cases for dropdowns (no pagination limit)
 export const getAllCasesForDropdown = () =>
@@ -17,8 +17,8 @@ export const deleteCase = (id) => api.delete(`/api/cases/${id}`);
 
 export const getPipelineCases = () => api.get(`/api/cases/pipeline`);
 
-export const updatePipelineStage = (id, caseStage) =>
-  api.patch(`/api/cases/${id}/stage`, { caseStage });
+export const updatePipelineStage = (id, caseStage, extra = {}) =>
+  api.patch(`/api/cases/${id}/stage`, { caseStage, ...extra });
 
 export const getCaseWorkflow = () => api.get(`/api/cases/workflow`);
 
@@ -62,9 +62,8 @@ export const getCaseworkerCaseDetails = (id) => api.get(`/api/caseworker/cases/$
 // Document APIs
 export const getCaseDocuments = (caseId, params = {}) => api.get(`/api/caseworker/documents/case/${caseId}`, { params });
 
-export const uploadDocument = (formData) => api.post('/api/caseworker/documents/upload', formData, {
-  headers: { 'Content-Type': 'multipart/form-data' }
-});
+export const uploadDocument = (formData) =>
+  api.post("/api/caseworker/documents/upload", formData, { timeout: 120000 });
 
 export const updateDocument = (documentId, data) => api.put(`/api/caseworker/documents/${documentId}`, data);
 

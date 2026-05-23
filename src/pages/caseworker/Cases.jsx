@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, Fragment } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Search,
   Plus,
@@ -18,20 +18,64 @@ import {
   Clock,
   Table,
   LayoutGrid,
+  Trash2,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
 import CaseTimeline from "../../components/CaseTimeline";
 import useCaseDetail from "../../hooks/useCaseDetail";
-import { getCaseworkerCases, getVisaTypes, getPetitionTypes, getAllUsers, createCaseworkerCase, updateCaseworkerCase, getDepartments, getCaseworkerCaseDetails, getCaseDocuments, uploadDocument, updateDocument, deleteDocument, updateDocumentStatus, downloadDocument, getCaseNotes, createCaseNote, updateCaseNote, deleteCaseNote, getTasks, getTaskByCaseId, createTask, updateTask, deleteTask, exportCases } from "../../services/caseApi";
+import {
+  getCaseworkerCases,
+  getVisaTypes,
+  getPetitionTypes,
+  getAllUsers,
+  createCaseworkerCase,
+  updateCaseworkerCase,
+  getDepartments,
+  getCaseworkerCaseDetails,
+  getCaseDocuments,
+  uploadDocument,
+  updateDocument,
+  deleteDocument,
+  updateDocumentStatus,
+  downloadDocument,
+  getCaseNotes,
+  createCaseNote,
+  updateCaseNote,
+  deleteCaseNote,
+  getTasks,
+  getTaskByCaseId,
+  createTask,
+  updateTask,
+  deleteTask,
+  exportCases,
+} from "../../services/caseApi";
 import { getCaseAuditLogs } from "../../services/auditApi";
-import { getCaseChecklist } from "../../services/documentChecklistApi";
+import {
+  getCaseChecklist,
+  initializeCaseChecklist,
+  createCaseChecklistItem,
+  updateCaseChecklistItem,
+  deleteCaseChecklistItem,
+} from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
 import { updateCaseFinance } from "../../services/caseDetailApi";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
+import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
+import CaseWorkflowGuidance from "../../components/case/CaseWorkflowGuidance";
+import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
+import BiometricBookedModal from "../../components/workflow/BiometricBookedModal";
+import CclFeeProposalModal from "../../components/case/CclFeeProposalModal";
+import PrintClientApplicationButton from "../../components/CandidateApplicationForm/PrintClientApplicationButton";
+import { updatePipelineStage, assignCase } from "../../services/caseApi";
+import { proposeCclFees, getCclStatus, sendBiometricSlot } from "../../services/workflowApi";
+import {
+  IMMIGRATION_CASE_STEPS,
+  resolveCaseStage,
+  getStepById,
+} from "../../constants/immigrationCaseProcess";
 
 const PAGE_SIZE = 7;
-
 
 const REASSIGN_REASONS = [
   "Caseworker unavailable / on leave",
@@ -123,8 +167,10 @@ const caseToEditForm = (c) => ({
   petitionTypeId: c.petitionTypeId || c.petitionType?.id || "",
   lcaNumber: c.lcaNumber || c.additional?.lcaNumber || "",
   receiptNumber: c.receiptNumber || c.additional?.receiptNumber || "",
-  assignedCaseworkerIds: c.assignedcaseworkerId 
-    ? (Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId : [c.assignedcaseworkerId])
+  assignedCaseworkerIds: c.assignedcaseworkerId
+    ? Array.isArray(c.assignedcaseworkerId)
+      ? c.assignedcaseworkerId
+      : [c.assignedcaseworkerId]
     : [],
   salaryOffered: c.salaryOffered || c.financial?.salaryOffered || "",
   totalAmount: c.totalAmount || c.financial?.totalFee || "",
@@ -337,6 +383,7 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
 const Cases = () => {
   const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
+  const location = useLocation();
   const [viewMode, setViewMode] = useState("table"); // 'table' or 'kanban'
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -353,13 +400,15 @@ const Cases = () => {
   const [page, setPage] = useState(1);
   const [detailCase, setDetailCase] = useState(null);
   const [detailTab, setDetailTab] = useState("overview");
+  const [stageSaving, setStageSaving] = useState(false);
+  const [biometricModalOpen, setBiometricModalOpen] = useState(false);
+  const [pendingBiometricStage, setPendingBiometricStage] = useState(null);
+  const { showToast } = useToast();
   const [newCaseOpen, setNewCaseOpen] = useState(false);
   const [newCaseForm, setNewCaseForm] = useState(emptyNewCaseForm);
   const [newCaseErrors, setNewCaseErrors] = useState({});
   const [editCaseId, setEditCaseId] = useState(null);
-  const [editCaseForm, setEditCaseForm] = useState(() =>
-    emptyNewCaseForm()
-  );
+  const [editCaseForm, setEditCaseForm] = useState(() => emptyNewCaseForm());
   const [editCaseErrors, setEditCaseErrors] = useState({});
   const [visaTypes, setVisaTypes] = useState([]);
   const [petitionTypes, setPetitionTypes] = useState([]);
@@ -409,13 +458,15 @@ const Cases = () => {
             "Unknown",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
+          legacyStatus: c.status,
+          caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
           priority: c.priority?.toLowerCase() || "medium",
           payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
           totalAmount: c.totalAmount || 0,
           paidAmount: c.paidAmount || 0,
-          amountStatus: c.amountStatus || 'Not Submitted',
-          amountNotes: c.amountNotes || '',
+          amountStatus: c.amountStatus || "Not Submitted",
+          amountNotes: c.amountNotes || "",
           id: c.id,
           candidateId: c.candidateId,
           sponsorId: c.sponsorId,
@@ -509,6 +560,92 @@ const Cases = () => {
   const [reassignments, setReassignments] = useState({});
   // ───────────────────────────────────────────────────────────────────────────
 
+  const handleWorkflowStageChange = useCallback(
+    async (caseStage) => {
+      if (!detailCase?.caseId) return;
+      if (caseStage === "biometrics_booked" || caseStage === "biometrics_confirmation_sent") {
+        setPendingBiometricStage(caseStage);
+        setBiometricModalOpen(true);
+        return;
+      }
+      setStageSaving(true);
+      try {
+        const res = await updatePipelineStage(detailCase.caseId, caseStage);
+        const updated = res?.data?.data?.case;
+        setDetailCase((prev) =>
+          prev
+            ? {
+                ...prev,
+                caseStage: updated?.caseStage ?? caseStage,
+                legacyStatus: updated?.status ?? prev.legacyStatus,
+              }
+            : null,
+        );
+        setCases((prev) =>
+          prev.map((item) =>
+            item.caseId === detailCase.caseId ? { ...item, caseStage } : item,
+          ),
+        );
+        showToast({ message: "Workflow stage updated." });
+      } catch (err) {
+        showToast({
+          message: err?.response?.data?.message || "Failed to update stage.",
+          variant: "danger",
+        });
+      } finally {
+        setStageSaving(false);
+      }
+    },
+    [detailCase?.caseId, showToast],
+  );
+
+  const confirmBiometricBooking = async (payload) => {
+    if (!detailCase?.caseId) return;
+    setStageSaving(true);
+    try {
+      const caseId = detailCase.caseId;
+      if (pendingBiometricStage === "biometrics_confirmation_sent") {
+        // Use dedicated workflow API
+        await sendBiometricSlot(caseId, {
+          location: payload.biometricLocation,
+          appointmentDate: payload.biometricDate,
+          appointmentTime: payload.biometricTime,
+          appointmentDay: payload.biometricDay,
+          instructions: payload.biometricInstructions,
+        });
+        showToast({
+          message: "Confirmation sent — candidate notified by email & in-app",
+          variant: "success",
+        });
+      } else {
+        await updatePipelineStage(caseId, "biometrics_booked", payload);
+        showToast({
+          message: "Biometrics booked — candidate notified",
+          variant: "success",
+        });
+      }
+      // Re-fetch detail
+      const res = await getCaseworkerCaseDetails(caseId);
+      const data = res?.data?.data;
+      if (data?.overview) {
+        setDetailCase((prev) =>
+          prev
+            ? { ...prev, caseStage: pendingBiometricStage }
+            : prev,
+        );
+      }
+      setBiometricModalOpen(false);
+      setPendingBiometricStage(null);
+    } catch (err) {
+      showToast({
+        variant: "danger",
+        message: err?.response?.data?.message || "Failed to book biometrics",
+      });
+    } finally {
+      setStageSaving(false);
+    }
+  };
+
   const openDetail = useCallback((c) => {
     setNewCaseOpen(false);
     setEditCaseId(null);
@@ -518,6 +655,18 @@ const Cases = () => {
   }, []);
 
   const closeDetail = useCallback(() => setDetailCase(null), []);
+
+  useEffect(() => {
+    const ref = location.state?.openCaseRef;
+    if (!ref || loading || !cases.length) return;
+    const found = cases.find(
+      (c) => c.caseId === ref || String(c.id) === String(ref),
+    );
+    if (found) {
+      openDetail(found);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [cases, loading, location.state, location.pathname, openDetail, navigate]);
 
   const openNewCaseModal = useCallback(() => {
     setDetailCase(null);
@@ -606,6 +755,8 @@ const Cases = () => {
             "Unknown",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
+          legacyStatus: c.status,
+          caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
           priority: c.priority?.toLowerCase() || "medium",
           payment:
@@ -735,6 +886,8 @@ const Cases = () => {
             "Unknown",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
+          legacyStatus: c.status,
+          caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
           priority: c.priority?.toLowerCase() || "medium",
           payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
@@ -793,7 +946,7 @@ const Cases = () => {
     setReassignForm(emptyReassignForm());
   }, []);
 
-  const submitReassign = useCallback(() => {
+  const submitReassign = useCallback(async () => {
     const err = {};
     if (!reassignForm.caseworkerIds || reassignForm.caseworkerIds.length === 0)
       err.caseworkerIds = "Please select at least one caseworker";
@@ -806,22 +959,43 @@ const Cases = () => {
     setReassignErrors(err);
     if (Object.keys(err).length) return;
 
-    const caseworkers = reassignForm.caseworkerIds.map(id => caseworkers.find((w) => w.id === id)).filter(Boolean);
+    const selectedCaseworkers = reassignForm.caseworkerIds
+      .map((id) => caseworkers.find((w) => w.id === id))
+      .filter(Boolean);
     const reason =
       reassignForm.reasonPreset === "Other"
         ? reassignForm.reasonCustom.trim()
         : reassignForm.reasonPreset;
 
-    setReassignments((prev) => ({
-      ...prev,
-      [reassignCaseId]: {
-        caseworkers: caseworkers.map(cw => ({ name: `${cw.first_name} ${cw.last_name}`, role: cw.role || "Caseworker" })),
+    try {
+      await assignCase(reassignCaseId, {
+        assignTo: reassignForm.caseworkerIds,
         reason,
-        at: new Date(),
-      },
-    }));
-    closeReassign();
-  }, [reassignCaseId, reassignForm, closeReassign, caseworkers]);
+        assignToName: selectedCaseworkers
+          .map((cw) => `${cw.first_name} ${cw.last_name}`)
+          .join(", "),
+      });
+      setReassignments((prev) => ({
+        ...prev,
+        [reassignCaseId]: {
+          caseworkers: selectedCaseworkers.map((cw) => ({
+            name: `${cw.first_name} ${cw.last_name}`,
+            role: cw.role || "Caseworker",
+          })),
+          reason,
+          at: new Date(),
+        },
+      }));
+      showToast({ message: "Case reassigned successfully." });
+      closeReassign();
+    } catch (e) {
+      console.error("Reassign error:", e);
+      showToast({
+        variant: "danger",
+        message: e?.response?.data?.message || "Failed to reassign case.",
+      });
+    }
+  }, [reassignCaseId, reassignForm, closeReassign, caseworkers, showToast]);
   // ───────────────────────────────────────────────────────────────────────────
 
   // Filtering is now handled by the API, so we use cases directly
@@ -1797,7 +1971,10 @@ const Cases = () => {
                   type="text"
                   value={editCaseForm.nationality}
                   onChange={(e) =>
-                    setEditCaseForm((f) => ({ ...f, nationality: e.target.value }))
+                    setEditCaseForm((f) => ({
+                      ...f,
+                      nationality: e.target.value,
+                    }))
                   }
                   placeholder="e.g. Indian"
                   className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
@@ -1824,7 +2001,10 @@ const Cases = () => {
                 <select
                   value={editCaseForm.department}
                   onChange={(e) =>
-                    setEditCaseForm((f) => ({ ...f, department: e.target.value }))
+                    setEditCaseForm((f) => ({
+                      ...f,
+                      department: e.target.value,
+                    }))
                   }
                   className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
                 >
@@ -1921,7 +2101,10 @@ const Cases = () => {
               <select
                 value={editCaseForm.petitionTypeId}
                 onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, petitionTypeId: e.target.value }))
+                  setEditCaseForm((f) => ({
+                    ...f,
+                    petitionTypeId: e.target.value,
+                  }))
                 }
                 className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
               >
@@ -1959,7 +2142,10 @@ const Cases = () => {
                 type="date"
                 value={editCaseForm.targetSubmissionDate}
                 onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, targetSubmissionDate: e.target.value }))
+                  setEditCaseForm((f) => ({
+                    ...f,
+                    targetSubmissionDate: e.target.value,
+                  }))
                 }
                 className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.targetSubmissionDate ? "border-red-300" : "border-gray-200"}`}
               />
@@ -1991,7 +2177,10 @@ const Cases = () => {
                 type="text"
                 value={editCaseForm.receiptNumber}
                 onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, receiptNumber: e.target.value }))
+                  setEditCaseForm((f) => ({
+                    ...f,
+                    receiptNumber: e.target.value,
+                  }))
                 }
                 placeholder="e.g. EAC240..."
                 className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
@@ -2015,7 +2204,9 @@ const Cases = () => {
                   : []
               }
               value={editCaseForm.assignedCaseworkerIds || []}
-              onChange={(ids) => setEditCaseForm((f) => ({ ...f, assignedCaseworkerIds: ids }))}
+              onChange={(ids) =>
+                setEditCaseForm((f) => ({ ...f, assignedCaseworkerIds: ids }))
+              }
               error={editCaseErrors.assignedCaseworkers}
             />
           </div>
@@ -2034,7 +2225,10 @@ const Cases = () => {
                 type="number"
                 value={editCaseForm.salaryOffered}
                 onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, salaryOffered: e.target.value }))
+                  setEditCaseForm((f) => ({
+                    ...f,
+                    salaryOffered: e.target.value,
+                  }))
                 }
                 placeholder="Annual salary"
                 className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
@@ -2048,7 +2242,10 @@ const Cases = () => {
                 type="number"
                 value={editCaseForm.totalAmount}
                 onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, totalAmount: e.target.value }))
+                  setEditCaseForm((f) => ({
+                    ...f,
+                    totalAmount: e.target.value,
+                  }))
                 }
                 placeholder="Total fee"
                 className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
@@ -2172,7 +2369,9 @@ const Cases = () => {
                   : []
               }
               value={reassignForm.caseworkerIds}
-              onChange={(ids) => setReassignForm((f) => ({ ...f, caseworkerIds: ids }))}
+              onChange={(ids) =>
+                setReassignForm((f) => ({ ...f, caseworkerIds: ids }))
+              }
               error={reassignErrors.caseworkerIds}
             />
 
@@ -2295,7 +2494,10 @@ const Cases = () => {
                   {reassignments[detailCase.caseId] && (
                     <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[11px] font-black text-violet-700">
                       <ArrowRightLeft size={11} />
-                      Reassigned → {reassignments[detailCase.caseId].caseworkers.map(c => c.name).join(" · ")}
+                      Reassigned →{" "}
+                      {reassignments[detailCase.caseId].caseworkers
+                        .map((c) => c.name)
+                        .join(" · ")}
                     </span>
                   )}
                 </div>
@@ -2325,10 +2527,8 @@ const Cases = () => {
                 { id: "documents", label: "Documents" },
                 { id: "tasks", label: "Tasks" },
                 { id: "payments", label: "Payments" },
-                { id: "comms", label: "Communication" },
                 { id: "notes", label: "Notes" },
                 { id: "timeline", label: "Timeline" },
-                 { id: "auditlogs", label: "Audit Logs" },
               ].map((t) => (
                 <button
                   key={t.id}
@@ -2345,9 +2545,14 @@ const Cases = () => {
               ))}
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6">
+            <div className="flex-1 p-4 sm:p-6">
               {detailTab === "overview" && (
-                <OverviewTab c={detailCase} userName={user?.name || "You"} />
+                <OverviewTab
+                  c={detailCase}
+                  userName={user?.name || "You"}
+                  onStageChange={handleWorkflowStageChange}
+                  stageSaving={stageSaving}
+                />
               )}
               {detailTab === "documents" && (
                 <DocumentsTab
@@ -2360,15 +2565,18 @@ const Cases = () => {
                 <PaymentsTab
                   caseDetail={detailCase}
                   onUpdate={(updated) => {
-                    setDetailCase((prev) => prev ? { ...prev, ...updated } : null);
+                    setDetailCase((prev) =>
+                      prev ? { ...prev, ...updated } : null,
+                    );
                     setCases((prev) =>
-                      prev.map((item) => (item.id === detailCase?.id ? { ...item, ...updated } : item))
+                      prev.map((item) =>
+                        item.id === detailCase?.id
+                          ? { ...item, ...updated }
+                          : item,
+                      ),
                     );
                   }}
                 />
-              )}
-              {detailTab === "comms" && (
-                <CommsTab candidate={detailCase.candidate} caseId={detailCase.caseId} />
               )}
               {detailTab === "notes" && (
                 <NotesTab
@@ -2378,9 +2586,6 @@ const Cases = () => {
               )}
               {detailTab === "timeline" && (
                 <CaseTimeline caseId={detailCase?.id} currentUser={user} />
-              )}
-              {detailTab === "auditlogs" && (
-                <AuditLogsTab caseId={detailCase?.id} />
               )}
             </div>
           </>
@@ -2788,7 +2993,6 @@ const Cases = () => {
           </div>
         </div>
       </Modal>
-
     </div>
   );
 };
@@ -2804,30 +3008,40 @@ function Field({ label, children }) {
   );
 }
 
-function OverviewTab({ c, userName }) {
+function OverviewTab({ c, userName, onStageChange, stageSaving }) {
   const st = badgeStatus(c.status);
+  const caseRecord = {
+    caseStage: c.caseStage,
+    status: c.legacyStatus || c.status,
+  };
+
+  const stageId = resolveCaseStage(caseRecord);
+  const currentStep = getStepById(stageId);
+  const currentOrder = currentStep?.order ?? 1;
+
   return (
     <div className="space-y-6">
-      {/* <div className="flex flex-wrap gap-2 pb-4 border-b border-gray-100">
-        <button
-          type="button"
-          className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white"
-        >
-          Update status
-        </button>
-        <button
-          type="button"
-          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700"
-        >
-          Add note
-        </button>
-        <button
-          type="button"
-          className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-800"
-        >
-          Flag case
-        </button>
-      </div> */}
+      {c.candidateId ? (
+        <div className="flex justify-end">
+          <PrintClientApplicationButton
+            candidateId={c.candidateId}
+            label="Print / PDF application"
+          />
+        </div>
+      ) : null}
+      <CaseWorkflowPanel
+        caseRecord={caseRecord}
+        onStageChange={onStageChange}
+        saving={stageSaving}
+      />
+      <CaseWorkflowGuidance caseRecord={caseRecord} />
+      <CaseWorkflowActions
+        caseId={c.caseId}
+        totalAmount={c.totalAmount}
+        amountStatus={c.amountStatus}
+        caseStage={c.caseStage}
+        onRefresh={onStageChange}
+      />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <Field label="Case ID">
           <span className="font-mono text-secondary">{c.caseId}</span>
@@ -2861,42 +3075,40 @@ function OverviewTab({ c, userName }) {
           Case progress
         </p>
         <div className="flex justify-between text-center gap-1">
-          {["Onboarded", "Documents", "Drafting", "Review", "Submitted"].map(
-            (label, i) => {
-              const done = i < 2;
-              const current = i === 2;
-              return (
-                <div key={label} className="flex-1 relative">
-                  {i > 0 && (
-                    <div
-                      className={`absolute left-0 right-1/2 top-[14px] h-0.5 -translate-x-1/2 ${
-                        i <= 2 ? "bg-emerald-500" : "bg-gray-200"
-                      }`}
-                      style={{ width: "50%" }}
-                    />
-                  )}
+          {IMMIGRATION_CASE_STEPS.map((step, i) => {
+            const done = step.order < currentOrder;
+            const current = step.order === currentOrder;
+            return (
+              <div key={step.id} className="flex-1 relative">
+                {i > 0 && (
                   <div
-                    className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black ${
-                      done
-                        ? "bg-emerald-500 text-white"
-                        : current
-                          ? "border-2 border-secondary bg-secondary/15 text-secondary"
-                          : "border-2 border-gray-200 bg-white text-gray-400"
+                    className={`absolute left-0 right-1/2 top-[14px] h-0.5 -translate-x-1/2 ${
+                      i < currentOrder ? "bg-emerald-500" : "bg-gray-200"
                     }`}
-                  >
-                    {done ? <Check size={14} /> : current ? "●" : ""}
-                  </div>
-                  <p
-                    className={`mt-1 text-[10px] font-bold ${
-                      current ? "text-secondary" : "text-gray-500"
-                    }`}
-                  >
-                    {label}
-                  </p>
+                    style={{ width: "50%" }}
+                  />
+                )}
+                <div
+                  className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black ${
+                    done
+                      ? "bg-emerald-500 text-white"
+                      : current
+                        ? "border-2 border-secondary bg-secondary/15 text-secondary"
+                        : "border-2 border-gray-200 bg-white text-gray-400"
+                  }`}
+                >
+                  {done ? <Check size={14} /> : current ? "●" : ""}
                 </div>
-              );
-            },
-          )}
+                <p
+                  className={`mt-1 text-[10px] font-bold ${
+                    current ? "text-secondary" : "text-gray-500"
+                  }`}
+                >
+                  {step.shortTitle}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -2936,6 +3148,21 @@ function DocumentsTab({ caseId, candidateId }) {
   const [viewDocumentUrl, setViewDocumentUrl] = useState("");
   const [uploadingForItem, setUploadingForItem] = useState(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+  const [checklistSaving, setChecklistSaving] = useState(false);
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [editForm, setEditForm] = useState({
+    documentName: "",
+    description: "",
+    isRequired: true,
+  });
+  const [addItemOpen, setAddItemOpen] = useState(false);
+  const [addItemForm, setAddItemForm] = useState({
+    documentType: "Other",
+    documentName: "",
+    description: "",
+    isRequired: true,
+    category: "other",
+  });
   const { showToast } = useToast();
 
   const closeViewDocument = () => {
@@ -2953,7 +3180,7 @@ function DocumentsTab({ caseId, candidateId }) {
     setChecklistLoading(true);
     try {
       const res = await getCaseChecklist(caseId);
-      if (res.data?.status === 'success') {
+      if (res.data?.status === "success") {
         setChecklist(res.data.data);
       }
     } catch (err) {
@@ -2966,6 +3193,117 @@ function DocumentsTab({ caseId, candidateId }) {
   useEffect(() => {
     fetchChecklist();
   }, [fetchChecklist]);
+
+  const handleInitializeChecklist = useCallback(async () => {
+    if (!caseId) return;
+    setChecklistSaving(true);
+    try {
+      await initializeCaseChecklist(caseId);
+      await fetchChecklist();
+      showToast({
+        message: "Checklist customized specifically for this case!",
+        variant: "success",
+      });
+    } catch (error) {
+      showToast({
+        message:
+          error.response?.data?.message || "Failed to customize checklist.",
+        variant: "danger",
+      });
+    } finally {
+      setChecklistSaving(false);
+    }
+  }, [caseId, fetchChecklist, showToast]);
+
+  const handleSaveChecklistItem = useCallback(async () => {
+    if (!caseId || !editingItemId) return;
+    setChecklistSaving(true);
+    try {
+      await updateCaseChecklistItem(editingItemId, editForm);
+      setEditingItemId(null);
+      await fetchChecklist();
+      showToast({ message: "Checklist item updated.", variant: "success" });
+    } catch (error) {
+      showToast({
+        message: error.response?.data?.message || "Failed to update item.",
+        variant: "danger",
+      });
+    } finally {
+      setChecklistSaving(false);
+    }
+  }, [caseId, editingItemId, editForm, fetchChecklist, showToast]);
+
+  const handleDeleteChecklistItem = useCallback(
+    async (itemId) => {
+      if (!caseId || !itemId) return;
+      if (!window.confirm("Remove this document requirement from the case checklist?")) {
+        return;
+      }
+      setChecklistSaving(true);
+      try {
+        await deleteCaseChecklistItem(itemId);
+        await fetchChecklist();
+        showToast({ message: "Checklist item removed.", variant: "success" });
+      } catch (error) {
+        showToast({
+          message: error.response?.data?.message || "Failed to delete item.",
+          variant: "danger",
+        });
+      } finally {
+        setChecklistSaving(false);
+      }
+    },
+    [fetchChecklist, showToast],
+  );
+
+  const handleToggleRequired = useCallback(
+    async (item) => {
+      if (!item?.id) return;
+      setChecklistSaving(true);
+      try {
+        await updateCaseChecklistItem(item.id, {
+          isRequired: !item.isRequired,
+        });
+        await fetchChecklist();
+      } catch (error) {
+        showToast({
+          message: error.response?.data?.message || "Failed to update item.",
+          variant: "danger",
+        });
+      } finally {
+        setChecklistSaving(false);
+      }
+    },
+    [fetchChecklist, showToast],
+  );
+
+  const handleCreateChecklistItem = useCallback(async () => {
+    if (!caseId || !addItemForm.documentName.trim()) return;
+    setChecklistSaving(true);
+    try {
+      await createCaseChecklistItem(caseId, {
+        ...addItemForm,
+        documentName: addItemForm.documentName.trim(),
+      });
+      setAddItemOpen(false);
+      setAddItemForm({
+        documentType: "Other",
+        documentName: "",
+        description: "",
+        isRequired: true,
+        category: "other",
+      });
+      await fetchChecklist();
+      showToast({ message: "Document requirement added.", variant: "success" });
+    } catch (error) {
+      showToast({
+        message: error.response?.data?.message || "Failed to add item.",
+        variant: "danger",
+      });
+    } finally {
+      setChecklistSaving(false);
+    }
+  }, [caseId, addItemForm, fetchChecklist, showToast]);
 
   const getBadgeColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -3031,7 +3369,7 @@ function DocumentsTab({ caseId, candidateId }) {
     try {
       setUploading(true);
       const formData = new FormData();
-      formData.append("documents", selectedFile);
+      formData.append("files", selectedFile);
       formData.append("caseId", caseId);
       formData.append("userId", candidateId);
       formData.append("documentType", uploadForm.documentType);
@@ -3064,7 +3402,16 @@ function DocumentsTab({ caseId, candidateId }) {
     } finally {
       setUploading(false);
     }
-  }, [uploadForm, selectedFile, caseId, candidateId, closeUploadModal, uploadDocument, fetchDocuments, fetchChecklist]);
+  }, [
+    uploadForm,
+    selectedFile,
+    caseId,
+    candidateId,
+    closeUploadModal,
+    uploadDocument,
+    fetchDocuments,
+    fetchChecklist,
+  ]);
 
   const handleDocumentStatusChange = useCallback(
     async (documentId, status) => {
@@ -3086,7 +3433,10 @@ function DocumentsTab({ caseId, candidateId }) {
         });
       } catch (error) {
         console.error("Error updating document status:", error);
-        showToast({ message: "Failed to update document status.", variant: "danger" });
+        showToast({
+          message: "Failed to update document status.",
+          variant: "danger",
+        });
       } finally {
         setStatusUpdatingId(null);
       }
@@ -3096,161 +3446,320 @@ function DocumentsTab({ caseId, candidateId }) {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'approved':
-      case 'uploaded':
-        return 'bg-green-100 text-green-700 border-green-200';
-      case 'under_review':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'rejected':
-        return 'bg-red-100 text-red-700 border-red-200';
-      case 'missing':
+      case "approved":
+      case "uploaded":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "under_review":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "rejected":
+        return "bg-red-100 text-red-700 border-red-200";
+      case "missing":
       default:
-        return 'bg-gray-100 text-gray-600 border-gray-200';
+        return "bg-gray-100 text-gray-600 border-gray-200";
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'approved':
-      case 'uploaded':
+      case "approved":
+      case "uploaded":
         return <Check size={14} className="text-green-600" />;
-      case 'under_review':
+      case "under_review":
         return <Clock size={14} className="text-blue-600" />;
-      case 'rejected':
+      case "rejected":
         return <X size={14} className="text-red-600" />;
-      case 'missing':
+      case "missing":
       default:
-        return <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-400" />;
+        return (
+          <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-400" />
+        );
     }
   };
 
   const categoryLabels = {
-    identity: 'Identity Documents',
-    education: 'Education & Qualifications',
-    work: 'Work Experience',
-    financial: 'Financial Documents',
-    medical: 'Medical Documents',
-    legal: 'Legal Documents',
-    other: 'Other Documents'
+    identity: "Identity Documents",
+    education: "Education & Qualifications",
+    work: "Work Experience",
+    financial: "Financial Documents",
+    medical: "Medical Documents",
+    legal: "Legal Documents",
+    other: "Other Documents",
   };
 
   return (
     <div className="space-y-6">
       {/* Document Checklist Section */}
-      {checklist && !checklistLoading && Object.keys(checklist.checklist).length > 0 && (
-        <>
-          {/* Progress Overview */}
-          <div className="bg-gradient-to-r from-secondary/5 to-primary/5 rounded-xl border border-secondary/10 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-sm font-black text-secondary uppercase tracking-wide">
-                Document Completion Progress
-              </h4>
-              <div className="flex items-center gap-3">
-                <span className="text-2xl font-black text-secondary">
-                  {checklist.completionPercentage}%
-                </span>
-                <button
-                  type="button"
-                  onClick={() => openUploadModal()}
-                  className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white"
-                >
-                  + Add Document
-                </button>
-              </div>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-secondary to-primary transition-all duration-500 ease-out"
-                style={{ width: `${checklist.completionPercentage}%` }}
-              />
-            </div>
-            <div className="flex justify-between mt-2 text-xs text-gray-600">
-              <span>{checklist.completed} of {checklist.required} required documents completed</span>
-              <span>{checklist.total} total documents</span>
-            </div>
-          </div>
-
-          {/* Checklist by Category */}
-          {Object.entries(checklist.checklist).map(([category, items]) => (
-            <div key={category} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50">
-                <h5 className="text-sm font-bold text-secondary">
-                  {categoryLabels[category] || category}
-                </h5>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {items.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="px-5 py-4 hover:bg-gray-50/50 transition-colors flex items-start gap-4"
+      {checklist &&
+        !checklistLoading &&
+        Object.keys(checklist.checklist).length > 0 && (
+          <>
+            {/* Progress Overview */}
+            <div className="bg-gradient-to-r from-secondary/5 to-primary/5 rounded-xl border border-secondary/10 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-black text-secondary uppercase tracking-wide">
+                  Document Completion Progress
+                </h4>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-2xl font-black text-secondary">
+                    {checklist.completionPercentage}%
+                  </span>
+                  {!checklist.isCustomized && (
+                    <button
+                      type="button"
+                      disabled={checklistSaving}
+                      onClick={handleInitializeChecklist}
+                      className="rounded-xl border border-secondary text-secondary bg-white hover:bg-secondary/5 px-3 py-2 text-xs font-black transition-all disabled:opacity-50"
+                    >
+                      {checklistSaving ? "Setting up…" : "Customize Required Documents"}
+                    </button>
+                  )}
+                  {checklist.isCustomized && (
+                    <button
+                      type="button"
+                      onClick={() => setAddItemOpen(true)}
+                      disabled={checklistSaving}
+                      className="rounded-xl border border-secondary/30 bg-secondary/10 px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/20 transition-all"
+                    >
+                      + Add Required Document
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => openUploadModal()}
+                    className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white"
                   >
-                    <div className="shrink-0 mt-0.5">
-                      {getStatusIcon(item.status)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="text-sm font-semibold text-gray-900">
-                          {item.documentName}
-                        </p>
-                        {item.isRequired && (
-                          <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">
-                            Required
-                          </span>
-                        )}
-                        {!item.isRequired && (
-                          <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                            Optional
-                          </span>
-                        )}
-                      </div>
-                      {item.description && (
-                        <p className="text-xs text-gray-500 mb-2">{item.description}</p>
-                      )}
-                      <div className="flex items-center gap-3">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusColor(item.status)}`}>
-                          {item.status.replace('_', ' ')}
-                        </span>
-                        {item.expiryDate && (
-                          <span className="text-[10px] text-gray-500">
-                            Expires: {new Date(item.expiryDate).toLocaleDateString()}
-                          </span>
-                        )}
-                        {item.uploadedAt && (
-                          <span className="text-[10px] text-gray-500">
-                            Uploaded: {new Date(item.uploadedAt).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {item.status === 'missing' ? (
-                      <button
-                        type="button"
-                        onClick={() => openUploadModal(item)}
-                        className="shrink-0 rounded-lg border border-secondary/30 bg-secondary/10 px-3 py-1.5 text-[11px] font-black text-secondary hover:bg-secondary/20 transition-colors"
-                      >
-                        Add
-                      </button>
-                    ) : item.documentId ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const doc = documents.find(d => d.id === item.documentId);
-                          if (doc && doc.documentUrl) {
-                            window.open(doc.documentUrl, "_blank");
-                          }
-                        }}
-                        className="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-black text-gray-600 hover:bg-gray-50 transition-colors"
-                      >
-                        View
-                      </button>
-                    ) : null}
-                  </div>
-                ))}
+                    + Upload Document
+                  </button>
+                </div>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-secondary to-primary transition-all duration-500 ease-out"
+                  style={{ width: `${checklist.completionPercentage}%` }}
+                />
+              </div>
+              <div className="flex justify-between mt-2 text-xs text-gray-600">
+                <span>
+                  {checklist.completed} of {checklist.required} required
+                  documents completed
+                </span>
+                <span>{checklist.total} total documents</span>
               </div>
             </div>
-          ))}
-        </>
-      )}
+
+            {/* Checklist by Category */}
+            {Object.entries(checklist.checklist).map(([category, items]) => (
+              <div
+                key={category}
+                className="bg-white rounded-xl border border-gray-100 overflow-hidden"
+              >
+                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50">
+                  <h5 className="text-sm font-bold text-secondary">
+                    {categoryLabels[category] || category}
+                  </h5>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {items.map((item, idx) => (
+                    <div
+                      key={item.id || idx}
+                      className="px-5 py-4 hover:bg-gray-50/50 transition-all duration-200 flex items-start gap-4 group"
+                    >
+                      <div className="shrink-0 mt-0.5">
+                        {getStatusIcon(item.status)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {editingItemId === item.id ? (
+                          <div className="space-y-2 mb-2">
+                            <input
+                              type="text"
+                              value={editForm.documentName}
+                              onChange={(e) =>
+                                setEditForm((f) => ({
+                                  ...f,
+                                  documentName: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15"
+                            />
+                            <textarea
+                              value={editForm.description}
+                              onChange={(e) =>
+                                setEditForm((f) => ({
+                                  ...f,
+                                  description: e.target.value,
+                                }))
+                              }
+                              rows={2}
+                              placeholder="Description (optional)"
+                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-secondary/15 resize-none"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                disabled={checklistSaving}
+                                onClick={handleSaveChecklistItem}
+                                className="rounded-lg bg-secondary px-3 py-1.5 text-[11px] font-black text-white"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingItemId(null)}
+                                className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-black text-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-semibold text-gray-900">
+                            {item.documentName}
+                          </p>
+                          {item.isRequired && (
+                            <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">
+                              Required
+                            </span>
+                          )}
+                          {!item.isRequired && (
+                            <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                              Optional
+                            </span>
+                          )}
+                        </div>
+                        {item.description && (
+                          <p className="text-xs text-gray-500 mb-2">
+                            {item.description}
+                          </p>
+                        )}
+                          </>
+                        )}
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusColor(item.status)}`}
+                          >
+                            {item.status.replace("_", " ")}
+                          </span>
+                          {item.expiryDate && (
+                            <span className="text-[10px] text-gray-500">
+                              Expires:{" "}
+                              {new Date(item.expiryDate).toLocaleDateString()}
+                            </span>
+                          )}
+                          {item.uploadedAt && (
+                            <span className="text-[10px] text-gray-500">
+                              Uploaded:{" "}
+                              {new Date(item.uploadedAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {checklist.isCustomized && item.id && editingItemId !== item.id && (
+                        <div className="flex flex-col gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            disabled={checklistSaving}
+                            onClick={() => {
+                              setEditingItemId(item.id);
+                              setEditForm({
+                                documentName: item.documentName || "",
+                                description: item.description || "",
+                                isRequired: Boolean(item.isRequired),
+                              });
+                            }}
+                            className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1"
+                          >
+                            <Pencil size={12} />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            disabled={checklistSaving}
+                            onClick={() => handleToggleRequired(item)}
+                            className={`rounded-full px-2.5 py-1 text-[10px] font-black border transition-all duration-200 ${
+                              item.isRequired
+                                ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                                : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            {item.isRequired ? "Required" : "Optional"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={checklistSaving}
+                            onClick={() => handleDeleteChecklistItem(item.id)}
+                            className="rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-700 hover:bg-red-100 transition-all duration-200"
+                            aria-label="Delete requirement"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                      {item.status === "missing" ? (
+                        <button
+                          type="button"
+                          onClick={() => openUploadModal(item)}
+                          className="shrink-0 rounded-lg border border-secondary/30 bg-secondary/10 px-3 py-1.5 text-[11px] font-black text-secondary hover:bg-secondary/20 transition-colors"
+                        >
+                          Add
+                        </button>
+                      ) : item.documentId ? (
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const doc = documents.find(
+                                (d) => d.id === item.documentId,
+                              );
+                              if (doc?.documentUrl) {
+                                window.open(doc.documentUrl, "_blank");
+                              }
+                            }}
+                            className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-black text-gray-600 hover:bg-gray-50 transition-colors"
+                          >
+                            View
+                          </button>
+                          {(item.status === "uploaded" ||
+                            item.status === "under_review") && (
+                            <>
+                              <button
+                                type="button"
+                                disabled={statusUpdatingId === item.documentId}
+                                onClick={() =>
+                                  handleDocumentStatusChange(
+                                    item.documentId,
+                                    "approved",
+                                  )
+                                }
+                                className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-800 disabled:opacity-50"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                disabled={statusUpdatingId === item.documentId}
+                                onClick={() =>
+                                  handleDocumentStatusChange(
+                                    item.documentId,
+                                    "rejected",
+                                  )
+                                }
+                                className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 disabled:opacity-50"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
 
       {/* General uploaded documents - always shown below checklist */}
       <div>
@@ -3287,6 +3796,11 @@ function DocumentsTab({ caseId, candidateId }) {
                   Uploaded {new Date(doc.uploadedAt).toLocaleDateString()} ·{" "}
                   {doc.documentType}
                 </p>
+                {doc.reviewNotes && doc.status === "rejected" && (
+                  <p className="text-[11px] font-bold text-red-600 mt-1">
+                    {doc.reviewNotes}
+                  </p>
+                )}
               </div>
               <span
                 className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${getBadgeColor(doc.status)}`}
@@ -3300,30 +3814,124 @@ function DocumentsTab({ caseId, candidateId }) {
               >
                 View
               </button>
-              {(doc.status === "uploaded" || doc.status === "under_review") && (
+              {(doc.status === "uploaded" ||
+                doc.status === "under_review" ||
+                doc.status === "rejected") && (
                 <>
                   <button
                     type="button"
                     disabled={statusUpdatingId === doc.id}
-                    onClick={() => handleDocumentStatusChange(doc.id, "approved")}
+                    onClick={() =>
+                      handleDocumentStatusChange(doc.id, "approved")
+                    }
                     className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-800 disabled:opacity-50"
                   >
                     Approve
                   </button>
-                  <button
-                    type="button"
-                    disabled={statusUpdatingId === doc.id}
-                    onClick={() => handleDocumentStatusChange(doc.id, "rejected")}
-                    className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 disabled:opacity-50"
-                  >
-                    Reject
-                  </button>
+                  {(doc.status === "uploaded" ||
+                    doc.status === "under_review") && (
+                    <button
+                      type="button"
+                      disabled={statusUpdatingId === doc.id}
+                      onClick={() =>
+                        handleDocumentStatusChange(doc.id, "rejected")
+                      }
+                      className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+                  )}
                 </>
               )}
             </div>
           ))
         )}
       </div>
+
+      <Modal
+        open={addItemOpen}
+        onClose={() => setAddItemOpen(false)}
+        title="Add custom document requirement"
+        titleId="add-checklist-item-modal-title"
+        maxWidthClass="max-w-lg"
+        bodyClassName="p-4 sm:p-6"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Document name
+            </label>
+            <input
+              type="text"
+              value={addItemForm.documentName}
+              onChange={(e) =>
+                setAddItemForm((f) => ({ ...f, documentName: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15"
+              placeholder="e.g. Employment reference letter"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Document type
+            </label>
+            <select
+              value={addItemForm.documentType}
+              onChange={(e) =>
+                setAddItemForm((f) => ({ ...f, documentType: e.target.value }))
+              }
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15"
+            >
+              {DOCUMENT_TYPE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+              Description (optional)
+            </label>
+            <textarea
+              value={addItemForm.description}
+              onChange={(e) =>
+                setAddItemForm((f) => ({ ...f, description: e.target.value }))
+              }
+              rows={3}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-secondary/15 resize-none"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-700">
+            <input
+              type="checkbox"
+              checked={addItemForm.isRequired}
+              onChange={(e) =>
+                setAddItemForm((f) => ({ ...f, isRequired: e.target.checked }))
+              }
+              className="accent-secondary rounded"
+            />
+            Required document
+          </label>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setAddItemOpen(false)}
+              className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-black text-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={checklistSaving || !addItemForm.documentName.trim()}
+              onClick={handleCreateChecklistItem}
+              className="rounded-xl bg-secondary px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+            >
+              {checklistSaving ? "Adding…" : "Add requirement"}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={uploadOpen}
@@ -3370,7 +3978,7 @@ function DocumentsTab({ caseId, candidateId }) {
               <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
                 Document type
               </label>
-                  <select
+              <select
                 value={uploadForm.documentType}
                 onChange={(e) =>
                   setUploadForm((f) => ({ ...f, documentType: e.target.value }))
@@ -3378,11 +3986,11 @@ function DocumentsTab({ caseId, candidateId }) {
                 disabled={!!uploadingForItem}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary disabled:bg-gray-50 disabled:text-gray-500"
               >
-                    {DOCUMENT_TYPE_OPTIONS.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
+                {DOCUMENT_TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -3686,36 +4294,77 @@ function TasksTab({ caseId }) {
 }
 
 function PaymentsTab({ caseDetail, onUpdate }) {
-  const toast = useToast();
+  const { showToast } = useToast();
   const [totalAmount, setTotalAmount] = useState(caseDetail?.totalAmount || 0);
   const [amountNotes, setAmountNotes] = useState(caseDetail?.amountNotes || "");
   const [loading, setLoading] = useState(false);
+  const [feeModalOpen, setFeeModalOpen] = useState(false);
+  const [cclMeta, setCclMeta] = useState(null);
+
+  const caseRef = caseDetail?.caseId || caseDetail?.id;
 
   useEffect(() => {
     setTotalAmount(caseDetail?.totalAmount || 0);
     setAmountNotes(caseDetail?.amountNotes || "");
   }, [caseDetail]);
 
-  const handleSave = async (submitForApproval = false) => {
+  useEffect(() => {
+    if (!caseRef) return;
+    getCclStatus(caseRef)
+      .then((data) => setCclMeta(data?.ccl || null))
+      .catch(() => setCclMeta(null));
+  }, [caseRef, caseDetail?.amountStatus, caseDetail?.caseStage]);
+
+  const handleSaveDraft = async () => {
     if (!caseDetail?.id) return;
     setLoading(true);
-    const newStatus = submitForApproval ? "Pending Approval" : caseDetail?.amountStatus;
     try {
       const payload = {
         totalAmount: parseFloat(totalAmount) || 0,
         amountNotes,
-        ...(submitForApproval ? { amountStatus: "Pending Approval" } : {}),
       };
       await updateCaseFinance(caseDetail.id, payload);
       onUpdate?.(payload);
-      toast?.showSuccess?.(
-        submitForApproval
-          ? "Proposed amount submitted to Admin for approval."
-          : "Financial details saved successfully."
-      );
+      showToast({ message: "Financial details saved successfully." });
     } catch (err) {
       console.error("Finance update error:", err);
-      toast?.showError?.("Failed to update financial details.");
+      showToast({
+        variant: "danger",
+        message:
+          err?.response?.data?.message || "Failed to update financial details.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitProposal = async (payload) => {
+    if (!caseRef) return;
+    setLoading(true);
+    try {
+      await proposeCclFees(caseRef, payload);
+      setFeeModalOpen(false);
+      const cclRes = await getCclStatus(caseRef).catch(() => null);
+      if (cclRes?.ccl) setCclMeta(cclRes.ccl);
+      onUpdate?.({
+        totalAmount: payload.feeAmount,
+        amountNotes: payload.notes,
+        amountStatus: "Pending Approval",
+        caseStage: "client_care_letter",
+      });
+      showToast({
+        message:
+          "Fee proposal submitted. Admins have been notified and a review task was created.",
+      });
+    } catch (err) {
+      console.error("CCL propose error:", err);
+      const apiMsg = err?.response?.data?.message;
+      showToast({
+        variant: "danger",
+        message: apiMsg?.includes("Fees can only be proposed")
+          ? `${apiMsg} Ask admin to open the case and set workflow step to “CCL Fee Proposal” (or complete draft review first). You can also change stage on the Overview tab.`
+          : apiMsg || "Failed to submit fee proposal for approval.",
+      });
     } finally {
       setLoading(false);
     }
@@ -3724,14 +4373,42 @@ function PaymentsTab({ caseDetail, onUpdate }) {
   const statusColors = {
     "Not Submitted": "bg-gray-100 text-gray-700 border-gray-200",
     "Pending Approval": "bg-amber-50 text-amber-800 border-amber-200",
-    "Approved": "bg-emerald-50 text-emerald-800 border-emerald-200",
-    "Rejected": "bg-red-50 text-red-800 border-red-200",
+    Approved: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    Paid: "bg-blue-50 text-blue-800 border-blue-200",
+    Rejected: "bg-red-50 text-red-800 border-red-200",
   };
 
   const currentStatus = caseDetail?.amountStatus || "Not Submitted";
   const paid = parseFloat(caseDetail?.paidAmount) || 0;
   const total = parseFloat(caseDetail?.totalAmount) || 0;
   const outstanding = Math.max(0, total - paid);
+  const stage = caseDetail?.caseStage || "";
+  const awaitingAdmin =
+    currentStatus === "Pending Approval" || cclMeta?.status === "fee_proposed";
+  const canProposeByStage =
+    [
+      "draft_application_review",
+      "client_care_letter",
+      "application_preparation",
+      "document_review",
+    ].includes(stage) || cclMeta?.status === "fee_rejected";
+  const feesLocked =
+    currentStatus === "Approved" ||
+    currentStatus === "Paid" ||
+    cclMeta?.status === "issued" ||
+    cclMeta?.status === "signed";
+  const canSubmit =
+    !feesLocked && !awaitingAdmin && currentStatus !== "Pending Approval";
+  const showStageHint =
+    stage &&
+    ![
+      "draft_application_review",
+      "client_care_letter",
+      "application_preparation",
+      "document_review",
+    ].includes(stage) &&
+    cclMeta?.status !== "fee_rejected" &&
+    canSubmit;
 
   return (
     <div className="space-y-6">
@@ -3742,11 +4419,14 @@ function PaymentsTab({ caseDetail, onUpdate }) {
             Financial Request & Approval
           </h3>
           <p className="text-xs font-bold text-gray-500 mt-0.5">
-            Propose case amounts to be authorized by Admin before requesting payment from Candidate.
+            Propose case amounts to be authorized by Admin before requesting
+            payment from Candidate.
           </p>
         </div>
         <div className="shrink-0">
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black border shadow-xs ${statusColors[currentStatus] || statusColors["Not Submitted"]}`}>
+          <span
+            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black border shadow-xs ${statusColors[currentStatus] || statusColors["Not Submitted"]}`}
+          >
             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-75 mr-1.5 animate-pulse" />
             {currentStatus}
           </span>
@@ -3767,7 +4447,7 @@ function PaymentsTab({ caseDetail, onUpdate }) {
               type="number"
               value={totalAmount}
               onChange={(e) => setTotalAmount(e.target.value)}
-              disabled={currentStatus === "Approved" || loading}
+              disabled={feesLocked || loading}
               placeholder="e.g. 2400"
               className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-secondary focus:bg-white transition-all disabled:opacity-60"
             />
@@ -3793,17 +4473,47 @@ function PaymentsTab({ caseDetail, onUpdate }) {
             rows={3}
             value={amountNotes}
             onChange={(e) => setAmountNotes(e.target.value)}
-            disabled={currentStatus === "Approved" || loading}
+            disabled={feesLocked || loading}
             placeholder="Itemize application fees, legal assistance, or IHS surcharge coverage..."
             className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm font-bold text-gray-800 outline-none focus:border-secondary focus:bg-white transition-all resize-none disabled:opacity-60"
           />
         </div>
 
-        {currentStatus !== "Approved" && (
+        {awaitingAdmin && (
+          <p className="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+            Awaiting admin approval. Admins have been notified and a review task
+            was created.
+          </p>
+        )}
+
+        {currentStatus === "Paid" && (
+          <p className="text-xs font-bold text-blue-800 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+            Payment has been received. Only an administrator can update payment
+            records.
+          </p>
+        )}
+
+        {currentStatus === "Approved" && !awaitingAdmin && (
+          <p className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+            Fees approved — the candidate can pay via their portal. You cannot
+            change amounts here.
+          </p>
+        )}
+
+        {showStageHint && (
+          <p className="text-xs font-bold text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            Current workflow step: <span className="font-mono">{stage}</span>.
+            You can still submit fees for admin approval; consider moving the
+            case to <strong>CCL Fee Proposal</strong> on the Overview tab if
+            admin requests it.
+          </p>
+        )}
+
+        {canSubmit && (
           <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-gray-50">
             <button
               type="button"
-              onClick={() => handleSave(false)}
+              onClick={handleSaveDraft}
               disabled={loading}
               className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-black text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
@@ -3811,22 +4521,47 @@ function PaymentsTab({ caseDetail, onUpdate }) {
             </button>
             <button
               type="button"
-              onClick={() => handleSave(true)}
+              onClick={() => setFeeModalOpen(true)}
               disabled={loading || !totalAmount}
               className="rounded-xl bg-secondary px-4 py-2 text-xs font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90 transition-all disabled:opacity-50"
             >
-              Submit for Approval
+              {cclMeta?.status === "fee_rejected" ||
+              currentStatus === "Rejected"
+                ? "Resubmit CCL fees for approval"
+                : "Submit CCL fees for approval"}
             </button>
           </div>
         )}
       </div>
 
+      <CclFeeProposalModal
+        open={feeModalOpen}
+        onClose={() => setFeeModalOpen(false)}
+        busy={loading}
+        initialFee={totalAmount || cclMeta?.feeAmount}
+        initialPlan={cclMeta?.installmentPlan || cclMeta?.installment_plan}
+        initialNotes={amountNotes || cclMeta?.notes}
+        onSubmit={handleSubmitProposal}
+      />
+
       {/* Summary Grid */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Total fee", value: `£${total.toLocaleString()}`, color: "text-secondary" },
-          { label: "Paid", value: `£${paid.toLocaleString()}`, color: "text-emerald-600" },
-          { label: "Outstanding", value: `£${outstanding.toLocaleString()}`, color: "text-amber-600" },
+          {
+            label: "Total fee",
+            value: `£${total.toLocaleString()}`,
+            color: "text-secondary",
+          },
+          {
+            label: "Paid",
+            value: `£${paid.toLocaleString()}`,
+            color: "text-emerald-600",
+          },
+          {
+            label: "Outstanding",
+            value: `£${outstanding.toLocaleString()}`,
+            color: "text-amber-600",
+          },
         ].map((b) => (
           <div
             key={b.label}
@@ -3835,7 +4570,9 @@ function PaymentsTab({ caseDetail, onUpdate }) {
             <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">
               {b.label}
             </p>
-            <p className={`text-base sm:text-lg font-black mt-0.5 tabular-nums ${b.color}`}>
+            <p
+              className={`text-base sm:text-lg font-black mt-0.5 tabular-nums ${b.color}`}
+            >
               {b.value}
             </p>
           </div>
@@ -3860,9 +4597,15 @@ function PaymentsTab({ caseDetail, onUpdate }) {
             {paid > 0 ? (
               <tr>
                 <td className="py-2.5 pr-2 whitespace-nowrap">
-                  {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                  {new Date().toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
                 </td>
-                <td className="py-2.5 pr-2 text-gray-600">Initial retainer coverage</td>
+                <td className="py-2.5 pr-2 text-gray-600">
+                  Initial retainer coverage
+                </td>
                 <td className="py-2.5 text-right tabular-nums text-emerald-600 font-black">
                   £{paid.toLocaleString()}
                 </td>
@@ -3874,7 +4617,10 @@ function PaymentsTab({ caseDetail, onUpdate }) {
               </tr>
             ) : (
               <tr>
-                <td colSpan={4} className="py-5 text-center text-gray-400 font-medium">
+                <td
+                  colSpan={4}
+                  className="py-5 text-center text-gray-400 font-medium"
+                >
                   No successful payments recorded yet.
                 </td>
               </tr>
@@ -3969,7 +4715,9 @@ function CommsTab({ candidate, caseId }) {
             >
               {message.side === "you" ? "You" : initial}
             </div>
-            <div className={`max-w-[85%] ${message.side === "you" ? "text-right" : ""}`}>
+            <div
+              className={`max-w-[85%] ${message.side === "you" ? "text-right" : ""}`}
+            >
               <p className="text-[10px] font-bold text-gray-500 mb-1">
                 {message.sender}
               </p>
@@ -3980,7 +4728,9 @@ function CommsTab({ candidate, caseId }) {
                     : "rounded-bl-sm border border-gray-100 bg-gray-50"
                 }`}
               >
-                <p className="text-sm font-bold text-gray-800">{message.text}</p>
+                <p className="text-sm font-bold text-gray-800">
+                  {message.text}
+                </p>
                 <p className="text-[10px] text-gray-500 mt-1">{message.time}</p>
               </div>
             </div>
@@ -4143,7 +4893,7 @@ function AuditLogsTab({ caseId }) {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     dateRange: "last30",
-    status: "all"
+    status: "all",
   });
 
   const fetchAuditLogs = useCallback(async () => {
@@ -4154,10 +4904,10 @@ function AuditLogsTab({ caseId }) {
         page: 1,
         limit: 20,
         dateRange: filters.dateRange,
-        status: filters.status
+        status: filters.status,
       });
-      
-      if (res.data?.status === 'success') {
+
+      if (res.data?.status === "success") {
         setLogs(res.data.data.logs);
       }
     } catch (err) {
@@ -4173,7 +4923,7 @@ function AuditLogsTab({ caseId }) {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+    setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -4212,8 +4962,18 @@ function AuditLogsTab({ caseId }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {["Timestamp", "User", "Action", "Resource", "Status", "Details"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                {[
+                  "Timestamp",
+                  "User",
+                  "Action",
+                  "Resource",
+                  "Status",
+                  "Details",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                  >
                     {h}
                   </th>
                 ))}
@@ -4222,13 +4982,19 @@ function AuditLogsTab({ caseId }) {
             <tbody className="divide-y divide-gray-50">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-gray-400"
+                  >
                     Loading audit logs...
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-gray-400"
+                  >
                     No audit logs found for this case
                   </td>
                 </tr>
@@ -4246,23 +5012,36 @@ function AuditLogsTab({ caseId }) {
                           </span>
                         </div>
                         <div>
-                          <p className="text-xs font-semibold text-secondary">{log.user}</p>
-                          <p className="text-[10px] text-gray-500">{log.role}</p>
+                          <p className="text-xs font-semibold text-secondary">
+                            {log.user}
+                          </p>
+                          <p className="text-[10px] text-gray-500">
+                            {log.role}
+                          </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${log.actionClass}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${log.actionClass}`}
+                      >
                         {log.action}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">{log.resource}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">
+                      {log.resource}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${log.statusClass}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${log.statusClass}`}
+                      >
                         {log.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs max-w-xs truncate" title={log.details}>
+                    <td
+                      className="px-4 py-3 text-gray-500 text-xs max-w-xs truncate"
+                      title={log.details}
+                    >
                       {log.details}
                     </td>
                   </tr>
@@ -4272,6 +5051,23 @@ function AuditLogsTab({ caseId }) {
           </table>
         </div>
       </div>
+
+      <BiometricBookedModal
+        open={biometricModalOpen}
+        onClose={() => {
+          setBiometricModalOpen(false);
+          setPendingBiometricStage(null);
+        }}
+        onConfirm={confirmBiometricBooking}
+        caseLabel={detailCase?.caseId}
+        loading={stageSaving}
+        initialData={detailCase?.workflowState?.biometrics?.availability ? {
+          location: detailCase.workflowState.biometrics.availability.preferredLocation,
+          date: detailCase.workflowState.biometrics.availability.preferredDate,
+          time: detailCase.workflowState.biometrics.availability.preferredTime,
+          instructions: detailCase.workflowState.biometrics.availability.notes,
+        } : undefined}
+      />
     </div>
   );
 }

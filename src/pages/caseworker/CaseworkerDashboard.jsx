@@ -1,9 +1,17 @@
 import { useMemo, useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { CalendarDays, Check, TrendingUp, Bell, Plus, Send, MessageSquareMore } from "lucide-react";
+import { CalendarDays, Check, Bell, Send, MessageSquareMore } from "lucide-react";
 import api from "../../services/api";
-import { MOCK_RECENT_MESSAGES } from "../../data/adminDashboardMock";
+import {
+  extractConversationsFromResponse,
+  formatLastMessagePreview,
+  sortConversationsByRecent,
+} from "../../utils/messagingConversations";
+import NotificationList from "../../components/notifications/NotificationList";
+import { getDueOverdueTasks } from "../../services/dashboardApi";
+import DueOverdueTasksWidget from "../../components/dashboard/DueOverdueTasksWidget";
+import { fetchUnreadCount } from "../../store/slices/notificationSlice";
 
 
 
@@ -28,14 +36,23 @@ function badgeClass(tone) {
   return map[tone] || map.gray;
 }
 
+const DASHBOARD_TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "notifications", label: "Notifications" },
+];
+
 const CaseworkerDashboard = () => {
   const user = useSelector((state) => state.auth.user);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [dashboardTab, setDashboardTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({});
   const [recentCases, setRecentCases] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [recentMessages, setRecentMessages] = useState([]);
+  const [dueOverdue, setDueOverdue] = useState(null);
+  const { unreadCount } = useSelector((state) => state.notifications);
 
   const greetingLine = useMemo(() => {
     const d = new Date();
@@ -65,31 +82,39 @@ const CaseworkerDashboard = () => {
     };
 
     const formatConversations = (conversations) =>
-      (Array.isArray(conversations) ? conversations : []).slice(0, 4).map((conv) => ({
-        from: `${conv.user?.first_name || ""} ${conv.user?.last_name || ""}`.trim() || "User",
-        initials: `${conv.user?.first_name?.[0] || "?"}${conv.user?.last_name?.[0] || ""}`.toUpperCase(),
-        text: conv.lastMessage?.content || "No message",
-        time: conv.lastMessage?.createdAt
-          ? new Date(conv.lastMessage.createdAt).toLocaleString()
-          : "",
-        unread: conv.unreadCount > 0,
-      }));
+      sortConversationsByRecent(conversations)
+        .slice(0, 4)
+        .map((conv) => ({
+          id: conv.id,
+          from: `${conv.user?.first_name || ""} ${conv.user?.last_name || ""}`.trim() || "User",
+          initials: `${conv.user?.first_name?.[0] || "?"}${conv.user?.last_name?.[0] || ""}`.toUpperCase(),
+          text:
+            formatLastMessagePreview(conv.lastMessage?.content) || "No message",
+          time: conv.lastMessage?.createdAt
+            ? new Date(conv.lastMessage.createdAt).toLocaleString()
+            : "",
+          unread: conv.unreadCount > 0,
+        }));
 
     const fetchRecentMessages = async () => {
       try {
         const response = await api.get("/api/messages/conversations");
-        const conversations = response.data.data?.conversations || response.data.conversations || [];
+        const conversations = extractConversationsFromResponse(response);
         const formatted = formatConversations(conversations);
-        setRecentMessages(formatted.length > 0 ? formatted : formatConversations(MOCK_RECENT_MESSAGES));
+        setRecentMessages(formatted);
       } catch (error) {
         console.error("Error fetching messages:", error);
-        setRecentMessages(formatConversations(MOCK_RECENT_MESSAGES));
+        setRecentMessages([]);
       }
     };
 
     fetchDashboardData();
     fetchRecentMessages();
-  }, []);
+    getDueOverdueTasks()
+      .then((res) => setDueOverdue(res?.data?.data || null))
+      .catch(() => setDueOverdue(null));
+    dispatch(fetchUnreadCount());
+  }, [dispatch]);
 
   const toggleTask = async (id) => {
     try {
@@ -207,12 +232,35 @@ const CaseworkerDashboard = () => {
           </h1>
           <p className="text-sm font-bold text-gray-600 mt-1">{greetingLine}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-
-
+        <div className="flex rounded-xl border border-gray-200 bg-white p-1 gap-1">
+          {DASHBOARD_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setDashboardTab(t.id)}
+              className={`relative rounded-lg px-4 py-2 text-xs font-black transition-colors ${
+                dashboardTab === t.id ? "bg-secondary text-white" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {t.label}
+              {t.id === "notifications" && unreadCount > 0 && (
+                <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] text-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
+      {dashboardTab === "notifications" && (
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+          <NotificationList />
+        </div>
+      )}
+
+      {dashboardTab === "overview" && (
+      <>
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-full text-center py-8">
@@ -241,6 +289,14 @@ const CaseworkerDashboard = () => {
           ))
         )}
       </div>
+
+      {dueOverdue && (
+        <DueOverdueTasksWidget
+          data={dueOverdue}
+          casesLink="/caseworker/cases"
+          tasksLink="/caseworker/tasks"
+        />
+      )}
 
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
@@ -428,7 +484,7 @@ const CaseworkerDashboard = () => {
           ) : (
             recentMessages.map((m) => (
               <div
-                key={`${m.from}-${m.time}`}
+                key={m.id || `${m.from}-${m.time}`}
                 className="rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-3"
               >
                 <div className="flex items-start gap-3">
@@ -451,11 +507,12 @@ const CaseworkerDashboard = () => {
           )}
         </div>
         <div className="px-5 py-4 border-t border-gray-100">
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={() => navigate('/caseworker/messages')}>
             <input
               type="text"
-              placeholder="Type a message..."
-              className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20"
+              readOnly
+              placeholder="Go to messages to start chatting..."
+              className="flex-1 cursor-pointer rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none"
             />
             <button
               type="button"
@@ -504,7 +561,8 @@ const CaseworkerDashboard = () => {
         </div> */}
       </div>
 
-      
+      </>
+      )}
     </div>
   );
 };

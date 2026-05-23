@@ -4,6 +4,9 @@ import { DollarSign, Clock, CheckCircle, TrendingUp, CreditCard, Landmark, Globe
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import { getFinancialReport, getFinancialTransactions } from "../../services/reportingApi";
+import { createAdminInvoice, exportAdminTransactionsCsv } from "../../services/adminFinanceApi";
+import MockDataBanner from "../../components/admin/MockDataBanner";
+import { MOCK_FINANCE_STATS, MOCK_FINANCE_TRANSACTIONS } from "../../data/adminMockData";
 
 
 const paymentMethods = [
@@ -78,6 +81,7 @@ export default function AdminFinance() {
   const [financeStats, setFinanceStats] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [usingMockData, setUsingMockData] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -94,8 +98,13 @@ export default function AdminFinance() {
         setTransactions(transRes.data.data.transactions);
         setPagination(transRes.data.data.pagination);
       }
+      setUsingMockData(false);
     } catch (error) {
       console.error("Failed to load finance data:", error);
+      setFinanceStats(MOCK_FINANCE_STATS);
+      setTransactions(MOCK_FINANCE_TRANSACTIONS);
+      setPagination({ page: 1, pages: 1, total: MOCK_FINANCE_TRANSACTIONS.length });
+      setUsingMockData(true);
     } finally {
       setIsLoading(false);
     }
@@ -203,9 +212,21 @@ export default function AdminFinance() {
     if (!validate()) return;
     setIsLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Invoice generated:", formData);
+      // Build the payload the backend expects
+      const payload = {
+        caseId:        formData.caseId.trim(),
+        amount:        formData.total,
+        paymentType:   'fee',
+        paymentMethod: 'bank_transfer',
+        dueDate:       formData.dueDate || null,
+        invoiceNumber: formData.invoiceNumber,
+        description:   formData.items.map(i => i.description).filter(Boolean).join('; '),
+        notes:         formData.notes || null,
+      };
+      await createAdminInvoice(payload);
       closeModal();
+      // Refresh the finance data so the new transaction appears
+      loadData();
     } catch (error) {
       console.error("Failed to generate invoice:", error);
     } finally {
@@ -221,6 +242,7 @@ export default function AdminFinance() {
 
   return (
     <div className="space-y-8 pb-10">
+      {usingMockData && <MockDataBanner />}
       {/* Header */}
       <motion.div
         className="flex items-start justify-between"
@@ -241,6 +263,26 @@ export default function AdminFinance() {
           <Button variant="ghost" onClick={loadData} disabled={isLoading}>
             <RefreshCw size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={async () => {
+              try {
+                const res = await exportAdminTransactionsCsv();
+                const url = window.URL.createObjectURL(new Blob([res.data]));
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `finance-export-${new Date().toISOString().slice(0, 10)}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+              } catch (err) {
+                console.error('Export failed:', err);
+              }
+            }}
+          >
+            Export CSV
           </Button>
           <Button onClick={() => setModalOpen(true)}>Generate Invoice</Button>
         </div>

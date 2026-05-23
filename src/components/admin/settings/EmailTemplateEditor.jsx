@@ -20,12 +20,14 @@ export default function EmailTemplateEditor({
   });
 
   const variables = [
-    { key: "{{first_name}}", label: "Candidate First Name" },
-    { key: "{{last_name}}", label: "Candidate Last Name" },
-    { key: "{{case_id}}", label: "Case ID" },
-    { key: "{{visa_type}}", label: "Visa Type" },
-    { key: "{{payment_link}}", label: "Payment Link" },
-    { key: "{{status}}", label: "Case Status" }
+    { key: "{{client_name}}", label: "Client Full Name" },
+    { key: "{{case_ref}}", label: "Case Reference" },
+    { key: "{{visa_type}}", label: "Visa Designation" },
+    { key: "{{firm_name}}", label: "Firm Name" },
+    { key: "{{biometrics_date}}", label: "Biometrics Date" },
+    { key: "{{amount}}", label: "Total Amount" },
+    { key: "{{caseworker_name}}", label: "Assigned Caseworker" },
+    { key: "{{employer_name}}", label: "Sponsor/Employer Name" },
   ];
 
   const quillRef = useRef(null);

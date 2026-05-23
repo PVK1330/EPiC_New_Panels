@@ -27,6 +27,8 @@ export default function CandidateNotifications() {
           body: n.message,
           time: formatTime(n.createdAt),
           unread: !n.isRead,
+          priority: n.priority,
+          metadata: n.metadata,
         }));
         setNotifications(mappedNotifications);
       }

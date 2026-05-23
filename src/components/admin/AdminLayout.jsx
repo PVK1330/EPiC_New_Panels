@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,6 +18,10 @@ import {
 
 import NotificationDropdown from "../Notifications/NotificationDropdown";
 import MessageDropdown from "../notifications/MessageDropdown";
+import eliteLogo from "../../assets/elitepic_logo.png";
+import { getOrganisationBranding } from "../../services/settingsService";
+import { resolveAssetUrl } from "../../utils/assetUrl";
+import { getProfileMenuPaths } from "../../utils/authResponse";
 
 
 
@@ -36,6 +40,31 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
+  const profileMenuPaths = getProfileMenuPaths(user);
+  const [orgLogoUrl, setOrgLogoUrl] = useState(null);
+  
+  const fullName = user?.first_name 
+    ? `${user?.first_name} ${user?.last_name || ''}`.trim() 
+    : user?.name || user?.email?.split('@')[0] || "Admin";
+
+  const profilePicUrl = user?.profile_pic || user?.avatar_url ? resolveAssetUrl(user?.profile_pic || user?.avatar_url) : null;
+
+  const fetchOrganisationBranding = useCallback(async () => {
+    try {
+      const res = await getOrganisationBranding();
+      const url = res.data?.data?.organisation?.logoUrl;
+      setOrgLogoUrl(url ? resolveAssetUrl(url) : null);
+    } catch {
+      setOrgLogoUrl(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOrganisationBranding();
+    const onBrandingUpdated = () => fetchOrganisationBranding();
+    window.addEventListener("organisation-branding-updated", onBrandingUpdated);
+    return () => window.removeEventListener("organisation-branding-updated", onBrandingUpdated);
+  }, [fetchOrganisationBranding]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -84,9 +113,20 @@ const AdminLayout = () => {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* ── Top Bar ── */}
-        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40 shrink-0 shadow-sm">
-          {/* Left: hamburger + breadcrumb */}
+        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40 shrink-0 shadow-sm gap-3">
+          {/* Left: EPiC logo + hamburger + breadcrumb */}
           <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+            <Link
+              to={`/${user?.role || "admin"}/dashboard`}
+              className="shrink-0"
+              aria-label="EPiC home"
+            >
+              {/* <img
+                src={eliteLogo}
+                alt="EPiC"
+                className="h-7 sm:h-8 w-auto object-contain"
+              /> */}
+            </Link>
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
@@ -152,12 +192,16 @@ const AdminLayout = () => {
                 className={`flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all ${profileOpen ? "bg-gray-100 ring-2 ring-primary/10" : "hover:bg-gray-50"
                   }`}
               >
-                <div className="w-8 h-8 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-sm shrink-0">
-                  {user?.name?.charAt(0) || "A"}
+                <div className="w-8 h-8 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-sm shrink-0 overflow-hidden">
+                  {profilePicUrl ? (
+                    <img src={profilePicUrl} alt={fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    fullName.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div className="text-left hidden sm:block">
                   <p className="text-xs font-black text-secondary leading-none">
-                    {user?.name || "Admin"}
+                    {fullName}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">
                     {user?.role || "Admin"}
@@ -175,19 +219,31 @@ const AdminLayout = () => {
                     className="absolute right-0 mt-2 w-52 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden py-1.5 z-50 origin-top-right"
                   >
                     <div className="px-4 py-3 border-b border-gray-100 mb-1">
-                      <p className="text-sm font-black text-secondary">{user?.name || "Admin"}</p>
+                      <p className="text-sm font-black text-secondary">{fullName}</p>
                       <p className="text-xs text-gray-400 truncate">
                         {user?.email || "admin@elitepic.com"}
                       </p>
                     </div>
-                    <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors">
-                      <RiUserLine size={16} />
-                      My Profile
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors">
-                      <RiSettings3Line size={16} />
-                      Settings
-                    </button>
+                    {profileMenuPaths && (
+                      <>
+                        <Link
+                          to={profileMenuPaths.profile}
+                          onClick={() => setProfileOpen(false)}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors"
+                        >
+                          <RiUserLine size={16} />
+                          My Profile
+                        </Link>
+                        <Link
+                          to={profileMenuPaths.settings}
+                          onClick={() => setProfileOpen(false)}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors"
+                        >
+                          <RiSettings3Line size={16} />
+                          Settings
+                        </Link>
+                      </>
+                    )}
                     <div className="border-t border-gray-100 my-1" />
                     <button
                       onClick={handleLogout}
@@ -200,6 +256,16 @@ const AdminLayout = () => {
                 )}
               </AnimatePresence>
             </div>
+
+            {orgLogoUrl && (
+              <div className="flex items-center pl-2 ml-1 border-l border-gray-100 shrink-0">
+                <img
+                  src={orgLogoUrl}
+                  alt="Organisation logo"
+                  className="max-h-8 sm:max-h-10 max-w-[100px] sm:max-w-[140px] object-contain"
+                />
+              </div>
+            )}
           </div>
         </header>
 

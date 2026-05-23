@@ -22,9 +22,11 @@ import {
   triggerDownload,
   getChecklistByVisaType,
 } from "../../services/documentApi";
+import { getMyDocumentChecklist } from "../../services/candidateDocumentApi";
 import useCandidate from "../../hooks/useCandidate";
 import { useToast } from "../../context/ToastContext";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
+import { confirmCclSigned } from "../../services/workflowApi";
 
 const DOC_TYPE_PLACEHOLDER = "— Select document type —";
 const DOC_TYPES = [DOC_TYPE_PLACEHOLDER, ...DOCUMENT_TYPE_OPTIONS];
@@ -54,10 +56,11 @@ const getCandidateStatusLabel = (status) => {
 const UploadDocuments = () => {
   const [searchParams] = useSearchParams();
   const user = useSelector((state) => state.auth.user);
-  const userId = user?.id || user?.userId;
+  const userId = user?.id ?? user?.userId;
 
   const [docType, setDocType]         = useState(DOC_TYPE_PLACEHOLDER);
   const [dynamicDocTypes, setDynamicDocTypes] = useState(DOC_TYPES);
+  const [checklistTypeOptions, setChecklistTypeOptions] = useState([]);
   const [description, setDescription] = useState("");
   const [file, setFile]               = useState(null);
   const [dragOver, setDragOver]       = useState(false);
@@ -83,12 +86,19 @@ const UploadDocuments = () => {
   const resolvedPrefillType = useMemo(() => {
     if (!prefillDocumentType) return null;
     const normalizedPrefill = prefillDocumentType.trim().toLowerCase();
+    const fromChecklist = checklistTypeOptions.find(
+      (opt) =>
+        opt.value.toLowerCase() === normalizedPrefill ||
+        opt.label.toLowerCase() === normalizedPrefill ||
+        opt.label.toLowerCase().includes(normalizedPrefill),
+    );
+    if (fromChecklist) return fromChecklist.value;
     return (
       dynamicDocTypes.find((type) => type.toLowerCase() === normalizedPrefill) ||
       dynamicDocTypes.find((type) => type.toLowerCase().includes(normalizedPrefill)) ||
-      null
+      prefillDocumentType
     );
-  }, [prefillDocumentType, dynamicDocTypes]);
+  }, [prefillDocumentType, dynamicDocTypes, checklistTypeOptions]);
 
   useEffect(() => {
     if (resolvedPrefillType) {
@@ -129,17 +139,24 @@ const UploadDocuments = () => {
         try {
           const res = await getChecklistByVisaType(visaTypeId);
           const checklistGroups = res.data?.data?.checklist || {};
-          const checklistTypes = [];
-          
-          Object.values(checklistGroups).forEach(group => {
-            group.forEach(item => {
-              // Add documentName if you want human-readable, or documentType
-              checklistTypes.push(item.documentName || item.documentType);
+          const options = [];
+
+          Object.values(checklistGroups).forEach((group) => {
+            group.forEach((item) => {
+              const value = item.documentType || item.documentName;
+              const label = item.documentName || item.documentType;
+              if (value) {
+                options.push({ value, label });
+              }
             });
           });
-          
-          if (checklistTypes.length > 0) {
-            setDynamicDocTypes([DOC_TYPE_PLACEHOLDER, ...new Set(checklistTypes)]);
+
+          if (options.length > 0) {
+            setChecklistTypeOptions(options);
+            setDynamicDocTypes([
+              DOC_TYPE_PLACEHOLDER,
+              ...options.map((o) => o.label),
+            ]);
           }
         } catch (error) {
           console.error("Failed to fetch document checklist:", error);
@@ -213,11 +230,19 @@ const UploadDocuments = () => {
     setUploadSuccess(false);
 
     try {
-      // Find active case ID if available
-      const activeCase = myApplication?._relatedData?.cases?.[0];
-      const caseIdToAttach = activeCase ? activeCase.id : undefined;
+      let caseIdToAttach =
+        myApplication?._relatedData?.cases?.[0]?.id ??
+        myApplication?._relatedData?.cases?.[0]?.internalId;
+      if (!caseIdToAttach) {
+        try {
+          const checklistRes = await getMyDocumentChecklist();
+          caseIdToAttach = checklistRes.data?.data?.caseId ?? null;
+        } catch {
+          /* case optional */
+        }
+      }
 
-      await uploadDocumentsApi(
+      const uploadRes = await uploadDocumentsApi(
         [file],
         {
           userId,
@@ -229,17 +254,40 @@ const UploadDocuments = () => {
         (pct) => setUploadProgress(pct)
       );
 
+      const uploadedDoc =
+        uploadRes?.data?.data?.documents?.[0] ||
+        uploadRes?.data?.data?.document ||
+        uploadRes?.data?.data?.[0];
+      if (docType === "Client Care Letter" && uploadedDoc?.id) {
+        try {
+          await confirmCclSigned(uploadedDoc.id);
+          showToast({
+            message: "Signed Client Care Letter uploaded and recorded.",
+            variant: "success",
+          });
+        } catch {
+          showToast({
+            message: "Document uploaded. CCL confirmation pending — contact your caseworker if needed.",
+            variant: "warning",
+          });
+        }
+      } else {
+        showToast({ message: "Document uploaded successfully.", variant: "success" });
+      }
+
       setUploadSuccess(true);
-      showToast({ message: "Document uploaded successfully.", variant: "success" });
       clearFile();
       setDocType(DOC_TYPE_PLACEHOLDER);
       setDescription("");
       // Refresh document list
       await loadDocuments();
     } catch (err) {
-      setUploadError(
-        err?.response?.data?.message || "Upload failed. Please try again."
-      );
+      const msg =
+        err?.response?.data?.message ||
+        (err?.response?.status === 401
+          ? "Session expired — please log in again."
+          : "Upload failed. Please try again.");
+      setUploadError(msg);
       showToast({
         message: err?.response?.data?.message || "Upload failed. Please try again.",
         variant: "danger",
@@ -304,11 +352,20 @@ const UploadDocuments = () => {
               onChange={(e) => setDocType(e.target.value)}
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none"
             >
-              {dynamicDocTypes.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
+              <option value={DOC_TYPE_PLACEHOLDER}>{DOC_TYPE_PLACEHOLDER}</option>
+              {checklistTypeOptions.length > 0
+                ? checklistTypeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))
+                : dynamicDocTypes
+                    .filter((t) => t !== DOC_TYPE_PLACEHOLDER)
+                    .map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
             </select>
           </div>
 

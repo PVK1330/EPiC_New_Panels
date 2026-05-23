@@ -25,11 +25,18 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../store/slices/authSlice";
 import eliteLogo from "../../assets/elitepic_logo.png";
+import useModuleAccess from "../../hooks/useModuleAccess";
+import { resolveAssetUrl } from "../../utils/assetUrl";
 
 const BusinessSidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
+  const fullName = user?.first_name 
+    ? `${user?.first_name} ${user?.last_name || ''}`.trim() 
+    : user?.name || user?.email?.split('@')[0] || "User";
+  const profilePicUrl = user?.profile_pic || user?.avatar_url ? resolveAssetUrl(user?.profile_pic || user?.avatar_url) : null;
+  const { canAccess } = useModuleAccess();
 
   const handleLogout = () => {
     dispatch(logout());
@@ -39,62 +46,54 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
   const navSections = [
     {
       items: [
-        {
-          to: "/business/dashboard",
-          label: "Dashboard",
-          icon: BarChart3,
-        },
+        { to: "/business/dashboard", label: "Dashboard", icon: BarChart3, moduleKey: "business.dashboard" },
       ],
     },
     {
       label: "Organisation",
       items: [
-        { to: "/business/profile", label: "Business Profile", icon: Building2 },
-        { to: "/business/personnel", label: "Key Personnel", icon: Users },
+        { to: "/business/profile",    label: "Business Profile", icon: Building2, moduleKey: "business.profile" },
+        { to: "/business/personnel",  label: "Key Personnel",    icon: Users,     moduleKey: "business.profile" },
       ],
     },
     {
       label: "Sponsorship & HR",
       items: [
-        { to: "/business/licence",            label: "Licence Management",  icon: ShieldCheck },
-        { to: "/business/licence-documents",  label: "Licence Documents",   icon: Files },
-        { to: "/business/cosallocation",      label: "CoS Allocation",      icon: Package },
-        { to: "/business/workers",            label: "Sponsored Workers",   icon: UserCog },
-        { to: "/business/employee-records",   label: "Employee Records",    icon: UserCheck },
+        { to: "/business/licence",           label: "Licence Management",  icon: ShieldCheck, moduleKey: "business.licence" },
+        { to: "/business/licence-documents", label: "Licence Documents",   icon: Files,       moduleKey: "business.licence" },
+        { to: "/business/cosallocation",     label: "CoS Allocation",      icon: Package,     moduleKey: "business.licence" },
+        { to: "/business/workers",           label: "Sponsored Workers",   icon: UserCog,     moduleKey: "business.workers" },
+        { to: "/business/employee-records",  label: "Employee Records",    icon: UserCheck,   moduleKey: "business.workers" },
       ],
     },
     {
       label: "Compliance",
       items: [
-        {
-          to: "/business/compliance",
-          label: "Compliance Dashboard",
-          icon: Activity,
-        },
-        { to: "/business/compliance-documents", label: "Compliance Documents", icon: ClipboardCheck },
-        { to: "/business/reporting-obligations", label: "Reporting Obligations", icon: FileWarning },
+        { to: "/business/compliance",             label: "Compliance Dashboard",  icon: Activity,      moduleKey: "business.compliance" },
+        { to: "/business/compliance-documents",   label: "Compliance Documents",  icon: ClipboardCheck, moduleKey: "business.compliance" },
+        { to: "/business/reporting-obligations",  label: "Reporting Obligations", icon: FileWarning,   moduleKey: "business.reporting-obligations" },
       ],
     },
     {
       label: "Finance",
       items: [
-        { to: "/business/invoices", label: "Invoices", icon: Receipt },
-        { to: "/business/payment",  label: "Payments", icon: DollarSign },
+        { to: "/business/invoices", label: "Invoices", icon: Receipt,    moduleKey: "business.payment" },
+        { to: "/business/payment",  label: "Payments", icon: DollarSign, moduleKey: "business.payment" },
       ],
     },
     {
       label: "Communication",
       items: [
-        { to: "/business/messages", label: "Messages", icon: MessageSquare },
-        { to: "/business/calendar", label: "Calendar", icon: Calendar },
-        { to: "/business/notifications", label: "Notifications", icon: Bell },
+        { to: "/business/messages",      label: "Messages",      icon: MessageSquare, moduleKey: "business.messages" },
+        { to: "/business/calendar",      label: "Calendar",      icon: Calendar,      moduleKey: "business.calendar" },
+        { to: "/business/notifications", label: "Notifications", icon: Bell,          moduleKey: "business.dashboard" },
       ],
     },
     {
       label: "System",
       items: [
-        { to: "/business/reports", label: "Reports", icon: TrendingUp },
-        { to: "/business/settings", label: "Settings", icon: Settings },
+        { to: "/business/reports",   label: "Reports",   icon: TrendingUp, moduleKey: "business.dashboard" },
+        { to: "/business/settings",  label: "Settings",  icon: Settings,   moduleKey: "business.settings" },
       ],
     },
   ];
@@ -158,7 +157,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
                 </p>
               )}
               <div className="space-y-0.5">
-                {section.items.map((item) => (
+                {section.items.filter((item) => canAccess(item.moduleKey)).map((item) => (
                   <NavLink
                     key={item.to}
                     to={item.to}
@@ -198,12 +197,16 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
         {/* Footer */}
         <div className="px-4 py-4 border-t border-gray-100 shrink-0">
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100 transition-all hover:bg-white hover:shadow-md group">
-            <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-sm group-hover:bg-primary group-hover:text-white transition-all shrink-0">
-              {user?.name?.charAt(0) || "B"}
+            <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black text-sm group-hover:bg-primary group-hover:text-white transition-all shrink-0 overflow-hidden">
+              {profilePicUrl ? (
+                <img src={profilePicUrl} alt={fullName} className="w-full h-full object-cover" />
+              ) : (
+                fullName.charAt(0).toUpperCase()
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-black text-secondary truncate">
-                {user?.name || "Business Account"}
+                {fullName}
               </p>
               <p className="text-[9px] font-black text-primary tracking-wider">
                 Sponsor Admin

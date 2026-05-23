@@ -7,116 +7,142 @@ import {
   CheckCircle2,
   Clock,
   Lock,
-  ExternalLink,
   ArrowRight,
   ShieldCheck,
 } from "lucide-react";
 import Modal from "../../components/Modal";
-import useCandidate from "../../hooks/useCandidate";
+import { getCandidateCcl, getCandidatePaymentSchedule } from "../../services/workflowApi";
+import {
+  createCaseCheckoutSession,
+  verifyCheckoutSession,
+} from "../../services/candidatePaymentApi";
 
-const CASE_ID = "VT-2024-0841";
-const TOTAL = 2400;
-const INITIAL_PAID = 1600;
-const BALANCE_DUE = 800;
-
-const LS_BALANCE_PAID = "elitepic_candidate_balance_paid";
-const LS_FINAL_PAY_DATE = "elitepic_candidate_final_pay_date";
-
-function loadSavedPaymentState() {
-  try {
-    const settled = localStorage.getItem(LS_BALANCE_PAID) === "1";
-    const paidAt = localStorage.getItem(LS_FINAL_PAY_DATE) || "";
-    return { settled, paidAt };
-  } catch {
-    return { settled: false, paidAt: "" };
-  }
-}
-
-function savePaymentSettled(paidAtLabel) {
-  try {
-    localStorage.setItem(LS_BALANCE_PAID, "1");
-    localStorage.setItem(LS_FINAL_PAY_DATE, paidAtLabel);
-  } catch {
-    /* ignore */
-  }
-}
-
-function buildHistoryRows(settled, finalPayDateLabel) {
-  const base = [
-    {
-      id: "1",
-      date: "8 Apr 2026",
-      description: "First payment (Visa fee + Healthcare surcharge)",
-      amount: "£1,200",
-      amountClass: "text-gray-900 font-bold",
-      method: "Stripe",
-      status: "Paid",
-      receipt: true,
-    },
-    {
-      id: "2",
-      date: "5 Apr 2026",
-      description: "Account setup fee",
-      amount: "£400",
-      amountClass: "text-gray-900 font-bold",
-      method: "Stripe",
-      status: "Paid",
-      receipt: true,
-    },
-  ];
-  if (settled && finalPayDateLabel) {
-    base.push({
-      id: "3",
-      date: finalPayDateLabel,
-      description: "Final remaining balance",
-      amount: "£800",
-      amountClass: "text-gray-900 font-bold",
-      method: "Stripe",
-      status: "Paid",
-      receipt: true,
-    });
-  } else {
-    base.push({
-      id: "3",
-      date: "—",
-      description: "Final remaining balance",
-      amount: "£800",
-      amountClass: "text-amber-600 font-bold",
-      method: "Stripe",
-      status: "Left to pay",
-      receipt: false,
-    });
-  }
-  return base;
-}
+const CASE_ID_FALLBACK = "—";
 
 const Payments = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [payOpen, setPayOpen] = useState(false);
-  const [paymentSnapshot, setPaymentSnapshot] = useState(loadSavedPaymentState);
-  const balanceSettled = paymentSnapshot.settled;
-  const finalPayDate = paymentSnapshot.paidAt;
+  const [schedule, setSchedule] = useState(null);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [scheduleError, setScheduleError] = useState("");
+  const [payError, setPayError] = useState("");
+  const [redirectState, setRedirectState] = useState("idle");
 
-  // Layman-friendly simulation state
-  const [redirectState, setRedirectState] = useState("idle"); // 'idle' | 'redirecting' | 'paid'
+  const loadSchedule = useCallback(async () => {
+    try {
+      setScheduleLoading(true);
+      setScheduleError("");
+      const data = await getCandidatePaymentSchedule();
 
-  // Authorization Status Controller: synced with candidate data but includes a plain testing switch
-  const [authStatus, setAuthStatus] = useState("Approved");
-  const { myApplication } = useCandidate();
+      if (data?.visible === true) {
+        setSchedule(data);
+        return;
+      }
+
+      const cclBundle = await getCandidateCcl().catch(() => null);
+      if (cclBundle?.releasedToClient) {
+        const totalFee =
+          Number(cclBundle.case?.totalAmount) || Number(cclBundle.ccl?.feeAmount) || 0;
+        const instalments = cclBundle.ccl?.installmentPlan || cclBundle.ccl?.installment_plan;
+        if (totalFee > 0) {
+          const paidAmount = Number(cclBundle.case?.paidAmount) || 0;
+          setSchedule({
+            visible: true,
+            caseId: cclBundle.case?.caseId,
+            totalFee,
+            paidAmount,
+            balanceDue: Math.max(0, totalFee - paidAmount),
+            amountStatus: cclBundle.case?.amountStatus,
+            installments:
+              Array.isArray(instalments) && instalments.length > 0
+                ? instalments
+                : [{ label: "Full fee", amount: totalFee, dueDate: null }],
+          });
+          return;
+        }
+      }
+
+      setSchedule(data);
+    } catch (e) {
+      setScheduleError(e?.response?.data?.message || e.message || "Failed to load payment schedule");
+    } finally {
+      setScheduleLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (myApplication?.case?.amountStatus) {
-      setAuthStatus(myApplication.case.amountStatus);
-    }
-  }, [myApplication]);
+    loadSchedule();
+  }, [loadSchedule]);
 
-  const historyRows = useMemo(
-    () => buildHistoryRows(balanceSettled, finalPayDate),
-    [balanceSettled, finalPayDate],
-  );
+  useEffect(() => {
+    const paymentResult = searchParams.get("payment");
+    const sessionId = searchParams.get("session_id");
+    if (paymentResult !== "success" || !sessionId) return;
 
-  const paid = balanceSettled ? TOTAL : INITIAL_PAID;
-  const balance = balanceSettled ? 0 : BALANCE_DUE;
+    let cancelled = false;
+    (async () => {
+      setPayOpen(true);
+      setRedirectState("redirecting");
+      try {
+        await verifyCheckoutSession(sessionId);
+        if (!cancelled) {
+          setRedirectState("paid");
+          await loadSchedule();
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setPayError(e?.response?.data?.message || e.message || "Could not verify payment");
+          setRedirectState("idle");
+          setPayOpen(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setSearchParams({}, { replace: true });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, setSearchParams, loadSchedule]);
+
+  const paymentsVisible = schedule?.visible === true;
+  const caseId = schedule?.caseId || CASE_ID_FALLBACK;
+  const TOTAL = Number(schedule?.totalFee) || 0;
+  const paidFromApi = Number(schedule?.paidAmount) || 0;
+  const balanceFromApi = Number(schedule?.balanceDue) ?? Math.max(0, TOTAL - paidFromApi);
+
+  const historyRows = useMemo(() => {
+    if (!paymentsVisible || !Array.isArray(schedule?.installments)) return [];
+    const paidSoFar = paidFromApi;
+    let allocated = 0;
+    return schedule.installments.map((row, i) => {
+      const amount = Number(row.amount || 0);
+      allocated += amount;
+      const isPaid = paidSoFar >= allocated - 0.02;
+      return {
+        id: String(i + 1),
+        date: row.dueDate
+          ? new Date(row.dueDate).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
+          : "—",
+        description: row.label || `Instalment ${i + 1}`,
+        amount: `£${amount.toLocaleString()}`,
+        amountClass: "text-gray-900 font-bold",
+        method: isPaid ? "Stripe" : "—",
+        status: isPaid ? "Paid" : "Due",
+        receipt: isPaid,
+      };
+    });
+  }, [paymentsVisible, schedule, paidFromApi]);
+
+  const paid = paidFromApi;
+  const balance = balanceFromApi;
+  const balanceSettled = paymentsVisible && balance <= 0.02;
 
   const tab = useMemo(() => {
     return searchParams.get("tab") === "history" ? "history" : "summary";
@@ -133,25 +159,20 @@ const Payments = () => {
     [setSearchParams],
   );
 
-  const handlePayClick = () => {
+  const handlePayClick = async () => {
+    setPayError("");
     setRedirectState("redirecting");
     setPayOpen(true);
-
-    // Actively trigger the browser to open the external Stripe checkout web interface
-    const stripeCheckoutUrl = "https://checkout.stripe.com/pay/cs_live_b1c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9u0";
-    window.open(stripeCheckoutUrl, "_blank");
-
-    // Automatically complete the simulated checkout state after a few seconds
-    setTimeout(() => {
-      setRedirectState("paid");
-      const paidAtLabel = new Date().toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-      savePaymentSettled(paidAtLabel);
-      setPaymentSnapshot({ settled: true, paidAt: paidAtLabel });
-    }, 3000);
+    try {
+      const data = await createCaseCheckoutSession();
+      const url = data?.url;
+      if (!url) throw new Error("Stripe checkout could not be started");
+      window.location.href = url;
+    } catch (e) {
+      setRedirectState("idle");
+      setPayOpen(false);
+      setPayError(e?.response?.data?.message || e.message || "Failed to start payment");
+    }
   };
 
   const closePaymentWindow = () => {
@@ -173,36 +194,34 @@ const Payments = () => {
         </div>
         <div className="shrink-0 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 text-right">
           <span className="block text-[11px] font-bold text-gray-400 uppercase">Application ID</span>
-          <span className="block text-sm font-black text-secondary">{CASE_ID}</span>
+          <span className="block text-sm font-black text-secondary">{caseId}</span>
         </div>
       </header>
 
-      {/* ── Very Simple Switcher for Demonstrating Approval Lockout ──────────── */}
-      <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="font-bold text-blue-900 flex items-center gap-1.5">
-          <span>⚙️ Testing panel: Change case state to preview payment button permissions</span>
-        </span>
-        <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-blue-200">
-          <button
-            type="button"
-            onClick={() => setAuthStatus("Pending Approval")}
-            className={`px-2.5 py-1 rounded text-xs font-bold ${
-              authStatus !== "Approved" ? "bg-amber-100 text-amber-800" : "text-gray-500"
-            }`}
-          >
-            Awaiting Admin Review
-          </button>
-          <button
-            type="button"
-            onClick={() => setAuthStatus("Approved")}
-            className={`px-2.5 py-1 rounded text-xs font-bold ${
-              authStatus === "Approved" ? "bg-blue-600 text-white" : "text-gray-500"
-            }`}
-          >
-            Approved (Ready to Pay)
-          </button>
+      {scheduleLoading && (
+        <p className="text-sm text-gray-500 font-bold">Loading payment schedule…</p>
+      )}
+      {scheduleError && (
+        <p className="text-sm text-red-600 font-bold">{scheduleError}</p>
+      )}
+      {payError && (
+        <p className="text-sm text-red-600 font-bold">{payError}</p>
+      )}
+      {!scheduleLoading && !paymentsVisible && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex gap-4">
+          <Lock className="text-amber-700 shrink-0" size={28} />
+          <div>
+            <h3 className="text-base font-black text-amber-950">Payments not available yet</h3>
+            <p className="text-sm text-amber-800 mt-1 leading-relaxed">
+              {schedule?.message ||
+                "Your payment schedule will appear here after your caseworker proposes fees and an administrator approves your Client Care Letter."}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {!scheduleLoading && paymentsVisible && (
+      <>
 
       {/* ── Tabs Navigation ─────────────────────────────────────────────────── */}
       <div className="flex gap-2 border-b border-gray-200 pb-2">
@@ -259,17 +278,22 @@ const Payments = () => {
           </div>
 
           {/* Action Box */}
-          {authStatus !== "Approved" ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-left flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="w-12 h-12 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center shrink-0 font-bold text-lg">
-                ⏳
-              </div>
+          {balance > 0 && !balanceSettled ? (
+            <div className="bg-white border border-gray-100 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-base font-black text-amber-950">Awaiting Final Review</h3>
-                <p className="text-sm text-amber-800 mt-1 leading-relaxed">
-                  Your final balance of <strong>£800</strong> is currently being reviewed by our administrative staff. The payment button will unlock automatically as soon as it is approved.
+                <h3 className="text-base font-black text-secondary">Outstanding balance</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Pay your approved instalment plan securely via Stripe.
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={handlePayClick}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-black text-white shadow-md"
+              >
+                Pay £{balance.toLocaleString()}
+                <ArrowRight size={16} />
+              </button>
             </div>
           ) : balanceSettled ? (
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -292,33 +316,7 @@ const Payments = () => {
                 View Receipts
               </button>
             </div>
-          ) : (
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-secondary text-xs font-bold mb-3">
-                  <ShieldCheck size={14} className="text-secondary" /> Secured by Stripe
-                </span>
-                <h3 className="text-xl font-black text-secondary">
-                  Pay final balance of £{BALANCE_DUE}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1 max-w-lg leading-relaxed">
-                  Clicking the button below will redirect you to Stripe's trusted checkout page to safely process your payment using any major debit or credit card.
-                </p>
-              </div>
-
-              <div className="shrink-0">
-                <button
-                  type="button"
-                  onClick={handlePayClick}
-                  className="w-full sm:w-auto px-8 py-4 bg-secondary text-white rounded-2xl font-black text-base shadow-md hover:bg-secondary/90 transition-all flex items-center justify-center gap-2 group cursor-pointer"
-                >
-                  <span>Pay now</span>
-                  <ExternalLink size={18} className="group-hover:translate-x-0.5 transition-transform" />
-                </button>
-                <span className="text-[11px] text-gray-400 block text-center mt-2">Redirects to secure Stripe Checkout</span>
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -374,6 +372,9 @@ const Payments = () => {
         </div>
       )}
 
+      </>
+      )}
+
       {/* ── Simulated Stripe Redirect Pop-up ───────────────────────────────── */}
       <Modal
         open={payOpen}
@@ -386,23 +387,12 @@ const Payments = () => {
           <div className="py-8 space-y-4 animate-in fade-in duration-200">
             <div className="w-12 h-12 border-4 border-gray-100 border-t-secondary rounded-full animate-spin mx-auto" />
             <div>
-              <h3 className="text-base font-black text-secondary">Stripe Checkout Launched</h3>
+              <h3 className="text-base font-black text-secondary">Confirming your payment</h3>
               <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
-                Stripe's secure checkout gateway has opened in a new tab to safely collect your payment of <strong>£{BALANCE_DUE}</strong>.
+                Please wait while we verify your Stripe payment of{" "}
+                <strong>£{balance.toLocaleString()}</strong> with our records.
               </p>
             </div>
-            <div className="pt-2">
-              <a
-                href="https://checkout.stripe.com/pay/cs_live_b1c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9u0"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary hover:underline bg-gray-50 px-3 py-2 rounded-xl border border-gray-200"
-              >
-                <span>Click here to open Stripe if your browser blocked the new tab</span>
-                <ExternalLink size={13} className="text-secondary" />
-              </a>
-            </div>
-            <p className="text-[11px] text-gray-400 italic pt-1">Verifying transaction automatically...</p>
           </div>
         ) : (
           <div className="py-8 space-y-4 animate-in fade-in duration-200">

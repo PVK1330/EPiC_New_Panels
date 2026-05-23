@@ -12,14 +12,16 @@ import {
   forgotPassword,
   verifyTwoFactor,
 } from "../services/auth.service";
-import { ROLE_NAMES, ROLE_ROUTES } from "../utils/constants";
-import { getAuthUserAndToken } from "../utils/authResponse";
+import { getAuthUserAndToken, getDashboardRouteForUser, resolveLoginRole } from "../utils/authResponse";
+import { API_BASE_URL } from "../utils/constants";
+import { getOrganisationSlugFromHost } from "../utils/organisationHost";
 
 const VIEWS = {
   login: "login",
   register: "register",
   forgot: "forgot",
   twoFactor: "twoFactor",
+  forceReset: "forceReset",
 };
 
 const COUNTRIES = [
@@ -86,6 +88,7 @@ const Login = () => {
 
 
   const [registerForm, setRegisterForm] = useState({
+    organisationId: "",
     firstName: "",
     middleName: "",
     lastName: "",
@@ -114,6 +117,11 @@ const Login = () => {
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
   const [pendingLogin, setPendingLogin] = useState(null);
 
+  const [resetPasswordForm, setResetPasswordForm] = useState({ password: "", confirmPassword: "" });
+  const [resetPasswordError, setResetPasswordError] = useState("");
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [pendingResetData, setPendingResetData] = useState(null);
+
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
@@ -137,6 +145,10 @@ const Login = () => {
 
   const validateRegister = () => {
     const errs = {};
+    if (!registerForm.organisationId.trim())
+      errs.organisationId = "Organisation ID is required";
+    else if (!/^\d+$/.test(registerForm.organisationId.trim()))
+      errs.organisationId = "Organisation ID must be a number";
     if (!registerForm.firstName.trim())
       errs.firstName = "First name is required";
     if (!registerForm.lastName.trim()) errs.lastName = "Last name is required";
@@ -148,8 +160,23 @@ const Login = () => {
       errs.password = "At least 8 characters";
     if (registerForm.password !== registerForm.confirmPassword)
       errs.confirmPassword = "Passwords do not match";
-    if (!registerForm.dob) errs.dob = "Date of birth is required";
+    if (!registerForm.dob) {
+      errs.dob = "Date of birth is required";
+    } else {
+      const dob = new Date(registerForm.dob);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (dob >= today) {
+        errs.dob = "Date of birth cannot be today or a future date";
+      } else {
+        const minAge = new Date(today);
+        minAge.setFullYear(minAge.getFullYear() - 16);
+        if (dob > minAge) errs.dob = "You must be at least 16 years old";
+      }
+    }
     if (!registerForm.phone.trim()) errs.phone = "Phone number is required";
+    else if (!/^\d{7,15}$/.test(registerForm.phone.trim().replace(/\s+/g, "")))
+      errs.phone = "Mobile must be 7–15 digits (numbers only)";
     if (!registerForm.address.trim()) errs.address = "Address is required";
     if (!registerForm.city.trim()) errs.city = "City is required";
     if (!registerForm.state.trim()) errs.state = "State is required";
@@ -184,24 +211,28 @@ const Login = () => {
         setPendingLogin({ email: form.email, password: form.password });
         setView(VIEWS.twoFactor);
       } else {
-        const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
+        const { user: userData, token: jwtToken, allowedModules } = getAuthUserAndToken(res);
 
         if (!userData || !jwtToken) {
           throw new Error(res.message || "Invalid credentials or response structure");
         }
 
-        const role = ROLE_NAMES[userData.role_id] || "candidate";
-        dispatch(
-          setCredentials({
-            user: {
-              ...userData,
-              role,
-              organisation_id: userData.organisation_id ?? null,
-            },
-            token: jwtToken,
-          }),
-        );
-        navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
+        const role = resolveLoginRole(userData);
+        const user = {
+          ...userData,
+          role,
+          organisation_id: userData.organisation_id ?? null,
+        };
+        
+        const forceReset = res?.data?.force_password_reset || res?.data?.data?.force_password_reset || res?.force_password_reset;
+        
+        if (forceReset) {
+          setPendingResetData({ user, token: jwtToken, allowedModules });
+          setView(VIEWS.forceReset);
+        } else {
+          dispatch(setCredentials({ user, token: jwtToken, allowedModules }));
+          navigate(getDashboardRouteForUser(user));
+        }
       }
     } catch (err) {
       setErrors({ password: err.message || "Invalid credentials" });
@@ -217,12 +248,14 @@ const Login = () => {
     setRegisterLoading(true);
     try {
       await registerUser({
+        organisation_id: registerForm.organisationId.trim(),
         first_name: registerForm.firstName.trim(),
         last_name: registerForm.lastName.trim(),
         email: registerForm.email.trim(),
         password: registerForm.password,
         country_code: selectedCountry.code,
-        mobile: registerForm.phone.trim(),
+        mobile: registerForm.phone.trim().replace(/\s+/g, ""),
+        date_of_birth: registerForm.dob || undefined,
         role_id: 1,
       });
       sessionStorage.setItem("pending_otp_email", registerForm.email.trim());
@@ -257,6 +290,47 @@ const Login = () => {
     }
   };
 
+  const handleForceResetSubmit = async (e) => {
+    e.preventDefault();
+    setResetPasswordError("");
+    if (!resetPasswordForm.password || resetPasswordForm.password.length < 8) {
+      setResetPasswordError("Password must be at least 8 characters");
+      return;
+    }
+    if (resetPasswordForm.password !== resetPasswordForm.confirmPassword) {
+      setResetPasswordError("Passwords do not match");
+      return;
+    }
+    setResetPasswordLoading(true);
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${pendingResetData.token}`
+      };
+      const orgSlug = getOrganisationSlugFromHost();
+      if (orgSlug) {
+        headers['X-Organisation-Slug'] = orgSlug;
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/user/change-password`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ new_password: resetPasswordForm.password })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || "Failed to update password");
+      }
+      
+      dispatch(setCredentials(pendingResetData));
+      navigate(getDashboardRouteForUser(pendingResetData.user));
+    } catch (err) {
+      setResetPasswordError(err.message || "Failed to update password");
+    } finally {
+      setResetPasswordLoading(false);
+    }
+  };
+
   const handleTwoFactorSubmit = async (e) => {
     e.preventDefault();
     if (!twoFactorCode || twoFactorCode.length !== 6) {
@@ -275,24 +349,20 @@ const Login = () => {
         throw new Error("No response received from 2FA server");
       }
 
-      const { user: userData, token: jwtToken } = getAuthUserAndToken(res);
+      const { user: userData, token: jwtToken, allowedModules } = getAuthUserAndToken(res);
 
       if (!userData || !jwtToken) {
         throw new Error(res.message || "Invalid 2FA code or server response");
       }
 
-      const role = ROLE_NAMES[userData.role_id] || "candidate";
-      dispatch(
-        setCredentials({
-          user: {
-            ...userData,
-            role,
-            organisation_id: userData.organisation_id ?? null,
-          },
-          token: jwtToken,
-        }),
-      );
-      navigate(ROLE_ROUTES[userData.role_id] || "/candidate/dashboard");
+      const role = resolveLoginRole(userData);
+      const user = {
+        ...userData,
+        role,
+        organisation_id: userData.organisation_id ?? null,
+      };
+      dispatch(setCredentials({ user, token: jwtToken, allowedModules }));
+      navigate(getDashboardRouteForUser(user));
     } catch (err) {
       setTwoFactorError(err.message || "Invalid 2FA code");
     } finally {
@@ -402,6 +472,24 @@ const Login = () => {
               are invited separately.
             </p>
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              {/* Organisation ID — must be first so the candidate knows which org they're joining */}
+              <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
+                <Input
+                  label="Organisation ID"
+                  name="organisationId"
+                  type="text"
+                  inputMode="numeric"
+                  value={registerForm.organisationId}
+                  onChange={handleRegisterChange}
+                  placeholder="e.g. 3"
+                  error={registerErrors.organisationId}
+                  required
+                />
+                <p className="text-xs text-blue-600 mt-1.5 font-medium">
+                  Your organisation ID is provided by your immigration adviser or administrator.
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Input
                   label="First name"
@@ -438,6 +526,8 @@ const Login = () => {
                   value={registerForm.dob}
                   onChange={handleRegisterChange}
                   error={registerErrors.dob}
+                  max={(() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split("T")[0]; })()}
+                  min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 120); return d.toISOString().split("T")[0]; })()}
                   required
                 />
                 <div>
@@ -647,6 +737,59 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => setView(VIEWS.login)}
+                className="font-black text-secondary hover:text-primary hover:underline"
+              >
+                Back to sign in
+              </button>
+            </p>
+          </>
+        )}
+
+        {view === VIEWS.forceReset && (
+          <>
+            <h1 className="text-lg font-black text-secondary text-center mb-1">
+              Update Password Required
+            </h1>
+            <p className="text-center text-xs font-bold text-gray-500 mb-6">
+              Since this is your first time logging in, please update your password.
+            </p>
+            <form onSubmit={handleForceResetSubmit} className="space-y-4">
+              <Input
+                label="New Password"
+                name="reset-password"
+                type="password"
+                value={resetPasswordForm.password}
+                onChange={(e) => {
+                  setResetPasswordForm((prev) => ({ ...prev, password: e.target.value }));
+                  setResetPasswordError("");
+                }}
+                placeholder="Enter new password"
+                required
+              />
+              <Input
+                label="Confirm Password"
+                name="reset-confirm-password"
+                type="password"
+                value={resetPasswordForm.confirmPassword}
+                onChange={(e) => {
+                  setResetPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }));
+                  setResetPasswordError("");
+                }}
+                placeholder="Confirm new password"
+                error={resetPasswordError}
+                required
+              />
+              <Button type="submit" disabled={resetPasswordLoading} className="w-full">
+                {resetPasswordLoading ? "Updating…" : "Update password"}
+              </Button>
+            </form>
+            <p className="mt-5 text-center text-sm text-gray-600">
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingResetData(null);
+                  setView(VIEWS.login);
+                }}
                 className="font-black text-secondary hover:text-primary hover:underline"
               >
                 Back to sign in

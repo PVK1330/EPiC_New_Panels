@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { updateUser } from "../../store/slices/authSlice";
 import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -15,7 +17,8 @@ import {
   FiCheckCircle,
   FiMenu,
   FiX,
-  FiFileText
+  FiFileText,
+  FiImage,
 } from "react-icons/fi";
 import {
   RiShieldFlashLine,
@@ -34,12 +37,14 @@ import AccountSettings from "../../components/admin/settings/AccountSettings";
 import VisaSettings from "../../components/admin/settings/VisaSettings";
 import EmailSettings from "../../components/admin/settings/EmailSettings";
 import PaymentSettings from "../../components/admin/settings/PaymentSettings";
+import SmtpSettings from "../../components/admin/settings/SmtpSettings";
 import SLASettings from "../../components/admin/settings/SLASettings";
 import DepartmentSettings from "../../components/admin/settings/DepartmentSettings";
 import CategorySettings from "../../components/admin/settings/CategorySettings";
 import EmailTemplateEditor from "../../components/admin/settings/EmailTemplateEditor";
 import EmailTemplatePreview from "../../components/admin/settings/EmailTemplatePreview";
 import DocumentChecklistSettings from "../../components/admin/settings/DocumentChecklistSettings";
+import OrganisationSettings from "../../components/admin/settings/OrganisationSettings";
 import RolesAndPermissionsPanel from "../../components/permissions/RolesAndPermissionsPanel";
 import UsersAndRolesPanel from "../../components/permissions/UsersAndRolesPanel";
 import { TAB_IDS, TABS } from "../../components/permissions/permissionsData";
@@ -56,6 +61,8 @@ import {
   createVisaType,
   updateVisaType,
   deleteVisaType,
+  uploadCclTemplate,
+  deleteCclTemplate,
   getPetitionTypes,
   createPetitionType,
   updatePetitionType,
@@ -73,16 +80,23 @@ import {
   deleteEmailTemplate,
   getPaymentSetting,
   updatePaymentSetting,
+  getSmtpSettings,
+  updateSmtpSettings,
+  testSmtpSettings,
+  getOrganisation,
+  uploadOrganisationLogo,
 } from "../../services/settingsService";
 
 const CONFIG_TABS = [
   { id: "account", label: "Account & Profile", icon: <FiUser />, color: "text-blue-500", bg: "bg-blue-50" },
+  { id: "organisation", label: "Organisation", icon: <FiImage />, color: "text-violet-500", bg: "bg-violet-50" },
   { id: "visa", label: "Visa & Petitions", icon: <FiLayers />, color: "text-indigo-500", bg: "bg-indigo-50" },
   { id: "checklist", label: "Document Checklists", icon: <FiFileText />, color: "text-teal-500", bg: "bg-teal-50" },
   { id: "categories", label: "Case Categories", icon: <FiFolder />, color: "text-emerald-500", bg: "bg-emerald-50" },
   { id: "departments", label: "Departments", icon: <FiFolder />, color: "text-violet-500", bg: "bg-violet-50" },
   { id: "roles", label: "Role Permissions", icon: <FiShield />, color: "text-amber-500", bg: "bg-amber-50" },
   { id: "email", label: "Email Templates", icon: <FiMail />, color: "text-rose-500", bg: "bg-rose-50" },
+  { id: "smtp", label: "SMTP / Mail", icon: <FiMail />, color: "text-pink-500", bg: "bg-pink-50" },
   { id: "payment", label: "Payment Config", icon: <FiCreditCard />, color: "text-cyan-500", bg: "bg-cyan-50" },
   { id: "sla", label: "SLA Rules", icon: <FiClock />, color: "text-orange-500", bg: "bg-orange-50" },
 ];
@@ -96,6 +110,7 @@ function getApiError(error) {
 }
 
 export default function AdminSettings() {
+  const dispatch = useDispatch();
   const { showToast } = useToast();
   const [configTab, setConfigTab] = useState("account");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -120,7 +135,23 @@ export default function AdminSettings() {
   const [categories, setCategories] = useState([]);
   const [emailTemplates, setEmailTemplates] = useState([]);
   const [slaRules, setSlaRules] = useState([]);
-  const [paymentConfig, setPaymentConfig] = useState({ currency: "GBP", pay_bank: true, pay_card: true, pay_cheque: false, bank_details: "Account Name: ElitePic Global Ltd\nSort Code: 20-04-15\nAccount No: 88291044\nBank: Barclays Bank PLC", invoice_prefix: "INV-", stripe_public_key: "", stripe_secret_key: "", paypal_client_id: "", paypal_secret: "", razorpay_key_id: "", razorpay_key_secret: "", active_gateway: "stripe" });
+  const [paymentConfig, setPaymentConfig] = useState({ currency: "GBP", pay_bank: true, pay_card: true, pay_cheque: false, bank_details: "Account Name: ElitePic Global Ltd\nSort Code: 20-04-15\nAccount No: 88291044\nBank: Barclays Bank PLC", invoice_prefix: "INV-", stripe_public_key: "", stripe_secret_key: "", stripe_webhook_secret: "", paypal_client_id: "", paypal_secret: "", razorpay_key_id: "", razorpay_key_secret: "", active_gateway: "stripe" });
+  const [organisation, setOrganisation] = useState(null);
+  const [orgLogoFile, setOrgLogoFile] = useState(null);
+  const [savingOrgLogo, setSavingOrgLogo] = useState(false);
+  const [smtpForm, setSmtpForm] = useState({
+    enabled: false,
+    host: "",
+    port: "",
+    secure: false,
+    service: "gmail",
+    user: "",
+    from: "",
+    password: "",
+    hasPassword: false,
+  });
+  const [smtpMeta, setSmtpMeta] = useState({ activeSource: "none", platformConfigured: false });
+  const [testingSmtp, setTestingSmtp] = useState(false);
 
   // Permissions Sub-tab State
   const [rbacTab, setRbacTab] = useState(TAB_IDS.roles);
@@ -191,7 +222,31 @@ export default function AdminSettings() {
         setEmailTemplates(res.data?.data?.templates ?? []);
       } else if (configTab === "payment") {
         const res = await getPaymentSetting();
-        if (res.data?.data) setPaymentConfig(res.data.data);
+        const raw = res.data?.data?.setting ?? res.data?.data;
+        if (raw) setPaymentConfig((prev) => ({ ...prev, ...raw }));
+      } else if (configTab === "organisation") {
+        const res = await getOrganisation();
+        setOrganisation(res.data?.data?.organisation ?? null);
+        setOrgLogoFile(null);
+      } else if (configTab === "smtp") {
+        const res = await getSmtpSettings();
+        const d = res.data?.data || {};
+        const org = d.organisation || {};
+        setSmtpMeta({
+          activeSource: d.activeSource || "none",
+          platformConfigured: d.platformConfigured === true,
+        });
+        setSmtpForm({
+          enabled: org.enabled === true,
+          host: org.host || "",
+          port: org.port || "",
+          secure: org.secure === true,
+          service: org.service || "gmail",
+          user: org.user || "",
+          from: org.from || "",
+          password: "",
+          hasPassword: org.hasPassword === true,
+        });
       } else if (configTab === "sla") {
         const res = await getSlaRules();
         setSlaRules(res.data?.data?.rules ?? []);
@@ -224,11 +279,14 @@ export default function AdminSettings() {
         dataToSubmit.append('profile_pic', profileFile);
       }
       // Parallel update for performance
-      await Promise.all([
+      const [prefRes, meRes] = await Promise.all([
         updateMePreferences(preferences),
         updateMe(dataToSubmit)
       ]);
       setProfileFile(null);
+      if (meRes?.data?.data?.profile) {
+        dispatch(updateUser(meRes.data.data.profile));
+      }
       showToast({ message: "Profile and preferences updated successfully." });
       loadData(); // Refresh to ensure sync
     } catch (e) {
@@ -280,6 +338,48 @@ export default function AdminSettings() {
       setPetitionModalOpen(false);
       showToast({ message: `Petition type ${petitionModalMode === "add" ? "added" : "updated"}.` });
     } catch (e) { setPetitionFormError(getApiError(e)); }
+  };
+
+  const CCL_TEMPLATE_MAX_BYTES = 5 * 1024 * 1024;
+
+  const handleUploadCclTemplate = async (visaId, file) => {
+    if (!file) return;
+    if (file.size > CCL_TEMPLATE_MAX_BYTES) {
+      showToast({ variant: "danger", message: "File must be 5 MB or smaller." });
+      return;
+    }
+    const name = file.name.toLowerCase();
+    if (!name.endsWith(".docx") && !name.endsWith(".pdf")) {
+      showToast({ variant: "danger", message: "Only .docx and .pdf files are allowed." });
+      return;
+    }
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      await uploadCclTemplate(visaId, formData);
+      showToast({ message: "CCL template uploaded." });
+      await loadData();
+    } catch (e) {
+      showToast({ variant: "danger", message: getApiError(e) });
+    }
+  };
+
+  const handleDeleteCclTemplate = async (visaId) => {
+    const result = await Swal.fire({
+      title: "Remove CCL template?",
+      text: "Cases for this visa type will use the default template until a new one is uploaded.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Remove",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      await deleteCclTemplate(visaId);
+      showToast({ message: "CCL template removed." });
+      await loadData();
+    } catch (e) {
+      showToast({ variant: "danger", message: getApiError(e) });
+    }
   };
 
   // Department Handlers
@@ -338,6 +438,63 @@ export default function AdminSettings() {
       showToast({ message: "Payment configuration updated." });
     } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
     finally { setSaving(false); }
+  };
+
+  const handleOrganisationLogoSave = async () => {
+    if (!orgLogoFile) return;
+    setSavingOrgLogo(true);
+    try {
+      const res = await uploadOrganisationLogo(orgLogoFile);
+      const org = res.data?.data?.organisation;
+      if (org) {
+        setOrganisation((prev) => ({ ...(prev || {}), ...org }));
+        setOrgLogoFile(null);
+        window.dispatchEvent(new CustomEvent("organisation-branding-updated"));
+      }
+      showToast({ message: "Organisation logo uploaded." });
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSavingOrgLogo(false);
+    }
+  };
+
+  const handleSmtpSave = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        enabled: smtpForm.enabled,
+        host: smtpForm.host,
+        port: smtpForm.port,
+        secure: smtpForm.secure,
+        service: smtpForm.service,
+        user: smtpForm.user,
+        from: smtpForm.from,
+      };
+      if (smtpForm.password) payload.pass = smtpForm.password;
+      const res = await updateSmtpSettings(payload);
+      const d = res.data?.data || {};
+      setSmtpMeta((m) => ({ ...m, activeSource: d.activeSource || m.activeSource }));
+      setSmtpForm((f) => ({ ...f, password: "", hasPassword: f.enabled ? true : f.hasPassword }));
+      showToast({ message: res.data?.message || "SMTP settings saved." });
+      loadData();
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSmtpTest = async () => {
+    setTestingSmtp(true);
+    try {
+      const res = await testSmtpSettings({});
+      showToast({ message: res.data?.message || "Test email sent." });
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setTestingSmtp(false);
+    }
   };
 
   // SLA Handlers
@@ -482,6 +639,8 @@ export default function AdminSettings() {
                 onAddVisa={() => { setVisaModalMode("add"); setVisaFormName(""); setVisaModalOpen(true); }}
                 onEditVisa={(id) => { const v = visaTypes.find(x => x.id === id); setVisaModalMode("edit"); setEditingVisaId(id); setVisaFormName(v.name); setVisaModalOpen(true); }}
                 onDeleteVisa={async (id) => { const r = await Swal.fire({ title: "Delete Visa Type?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteVisaType(id); loadData(); } }}
+                onUploadCclTemplate={handleUploadCclTemplate}
+                onDeleteCclTemplate={handleDeleteCclTemplate}
                 onAddPetition={() => { setPetitionModalMode("add"); setPetitionFormName(""); setPetitionModalOpen(true); }}
                 onEditPetition={(id) => { const p = petitionTypes.find(x => x.id === id); setPetitionModalMode("edit"); setEditingPetitionId(id); setPetitionFormName(p.name); setPetitionModalOpen(true); }}
                 onDeletePetition={async (id) => { const r = await Swal.fire({ title: "Delete Petition Type?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deletePetitionType(id); loadData(); } }}
@@ -569,6 +728,21 @@ export default function AdminSettings() {
               />
             )}
 
+            {configTab === "smtp" && (
+              <SmtpSettings
+                form={smtpForm}
+                meta={smtpMeta}
+                onChange={(key, val) => setSmtpForm((f) => ({ ...f, [key]: val }))}
+                onToggleEnabled={() => setSmtpForm((f) => ({ ...f, enabled: !f.enabled }))}
+                onSave={handleSmtpSave}
+                onTest={handleSmtpTest}
+                saving={saving}
+                testing={testingSmtp}
+                loading={loading}
+                error={error}
+              />
+            )}
+
             {configTab === "payment" && (
               <PaymentSettings 
                 config={paymentConfig}
@@ -576,6 +750,18 @@ export default function AdminSettings() {
                 onToggle={(key) => setPaymentConfig({...paymentConfig, [key]: !paymentConfig[key]})}
                 onSave={handlePaymentSave}
                 saving={saving}
+                loading={loading}
+                error={error}
+              />
+            )}
+
+            {configTab === "organisation" && (
+              <OrganisationSettings
+                organisation={organisation}
+                logoFile={orgLogoFile}
+                onLogoFileChange={setOrgLogoFile}
+                onSave={handleOrganisationLogoSave}
+                saving={savingOrgLogo}
                 loading={loading}
                 error={error}
               />

@@ -32,7 +32,7 @@ export const exportCandidates = (params = {}) =>
   api.get(`/api/admin/candidates/export`, { params, responseType: 'blob' });
 
 export const updateAdminCandidateApplication = (id, data) =>
-  api.put(`/api/admin/candidates/${id}/application`, data);
+  api.put(`/api/admin/candidates/${id}/application`, data, { timeout: 60000 });
 
 export const exportCandidateApplicationsExcel = (params = {}) =>
   api.get(`/api/admin/candidates/applications/export`, {

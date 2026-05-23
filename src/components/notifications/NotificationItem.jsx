@@ -1,8 +1,9 @@
-import React from 'react';
-import { useDispatch } from 'react-redux';
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Bell, MessageSquare, FileText, AlertTriangle, CheckCircle, Clock, User, Trash2 } from 'lucide-react';
+import { Bell, MessageSquare, FileText, AlertTriangle, CheckCircle, Clock, User, Trash2, X, ArrowRight } from 'lucide-react';
 import { markAsRead, removeNotification } from '../../store/slices/notificationSlice';
+import { getNotificationRoute, getCaseworkerOpenCaseState } from '../../utils/notificationHelpers';
 
 const formatTimeAgo = (timestamp) => {
   const date = new Date(timestamp);
@@ -23,6 +24,8 @@ const formatTimeAgo = (timestamp) => {
 const NotificationItem = ({ notification }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
+  const [showModal, setShowModal] = useState(false);
 
   const getIcon = (type) => {
     switch (type) {
@@ -30,7 +33,14 @@ const NotificationItem = ({ notification }) => {
         return <MessageSquare className="w-5 h-5 text-blue-500" />;
       case 'case_assigned':
       case 'case_updated':
+      case 'case_status_changed':
+      case 'case_stage_change':
+      case 'ccl_fee_review':
+      case 'ccl_issued':
         return <FileText className="w-5 h-5 text-green-500" />;
+      case 'task_assigned':
+      case 'workflow_task':
+        return <Clock className="w-5 h-5 text-indigo-500" />;
       case 'deadline_reminder':
         return <Clock className="w-5 h-5 text-orange-500" />;
       case 'system_announcement':
@@ -74,15 +84,29 @@ const NotificationItem = ({ notification }) => {
 
   const handleClick = () => {
     handleMarkAsRead();
-    // Handle navigation based on entity type
-    if (notification.entityType === 'message' && notification.metadata?.conversationId) {
-      // Navigate to conversation
-      navigate(`/messages/${notification.metadata.conversationId}`);
-    } else if (notification.entityType === 'case' && notification.entityId) {
-      // Navigate to case
-      navigate(`/cases/${notification.entityId}`);
+    setShowModal(true);
+  };
+
+  const handleNavigate = () => {
+    setShowModal(false);
+    const route = getNotificationRoute(notification, user);
+    const roleId = Number(user?.role_id);
+    const isCaseworker = user?.role === 'caseworker' || roleId === 2;
+
+    if (isCaseworker) {
+      const openState = getCaseworkerOpenCaseState(notification);
+      if (openState) {
+        navigate('/caseworker/cases', { state: openState });
+        return;
+      }
+    }
+
+    if (route) {
+      navigate(route);
     }
   };
+
+  const hasRoute = getNotificationRoute(notification, user) || getCaseworkerOpenCaseState(notification);
 
   return (
     <div
@@ -93,34 +117,28 @@ const NotificationItem = ({ notification }) => {
       `}
       onClick={handleClick}
     >
-      {/* Unread indicator */}
       {!notification.isRead && (
-        <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full"></div>
+        <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full" />
       )}
 
       <div className="flex items-start space-x-3">
-        {/* Icon */}
         <div className="flex-shrink-0 mt-1">
-          {getIcon(notification.type)}
+          {getIcon(notification.type || notification.actionType)}
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Title */}
           <h4 className="text-sm font-semibold text-gray-900 truncate">
             {notification.title}
           </h4>
 
-          {/* Message */}
           <p className="text-sm text-gray-600 mt-1 line-clamp-2">
             {notification.message}
           </p>
 
-          {/* Metadata */}
           {notification.metadata && Object.keys(notification.metadata).length > 0 && (
             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
               {Object.entries(notification.metadata).map(([key, value]) => {
-                if (['senderId', 'conversationId', 'entityId', 'applicationId'].includes(key)) return null;
+                if (['senderId', 'conversationId', 'entityId', 'applicationId', 'taskId'].includes(key)) return null;
                 return (
                   <span key={key} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium capitalize">
                     <span className="opacity-60">{key.replace(/([A-Z])/g, ' $1').trim()}:</span> {Array.isArray(value) ? value.join(', ') : String(value)}
@@ -130,16 +148,15 @@ const NotificationItem = ({ notification }) => {
             </div>
           )}
 
-          {/* Timestamp */}
           <div className="mt-2 text-xs text-gray-400">
             {formatTimeAgo(notification.sentAt)}
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex flex-col space-y-2">
           {!notification.isRead && (
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleMarkAsRead();
@@ -151,6 +168,7 @@ const NotificationItem = ({ notification }) => {
             </button>
           )}
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               handleDelete();
@@ -162,6 +180,96 @@ const NotificationItem = ({ notification }) => {
           </button>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="bg-white rounded-xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200"
+          >
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+              <h3 className="text-sm font-black text-gray-900">Notification Details</h3>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowModal(false);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="p-6 max-h-[70vh] overflow-y-auto cursor-default">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-bold text-gray-900">{notification.title}</h4>
+                {notification.priority && (
+                  <span className={`px-2 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                    notification.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                    notification.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                    notification.priority === 'low' ? 'bg-gray-100 text-gray-700' :
+                    'bg-blue-100 text-blue-700'
+                  }`}>
+                    {notification.priority} Priority
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-600 mb-6 whitespace-pre-wrap leading-relaxed">{notification.message}</p>
+              
+              {notification.metadata && Object.keys(notification.metadata).length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
+                  <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Metadata</h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
+                    {Object.entries(notification.metadata).map(([key, value]) => {
+                      if (['senderId', 'conversationId', 'entityId', 'applicationId', 'taskId'].includes(key)) return null;
+                      return (
+                        <div key={key}>
+                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                            {key.replace(/([A-Z])/g, ' $1').trim()}
+                          </div>
+                          <div className="text-sm font-semibold text-gray-900 mt-0.5 break-words">
+                            {Array.isArray(value) ? value.join(', ') : String(value)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Clock className="w-3 h-3" />
+                Received: {new Date(notification.createdAt || notification.sentAt).toLocaleString()}
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 cursor-default">
+              <button
+                type="button"
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowModal(false);
+                }}
+              >
+                Close
+              </button>
+              {hasRoute && (
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNavigate();
+                  }}
+                >
+                  View Details
+                  <ArrowRight size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

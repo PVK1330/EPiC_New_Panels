@@ -17,8 +17,12 @@ import Appointments from '../pages/candidate/Appointments';
 import Application from '../pages/candidate/Application';
 import CandidateMessages from '../pages/candidate/CandidateMessages';
 import CandidateNotifications from '../pages/candidate/CandidateNotifications';
+import CandidateTasks from '../pages/candidate/CandidateTasks';
 import ActivityLog from '../pages/candidate/ActivityLog';
 import ApplicationStatus from '../pages/candidate/ApplicationStatus';
+import DataCaptureSheet from '../pages/candidate/DataCaptureSheet';
+import CandidateCCL from '../pages/candidate/CandidateCCL';
+import BiometricAvailability from '../pages/candidate/BiometricAvailability';
 import CandidateAccount from '../pages/candidate/CandidateAccount';
 
 import CaseworkerDashboard from '../pages/caseworker/CaseworkerDashboard';
@@ -34,6 +38,7 @@ import CaseworkerPerformance from '../pages/caseworker/CaseworkerPerformance';
 import CaseworkerMessages from '../pages/caseworker/CaseworkerMessages';
 import CaseworkerFinance from '../pages/caseworker/CaseworkerFinance';
 import CaseworkerLicenceApplications from '../pages/caseworker/CaseworkerLicenceApplications';
+import CaseworkerNotifications from '../pages/caseworker/CaseworkerNotifications';
 
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminCases from '../pages/admin/AdminCases';
@@ -58,6 +63,9 @@ import AdminDocuments from '../pages/admin/AdminDocuments';
 import AdminMessages from '../pages/admin/AdminMessages';
 import AdminCalendar from '../pages/admin/AdminCalendar';
 import AdminLicenceApplications from '../pages/admin/AdminLicenceApplications';
+import AdminEnquiryInbox from '../pages/admin/AdminEnquiryInbox';
+import AdminCclFeeApprovals from '../pages/admin/AdminCclFeeApprovals';
+import AdminAnnouncements from '../pages/admin/AdminAnnouncements';
 
 import BusinessDashboard from '../pages/business/BusinessDashboard';
 import BussinessProfile from '../pages/business/BusinessProfile'; import CandidateCalendar from '../pages/candidate/CandidateCalendar';
@@ -98,6 +106,7 @@ const SuperadminTeam = lazy(() => import('../pages/superadmin/SuperadminTeam'));
 const SuperadminFrontend = lazy(() => import('../pages/superadmin/SuperadminFrontend'));
 const SuperadminProfile = lazy(() => import('../pages/superadmin/SuperadminProfile'));
 const SuperadminNotifications = lazy(() => import('../pages/superadmin/SuperadminNotifications'));
+const SuperadminAnnouncements = lazy(() => import('../pages/superadmin/SuperadminAnnouncements'));
 
 
 import NotFoundPage from '../pages/NotFoundPage';
@@ -168,12 +177,15 @@ const AppRouter = () => {
         >
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="enquiries" element={<AdminEnquiryInbox />} />
+          <Route path="ccl-fee-approvals" element={<AdminCclFeeApprovals />} />
           <Route path="cases" element={<AdminCases />} />
           <Route path="businesses" element={<AdminBusinesses />} />
           <Route path="candidates" element={<AdminCandidates />} />
           <Route path="caseworkers" element={<AdminCaseworkers />} />
           <Route path="finance" element={<AdminFinance />} />
           <Route path="reports" element={<AdminReports />} />
+          <Route path="announcements" element={<AdminAnnouncements />} />
           <Route path="notifications" element={<AdminNotifications />} />
           <Route path="audit-logs" element={<AdminAuditLogs />} />
           <Route path="settings" element={<AdminSettings />} />
@@ -215,10 +227,16 @@ const AppRouter = () => {
           <Route path="communication" element={<Communication />} />
           <Route path="messages" element={<CandidateMessages />} />
           <Route path="notifications" element={<CandidateNotifications />} />
+          <Route path="tasks" element={<CandidateTasks />} />
           <Route path="appointments" element={<Appointments />} />
           <Route path="calendar" element={<CandidateCalendar />} />
           <Route path="activity-log" element={<ActivityLog />} />
           <Route path="application-status" element={<ApplicationStatus />} />
+          <Route path="track-progress" element={<Navigate to="/candidate/application-status" replace />} />
+          <Route path="data-capture-sheet" element={<DataCaptureSheet />} />
+          <Route path="data-capture" element={<Navigate to="/candidate/data-capture-sheet" replace />} />
+          <Route path="ccl" element={<CandidateCCL />} />
+          <Route path="biometric-availability" element={<BiometricAvailability />} />
           <Route path="timeline" element={<Navigate to="/candidate/application-status?tab=timeline" replace />} />
           <Route path="pending-actions" element={<Navigate to="/candidate/application-status?tab=actions" replace />} />
           <Route path="account" element={<CandidateAccount />} />
@@ -249,6 +267,7 @@ const AppRouter = () => {
           <Route path="people/candidates" element={<CaseworkerClients />} />
           <Route path="people/sponsors" element={<CaseworkerClients />} />
           <Route path="messages" element={<CaseworkerMessages />} />
+          <Route path="notifications" element={<CaseworkerNotifications />} />
           <Route path="finance" element={<CaseworkerFinance />} />
           <Route path="performance" element={<CaseworkerPerformance />} />
           <Route path="licence-reviews" element={<CaseworkerLicenceApplications />} />
@@ -303,6 +322,7 @@ const AppRouter = () => {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<SuperadminDashboard />} />
           <Route path="organisations" element={<SuperadminOrganisations />} />
+          <Route path="announcements" element={<SuperadminAnnouncements />} />
           <Route path="plans" element={<SuperadminPlans />} />
           <Route path="billing" element={<SuperadminBilling />} />
           <Route path="audit-log" element={<SuperadminAuditLog />} />

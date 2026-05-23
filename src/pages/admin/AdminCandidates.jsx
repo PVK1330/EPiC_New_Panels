@@ -11,6 +11,7 @@ import {
   FiChevronDown,
   FiFolder,
   FiChevronUp,
+  FiPrinter,
 } from "react-icons/fi";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -21,6 +22,10 @@ import useCandidate from "../../hooks/useCandidate";
 import useAdmin from "../../hooks/useAdmin";
 import { useToast } from "../../context/ToastContext";
 import CandidateApplicationForm from "../../components/CandidateApplicationForm/CandidateApplicationForm";
+import CandidateApplicationReadonly, {
+  printCandidateApplication,
+} from "../../components/CandidateApplicationForm/CandidateApplicationReadonly";
+import { downloadCandidateApplicationPdf } from "../../utils/exportCandidateApplicationPdf";
 import {
   APPLICATION_FIELD_LABELS,
   getInitialApplicationFormData,
@@ -87,7 +92,7 @@ const AVATAR_COLORS = [
   "bg-teal-500",
 ];
 
-const ROLE_OPTIONS = [{ value: "3", label: "Candidate" }];
+const ROLE_OPTIONS = [{ value: "1", label: "Candidate" }];
 
 const VISA_TYPE_OPTIONS = [
   { value: "Skilled Worker", label: "Skilled Worker" },
@@ -135,7 +140,7 @@ const EMPTY_CREATE = {
   email: "",
   country_code: "+44",
   mobile: "",
-  role_id: "3",
+  role_id: "1",
   password: "",
   confirm_password: "",
 };
@@ -469,7 +474,7 @@ export default function AdminCandidates() {
       email: mapped.userData.email,
       country_code: mapped.userData.country_code || "+44",
       mobile: mapped.userData.mobile,
-      role_id: 3,
+      role_id: 1,
       password: payload.password || "",
       confirm_password: payload.confirmPassword || "",
       
@@ -584,22 +589,27 @@ export default function AdminCandidates() {
         caseworkerId: payloadClean.caseworkerId,
       };
       const res = await updateAdminCandidateApplication(candidateId, body);
+      const updated = res.data?.data?.candidate;
       showToast({
-        message: res.data?.message || "Application updated successfully",
+        message: res.data?.message || "Client updated successfully",
         variant: "success",
       });
+      if (updated) {
+        setApplicationForm(candidateRowToApplicationForm(updated));
+      }
       closeModal();
-      const r = await fetchCandidates(
+      fetchCandidates(
         page,
         limit,
         debouncedSearch.trim(),
         statusParam,
         visaParam,
         payParam,
-      );
-      if (!r.ok) {
-        showToast({ message: getApiError(r.error), variant: "danger" });
-      }
+      ).then((r) => {
+        if (!r.ok) {
+          showToast({ message: getApiError(r.error), variant: "danger" });
+        }
+      });
     } catch (e) {
       console.error("Update application error:", e);
       showToast({ message: getApiError(e), variant: "danger" });
@@ -1116,16 +1126,45 @@ export default function AdminCandidates() {
                     <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-black ${PAYMENT_CHIPS[paymentStatus] ?? "bg-gray-100 text-gray-500"}`}>{paymentStatus}</span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openEdit(c)}
-                  className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-indigo-600 hover:bg-indigo-50"
-                >
-                  Edit client
-                </button>
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => printCandidateApplication()}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 hover:bg-gray-50 inline-flex items-center gap-1.5 print:hidden"
+                  >
+                    <FiPrinter size={14} />
+                    Print
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const name = fullName(c).replace(/\s+/g, "-").toLowerCase() || "client";
+                        await downloadCandidateApplicationPdf(
+                          "candidate-application-print",
+                          `application-${name}.pdf`,
+                        );
+                        showToast({ message: "PDF downloaded." });
+                      } catch (e) {
+                        showToast({ message: e.message || "PDF failed", variant: "danger" });
+                      }
+                    }}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 hover:bg-gray-50 inline-flex items-center gap-1.5 print:hidden"
+                  >
+                    <FiDownload size={14} />
+                    Download PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openEdit(c)}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-indigo-600 hover:bg-indigo-50 print:hidden"
+                  >
+                    Edit client
+                  </button>
+                </div>
               </div>
 
-              <div className="shrink-0 flex gap-0 overflow-x-auto border-b border-gray-100 bg-gray-50/50 px-2 no-scrollbar">
+              <div className="shrink-0 flex gap-0 overflow-x-auto border-b border-gray-100 bg-gray-50/50 px-2 no-scrollbar print:hidden">
                 {[
                   { id: "overview",       label: "Overview"      },
                   { id: "documents",      label: "Documents"     },
@@ -1150,49 +1189,12 @@ export default function AdminCandidates() {
                 ))}
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6">
-                {detailTab === "overview" && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h4 className="text-sm font-black text-indigo-600 uppercase tracking-wide mb-3">Personal Information</h4>
-                        <div className="space-y-3">
-                          {[
-                            ["Full Name",    fullName(c)],
-                            ["Date of Birth", dob],
-                            ["Email",        c.email],
-                            ["Mobile",       `${c.country_code} ${c.mobile}`],
-                          ].map(([lbl, val]) => (
-                            <div key={lbl}>
-                              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">{lbl}</p>
-                              <p className="text-sm font-semibold text-gray-800">{val}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-black text-indigo-600 uppercase tracking-wide mb-3">Case Information</h4>
-                        <div className="space-y-3">
-                          {[
-                            ["Visa Type",      visaType],
-                            ["Case Status",    caseStatus],
-                            ["Payment Status", paymentStatus],
-                          ].map(([lbl, val]) => (
-                            <div key={lbl}>
-                              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">{lbl}</p>
-                              <p className="text-sm font-semibold text-gray-800">{val}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {detailTab !== "overview" && (
-                  <div className="text-center py-12">
-                    <p className="text-sm text-gray-500">This tab is under development</p>
-                  </div>
-                )}
+              <div className="flex-1 p-4 sm:p-6">
+                <CandidateApplicationReadonly
+                  candidate={c}
+                  customFieldDefinitions={customDefsForForm}
+                  tabId={detailTab}
+                />
               </div>
             </>
           );

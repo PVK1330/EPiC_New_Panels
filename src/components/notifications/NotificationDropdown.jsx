@@ -6,6 +6,7 @@ import { Bell, BellRing, X, ChevronDown } from 'lucide-react';
 import { fetchUnreadCount, fetchNotifications } from '../../store/slices/notificationSlice';
 import NotificationList from './NotificationList';
 import { getMessagingSocketUrl } from '../../utils/socketOrigin';
+import { getNotificationRoute } from '../../utils/notificationHelpers';
 
 const NotificationDropdown = () => {
   const dispatch = useDispatch();
@@ -126,7 +127,7 @@ const NotificationDropdown = () => {
             <button
               onClick={() => {
                 setIsOpen(false);
-                navigate('/notifications');
+                navigate(getNotificationRoute({}, user));
               }}
               className="w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
             >

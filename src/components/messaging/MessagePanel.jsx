@@ -1,4 +1,5 @@
 import { ChevronLeft, FileText, Paperclip, Search, Send, X } from "lucide-react";
+import { resolveAssetUrl } from "../../utils/assetUrl";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import useMediaQuery from "../../hooks/useMediaQuery";
 import { API_BASE_URL } from "../../utils/constants";
@@ -156,14 +157,20 @@ const MessagePanel = ({
                 onClick={() => handleSelectThread(t.id)}
                 className={`w-full text-left px-3 sm:px-4 py-3 min-h-[56px] border-b border-gray-100 transition-colors active:bg-gray-100/90 ${activeThreadId === t.id
                     ? "bg-secondary/10 border-l-2 border-l-secondary"
+                    : t.unread > 0
+                    ? "bg-[#25D366]/5 border-l-2 border-l-transparent hover:bg-[#25D366]/10"
                     : "hover:bg-gray-100/80 border-l-2 border-l-transparent"
                   }`}
               >
                 <div className="flex items-start gap-2 sm:gap-2.5">
                   <div
-                    className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${t.avatarClass}`}
+                    className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-black shrink-0 overflow-hidden ${!t.profile_pic && !t.avatar_url ? t.avatarClass : 'bg-gray-100 border border-gray-200'}`}
                   >
-                    {t.initials}
+                    {t.profile_pic || t.avatar_url ? (
+                      <img src={resolveAssetUrl(t.profile_pic || t.avatar_url)} alt={t.name} className="w-full h-full object-cover" />
+                    ) : (
+                      t.initials
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -181,15 +188,15 @@ const MessagePanel = ({
                         </span>
                       )}
                       {t.unread > 0 && (
-                        <span className="shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-black text-white min-w-[1.25rem] text-center">
+                        <span className="shrink-0 rounded-full bg-[#25D366] px-1.5 py-0.5 text-[10px] font-black text-white min-w-[1.25rem] text-center shadow-sm">
                           {t.unread}
                         </span>
                       )}
-                      <span className="ml-auto text-[11px] font-bold text-gray-400 shrink-0">
+                      <span className={`ml-auto text-[11px] shrink-0 ${t.unread > 0 ? "text-[#25D366] font-black" : "font-bold text-gray-400"}`}>
                         {t.time}
                       </span>
                     </div>
-                    <p className="text-xs font-bold text-gray-500 truncate mt-1 pr-1">
+                    <p className={`text-xs truncate mt-1 pr-1 ${t.unread > 0 ? "font-black text-gray-800" : "font-bold text-gray-500"}`}>
                       {t.preview}
                     </p>
                   </div>
@@ -217,9 +224,13 @@ const MessagePanel = ({
                   <ChevronLeft size={22} strokeWidth={2.5} />
                 </button>
                 <div
-                  className={`w-10 h-10 rounded-full text-white flex items-center justify-center text-sm font-black shrink-0 ${activeMeta.avatarClass}`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black shrink-0 overflow-hidden ${!activeMeta.profile_pic && !activeMeta.avatar_url ? `text-white ${activeMeta.avatarClass}` : 'bg-gray-100 border border-gray-200'}`}
                 >
-                  {activeMeta.initials}
+                  {activeMeta.profile_pic || activeMeta.avatar_url ? (
+                    <img src={resolveAssetUrl(activeMeta.profile_pic || activeMeta.avatar_url)} alt={activeMeta.name} className="w-full h-full object-cover" />
+                  ) : (
+                    activeMeta.initials
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-black text-gray-900 truncate">

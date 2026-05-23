@@ -1,13 +1,23 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { FiFileText, FiEye, FiUpload, FiCheck, FiClock, FiX } from "react-icons/fi";
+import { FiFileText, FiUpload, FiCheck, FiClock, FiX } from "react-icons/fi";
 import Modal from "../Modal";
-import Input from "../Input";
 import Button from "../Button";
 import { getCaseChecklist } from "../../services/documentChecklistApi";
+import { useToast } from "../../context/ToastContext";
+
+const REVIEWABLE_STATUSES = new Set(["uploaded", "under_review"]);
+
+function canReviewDocument(status) {
+  return REVIEWABLE_STATUSES.has(String(status || "").toLowerCase());
+}
 
 const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocumentStatus }) => {
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectNotes, setRejectNotes] = useState("");
   const [uploadForm, setUploadForm] = useState({
     documentType: "General",
     documentCategory: "candidate",
@@ -41,6 +51,106 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
     fetchChecklist();
   }, [fetchChecklist]);
 
+  const runReview = useCallback(
+    async (documentId, status, notes = "") => {
+      if (!changeDocumentStatus) return;
+      setStatusUpdatingId(documentId);
+      try {
+        const payload = { status };
+        if (status === "rejected") {
+          payload.rejectionReason = notes.trim();
+        } else if (notes?.trim()) {
+          payload.reviewNotes = notes.trim();
+        }
+        await changeDocumentStatus(documentId, payload);
+        await fetchChecklist();
+        showToast({
+          message:
+            status === "approved"
+              ? "Document approved."
+              : "Document rejected — the candidate will be notified.",
+        });
+      } catch (err) {
+        showToast({
+          variant: "danger",
+          message: err?.response?.data?.message || "Could not update document status",
+        });
+      } finally {
+        setStatusUpdatingId(null);
+        setRejectOpen(false);
+        setRejectTarget(null);
+        setRejectNotes("");
+      }
+    },
+    [changeDocumentStatus, fetchChecklist, showToast],
+  );
+
+  const openRejectModal = (documentId, label) => {
+    setRejectTarget({ documentId, label });
+    setRejectNotes("");
+    setRejectOpen(true);
+  };
+
+  const submitReject = () => {
+    if (!rejectTarget) return;
+    const reason = rejectNotes.trim();
+    if (!reason) {
+      showToast({
+        variant: "danger",
+        message: "Rejection reason is required.",
+      });
+      return;
+    }
+    runReview(rejectTarget.documentId, "rejected", reason);
+  };
+
+  const renderReviewActions = (documentId, rawStatus, label) => {
+    if (!changeDocumentStatus || !documentId) return null;
+    const busy = statusUpdatingId === documentId;
+    const reviewable = canReviewDocument(rawStatus);
+
+    return (
+      <div className="flex flex-wrap gap-1.5 shrink-0">
+        {reviewable && (
+          <>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                runReview(
+                  documentId,
+                  "approved",
+                  "Document approved",
+                )
+              }
+              className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+            >
+              Approve
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => openRejectModal(documentId, label)}
+              className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 hover:bg-red-100 disabled:opacity-50"
+            >
+              Reject
+            </button>
+          </>
+        )}
+        {rawStatus === "rejected" && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => runReview(documentId, "approved", "Document approved after re-upload")}
+            className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-800 disabled:opacity-50"
+          >
+            Approve
+          </button>
+        )}
+      </div>
+    );
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'approved':
@@ -54,6 +164,17 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
       default:
         return 'bg-gray-100 text-gray-600 border-gray-200';
     }
+  };
+
+  const formatStatusLabel = (status) => {
+    const labels = {
+      missing: "Missing",
+      uploaded: "Uploaded",
+      under_review: "Under Review",
+      approved: "Approved",
+      rejected: "Rejected",
+    };
+    return labels[status] || String(status || "").replace(/_/g, " ");
   };
 
   const getStatusIcon = (status) => {
@@ -129,7 +250,7 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
     try {
       setUploading(true);
       const formData = new FormData();
-      formData.append("documents", selectedFile);
+      formData.append("files", selectedFile);
       formData.append("caseId", caseId);
       formData.append("documentType", uploadForm.documentType);
       formData.append("documentCategory", uploadForm.documentCategory);
@@ -173,6 +294,13 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
 
   return (
     <div className="space-y-6">
+      {changeDocumentStatus && (
+        <p className="text-xs font-bold text-gray-600 bg-sky-50 border border-sky-100 rounded-xl px-4 py-3">
+          Candidate uploads appear below as <strong>Pending review</strong>. Use Approve or Reject
+          on each document; the candidate is notified automatically.
+        </p>
+      )}
+
       {/* Document Checklist Section */}
       {checklist && !checklistLoading && Object.keys(groupedChecklist).length > 0 && (
         <>
@@ -245,7 +373,7 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
                       )}
                       <div className="flex items-center gap-3">
                         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusColor(item.status)}`}>
-                          {item.status.replace('_', ' ')}
+                          {formatStatusLabel(item.status)}
                         </span>
                         {item.expiryDate && (
                           <span className="text-[10px] text-gray-500">
@@ -256,6 +384,11 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
                           <span className="text-[10px] text-gray-500">
                             Uploaded: {new Date(item.uploadedAt).toLocaleDateString()}
                           </span>
+                        )}
+                        {item.status === "rejected" && item.rejectionReason && (
+                          <p className="text-[10px] font-bold text-red-700 mt-1">
+                            Reason: {item.rejectionReason}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -268,18 +401,25 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
                         Add
                       </button>
                     ) : item.documentId ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const doc = documents.find(d => d.id === item.documentId);
-                          if (doc && doc.documentUrl) {
-                            window.open(doc.documentUrl, "_blank");
-                          }
-                        }}
-                        className="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-black text-gray-600 hover:bg-gray-50 transition-colors"
-                      >
-                        View
-                      </button>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const doc = documents.find((d) => d.id === item.documentId);
+                            if (doc?.documentUrl) {
+                              window.open(doc.documentUrl, "_blank");
+                            }
+                          }}
+                          className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-black text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                          View
+                        </button>
+                        {renderReviewActions(
+                          item.documentId,
+                          item.status,
+                          item.documentName,
+                        )}
+                      </div>
                     ) : null}
                   </div>
                 ))}
@@ -318,6 +458,11 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
               <p className="text-[11px] font-bold text-gray-500">
                 {d.meta}
               </p>
+              {d.rawStatus === "rejected" && d.rejectionReason && (
+                <p className="text-[10px] font-bold text-red-700 mt-0.5">
+                  Rejection: {d.rejectionReason}
+                </p>
+              )}
             </div>
             <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${d.statusClass}`}>{d.status}</span>
             <button
@@ -327,9 +472,51 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
             >
               View
             </button>
+            {renderReviewActions(d.id, d.rawStatus, d.name)}
           </div>
         ))}
       </div>
+
+      <Modal
+        open={rejectOpen}
+        onClose={() => {
+          setRejectOpen(false);
+          setRejectTarget(null);
+        }}
+        title="Reject document"
+        maxWidthClass="max-w-md"
+        bodyClassName="p-4 sm:p-6"
+      >
+        <div className="space-y-4">
+          <p className="text-sm font-bold text-gray-600">
+            {rejectTarget?.label
+              ? `Tell the candidate what to fix for "${rejectTarget.label}".`
+              : "Add a note for the candidate."}
+          </p>
+          <textarea
+            value={rejectNotes}
+            onChange={(e) => setRejectNotes(e.target.value)}
+            rows={3}
+            required
+            placeholder="e.g. Passport scan is unclear — please upload a full colour copy."
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold resize-none"
+          />
+          <p className="text-[10px] font-bold text-red-600">Required — shown to the candidate.</p>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setRejectOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={submitReject}
+              disabled={statusUpdatingId != null}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Reject document
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={open}

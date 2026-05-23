@@ -14,6 +14,8 @@ import {
   Loader2,
   Bell,
   MessageSquare,
+  MapPin,
+  CheckCircle2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -21,14 +23,26 @@ import { useSelector } from "react-redux";
 import useCandidate from "../../hooks/useCandidate";
 import { getNotifications } from "../../services/notificationApi";
 import messagingApi from "../../services/messagingApi";
-import { MOCK_RECENT_MESSAGES, MOCK_NOTIFICATIONS } from "../../data/adminDashboardMock";
+import {
+  extractConversationsFromResponse,
+  formatLastMessagePreview,
+  sortConversationsByRecent,
+} from "../../utils/messagingConversations";
+import { MOCK_NOTIFICATIONS } from "../../data/adminDashboardMock";
 import CaseWorkflowProgress from "../../components/case/CaseWorkflowProgress";
 import Button from "../../components/Button";
+import { Link } from "react-router-dom";
 import {
   resolveCaseStage,
   getStepById,
   DEFAULT_CASE_STAGE,
+  getCandidateNextAction,
 } from "../../constants/immigrationCaseProcess";
+import {
+  getCandidateWorkflowProcess,
+  markBiometricAttended,
+} from "../../services/workflowApi";
+import { useToast } from "../../context/ToastContext";
 
 const getStatusColor = (status) => {
   const map = {
@@ -45,13 +59,23 @@ const getStatusColor = (status) => {
 
 const CandidateDashboard = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const user = useSelector((state) => state.auth.user);
   const { myApplication, applicationLoading, getMyApplication } = useCandidate();
   const [notifications, setNotifications] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [workflowProcess, setWorkflowProcess] = useState(null);
+  const [markingBiometric, setMarkingBiometric] = useState(false);
+
+  const refreshWorkflow = () => {
+    getCandidateWorkflowProcess()
+      .then((data) => setWorkflowProcess(data))
+      .catch(() => setWorkflowProcess(null));
+  };
 
   useEffect(() => {
     getMyApplication();
+    refreshWorkflow();
     getNotifications({ limit: 4 })
       .then((res) => {
         const list = res?.data?.data?.notifications || res?.data?.data || [];
@@ -61,11 +85,12 @@ const CandidateDashboard = () => {
     messagingApi
       .getConversations()
       .then((res) => {
-        const mData = res?.data?.conversations || res?.data?.data?.conversations || res?.data || [];
-        const list = Array.isArray(mData) ? mData.slice(0, 4) : [];
-        setMessages(list.length > 0 ? list : MOCK_RECENT_MESSAGES);
+        const list = sortConversationsByRecent(
+          extractConversationsFromResponse(res),
+        ).slice(0, 4);
+        setMessages(list);
       })
-      .catch(() => setMessages(MOCK_RECENT_MESSAGES));
+      .catch(() => setMessages([]));
   }, [getMyApplication]);
 
   if (applicationLoading && !myApplication) {
@@ -81,10 +106,54 @@ const CandidateDashboard = () => {
   const caseData = myApplication?._relatedData?.cases?.[0] || {};
   const caseStatus = caseData.status || (appStatus === "submitted" ? "Lead" : "Draft");
   const caseStage = resolveCaseStage({
-    caseStage: caseData.caseStage,
+    caseStage: workflowProcess?.caseStage || caseData.caseStage,
     status: caseStatus,
   });
+  const proposedAmount =
+    workflowProcess?.proposedAmount ?? caseData.proposedAmount;
+  const biometricLocation =
+    workflowProcess?.biometricLocation || caseData.biometricLocation;
+  const biometricDate =
+    workflowProcess?.biometricsDate || caseData.biometricsDate;
+  const biometricTime =
+    workflowProcess?.biometricTime || caseData.biometricTime;
+  const biometricDay = workflowProcess?.biometricDay || caseData.biometricDay;
+  const biometricAttended =
+    workflowProcess?.workflowState?.biometrics?.attendedAt;
+  const hasBiometricAppointment =
+    workflowProcess?.hasBiometricAppointment ??
+    Boolean(
+      workflowProcess?.workflowState?.biometrics?.bookedSlot ||
+        biometricLocation ||
+        biometricDate,
+    );
+  const canMarkBiometricAttended =
+    workflowProcess?.canMarkBiometricAttended ??
+    (hasBiometricAppointment &&
+      !biometricAttended &&
+      !["awaiting_decision", "decision_communicated", "case_closure"].includes(caseStage));
+
+  const handleMarkBiometricAttended = async () => {
+    setMarkingBiometric(true);
+    try {
+      await markBiometricAttended();
+      showToast({
+        message: "Thank you — your caseworker has been notified.",
+        variant: "success",
+      });
+      refreshWorkflow();
+      getMyApplication();
+    } catch (err) {
+      showToast({
+        message: err?.response?.data?.message || "Could not update status",
+        variant: "danger",
+      });
+    } finally {
+      setMarkingBiometric(false);
+    }
+  };
   const currentStep = getStepById(caseStage) || getStepById(DEFAULT_CASE_STAGE);
+  const nextAction = getCandidateNextAction(caseStage);
   const needsEnquiry = appStatus === "draft" && !myApplication?.visaType;
 
   const widgets = [
@@ -97,8 +166,8 @@ const CandidateDashboard = () => {
       valueSize: "text-lg md:text-xl leading-snug",
     },
     {
-      label: "Case Status",
-      value: caseStatus,
+      label: "Workflow step",
+      value: currentStep?.shortTitle || currentStep?.title || caseStatus,
       sub: caseData.updatedAt ? `Updated ${new Date(caseData.updatedAt).toLocaleDateString()}` : "Form submission pending",
       Icon: ClipboardCheck,
       valueClass: "text-primary",
@@ -163,6 +232,107 @@ const CandidateDashboard = () => {
         </div>
       </section>
 
+      {proposedAmount != null && Number(proposedAmount) > 0 && (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <BadgePoundSterling className="text-emerald-700 shrink-0 mt-0.5" size={22} />
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-widest text-emerald-800">
+                Client Care Letter (CCL) fee — amount due
+              </p>
+              <p className="text-2xl font-black text-emerald-950 mt-1">
+                £{Number(proposedAmount).toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-xs font-bold text-emerald-800/80 mt-0.5">
+                This is the fee your administrator set. Review your Client Care Letter and pay from
+                Payments when you are ready.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button variant="outline" onClick={() => navigate("/candidate/tasks")}>
+              View task
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/candidate/ccl")}>
+              Review CCL
+            </Button>
+            <Button onClick={() => navigate("/candidate/payments")}>
+              Pay now
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {canMarkBiometricAttended && (biometricLocation || biometricDate) && (
+        <section className="rounded-2xl border-2 border-primary/30 bg-primary/5 p-5 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-widest text-primary mb-2">
+            Pending task — biometrics
+          </p>
+          <p className="text-base font-black text-secondary leading-snug">
+            Attend biometrics at{" "}
+            <span className="text-primary">{biometricLocation || "your appointment centre"}</span>
+            {biometricDate && (
+              <>
+                {" "}
+                on{" "}
+                <span className="text-primary">
+                  {biometricDay ? `${biometricDay}, ` : ""}
+                  {new Date(biometricDate).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
+              </>
+            )}
+            {biometricTime && (
+              <>
+                {" "}
+                at <span className="text-primary">{biometricTime}</span>
+              </>
+            )}
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <MapPin size={16} className="text-gray-400" />
+            <Button
+              onClick={handleMarkBiometricAttended}
+              disabled={markingBiometric}
+              className="inline-flex items-center gap-2"
+            >
+              {markingBiometric ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <CheckCircle2 size={16} />
+              )}
+              {markingBiometric ? "Updating…" : "Mark as done / Biometric attended"}
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {!needsEnquiry && (
+        <section className="rounded-2xl border border-gray-100 bg-white p-4 md:p-5 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-widest text-gray-400">
+            Next step for you
+          </p>
+          {nextAction.calm ? (
+            <p className="text-sm font-bold text-gray-600 mt-2">{nextAction.text}</p>
+          ) : (
+            <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm font-black text-secondary">{nextAction.text}</p>
+              {nextAction.to && (
+                <Link
+                  to={nextAction.to}
+                  className="inline-flex items-center gap-1 text-xs font-black text-primary hover:underline shrink-0"
+                >
+                  Go <ArrowRight size={14} />
+                </Link>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {widgets.map(
           ({ label, value, sub, Icon, valueClass, valueSize = "text-3xl" }) => (
@@ -196,6 +366,28 @@ const CandidateDashboard = () => {
             </span>
           </div>
           <div className="space-y-3">
+            {myApplication?._relatedData?.documents?.filter(d => d.status === 'rejected').slice(0, 2).map((doc) => (
+              <div
+                key={`rej-${doc.id}`}
+                className="rounded-xl border border-red-200 bg-red-50/70 px-3 py-3"
+              >
+                <div className="flex items-start gap-3">
+                  <FileWarning size={18} className="text-red-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-black text-red-900">{doc.documentType?.name || doc.userFileName || "Document"}</p>
+                    <p className="text-xs font-bold text-red-800 mt-1">
+                      Rejected: {doc.rejectionReason || doc.reviewNotes || "Please re-upload with corrections."}
+                    </p>
+                  </div>
+                  <Link
+                    to="/candidate/documents"
+                    className="text-[11px] font-black text-red-700 hover:underline shrink-0"
+                  >
+                    Fix →
+                  </Link>
+                </div>
+              </div>
+            ))}
             {myApplication?._relatedData?.documents?.filter(d => d.status === 'Pending').slice(0, 3).map((doc) => (
               <div
                 key={doc.id}
@@ -254,12 +446,30 @@ const CandidateDashboard = () => {
               View all
             </button>
           </div>
+          <div className="p-4 sm:p-5 border-t border-gray-100 bg-gray-50/50 mb-4 rounded-xl">
+            <div className="flex gap-2" onClick={() => navigate('/candidate/messages')}>
+              <input
+                type="text"
+                readOnly
+                placeholder="Type a message..."
+                className="flex-1 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-[13px] sm:text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                className="rounded-xl bg-primary p-2.5 sm:p-3 text-white shadow-md shadow-primary/20 hover:bg-primary-dark transition-colors"
+              >
+                <Send size={18} />
+              </button>
+            </div>
+          </div>
           <div className="space-y-3 flex-1">
             {messages.map((item) => {
               const otherUser = item.user || {};
               const lastMsg = item.lastMessage || {};
               const name = `${otherUser.first_name || ""} ${otherUser.last_name || ""}`.trim() || "Caseworker";
-              const preview = typeof lastMsg === "object" ? lastMsg?.content : lastMsg;
+              const preview = formatLastMessagePreview(
+                typeof lastMsg === "object" ? lastMsg?.content : lastMsg,
+              );
               const time = String(lastMsg.createdAt || item.lastMessageTime || "").split("T")[0];
               return (
                 <div

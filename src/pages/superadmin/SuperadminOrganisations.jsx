@@ -19,17 +19,15 @@ import TableActionButton from '../../components/common/TableActionButton';
 import {
   fetchOrganisations,
   fetchOrganisationById,
-  createOrganisation,
+  createOrganisationWithAdmin,
   updateOrganisation,
   deleteOrganisation,
-  createOrganisationAdmin,
   impersonateOrganisation,
 } from '../../services/superadminOrganisation.service';
 import { getOrganisationSubdomainLabel } from '../../utils/organisationHost';
 import { getAuthUserAndToken, getDashboardRouteForUser } from '../../utils/authResponse';
 import { getToken, getUser, saveImpersonatorSession } from '../../utils/storage';
 import { buildTenantHandoffUrl } from '../../utils/organisationHost';
-import { MOCK_ORGANISATIONS } from '../../data/mockOrganisations';
 
 const capitalize = (s) =>
   s && typeof s === 'string' ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
@@ -39,10 +37,7 @@ const mapApiOrgToRow = (o) => ({
   name: o.name,
   slug: o.slug,
   plan: capitalize(o.plan?.name || o.plan || 'Starter'),
-  _mock: Boolean(o._mock),
   users: Array.isArray(o.users) ? o.users.length : 0,
-  cases: 0,
-  storage: '—',
   status: capitalize(o.status || 'trial'),
   country: o.country || '—',
   primaryEmail: o.primaryEmail,
@@ -51,7 +46,6 @@ const mapApiOrgToRow = (o) => ({
 
 const SuperadminOrganisations = () => {
   const [activeTab, setActiveTab] = useState('All');
-  const [showingMockData, setShowingMockData] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -63,24 +57,18 @@ const SuperadminOrganisations = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [orgs, setOrgs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const loadOrgs = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetchOrganisations();
       const list = res.data?.data?.organisations ?? res.data?.organisations ?? [];
-      const rows = Array.isArray(list) ? list.map(mapApiOrgToRow) : [];
-      if (rows.length === 0) {
-        setOrgs(MOCK_ORGANISATIONS.map(mapApiOrgToRow));
-        setShowingMockData(true);
-      } else {
-        setOrgs(rows);
-        setShowingMockData(false);
-      }
+      setOrgs(Array.isArray(list) ? list.map(mapApiOrgToRow) : []);
     } catch (e) {
       toast.error(e?.response?.data?.message || e.message || 'Failed to load organisations');
-      setOrgs(MOCK_ORGANISATIONS.map(mapApiOrgToRow));
-      setShowingMockData(true);
+      setOrgs([]);
     } finally {
       setLoading(false);
     }
@@ -102,35 +90,75 @@ const SuperadminOrganisations = () => {
     return matchesTab && matchesSearch;
   });
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchTerm]);
+
+  const totalPages = Math.ceil(filteredOrgs.length / itemsPerPage);
+  const paginatedOrgs = filteredOrgs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const handleCreateOrg = async (data) => {
-    const orgRes = await createOrganisation({
+    if (!data.adminFirstName?.trim() || !data.adminLastName?.trim()) {
+      throw new Error('Administrator first and last name are required');
+    }
+
+    const res = await createOrganisationWithAdmin({
       name: data.name.trim(),
       slug: data.slug?.trim() || undefined,
       primaryEmail: data.primaryEmail.trim(),
       country: data.country?.trim() || null,
-      plan: data.plan || 'starter',
+      plan_id: data.plan_id ? parseInt(data.plan_id, 10) : undefined,
       status: 'trial',
+      adminEmail: data.adminEmail.trim().toLowerCase(),
+      adminFirstName: data.adminFirstName.trim(),
+      adminLastName: data.adminLastName.trim(),
+      adminCountryCode: (data.adminCountryCode || '+44').trim(),
+      adminMobile: String(data.adminMobile || '').replace(/\s/g, '') || '0000000001',
     });
-    const created = orgRes.data?.data?.organisation ?? orgRes.data?.organisation;
-    if (!created?.id) {
-      throw new Error(orgRes.data?.message || 'Organisation create failed');
+
+    const payload = res.data?.data ?? res.data;
+    const inner = payload;
+    const apiMessage = res.data?.message;
+
+    if (inner?.email_sent === false) {
+      const errDetail = inner?.email_error || "unknown";
+      console.warn("[createOrg] Welcome email not sent:", errDetail, inner);
     }
-    const adminRes = await createOrganisationAdmin(created.id, {
-      email: data.adminEmail.trim().toLowerCase(),
-      first_name: data.adminFirstName.trim(),
-      last_name: data.adminLastName.trim(),
-      country_code: (data.adminCountryCode || '+44').trim(),
-      mobile: String(data.adminMobile || '').replace(/\s/g, '') || '0000000001',
-    });
-    const inner = adminRes.data?.data ?? adminRes.data;
-    const welcome = inner?.welcome_email;
     const tempPw = inner?.temporary_password;
-    if (welcome?.sent) {
-      toast.success(`Organisation created. Login details emailed to ${data.adminEmail.trim().toLowerCase()}`);
+    const emailSent = inner?.email_sent === true;
+    const emailError = inner?.email_error;
+    const ownerNotified = inner?.owner_notified === true;
+
+    if (emailSent) {
+      toast.success(
+        `Organisation created. Welcome email sent to ${data.adminEmail.trim().toLowerCase()}.`,
+        { duration: 8000 },
+      );
     } else if (tempPw) {
-      toast.success(`Organisation created. Email not configured — admin password: ${tempPw}`, { duration: 14000 });
+      toast.success(
+        `Organisation created.\n\nAdmin login:\nEmail: ${data.adminEmail.trim().toLowerCase()}\nPassword: ${tempPw}`,
+        { duration: 20000 },
+      );
+      toast.error(
+        emailError === "mail_not_configured"
+          ? "SMTP is not configured. Set Superadmin → Settings → Connectivity (SMTP), or EMAIL_USER/EMAIL_PASS in .env."
+          : ownerNotified
+            ? `Welcome email could not be delivered${emailError ? ` (${emailError})` : ""}. A failure notice was sent to your SMTP inbox — check ${data.adminEmail.trim().toLowerCase()} and share the password above if needed.`
+            : `Welcome email was not sent${emailError ? `: ${emailError}` : ""}. Share the password above manually.`,
+        { duration: 12000 },
+      );
     } else {
-      toast.success('Organisation and admin created');
+      toast.success(apiMessage || `Organisation and admin created.`);
+      if (!emailSent) {
+        toast.error(
+          emailError === "mail_not_configured"
+            ? "SMTP not configured — admin could not receive credentials by email."
+            : ownerNotified
+              ? `Welcome email failed${emailError ? `: ${emailError}` : ""}. A delivery failure notice was sent to your SMTP inbox.`
+              : `Welcome email failed${emailError ? `: ${emailError}` : ""}.`,
+          { duration: 10000 },
+        );
+      }
     }
     await loadOrgs();
   };
@@ -152,11 +180,11 @@ const SuperadminOrganisations = () => {
   };
 
   const handleDeleteOrg = async () => {
-    if (!selectedOrg?.id || selectedOrg._mock) return;
+    if (!selectedOrg?.id) return;
     setActionLoading(true);
     try {
       await deleteOrganisation(selectedOrg.id);
-      toast.success('Organisation permanently deleted');
+      toast.success('Organisation deleted. You can recreate it with the same admin email/mobile.');
       await loadOrgs();
       setIsDeleteModalOpen(false);
     } catch (e) {
@@ -167,11 +195,6 @@ const SuperadminOrganisations = () => {
   };
 
   const openView = async (org) => {
-    if (org._mock) {
-      setViewOrg(org._raw || org);
-      setIsViewModalOpen(true);
-      return;
-    }
     setIsViewModalOpen(true);
     setViewLoading(true);
     setViewOrg(null);
@@ -188,10 +211,6 @@ const SuperadminOrganisations = () => {
   };
 
   const handleLoginAs = async (org) => {
-    if (org._mock || showingMockData) {
-      toast.error('Login as works only for live organisations created in the platform.');
-      return;
-    }
     setActionLoading(true);
     try {
       const res = await impersonateOrganisation(org.id);
@@ -216,11 +235,6 @@ const SuperadminOrganisations = () => {
 
   return (
     <div className="space-y-5 pb-6">
-      {showingMockData && (
-        <motion.div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 font-medium">
-          Showing sample organisations for preview. Create a real organisation to use Login as and tenant features.
-        </motion.div>
-      )}
       <CreateOrganizationModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
@@ -239,7 +253,7 @@ const SuperadminOrganisations = () => {
             <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>
               Close
             </Button>
-            {viewOrg && !viewOrg._mock && (
+            {viewOrg && (
               <Button onClick={() => { setIsViewModalOpen(false); handleLoginAs(mapApiOrgToRow(viewOrg)); }}>
                 <RiLoginBoxLine className="inline mr-1" size={16} />
                 Login as
@@ -371,28 +385,16 @@ const SuperadminOrganisations = () => {
         </div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-             <h1 className="text-3xl font-black text-red-800 mb-2">Organisations</h1>
+             <h1 className="text-3xl font-black text-secondary mb-2">Organisations</h1>
              <p className="text-sm text-gray-500 font-medium">Manage all client organisations and their statuses.</p>
           </div>
           <div className="flex items-center gap-3">
-             <motion.div
-               whileHover={{ scale: 1.05 }}
-               whileTap={{ scale: 0.95 }}
+             <Button 
+                onClick={() => setIsCreateModalOpen(true)}
+                className="px-6 py-2.5 text-sm font-bold shadow-lg shadow-primary/20"
              >
-               
-             </motion.div>
-             <motion.div
-               whileHover={{ scale: 1.05 }}
-               whileTap={{ scale: 0.95 }}
-             >
-               <Button 
-               
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="px-6 py-3 text-[11px] font-black uppercase tracking-widest bg-blue-950 border border-white/30 text-gray-500shadow-lg backdrop-blur-sm"
-               >
-                  <RiAddLine size={18} /> Create Organisation
-               </Button>
-             </motion.div>
+                <RiAddLine size={18} className="inline mr-2" /> Create Organisation
+             </Button>
           </div>
         </div>
       </motion.div>
@@ -435,13 +437,11 @@ const SuperadminOrganisations = () => {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto no-scrollbar">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50/50 text-[9px] uppercase text-gray-400 tracking-widest font-bold border-b border-gray-50">
+            <thead className="bg-gray-50/50 text-[10px] uppercase text-gray-400 tracking-widest font-bold border-b border-gray-50">
               <tr>
                 <th className="px-5 py-3 text-left">Organisation</th>
                 <th className="px-5 py-3 text-left">Tier</th>
                 <th className="px-5 py-3 text-center">Users</th>
-                <th className="px-5 py-3 text-center">Cases</th>
-                <th className="px-5 py-3 text-center">Storage</th>
                 <th className="px-5 py-3 text-left">Status</th>
                 <th className="px-5 py-3 text-right">Action</th>
               </tr>
@@ -449,43 +449,46 @@ const SuperadminOrganisations = () => {
             <tbody className="divide-y divide-gray-50/50">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
+                  <td colSpan={5} className="px-5 py-10 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
                     Loading organisations…
                   </td>
                 </tr>
-              ) : filteredOrgs.length === 0 ? (
+              ) : paginatedOrgs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    No organisations found
+                  <td colSpan={5} className="px-5 py-12 text-center">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+                      No organisations yet
+                    </p>
+                    <Button onClick={() => setIsCreateModalOpen(true)} className="text-[10px] font-bold uppercase tracking-widest">
+                      <RiAddLine size={16} /> Create your first organisation
+                    </Button>
                   </td>
                 </tr>
               ) : (
-              filteredOrgs.map((org) => (
-                <tr key={org.id} className="hover:bg-gray-50/50 transition-colors group">
+              paginatedOrgs.map((org) => (
+                <tr key={org.id} className="hover:bg-gray-50/50 transition-colors group/row">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded flex items-center justify-center text-gray-400 font-black text-[9px] group-hover:bg-primary group-hover:text-white transition-all">
+                      <div className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-gray-400 font-black text-xs group-hover/row:bg-primary group-hover/row:text-white transition-all">
                         {org.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-bold text-secondary text-xs">{org.name}</p>
-                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">{org.country}</p>
+                        <p className="font-bold text-secondary text-sm">{org.name}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{org.country}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
                       org.plan === 'Enterprise' ? 'bg-primary/5 text-primary border-primary/10' :
                       org.plan === 'Pro' ? 'bg-secondary/5 text-secondary border-secondary/10' : 'bg-gray-50 text-gray-400 border-gray-100'
                     }`}>
                       {org.plan}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-center font-bold text-secondary text-xs">{org.users}</td>
-                  <td className="px-5 py-3 text-center font-bold text-secondary text-xs">{org.cases}</td>
-                  <td className="px-5 py-3 text-center text-[9px] font-bold text-gray-300 uppercase">{org.storage}</td>
+                  <td className="px-5 py-3 text-center font-bold text-secondary text-sm">{org.users}</td>
                   <td className="px-5 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                       org.status === 'Active' ? 'bg-green-50 text-green-700 border-green-100' :
                       org.status === 'Trial' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-red-50 text-red-700 border-red-100'
                     }`}>
@@ -532,11 +535,23 @@ const SuperadminOrganisations = () => {
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{filteredOrgs.length} results</p>
+        <div className="px-5 py-4 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
+          <p className="text-xs font-bold text-gray-400">Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredOrgs.length)} to {Math.min(currentPage * itemsPerPage, filteredOrgs.length)} of {filteredOrgs.length} results</p>
           <div className="flex gap-2">
-            <button disabled className="px-3 py-1 rounded-lg text-[9px] font-bold uppercase bg-white border border-gray-200 text-gray-300">Prev</button>
-            <button className="px-3 py-1 rounded-lg text-[9px] font-bold uppercase bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm">Next</button>
+            <button 
+              disabled={currentPage === 1} 
+              onClick={() => setCurrentPage(p => p - 1)}
+              className="px-4 py-2 rounded-lg text-xs font-bold bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50 disabled:hover:bg-white"
+            >
+              Prev
+            </button>
+            <button 
+              disabled={currentPage === totalPages || totalPages === 0}
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="px-4 py-2 rounded-lg text-xs font-bold bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50 disabled:hover:bg-white"
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
