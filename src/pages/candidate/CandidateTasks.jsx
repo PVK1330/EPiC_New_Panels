@@ -96,7 +96,7 @@ export default function CandidateTasks() {
       <header>
         <h1 className="text-2xl md:text-3xl font-black text-secondary tracking-tight">My Tasks</h1>
         <p className="text-sm font-bold text-gray-500 mt-1">
-          Actions from your caseworker â€” including Data Capture Sheet requests sent to you.
+          Actions from your caseworker  including Data Capture Sheet requests sent to you.
         </p>
       </header>
 
@@ -113,7 +113,7 @@ export default function CandidateTasks() {
             </div>
             {pending.length === 0 ? (
               <p className="px-5 py-8 text-sm font-bold text-gray-400 text-center">
-                No pending tasks â€” you are up to date.
+                No pending tasks  you are up to date.
               </p>
             ) : (
               <ul className="divide-y divide-gray-50">
@@ -178,7 +178,7 @@ export default function CandidateTasks() {
                           Open <ArrowRight size={14} />
                         </Link>
                       )}
-                      {!task.isDataCapture && !isBiometricAvailabilityTask(task) && (
+                      {!isBiometricAvailabilityTask(task) && (
                         <Button
                           type="button"
                           variant={isBiometricAttendTask(task) ? "primary" : "outline"}

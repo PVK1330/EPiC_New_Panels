@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Bell, MessageSquare, FileText, AlertTriangle, CheckCircle, Clock, User, Trash2, X, ArrowRight } from 'lucide-react';
@@ -181,8 +182,8 @@ const NotificationItem = ({ notification }) => {
         </div>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
+      {showModal && createPortal(
+        <div data-notification-modal className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
           <div
             className="bg-white rounded-xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200"
           >
@@ -268,7 +269,8 @@ const NotificationItem = ({ notification }) => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

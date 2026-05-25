@@ -161,18 +161,16 @@ function FormProgress({ step, labels, onStepClick }) {
             className="flex min-w-[4.5rem] flex-1 flex-col items-center sm:min-w-0 cursor-pointer group"
           >
             <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm transition-all ${
-                idx <= step
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm transition-all ${idx <= step
                   ? "bg-secondary text-white shadow-md shadow-secondary/20"
                   : "bg-gray-200 text-gray-600 group-hover:bg-gray-300"
-              }`}
+                }`}
             >
               {idx + 1}
             </div>
             <span
-              className={`mt-1.5 text-center text-xs font-bold leading-snug tracking-normal sm:text-sm transition-colors ${
-                idx <= step ? "text-secondary" : "text-gray-400 group-hover:text-gray-600"
-              }`}
+              className={`mt-1.5 text-center text-xs font-bold leading-snug tracking-normal sm:text-sm transition-colors ${idx <= step ? "text-secondary" : "text-gray-400 group-hover:text-gray-600"
+                }`}
             >
               {lbl}
             </span>
@@ -213,7 +211,7 @@ const fallbackVisaTypeOptions = [
   { value: "Other", label: "Other" },
 ];
 
-/** All DATE-type fields â€” empty strings must be converted to null before the API call. */
+/** All DATE-type fields  empty strings must be converted to null before the API call. */
 const DATE_FIELDS = [
   "dob",
   "issueDate",
@@ -464,7 +462,7 @@ export default function CandidateApplicationForm({
             return;
           }
 
-          // Submitted and locked â€” show read-only form with status banner
+          // Submitted and locked  show read-only form with status banner
           if (app.status === "submitted" && app.isLocked === true) {
             setIsLocked(true);
             setSubmittedAt(app.submittedAt ?? null);
@@ -497,7 +495,7 @@ export default function CandidateApplicationForm({
             setDraftRestored(true);
           }
         } else {
-          // API ok but no record yet â€” try localStorage fallback
+          // API ok but no record yet  try localStorage fallback
           tryLocalStorageFallback();
         }
       } catch {
@@ -698,10 +696,10 @@ export default function CandidateApplicationForm({
       return;
     }
 
-    // Candidate variant â€” required fields relaxed to allow fluid navigation and submission
+    // Candidate variant  required fields relaxed to allow fluid navigation and submission
     setFormErrors({});
 
-    // Sanitize date fields â€” convert empty strings to null
+    // Sanitize date fields  convert empty strings to null
     const payload = sanitizeForApi(cleaned);
 
     setIsSubmitting(true);
@@ -716,7 +714,7 @@ export default function CandidateApplicationForm({
       if (status === 409) {
         setApiError(
           result.error.response.data?.message ||
-            "Your application has already been submitted and is currently under review.",
+          "Your application has already been submitted and is currently under review.",
         );
       } else {
         setApiError("Something went wrong. Please try again.");
@@ -746,7 +744,7 @@ export default function CandidateApplicationForm({
         if (status === 403) {
           setApiError(
             result.error.response.data?.message ||
-              "Your application is locked and cannot be edited. Contact your caseworker.",
+            "Your application is locked and cannot be edited. Contact your caseworker.",
           );
           return;
         }
@@ -802,7 +800,7 @@ export default function CandidateApplicationForm({
         setIsLocked(false);
         showToast({ message: "You can now edit your application." });
       } else {
-        showToast({ message: "Thank you â€” your draft is confirmed." });
+        showToast({ message: "Thank you  your draft is confirmed." });
         navigate("/candidate/application-status");
       }
       if (data?.caseStage) setCaseStage(data.caseStage);
@@ -897,7 +895,7 @@ export default function CandidateApplicationForm({
               onClick={() => handleDraftReview(true)}
               className="rounded-xl bg-secondary px-6 py-3 text-sm font-black text-white shadow-md disabled:opacity-60"
             >
-              {draftReviewBusy ? "Savingâ€¦" : "Yes â€” details are correct"}
+              {draftReviewBusy ? "Savingâ€¦" : "Yes  details are correct"}
             </button>
             <button
               type="button"
@@ -905,7 +903,7 @@ export default function CandidateApplicationForm({
               onClick={() => handleDraftReview(false)}
               className="rounded-xl border-2 border-gray-300 bg-white px-6 py-3 text-sm font-black text-gray-700 hover:border-primary disabled:opacity-60"
             >
-              No â€” I need to make changes
+              No  I need to make changes
             </button>
           </div>
         </div>
@@ -1827,7 +1825,7 @@ export default function CandidateApplicationForm({
               </div>
             )}
 
-            {/* Amber warning banner â€” only on final step, candidate form, before submit */}
+            {/* Amber warning banner  only on final step, candidate form, before submit */}
             {step >= lastStep &&
               variant === "candidate" &&
               showSubmitWarning && (
@@ -1874,103 +1872,103 @@ export default function CandidateApplicationForm({
               )}
 
             {!formDisabled && (
-            <div className="flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-              <div className="flex flex-col gap-2 sm:flex-row">
-                {variant === "candidate" ||
-                typeof onAdminSaveDraft === "function" ? (
+              <div className="flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  {variant === "candidate" ||
+                    typeof onAdminSaveDraft === "function" ? (
+                    <button
+                      type="button"
+                      onClick={handleSaveDraft}
+                      disabled={
+                        variant === "candidate"
+                          ? isSubmitting || applicationLoading
+                          : adminDraftSaving || isSubmitting || adminSubmitBusy
+                      }
+                      className="rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition-colors hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {variant === "candidate"
+                        ? applicationLoading
+                          ? "Savingâ€¦"
+                          : "Save draft"
+                        : adminDraftSaving
+                          ? "Savingâ€¦"
+                          : "Save draft"}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
-                    onClick={handleSaveDraft}
-                    disabled={
-                      variant === "candidate"
-                        ? isSubmitting || applicationLoading
-                        : adminDraftSaving || isSubmitting || adminSubmitBusy
-                    }
-                    className="rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition-colors hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                    onClick={handleCancel}
+                    className="rounded-xl px-5 py-3 text-sm font-black text-gray-500 transition-colors hover:bg-gray-100"
                   >
-                    {variant === "candidate"
-                      ? applicationLoading
+                    Cancel
+                  </button>
+                </div>
+                <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={goPrev}
+                    disabled={step === 0}
+                    className="rounded-xl bg-gray-200 px-6 py-3 text-sm font-black text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  {step < lastStep && (
+                    <button
+                      key="next-btn"
+                      type="button"
+                      onClick={goNext}
+                      className="rounded-xl bg-secondary px-6 py-3 text-sm font-black text-white shadow-md shadow-secondary/20 transition-colors hover:bg-secondary-dark"
+                    >
+                      Next
+                    </button>
+                  )}
+                  {step >= lastStep && (
+                    <button
+                      key="submit-btn"
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={
+                        isSubmitting ||
+                        applicationLoading ||
+                        (variant === "admin" &&
+                          (adminDraftSaving || adminSubmitBusy))
+                      }
+                      className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition-colors hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {(variant === "admin" && adminSubmitBusy) ||
+                        isSubmitting ? (
+                        <svg
+                          className="h-4 w-4 animate-spin"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                          />
+                        </svg>
+                      ) : null}
+                      {variant === "admin" && adminSubmitBusy
                         ? "Savingâ€¦"
-                        : "Save draft"
-                      : adminDraftSaving
-                        ? "Savingâ€¦"
-                        : "Save draft"}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="rounded-xl px-5 py-3 text-sm font-black text-gray-500 transition-colors hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
+                        : isSubmitting
+                          ? "Submittingâ€¦"
+                          : variant === "admin"
+                            ? "Save client"
+                            : "Submit application"}
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row">
-                <button
-                  type="button"
-                  onClick={goPrev}
-                  disabled={step === 0}
-                  className="rounded-xl bg-gray-200 px-6 py-3 text-sm font-black text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                {step < lastStep && (
-                  <button
-                    key="next-btn"
-                    type="button"
-                    onClick={goNext}
-                    className="rounded-xl bg-secondary px-6 py-3 text-sm font-black text-white shadow-md shadow-secondary/20 transition-colors hover:bg-secondary-dark"
-                  >
-                    Next
-                  </button>
-                )}
-                {step >= lastStep && (
-                  <button
-                    key="submit-btn"
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={
-                      isSubmitting ||
-                      applicationLoading ||
-                      (variant === "admin" &&
-                        (adminDraftSaving || adminSubmitBusy))
-                    }
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-black text-white shadow-lg shadow-primary/25 transition-colors hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {(variant === "admin" && adminSubmitBusy) ||
-                    isSubmitting ? (
-                      <svg
-                        className="h-4 w-4 animate-spin"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
-                        />
-                      </svg>
-                    ) : null}
-                    {variant === "admin" && adminSubmitBusy
-                      ? "Savingâ€¦"
-                      : isSubmitting
-                        ? "Submittingâ€¦"
-                        : variant === "admin"
-                          ? "Save client"
-                          : "Submit application"}
-                  </button>
-                )}
-              </div>
-            </div>
             )}
           </form>
         </> // closes {!draftLoading && (

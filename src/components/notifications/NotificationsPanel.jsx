@@ -1,5 +1,6 @@
 import { Bell, Check, Filter, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * Reusable notifications list UI for all portals.
@@ -177,8 +178,8 @@ const NotificationsPanel = ({
       </div>
 
       {/* Notification Details Modal */}
-      {selectedNotification && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
+      {selectedNotification && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
           <div
             className="bg-white rounded-xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200"
           >
@@ -242,7 +243,8 @@ const NotificationsPanel = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

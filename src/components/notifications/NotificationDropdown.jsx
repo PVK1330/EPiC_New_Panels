@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Bell, BellRing, X, ChevronDown } from 'lucide-react';
 import { fetchUnreadCount, fetchNotifications } from '../../store/slices/notificationSlice';
@@ -11,6 +11,7 @@ import { getNotificationRoute } from '../../utils/notificationHelpers';
 const NotificationDropdown = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { unreadCount, unreadCountLoading } = useSelector((state) => state.notifications);
   const { user, token } = useSelector((state) => state.auth);
   const [isOpen, setIsOpen] = useState(false);
@@ -64,6 +65,8 @@ const NotificationDropdown = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
+      // Don't close if clicking inside a notification modal portal
+      if (event.target.closest('[data-notification-modal]')) return;
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
       }
@@ -72,6 +75,11 @@ const NotificationDropdown = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close dropdown on route change
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location]);
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen);

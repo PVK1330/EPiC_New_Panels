@@ -148,8 +148,8 @@ export default function AssignCaseworkerModal({
             </div>
 
             <p className="text-xs font-bold text-blue-800 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-              Select up to 2 active caseworkers. The CCL fee you enter is issued to the candidate
-              immediately — they must pay this amount via the Client Care Letter and Payments area.
+              Select up to 2 active caseworkers. The proposed amount will be sent to the
+              candidate for review — the CCL fee is confirmed in a later step.
             </p>
 
             <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-100 rounded-xl p-2">
@@ -190,7 +190,7 @@ export default function AssignCaseworkerModal({
             </div>
 
             <Input
-              label="CCL fee (£) — amount candidate must pay"
+              label="Proposed amount (£)"
               type="number"
               min="0"
               step="0.01"

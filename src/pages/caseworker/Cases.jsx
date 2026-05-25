@@ -473,6 +473,7 @@ const Cases = () => {
           businessId: c.businessId,
           department: c.department,
           sponsor: c.sponsor,
+          proposedAmount: c.proposedAmount ?? null,
           caseworker:
             c.caseworkers && c.caseworkers.length > 0
               ? c.caseworkers
@@ -616,6 +617,7 @@ const Cases = () => {
           totalAmount: data.financial?.totalFee || 0,
           paidAmount: data.financial?.paidAmount || 0,
           amountStatus: data.financial?.amountStatus || "Not Submitted",
+          proposedAmount: data.overview?.proposedAmount ?? data.financial?.proposedAmount ?? null,
         };
 
         setDetailCase(updatedDetail);
@@ -802,6 +804,7 @@ const Cases = () => {
           businessId: c.businessId,
           department: c.department,
           sponsor: c.sponsor,
+          proposedAmount: c.proposedAmount ?? null,
           caseworker:
             c.caseworkers && c.caseworkers.length > 0
               ? c.caseworkers
@@ -928,6 +931,7 @@ const Cases = () => {
           businessId: c.businessId,
           department: c.department,
           sponsor: c.sponsor,
+          proposedAmount: c.proposedAmount ?? null,
           caseworker:
             c.caseworkers && c.caseworkers.length > 0
               ? c.caseworkers
@@ -3101,6 +3105,22 @@ function OverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }) {
             {priorityLabel(c.priority)}
           </span>
         </Field>
+        {c.proposedAmount != null && Number(c.proposedAmount) > 0 && (
+          <div className="sm:col-span-2 mt-2 p-4 rounded-xl border border-emerald-100 bg-emerald-50/50">
+            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-800 mb-1">
+              Admin CCL fee (proposed amount)
+            </p>
+            <p className="text-lg font-black text-emerald-950">
+              £
+              {Number(c.proposedAmount).toLocaleString("en-GB", {
+                minimumFractionDigits: 2,
+              })}
+            </p>
+            <p className="text-[10px] font-bold text-emerald-800/80 mt-0.5">
+              Client Care Letter fee set at assignment — this is what the candidate must pay.
+            </p>
+          </div>
+        )}
       </div>
       <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
         <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">
