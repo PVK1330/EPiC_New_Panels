@@ -121,12 +121,30 @@ export const getEmployeeRecords = () =>
 
 // Business: Reporting obligations
 export const getReportingObligations = () =>
-  api.get("/api/business/reporting-obligations");
+  api.get("/api/business/worker-events");
 
 // Business: Submit/Update a reporting obligation
-export const submitReportingObligation = (data) =>
-  api.post("/api/business/reporting-obligations", data);
+export const submitReportingObligation = (data) => {
+  const fd = new FormData();
+  Object.keys(data).forEach((key) => {
+    if (data[key] !== null && data[key] !== undefined) {
+      fd.append(key, data[key]);
+    }
+  });
+  return api.post("/api/business/worker-events", fd, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+};
 
-export const updateReportingObligation = (id, data) =>
-  api.patch(`/api/business/reporting-obligations/${id}`, data);
+export const updateReportingObligation = (id, data) => {
+  const fd = new FormData();
+  Object.keys(data).forEach((key) => {
+    if (data[key] !== null && data[key] !== undefined) {
+      fd.append(key, data[key]);
+    }
+  });
+  return api.put(`/api/business/worker-events/${id}`, fd, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+};
 

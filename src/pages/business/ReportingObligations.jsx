@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { getReportingObligations } from "../../services/licenceApi";
+import { getReportingObligations, updateReportingObligation } from "../../services/licenceApi";
+import { API_BASE_URL } from "../../utils/constants";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -16,12 +17,14 @@ import {
   DollarSign,
   LogOut,
   X,
+  Paperclip,
 } from "lucide-react";
 
 const ReportingObligations = () => {
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [editingEvent, setEditingEvent] = useState(null);
 
   const [events, setEvents] = useState([]);
   const [workers, setWorkers] = useState([]);
@@ -32,6 +35,9 @@ const ReportingObligations = () => {
     eventType: "",
     eventDate: "",
     description: "",
+    reportedBy: "",
+    evidenceFile: null,
+    dateReportedToSms: "",
   });
 
   useEffect(() => {
@@ -113,6 +119,30 @@ const ReportingObligations = () => {
   const overdueEvents = events.filter((e) => e.status === "Overdue").length;
 
   const handleAddEvent = () => {
+    setEditingEvent(null);
+    setFormData({
+      workerId: "",
+      eventType: "",
+      eventDate: "",
+      description: "",
+      reportedBy: "",
+      evidenceFile: null,
+      dateReportedToSms: "",
+    });
+    setShowModal(true);
+  };
+
+  const handleEditEvent = (event) => {
+    setEditingEvent(event);
+    setFormData({
+      workerId: event.workerId || "",
+      eventType: event.eventType || "",
+      eventDate: event.eventDate || "",
+      description: event.description || "",
+      reportedBy: event.reportedBy || "",
+      evidenceFile: null,
+      dateReportedToSms: event.dateReportedToSms ? new Date(event.dateReportedToSms).toISOString().slice(0, 16) : "",
+    });
     setShowModal(true);
   };
 
@@ -125,10 +155,24 @@ const ReportingObligations = () => {
     try {
       setIsSubmitting(true);
       const { submitReportingObligation } = await import("../../services/licenceApi");
-      const res = await submitReportingObligation(formData);
+      let res;
+      if (editingEvent) {
+        res = await updateReportingObligation(editingEvent.id, formData);
+      } else {
+        res = await submitReportingObligation(formData);
+      }
       if (res.data.status === "success") {
         setShowModal(false);
-        setFormData({ workerId: "", eventType: "", eventDate: "", description: "" });
+        setFormData({
+          workerId: "",
+          eventType: "",
+          eventDate: "",
+          description: "",
+          reportedBy: "",
+          evidenceFile: null,
+          dateReportedToSms: "",
+        });
+        setEditingEvent(null);
         fetchEvents();
       }
     } catch (err) {
@@ -259,6 +303,8 @@ const ReportingObligations = () => {
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Days Remaining</th>
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Risk</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Evidence</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -302,6 +348,29 @@ const ReportingObligations = () => {
                       {event.risk}
                     </span>
                   </td>
+                  <td className="px-4 py-4 text-xs font-bold text-gray-600">
+                    {event.evidenceFile ? (
+                      <a
+                        href={`${API_BASE_URL}/${event.evidenceFile}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-primary hover:underline font-black text-xs"
+                      >
+                        <Paperclip size={12} />
+                        View
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+                  <td className="px-4 py-4 text-xs font-bold text-gray-600">
+                    <button
+                      onClick={() => handleEditEvent(event)}
+                      className="text-primary hover:text-primary-dark font-black text-xs hover:underline"
+                    >
+                      Update
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -324,7 +393,7 @@ const ReportingObligations = () => {
             className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-xl"
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-black text-secondary">Report Worker Event</h3>
+              <h3 className="text-xl font-black text-secondary">{editingEvent ? "Update Worker Event" : "Report Worker Event"}</h3>
               <button
                 onClick={() => setShowModal(false)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
@@ -365,6 +434,11 @@ const ReportingObligations = () => {
                   <option value="Absence >10 days">Absence &gt;10 days</option>
                   <option value="Termination">Termination</option>
                   <option value="Address Change">Address Change</option>
+                  <option value="Resignation">Resignation</option>
+                  <option value="Dismissal">Dismissal</option>
+                  <option value="Visa Curtailment">Visa Curtailment</option>
+                  <option value="Reduced Hours">Reduced Hours</option>
+                  <option value="Change of Contract Type">Change of Contract Type</option>
                 </select>
               </div>
 
@@ -375,6 +449,41 @@ const ReportingObligations = () => {
                   type="date"
                   value={formData.eventDate}
                   onChange={(e) => setFormData({...formData, eventDate: e.target.value})}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-2">Reported By</label>
+                <input
+                  type="text"
+                  value={formData.reportedBy}
+                  onChange={(e) => setFormData({...formData, reportedBy: e.target.value})}
+                  placeholder="Name of person reporting"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-2">Evidence File</label>
+                <input
+                  type="file"
+                  onChange={(e) => setFormData({...formData, evidenceFile: e.target.files[0]})}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                />
+                {editingEvent?.evidenceFile && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Current file: {editingEvent.evidenceFile.split("/").pop()}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-2">Date Reported to SMS</label>
+                <input
+                  type="datetime-local"
+                  value={formData.dateReportedToSms}
+                  onChange={(e) => setFormData({...formData, dateReportedToSms: e.target.value})}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                 />
               </div>
@@ -404,7 +513,7 @@ const ReportingObligations = () => {
                   disabled={isSubmitting}
                   className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition disabled:opacity-50"
                 >
-                  {isSubmitting ? "Submitting..." : "Submit Report"}
+                  {isSubmitting ? "Submitting..." : editingEvent ? "Save Changes" : "Submit Report"}
                 </button>
               </div>
             </form>
