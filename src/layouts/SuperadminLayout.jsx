@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { logout } from "../store/slices/authSlice";
 import SuperadminSidebar from "../components/superadmin/SuperadminSidebar";
+import PlatformNotificationDropdown from "../components/superadmin/PlatformNotificationDropdown";
 import useIdleTimer from "../hooks/useIdleTimer";
 import {
   RiMenuLine,
@@ -12,7 +13,6 @@ import {
   RiSettings3Line,
   RiUserLine,
   RiLogoutBoxRLine,
-  RiNotification3Line,
   RiSearchLine,
 } from "react-icons/ri";
 
@@ -130,13 +130,7 @@ const SuperadminLayout = () => {
             </div>
 
             {/* Notifications */}
-            <Link 
-              to="/superadmin/notifications"
-              className="p-2 text-gray-500 hover:text-primary hover:bg-gray-50 rounded-lg transition-all relative"
-            >
-              <RiNotification3Line size={20} />
-              <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
-            </Link>
+            <PlatformNotificationDropdown />
 
             {/* Profile */}
             <div className="relative">
