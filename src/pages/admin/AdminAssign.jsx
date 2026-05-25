@@ -354,7 +354,7 @@ const AdminAssign = () => {
             </div>
 
             <div className="flex flex-col gap-1 mb-4">
-              <label className="text-sm font-medium text-gray-700">CCL fee (£) — amount candidate must pay</label>
+              <label className="text-sm font-medium text-gray-700">Proposed amount (£)</label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-gray-400 font-bold">£</span>
                 <input
@@ -368,7 +368,7 @@ const AdminAssign = () => {
                 />
               </div>
               <p className="text-xs text-gray-500">
-                Issues the Client Care Letter to the candidate with this fee. They pay this amount from Payments.
+                The proposed fee sent to the candidate for review. The CCL is confirmed in a later step.
               </p>
             </div>
 

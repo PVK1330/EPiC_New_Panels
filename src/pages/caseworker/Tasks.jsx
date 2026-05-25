@@ -127,11 +127,11 @@ function badgePriority(tone) {
 export default function Tasks() {
   const user = useSelector((state) => state.auth.user);
   const [filter, setFilter] = useState("all");
-  const [tasks, setTasks] = useState(() => INITIAL_TASKS);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 0 });
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
   const [caseOptions, setCaseOptions] = useState([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState(emptyCreateForm);
@@ -177,13 +177,13 @@ export default function Tasks() {
         params.append("filter", filter);
         if (search.trim()) params.append("search", search.trim());
         params.append("page", page);
-        params.append("limit", 10);
+        params.append("limit", 20);
 
         const response = await api.get(`/api/tasks/assign?${params.toString()}`);
         
         if (response.data.status === "success") {
           const apiTasks = response.data.data.tasks || [];
-          setPagination(response.data.data.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 });
+          setPagination(response.data.data.pagination || { total: 0, page: 1, limit: 20, totalPages: 0 });
           
           // Map API response to local task structure
           const mappedTasks = apiTasks.map((task) => {
@@ -233,6 +233,7 @@ export default function Tasks() {
         }
       } catch (error) {
         console.error("Error fetching tasks:", error);
+        setTasks([]);
       } finally {
         setLoading(false);
       }
