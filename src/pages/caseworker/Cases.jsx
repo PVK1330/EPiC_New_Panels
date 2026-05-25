@@ -3195,6 +3195,7 @@ function DocumentsTab({ caseId, candidateId }) {
     isRequired: true,
     category: "other",
   });
+  const [rejectModal, setRejectModal] = useState({ isOpen: false, docId: null, docName: "", reason: "" });
   const { showToast } = useToast();
 
   const closeViewDocument = () => {
@@ -3446,14 +3447,17 @@ function DocumentsTab({ caseId, candidateId }) {
   ]);
 
   const handleDocumentStatusChange = useCallback(
-    async (documentId, status) => {
+    async (documentId, status, rejectionReason) => {
       try {
         setStatusUpdatingId(documentId);
-        const reviewNotes =
-          status === "approved"
-            ? "Document approved by caseworker"
-            : "Document rejected by caseworker";
-        await updateDocumentStatus(documentId, { status, reviewNotes });
+        const payload = { status };
+        if (status === "approved") {
+          payload.reviewNotes = "Document approved by caseworker";
+        } else if (status === "rejected") {
+          payload.rejectionReason = rejectionReason;
+          payload.reviewNotes = rejectionReason;
+        }
+        await updateDocumentStatus(documentId, payload);
         await fetchDocuments(caseId);
         await fetchChecklist();
         showToast({
@@ -3466,7 +3470,7 @@ function DocumentsTab({ caseId, candidateId }) {
       } catch (error) {
         console.error("Error updating document status:", error);
         showToast({
-          message: "Failed to update document status.",
+          message: error.response?.data?.message || "Failed to update document status.",
           variant: "danger",
         });
       } finally {
@@ -3475,6 +3479,20 @@ function DocumentsTab({ caseId, candidateId }) {
     },
     [updateDocumentStatus, fetchDocuments, fetchChecklist, caseId],
   );
+
+  const openRejectModal = useCallback((docId, docName) => {
+    setRejectModal({ isOpen: true, docId, docName: docName || "", reason: "" });
+  }, []);
+
+  const closeRejectModal = useCallback(() => {
+    setRejectModal({ isOpen: false, docId: null, docName: "", reason: "" });
+  }, []);
+
+  const confirmReject = useCallback(async () => {
+    if (!rejectModal.docId || !rejectModal.reason?.trim()) return;
+    await handleDocumentStatusChange(rejectModal.docId, "rejected", rejectModal.reason.trim());
+    closeRejectModal();
+  }, [rejectModal, handleDocumentStatusChange, closeRejectModal]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -3772,9 +3790,9 @@ function DocumentsTab({ caseId, candidateId }) {
                                 type="button"
                                 disabled={statusUpdatingId === item.documentId}
                                 onClick={() =>
-                                  handleDocumentStatusChange(
+                                  openRejectModal(
                                     item.documentId,
-                                    "rejected",
+                                    item.documentName || item.userFileName,
                                   )
                                 }
                                 className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 disabled:opacity-50"
@@ -3866,7 +3884,7 @@ function DocumentsTab({ caseId, candidateId }) {
                       type="button"
                       disabled={statusUpdatingId === doc.id}
                       onClick={() =>
-                        handleDocumentStatusChange(doc.id, "rejected")
+                        openRejectModal(doc.id, doc.userFileName || doc.documentName)
                       }
                       className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-800 disabled:opacity-50"
                     >
@@ -4100,6 +4118,57 @@ function DocumentsTab({ caseId, candidateId }) {
           </div>
         </div>
       </Modal>
+
+      {/* Reject Document Modal */}
+      {rejectModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black text-gray-900">Reject document</h3>
+              <button
+                type="button"
+                onClick={closeRejectModal}
+                className="rounded-lg p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {rejectModal.docName && (
+              <p className="text-sm font-bold text-gray-600 mb-3">{rejectModal.docName}</p>
+            )}
+            <div className="mb-4">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                Reason for rejection <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={rejectModal.reason}
+                onChange={(e) => setRejectModal((prev) => ({ ...prev, reason: e.target.value }))}
+                rows={3}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-red-100 focus:border-red-300 resize-y min-h-[72px]"
+                placeholder="Explain why this document is being rejected…"
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeRejectModal}
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmReject}
+                disabled={!rejectModal.reason?.trim() || statusUpdatingId === rejectModal.docId}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {statusUpdatingId === rejectModal.docId ? "Rejecting…" : "Confirm rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

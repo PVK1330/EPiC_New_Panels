@@ -56,8 +56,8 @@ export const deleteDocument = (documentId) =>
   api.delete(`${BASE}/${documentId}`);
 
 /** Update document review status (caseworker/admin) */
-export const updateDocumentStatus = (documentId, status, reviewNotes = "") =>
-  api.patch(`${BASE}/status/${documentId}`, { status, reviewNotes });
+export const updateDocumentStatus = (documentId, data) =>
+  api.patch(`${BASE}/status/${documentId}`, data);
 
 /** Download a document — returns a blob */
 export const downloadDocument = (documentId) =>
