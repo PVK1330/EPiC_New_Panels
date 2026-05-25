@@ -509,6 +509,7 @@ const AdminCaseDetail = () => {
   };
 
   const handleWorkflowStageChange = async (caseStage) => {
+    if (!caseStage) return;
     if (!cleanId) return;
     // Both biometrics stages require the booking details popup
     if (caseStage === "biometrics_booked" || caseStage === "biometrics_confirmation_sent") {
