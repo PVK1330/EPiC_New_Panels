@@ -562,6 +562,7 @@ const Cases = () => {
 
   const handleWorkflowStageChange = useCallback(
     async (caseStage) => {
+      if (!caseStage) return;
       if (!detailCase?.caseId) return;
       if (caseStage === "biometrics_booked" || caseStage === "biometrics_confirmation_sent") {
         setPendingBiometricStage(caseStage);
@@ -598,6 +599,36 @@ const Cases = () => {
     },
     [detailCase?.caseId, showToast],
   );
+
+  const handleRefreshCase = useCallback(async () => {
+    if (!detailCase?.caseId) return;
+    try {
+      const res = await getCaseworkerCaseDetails(detailCase.caseId);
+      const data = res?.data?.data;
+      if (data) {
+        const updatedDetail = {
+          ...detailCase,
+          caseStage: data.overview?.caseStage,
+          status: mapApiStatus(data.overview?.status),
+          legacyStatus: data.overview?.status,
+          priority: data.overview?.priority?.toLowerCase() || "medium",
+          target: data.overview?.targetSubmissionDate || data.overview?.created_at,
+          totalAmount: data.financial?.totalFee || 0,
+          paidAmount: data.financial?.paidAmount || 0,
+          amountStatus: data.financial?.amountStatus || "Not Submitted",
+        };
+
+        setDetailCase(updatedDetail);
+        setCases((prev) =>
+          prev.map((item) =>
+            item.caseId === detailCase.caseId ? updatedDetail : item
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Failed to refresh case details:", err);
+    }
+  }, [detailCase, getCaseworkerCaseDetails, mapApiStatus]);
 
   const confirmBiometricBooking = async (payload) => {
     if (!detailCase?.caseId) return;
@@ -2552,6 +2583,7 @@ const Cases = () => {
                   userName={user?.name || "You"}
                   onStageChange={handleWorkflowStageChange}
                   stageSaving={stageSaving}
+                  onRefresh={handleRefreshCase}
                 />
               )}
               {detailTab === "documents" && (
@@ -3008,7 +3040,7 @@ function Field({ label, children }) {
   );
 }
 
-function OverviewTab({ c, userName, onStageChange, stageSaving }) {
+function OverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }) {
   const st = badgeStatus(c.status);
   const caseRecord = {
     caseStage: c.caseStage,
@@ -3040,7 +3072,7 @@ function OverviewTab({ c, userName, onStageChange, stageSaving }) {
         totalAmount={c.totalAmount}
         amountStatus={c.amountStatus}
         caseStage={c.caseStage}
-        onRefresh={onStageChange}
+        onRefresh={onRefresh}
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <Field label="Case ID">
