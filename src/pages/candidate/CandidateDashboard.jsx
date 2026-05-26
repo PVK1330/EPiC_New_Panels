@@ -233,34 +233,49 @@ const CandidateDashboard = () => {
       </section>
 
       {proposedAmount != null && Number(proposedAmount) > 0 && (
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <BadgePoundSterling className="text-emerald-700 shrink-0 mt-0.5" size={22} />
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-widest text-emerald-800">
-                Client Care Letter (CCL) fee — amount due
-              </p>
-              <p className="text-2xl font-black text-emerald-950 mt-1">
-                £{Number(proposedAmount).toLocaleString("en-GB", { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-xs font-bold text-emerald-800/80 mt-0.5">
-                This is the fee your administrator set. Review your Client Care Letter and pay from
-                Payments when you are ready.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 shrink-0">
-            <Button variant="outline" onClick={() => navigate("/candidate/tasks")}>
-              View task
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/candidate/ccl")}>
-              Review CCL
-            </Button>
-            <Button onClick={() => navigate("/candidate/payments")}>
-              Pay now
-            </Button>
-          </div>
-        </section>
+        (() => {
+          const cclStatus = myApplication?._relatedData?.cclRecord?.status;
+          const isCclReady =
+            cclStatus === "issued" ||
+            cclStatus === "signed" ||
+            ["Approved", "Paid"].includes(caseData.amountStatus);
+
+          return (
+            <section className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <BadgePoundSterling className="text-emerald-700 shrink-0 mt-0.5" size={22} />
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-emerald-800">
+                    Client Care Letter (CCL) fee — amount due
+                  </p>
+                  <p className="text-2xl font-black text-emerald-950 mt-1">
+                    £{Number(proposedAmount).toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs font-bold text-emerald-800/80 mt-0.5">
+                    This is the fee your administrator set. Review your Client Care Letter and pay from
+                    Payments when you are ready.
+                    {!isCclReady && (
+                      <span className="block mt-1 text-amber-600">
+                        Please wait for your caseworker to send the official CCL before reviewing or paying.
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <Button variant="outline" onClick={() => navigate("/candidate/tasks")}>
+                  View task
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/candidate/ccl")} disabled={!isCclReady}>
+                  Review CCL
+                </Button>
+                <Button onClick={() => navigate("/candidate/payments")} disabled={!isCclReady}>
+                  Pay now
+                </Button>
+              </div>
+            </section>
+          );
+        })()
       )}
 
       {canMarkBiometricAttended && (biometricLocation || biometricDate) && (
