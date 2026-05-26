@@ -33,7 +33,7 @@ function taskActionPath(task) {
   if (/draft application|review draft/i.test(title)) return "/candidate/application";
   if (/upload|document/i.test(title)) return "/candidate/upload-documents";
   if (/checklist/i.test(title)) return "/candidate/document-checklist";
-  if (task.isCclPayment || /pay ccl fee/i.test(title)) return "/candidate/payments";
+  if (task.isCclPayment || /pay ccl fee/i.test(title)) return "/candidate/ccl";
   if (/client care|ccl|fee|payment/i.test(title)) return "/candidate/ccl";
   return "/candidate/application";
 }
@@ -178,21 +178,19 @@ export default function CandidateTasks() {
                           Open <ArrowRight size={14} />
                         </Link>
                       )}
-                      {!isBiometricAvailabilityTask(task) && (
-                        <Button
-                          type="button"
-                          variant={isBiometricAttendTask(task) ? "primary" : "outline"}
-                          className="rounded-xl text-xs"
-                          disabled={busyId === task.id}
-                          onClick={() => handleComplete(task)}
-                        >
-                          {busyId === task.id
-                            ? "Saving…"
-                            : isBiometricAttendTask(task)
-                              ? "Mark as attended"
-                              : "Mark done"}
-                        </Button>
-                      )}
+                      <Button
+                        type="button"
+                        variant={isBiometricAttendTask(task) ? "primary" : "outline"}
+                        className="rounded-xl text-xs"
+                        disabled={busyId === task.id}
+                        onClick={() => handleComplete(task)}
+                      >
+                        {busyId === task.id
+                          ? "Saving…"
+                          : isBiometricAttendTask(task)
+                            ? "Mark as attended"
+                            : "Mark done"}
+                      </Button>
                     </div>
                   </li>
                 ))}

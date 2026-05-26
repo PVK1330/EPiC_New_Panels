@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { selectLogoUrl, selectPlatformName } from "../../store/slices/platformBrandingSlice";
 import {
   Download,
   PoundSterling,
@@ -16,11 +18,15 @@ import {
   createCaseCheckoutSession,
   verifyCheckoutSession,
 } from "../../services/candidatePaymentApi";
+import { downloadInvoicePdf } from "../../utils/exportInvoicePdf";
 
 const CASE_ID_FALLBACK = "—";
 
 const Payments = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const user = useSelector((state) => state.auth.user);
+  const logoUrl = useSelector(selectLogoUrl);
+  const platformName = useSelector(selectPlatformName);
   const [payOpen, setPayOpen] = useState(false);
   const [schedule, setSchedule] = useState(null);
   const [scheduleLoading, setScheduleLoading] = useState(true);
@@ -111,7 +117,7 @@ const Payments = () => {
   const caseId = schedule?.caseId || CASE_ID_FALLBACK;
   const TOTAL = Number(schedule?.totalFee) || 0;
   const paidFromApi = Number(schedule?.paidAmount) || 0;
-  const balanceFromApi = Number(schedule?.balanceDue) ?? Math.max(0, TOTAL - paidFromApi);
+  const balanceFromApi = schedule?.balanceDue != null ? Number(schedule.balanceDue) : Math.max(0, TOTAL - paidFromApi);
 
   const historyRows = useMemo(() => {
     if (!paymentsVisible || !Array.isArray(schedule?.installments)) return [];
@@ -354,7 +360,16 @@ const Payments = () => {
                       {row.receipt ? (
                         <button
                           type="button"
-                          onClick={() => window.alert("Downloading official payment receipt PDF.")}
+                          onClick={() => downloadInvoicePdf({
+                            caseId: caseId,
+                            amount: row.amount.replace('£', '').replace(/,/g, ''),
+                            date: row.date,
+                            description: row.description,
+                            isReceipt: true,
+                            candidateName: user ? `${user.first_name || ""} ${user.last_name || ""}`.trim() : "Client",
+                            logoUrl: logoUrl,
+                            platformName: platformName
+                          })}
                           className="inline-flex items-center gap-1 text-xs font-bold text-secondary hover:underline"
                         >
                           <Download size={14} />

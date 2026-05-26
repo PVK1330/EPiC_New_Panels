@@ -240,24 +240,30 @@ const CandidateDashboard = () => {
             cclStatus === "signed" ||
             ["Approved", "Paid"].includes(caseData.amountStatus);
 
-          return (
-            <section className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <BadgePoundSterling className="text-emerald-700 shrink-0 mt-0.5" size={22} />
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-widest text-emerald-800">
-                    Client Care Letter (CCL) fee — amount due
-                  </p>
+            return (
+              <section className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <BadgePoundSterling className="text-emerald-700 shrink-0 mt-0.5" size={22} />
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-emerald-800">
+                      Client Care Letter (CCL) fee — {["paid", "Paid"].includes(caseData?.amountStatus) ? "PAID" : "amount due"}
+                    </p>
                   <p className="text-2xl font-black text-emerald-950 mt-1">
                     £{Number(proposedAmount).toLocaleString("en-GB", { minimumFractionDigits: 2 })}
                   </p>
                   <p className="text-xs font-bold text-emerald-800/80 mt-0.5">
-                    This is the fee your administrator set. Review your Client Care Letter and pay from
-                    Payments when you are ready.
-                    {!isCclReady && (
-                      <span className="block mt-1 text-amber-600">
-                        Please wait for your caseworker to send the official CCL before reviewing or paying.
-                      </span>
+                    {["paid", "Paid"].includes(caseData?.amountStatus) ? (
+                      "Your fee has been paid successfully. Thank you!"
+                    ) : (
+                      <>
+                        This is the fee your administrator set. Review your Client Care Letter and pay from
+                        Payments when you are ready.
+                        {!isCclReady && (
+                          <span className="block mt-1 text-amber-600">
+                            Please wait for your caseworker to send the official CCL before reviewing or paying.
+                          </span>
+                        )}
+                      </>
                     )}
                   </p>
                 </div>
@@ -269,9 +275,11 @@ const CandidateDashboard = () => {
                 <Button variant="outline" onClick={() => navigate("/candidate/ccl")} disabled={!isCclReady}>
                   Review CCL
                 </Button>
-                <Button onClick={() => navigate("/candidate/payments")} disabled={!isCclReady}>
-                  Pay now
-                </Button>
+                {!["paid", "Paid"].includes(caseData?.amountStatus) && (
+                  <Button onClick={() => navigate("/candidate/payments")} disabled={!isCclReady}>
+                    Pay now
+                  </Button>
+                )}
               </div>
             </section>
           );
