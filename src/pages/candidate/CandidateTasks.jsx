@@ -103,7 +103,7 @@ export default function CandidateTasks() {
       {loading ? (
         <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
           <Loader2 className="animate-spin" size={22} />
-          <span className="text-sm font-bold">Loading tasksâ€¦</span>
+          <span className="text-sm font-bold">Loading tasks</span>
         </div>
       ) : (
         <>
