@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, Fragment } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import Swal from "sweetalert2";
 import {
   Search,
   Plus,
@@ -3289,9 +3290,21 @@ function DocumentsTab({ caseId, candidateId }) {
   const handleDeleteChecklistItem = useCallback(
     async (itemId) => {
       if (!caseId || !itemId) return;
-      if (!window.confirm("Remove this document requirement from the case checklist?")) {
+
+      const result = await Swal.fire({
+        title: "Are you sure?",
+        text: "Remove this document requirement from the case checklist?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, remove it!",
+      });
+
+      if (!result.isConfirmed) {
         return;
       }
+
       setChecklistSaving(true);
       try {
         await deleteCaseChecklistItem(itemId);
@@ -4425,9 +4438,9 @@ function PaymentsTab({ caseDetail, onUpdate }) {
   const caseRef = caseDetail?.caseId || caseDetail?.id;
 
   useEffect(() => {
-    setTotalAmount(caseDetail?.totalAmount || 0);
-    setAmountNotes(caseDetail?.amountNotes || "");
-  }, [caseDetail]);
+    setTotalAmount(caseDetail?.totalAmount || caseDetail?.proposedAmount || cclMeta?.feeAmount || 0);
+    setAmountNotes(caseDetail?.amountNotes || cclMeta?.notes || "");
+  }, [caseDetail, cclMeta]);
 
   useEffect(() => {
     if (!caseRef) return;
@@ -4499,9 +4512,19 @@ function PaymentsTab({ caseDetail, onUpdate }) {
     Rejected: "bg-red-50 text-red-800 border-red-200",
   };
 
-  const currentStatus = caseDetail?.amountStatus || "Not Submitted";
+  let currentStatus = caseDetail?.amountStatus || "Not Submitted";
+  if (currentStatus === "Not Submitted" && cclMeta?.status) {
+    const cclStatusMap = {
+      fee_proposed: "Pending Approval",
+      fee_rejected: "Rejected",
+      issued: "Approved",
+      signed: "Approved",
+    };
+    currentStatus = cclStatusMap[cclMeta.status] || currentStatus;
+  }
+
   const paid = parseFloat(caseDetail?.paidAmount) || 0;
-  const total = parseFloat(caseDetail?.totalAmount) || 0;
+  const total = parseFloat(caseDetail?.totalAmount) || parseFloat(caseDetail?.proposedAmount) || parseFloat(cclMeta?.feeAmount) || 0;
   const outstanding = Math.max(0, total - paid);
   const stage = caseDetail?.caseStage || "";
   const awaitingAdmin =
