@@ -20,6 +20,8 @@ import {
   deleteAdmin,
   exportAdmins,
 } from "../../services/adminService";
+import { useSelector, useDispatch } from "react-redux";
+import { updateUser } from "../../store/slices/authSlice";
 
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
 
@@ -107,6 +109,8 @@ function fullName(admin) {
 export default function AdminUsers() {
   const { showToast } = useToast();
   const { admins, pagination, loading, fetchAdmins } = useAdmin();
+  const dispatch = useDispatch();
+  const currentUser = useSelector((state) => state.auth.user);
 
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -309,6 +313,17 @@ export default function AdminUsers() {
         message: res.data?.message || "Admin updated successfully",
         variant: "success",
       });
+      if (currentUser?.id === modal.data.id) {
+        dispatch(updateUser({
+          first_name: editForm.first_name.trim(),
+          last_name: editForm.last_name.trim(),
+          email: editForm.email.trim(),
+          country_code: editForm.country_code.trim(),
+          mobile: editForm.mobile.trim(),
+          role_id: Number(editForm.role_id),
+          status: editForm.status,
+        }));
+      }
       closeModal();
       {
         const r = await fetchAdmins(
@@ -379,6 +394,11 @@ export default function AdminUsers() {
         message: res.data?.message || "Status updated successfully",
         variant: "success",
       });
+      if (currentUser?.id === user.id) {
+        dispatch(updateUser({
+          status: newStatus,
+        }));
+      }
       const r = await fetchAdmins(
         page,
         limit,
