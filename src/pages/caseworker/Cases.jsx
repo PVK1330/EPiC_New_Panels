@@ -68,6 +68,7 @@ import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
 import BiometricBookedModal from "../../components/workflow/BiometricBookedModal";
 import CclFeeProposalModal from "../../components/case/CclFeeProposalModal";
 import PrintClientApplicationButton from "../../components/CandidateApplicationForm/PrintClientApplicationButton";
+import CaseworkerApplicationTab from "../../components/caseDetail/CaseworkerApplicationTab";
 import { updatePipelineStage, assignCase } from "../../services/caseApi";
 import { proposeCclFees, getCclStatus, sendBiometricSlot } from "../../services/workflowApi";
 import {
@@ -2560,6 +2561,7 @@ const Cases = () => {
             <div className="shrink-0 flex gap-0 overflow-x-auto border-b border-gray-100 bg-gray-50/50 px-2 no-scrollbar">
               {[
                 { id: "overview", label: "Overview" },
+                { id: "application", label: "Application" },
                 { id: "documents", label: "Documents" },
                 { id: "tasks", label: "Tasks" },
                 { id: "payments", label: "Payments" },
@@ -2589,6 +2591,12 @@ const Cases = () => {
                   onStageChange={handleWorkflowStageChange}
                   stageSaving={stageSaving}
                   onRefresh={handleRefreshCase}
+                />
+              )}
+              {detailTab === "application" && (
+                <CaseworkerApplicationTab 
+                  caseDetail={detailCase} 
+                  userName={user?.name || "Caseworker"}
                 />
               )}
               {detailTab === "documents" && (

@@ -385,7 +385,7 @@ const CandidateDashboard = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-black text-secondary">Pending Actions</h2>
             <span className="bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full">
-              {myApplication?._relatedData?.documents?.filter(d => d.status === 'Pending').length || 0} Required
+              {myApplication?._relatedData?.documents?.filter(d => d.status === 'missing').length || 0} Required
             </span>
           </div>
           <div className="space-y-3">
@@ -411,7 +411,7 @@ const CandidateDashboard = () => {
                 </div>
               </div>
             ))}
-            {myApplication?._relatedData?.documents?.filter(d => d.status === 'Pending').slice(0, 3).map((doc) => (
+            {myApplication?._relatedData?.documents?.filter(d => d.status === 'missing').slice(0, 3).map((doc) => (
               <div
                 key={doc.id}
                 className="rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-3"

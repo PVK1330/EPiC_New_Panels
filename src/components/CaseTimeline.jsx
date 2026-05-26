@@ -7,20 +7,17 @@ const ACTION_TYPES = [
   'case_updated',
   'status_changed',
   'document_uploaded',
-  'document_deleted',
+  'document_reviewed',
+  'payment_received',
+  'payment_recorded',
   'note_added',
-  'task_created',
-  'task_completed',
-  'payment_made',
-  'caseworker_assigned',
-  'caseworker_reassigned',
-  'deadline_changed',
   'communication_sent',
-  'interview_scheduled',
-  'visa_submitted',
-  'visa_approved',
-  'visa_denied',
-  'other',
+  'communication_received',
+  'assignment_changed',
+  'deadline_updated',
+  'reminder_sent',
+  'case_closed',
+  'case_reopened'
 ];
 
 const ACTION_TYPE_LABELS = {
@@ -28,20 +25,17 @@ const ACTION_TYPE_LABELS = {
   case_updated: 'Case Updated',
   status_changed: 'Status Changed',
   document_uploaded: 'Document Uploaded',
-  document_deleted: 'Document Deleted',
+  document_reviewed: 'Document Reviewed',
+  payment_received: 'Payment Received',
+  payment_recorded: 'Payment Recorded',
   note_added: 'Note Added',
-  task_created: 'Task Created',
-  task_completed: 'Task Completed',
-  payment_made: 'Payment Made',
-  caseworker_assigned: 'Caseworker Assigned',
-  caseworker_reassigned: 'Caseworker Reassigned',
-  deadline_changed: 'Deadline Changed',
   communication_sent: 'Communication Sent',
-  interview_scheduled: 'Interview Scheduled',
-  visa_submitted: 'Visa Submitted',
-  visa_approved: 'Visa Approved',
-  visa_denied: 'Visa Denied',
-  other: 'Other',
+  communication_received: 'Communication Received',
+  assignment_changed: 'Assignment Changed',
+  deadline_updated: 'Deadline Updated',
+  reminder_sent: 'Reminder Sent',
+  case_closed: 'Case Closed',
+  case_reopened: 'Case Reopened'
 };
 
 const CaseTimeline = ({ caseId, currentUser }) => {
@@ -51,7 +45,7 @@ const CaseTimeline = ({ caseId, currentUser }) => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterType, setFilterType] = useState('all');
   const [newEntry, setNewEntry] = useState({
-    actionType: 'other',
+    actionType: 'case_updated',
     description: '',
     visibility: 'public',
   });
@@ -94,7 +88,7 @@ const CaseTimeline = ({ caseId, currentUser }) => {
         visibility: newEntry.visibility,
         isSystemAction: false,
       });
-      setNewEntry({ actionType: 'other', description: '', visibility: 'public' });
+      setNewEntry({ actionType: 'case_updated', description: '', visibility: 'public' });
       setShowAddForm(false);
       setError('');
       fetchTimeline();
