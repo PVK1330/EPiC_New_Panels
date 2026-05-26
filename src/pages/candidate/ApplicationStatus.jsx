@@ -116,7 +116,7 @@ const ApplicationStatus = () => {
     ...((cclStatus === "issued" ||
       (["Approved", "Paid"].includes(caseData.amountStatus) &&
         stageId === "client_care_letter")) &&
-      stageId === "client_care_letter"
+      stageId === "client_care_letter" && cclStatus !== "signed"
       ? [
           {
             prio: "high",
@@ -127,8 +127,7 @@ const ApplicationStatus = () => {
           },
         ]
       : []),
-    ...(cclStatus !== "signed" &&
-    ["Approved", "Paid"].includes(caseData.amountStatus) &&
+    ...(["Approved", "Paid"].includes(caseData.amountStatus) &&
     ["ccl_issued", "ccl_payment_received", "client_care_letter"].includes(stageId) &&
     !["paid", "Paid"].includes(caseData.amountStatus) &&
     Number(caseData.totalAmount) > 0 &&

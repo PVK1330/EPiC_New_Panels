@@ -179,6 +179,7 @@ export default function BiometricAvailability() {
             <input
               type="date"
               required
+              min={new Date().toISOString().split('T')[0]}
               value={form.preferredDate}
               onChange={(e) => setForm((f) => ({ ...f, preferredDate: e.target.value }))}
               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold"
