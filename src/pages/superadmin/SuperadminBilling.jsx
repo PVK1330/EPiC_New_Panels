@@ -14,6 +14,7 @@ import {
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
 import useBilling from '../../hooks/useBilling';
+import useDownloads from '../../hooks/useDownloads';
 import toast from 'react-hot-toast';
 
 const SuperadminBilling = () => {
@@ -27,11 +28,11 @@ const SuperadminBilling = () => {
    invoicesLoading,
    fetchInvoices,
    fetchInvoiceById,
-   downloadFinancials,
    dashboardStats,
    statsLoading,
    fetchDashboardStats,
  } = useBilling();
+ const { exportSuperadminFinancials } = useDownloads();
 
  useEffect(() => {
    fetchInvoices();
@@ -68,18 +69,11 @@ const SuperadminBilling = () => {
 
  const handleGlobalAction = async (type) => {
  if (type === 'Export') {
- try {
- const res = await downloadFinancials();
- const url = window.URL.createObjectURL(new Blob([res.data]));
- const link = document.createElement('a');
- link.href = url;
- link.setAttribute('download', `financials_${Date.now()}.xlsx`);
- document.body.appendChild(link);
- link.click();
- link.remove();
+ const result = await exportSuperadminFinancials();
+ if (result.ok) {
  toast.success('Financials exported successfully');
- } catch (e) {
- toast.error('Failed to export financials');
+ } else {
+ toast.error(result.message || 'Failed to export financials');
  }
  }
  };

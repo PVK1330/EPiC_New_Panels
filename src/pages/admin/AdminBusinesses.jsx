@@ -548,11 +548,11 @@ export default function AdminBusinesses() {
       });
       
       // Create a blob from the response
-      const blob = new Blob([res.data], { type: 'text/csv' });
+      const blob = res.data;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `sponsors_export_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `sponsors_export_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

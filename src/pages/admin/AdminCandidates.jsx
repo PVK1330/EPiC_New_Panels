@@ -25,7 +25,7 @@ import CandidateApplicationForm from "../../components/CandidateApplicationForm/
 import CandidateApplicationReadonly, {
   printCandidateApplication,
 } from "../../components/CandidateApplicationForm/CandidateApplicationReadonly";
-import { downloadCandidateApplicationPdf } from "../../utils/exportCandidateApplicationPdf";
+import useDownloads from "../../hooks/useDownloads";
 import {
   APPLICATION_FIELD_LABELS,
   getInitialApplicationFormData,
@@ -197,6 +197,7 @@ export default function AdminCandidates() {
     addApplicationCustomField,
     removeApplicationCustomField,
   } = useAdmin();
+  const { downloadAdminCandidateApplicationPdf } = useDownloads();
 
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -1139,11 +1140,9 @@ export default function AdminCandidates() {
                     type="button"
                     onClick={async () => {
                       try {
-                        const name = fullName(c).replace(/\s+/g, "-").toLowerCase() || "client";
-                        await downloadCandidateApplicationPdf(
-                          "candidate-application-print",
-                          `application-${name}.pdf`,
-                        );
+                        const candidateId = c?.id ?? c?.userId;
+                        if (!candidateId) throw new Error("Candidate id not found");
+                        await downloadAdminCandidateApplicationPdf(candidateId);
                         showToast({ message: "PDF downloaded." });
                       } catch (e) {
                         showToast({ message: e.message || "PDF failed", variant: "danger" });

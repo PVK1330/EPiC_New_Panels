@@ -6,8 +6,8 @@ import CandidateApplicationReadonly, {
   printCandidateApplication,
 } from "./CandidateApplicationReadonly";
 import { loadCustomFieldDefinitionsFromStorage } from "./initialFormState";
-import { downloadCandidateApplicationPdf } from "../../utils/exportCandidateApplicationPdf";
 import { useToast } from "../../context/ToastContext";
+import useDownloads from "../../hooks/useDownloads";
 
 /**
  * Fetches candidate + application and opens a printable read-only view (admin & caseworker).
@@ -19,6 +19,7 @@ export default function PrintClientApplicationButton({
   showPdf = true,
 }) {
   const { showToast } = useToast();
+  const { downloadAdminCandidateApplicationPdf } = useDownloads();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -46,13 +47,7 @@ export default function PrintClientApplicationButton({
   const handlePdf = async () => {
     setExporting(true);
     try {
-      const name = candidate
-        ? [candidate.first_name, candidate.last_name].filter(Boolean).join("-") || "client"
-        : "client";
-      await downloadCandidateApplicationPdf(
-        "candidate-application-print",
-        `application-${name.replace(/\s+/g, "-").toLowerCase()}.pdf`,
-      );
+      await downloadAdminCandidateApplicationPdf(candidateId);
       showToast({ message: "PDF downloaded." });
     } catch (e) {
       showToast({ message: e.message || "PDF export failed", variant: "danger" });

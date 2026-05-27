@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
+import useDownloads from "../../hooks/useDownloads";
 import MockDataBanner from "../../components/admin/MockDataBanner";
 import {
   MOCK_WORKLOAD_TEAM,
@@ -62,11 +63,11 @@ const getOverdueChip = (overdue) => {
 
 const AdminWorkload = () => {
   const { showToast } = useToast();
+  const { exportWorkloadReport } = useDownloads();
   const [tab, setTab] = useState("team");
   const [loading, setLoading] = useState(false);
   const [workloadData, setWorkloadData] = useState([]);
   const [alerts, setAlerts] = useState([]);
-  const [exporting, setExporting] = useState(false);
   const [pendingTasks, setPendingTasks] = useState([]);
   const [cases, setCases] = useState([]);
   const [usingMockData, setUsingMockData] = useState(false);
@@ -251,39 +252,11 @@ const AdminWorkload = () => {
   };
 
   const handleExport = async () => {
-    setExporting(true);
-    try {
-      const response = await api.get(`${WORKLOAD_PATH}/export`, {
-        responseType: "blob",
-      });
-      
-      // Get filename from response header if available
-      const contentDisposition = response.headers['content-disposition'];
-      let filename = `workload_report_${new Date().toISOString().split('T')[0]}.csv`;
-      
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="(.+)"/);
-        if (match) filename = match[1];
-      }
-
-      // Create and trigger download
-      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
+    const result = await exportWorkloadReport();
+    if (result.ok) {
       showToast({ message: "Workload report exported successfully", variant: "success" });
-      console.log("Report exported successfully:", filename);
-    } catch (e) {
-      console.error("Failed to export report:", e);
-      showToast({ message: "Failed to export report", variant: "danger" });
-    } finally {
-      setExporting(false);
+    } else {
+      showToast({ message: result.message || "Failed to export report", variant: "danger" });
     }
   };
 
@@ -300,8 +273,8 @@ const AdminWorkload = () => {
             <p className="text-sm text-gray-500 mt-0.5">Caseworker capacity, tasks and deadlines</p>
           </div>
         </div>
-        <button type="button" onClick={handleExport} disabled={exporting} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm shrink-0 self-start disabled:opacity-50 disabled:cursor-not-allowed">
-          {exporting ? <Loader2 size={14} className="animate-spin" /> : <FiDownload size={14} />} Export Report
+        <button type="button" onClick={handleExport} disabled={loading} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm shrink-0 self-start disabled:opacity-50 disabled:cursor-not-allowed">
+          {loading ? <Loader2 size={14} className="animate-spin" /> : <FiDownload size={14} />} Export Report
         </button>
       </div>
 

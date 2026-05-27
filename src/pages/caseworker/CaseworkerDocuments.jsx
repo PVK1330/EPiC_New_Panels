@@ -5,6 +5,7 @@ import api from "../../services/api";
 import { getCaseChecklist } from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
+import useDownloads from "../../hooks/useDownloads";
 
 const DOC_TYPES = DOCUMENT_TYPE_OPTIONS;
 
@@ -57,6 +58,7 @@ export default function CaseworkerDocuments() {
   const [uploadErrors, setUploadErrors] = useState({});
   const [uploadingForItem, setUploadingForItem] = useState(null);
   const { showToast } = useToast();
+  const { downloadCaseworkerDocument, busy } = useDownloads();
 
   const isMissingRoute = location.pathname.includes("/documents/missing");
 
@@ -369,21 +371,9 @@ export default function CaseworkerDocuments() {
   };
 
   const handleDownload = async (documentId) => {
-    try {
-      const response = await api.get(`/api/caseworker/documents/download/${documentId}`, {
-        responseType: "blob",
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "document");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      showToast({ message: "Document download started.", variant: "success" });
-    } catch (error) {
-      console.error("Error downloading document:", error);
-      showToast({ message: "Failed to download document.", variant: "danger" });
+    const result = await downloadCaseworkerDocument(documentId, "document");
+    if (!result.ok) {
+      showToast({ message: result.message || "Failed to download document.", variant: "danger" });
     }
   };
 
