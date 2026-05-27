@@ -1338,14 +1338,14 @@ const Cases = () => {
                                 >
                                   <Eye size={14} />
                                 </button>
-                                <button
+                                {/* <button
                                   type="button"
                                   onClick={() => openCaseEdit(c)}
                                   className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-secondary hover:bg-secondary/5 transition-colors"
                                   title="Edit case"
                                 >
                                   <Pencil size={14} />
-                                </button>
+                                </button> */}
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -1945,7 +1945,7 @@ const Cases = () => {
       </Modal>
 
       {/* ─────────────────────── EDIT CASE MODAL ─────────────────────── */}
-      <Modal
+      {/* <Modal
         open={!!editCaseId}
         onClose={closeCaseEdit}
         title={editCaseId ? `Edit case ${editCaseId}` : ""}
@@ -2361,7 +2361,7 @@ const Cases = () => {
             Save changes
           </button>
         </div>
-      </Modal>
+      </Modal> */}
 
       {/* ─────────────────────── REASSIGN MODAL ─────────────────────── */}
       <Modal
@@ -2548,13 +2548,13 @@ const Cases = () => {
                   <ArrowRightLeft size={14} />
                   Reassign
                 </button>
-                <button
+                {/* <button
                   type="button"
                   onClick={() => openCaseEdit(detailCase)}
                   className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/5"
                 >
                   Edit case
-                </button>
+                </button> */}
               </div>
             </div>
 
