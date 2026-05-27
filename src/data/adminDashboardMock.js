@@ -112,6 +112,39 @@ export const MOCK_RECENT_ACTIVITIES = [
   },
 ];
 
+export const MOCK_RECENT_MESSAGES = [
+  {
+    id: 1,
+    user: { id: 1, first_name: "Amara", last_name: "Okafor" },
+    lastMessage: {
+      content: "Hi, I have some questions about the Skilled Worker visa requirements.",
+      createdAt: new Date(Date.now() - 3600000).toISOString()
+    },
+    unreadCount: 2,
+    case: { caseId: "CAS-105201" }
+  },
+  {
+    id: 2,
+    user: { id: 2, first_name: "James", last_name: "Mitchell" },
+    lastMessage: {
+      content: "I've uploaded my passport scan as requested.",
+      createdAt: new Date(Date.now() - 7200000).toISOString()
+    },
+    unreadCount: 0,
+    case: { caseId: "CAS-105188" }
+  },
+  {
+    id: 3,
+    user: { id: 3, first_name: "Priya", last_name: "Sharma" },
+    lastMessage: {
+      content: "Can we schedule a consultation for next week?",
+      createdAt: new Date(Date.now() - 86400000).toISOString()
+    },
+    unreadCount: 1,
+    case: { caseId: "CAS-105172" }
+  }
+];
+
 export const MOCK_NOTIFICATIONS = [
   {
     id: 1,
