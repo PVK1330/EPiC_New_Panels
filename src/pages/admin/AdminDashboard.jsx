@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react"; 
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+
 import { Skeleton } from "boneyard-js/react";
 import {
   RiFolderOpenLine,
@@ -33,12 +33,15 @@ import {
   normalizeConversationForDashboard,
   sortConversationsByRecent,
 } from "../../utils/messagingConversations";
-import { getNotifications, markNotificationAsRead } from "../../services/notificationApi";
 import {
-
+  getNotifications,
+  markNotificationAsRead,
+} from "../../services/notificationApi";
+import {
   MOCK_DASHBOARD_STATS,
   MOCK_RECENT_CASES,
   MOCK_RECENT_ACTIVITIES,
+  MOCK_RECENT_MESSAGES,
 } from "../../data/adminDashboardMock";
 
 const today = new Date().toLocaleDateString("en-GB", {
@@ -47,22 +50,6 @@ const today = new Date().toLocaleDateString("en-GB", {
   month: "long",
   year: "numeric",
 });
-
-const fade = (delay = 0) => ({
-  initial: { opacity: 0, y: 14 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4, delay },
-});
-
-const stagger = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
-};
-
-const cardItem = {
-  hidden: { opacity: 0, y: 18 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
-};
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -84,6 +71,7 @@ export default function AdminDashboard() {
     setDashboardStats(MOCK_DASHBOARD_STATS);
     setRecentCases(MOCK_RECENT_CASES);
     setRecentActivities(MOCK_RECENT_ACTIVITIES);
+    setRecentMessages(normalizeConversations(MOCK_RECENT_MESSAGES));
     setUsingDemoData(true);
   };
 
@@ -97,15 +85,21 @@ export default function AdminDashboard() {
       setLoading(true);
       setUsingDemoData(false);
 
-      const [statsResult, casesResult, activitiesResult, messagesResult, dueResult, notifResult] =
-        await Promise.allSettled([
-          getDashboardStats({ filter: dashboardFilter }),
-          getRecentCases({ limit: 5 }),
-          getRecentActivities({ limit: 5 }),
-          getConversations(),
-          getDueOverdueTasks(),
-          getNotifications({ limit: 5 })
-        ]);
+      const [
+        statsResult,
+        casesResult,
+        activitiesResult,
+        messagesResult,
+        dueResult,
+        notifResult,
+      ] = await Promise.allSettled([
+        getDashboardStats({ filter: dashboardFilter }),
+        getRecentCases({ limit: 5 }),
+        getRecentActivities({ limit: 5 }),
+        getConversations(),
+        getDueOverdueTasks(),
+        getNotifications({ limit: 5 }),
+      ]);
 
       let anySuccess = false;
 
@@ -129,10 +123,14 @@ export default function AdminDashboard() {
 
       if (messagesResult.status === "fulfilled") {
         const conv = extractConversationsFromResponse(messagesResult.value);
-        setRecentMessages(normalizeConversations(conv));
-        anySuccess = true;
+        if (conv.length > 0) {
+          setRecentMessages(normalizeConversations(conv));
+          anySuccess = true;
+        } else {
+          setRecentMessages(normalizeConversations(MOCK_RECENT_MESSAGES));
+        }
       } else if (messagesResult.status === "rejected") {
-        setRecentMessages([]);
+        setRecentMessages(normalizeConversations(MOCK_RECENT_MESSAGES));
       }
 
       if (dueResult.status === "fulfilled" && dueResult.value?.data?.data) {
@@ -165,7 +163,7 @@ export default function AdminDashboard() {
           setUsingDemoData(true);
         }
         if (messagesResult.status === "rejected") {
-          setRecentMessages([]);
+          setRecentMessages(normalizeConversations(MOCK_RECENT_MESSAGES));
         }
       }
 
@@ -191,7 +189,7 @@ export default function AdminDashboard() {
       try {
         await markNotificationAsRead(notif.id);
         setNotifications((prev) =>
-          prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
+          prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n)),
         );
       } catch (err) {
         console.error("Failed to mark notification as read", err);
@@ -257,7 +255,9 @@ export default function AdminDashboard() {
         },
         {
           label: "Sponsor Alerts",
-          value: (dashboardStats.caseStats?.sponsorExpiryAlerts || 0).toString(),
+          value: (
+            dashboardStats.caseStats?.sponsorExpiryAlerts || 0
+          ).toString(),
           icon: RiBuildingLine,
           iconColor: "text-orange-500",
           iconBg: "bg-orange-50",
@@ -268,30 +268,38 @@ export default function AdminDashboard() {
   return (
     <div ref={dashboardRef} className="pb-10 p-4 max-w-[1600px] mx-auto">
       <Skeleton name="admin-dashboard" loading={loading} animate="shimmer">
-        <motion.div className="space-y-6">
+        <div className="space-y-6">
           {usingDemoData && (
-            <motion.div
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 font-medium"
-            >
-              Showing sample dashboard data — live stats will appear when the API is available.
-            </motion.div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 font-medium">
+              Showing sample dashboard data — live stats will appear when the
+              API is available.
+            </div>
           )}
           {/* Slim Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-gray-100 mb-6">
             <div>
-              <h1 className="text-xl font-black text-secondary tracking-tight">Dashboard</h1>
+              <h1 className="text-xl font-black text-secondary tracking-tight">
+                Dashboard
+              </h1>
               <p className="text-xs text-gray-400 mt-0.5 font-medium">
                 Consolidated platform intelligence — {today}
               </p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={isExporting}
+              >
                 <RiDownloadLine size={14} className="mr-1.5" />
                 {isExporting ? "Exporting..." : "Generate Report"}
               </Button>
-              <Button variant="primary" size="sm" onClick={() => navigate("/admin/cases")}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => navigate("/admin/cases")}
+              >
                 <RiAddLine size={16} className="mr-1" />
                 New Case
               </Button>
@@ -299,36 +307,36 @@ export default function AdminDashboard() {
           </div>
 
           {/* KPI Grid */}
-          <motion.div
-            className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"
-            variants={stagger}
-            initial="hidden"
-            animate="visible"
-          >
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
             {kpiCards.map((card) => (
-              <motion.div
+              <div
                 key={card.label}
-                variants={cardItem}
                 onClick={() => card.to && navigate(card.to)}
                 className={`bg-white rounded-xl border border-gray-100 p-5 shadow-sm relative overflow-hidden group transition-all duration-200 ${
-                  card.to ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5" : ""
+                  card.to
+                    ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5"
+                    : ""
                 }`}
               >
-                <div className={`absolute top-4 right-4 p-2 rounded-xl ${card.iconBg}`}>
+                <div
+                  className={`absolute top-4 right-4 p-2 rounded-xl ${card.iconBg}`}
+                >
                   <card.icon size={18} className={card.iconColor} />
                 </div>
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 pr-10 leading-tight">
                   {card.label}
                 </p>
                 <div className="mt-3 flex items-end gap-2">
-                  <span className="text-2xl font-black text-secondary tracking-tight leading-none">{card.value}</span>
+                  <span className="text-2xl font-black text-secondary tracking-tight leading-none">
+                    {card.value}
+                  </span>
                 </div>
                 {card.to && (
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left rounded-b-xl" />
                 )}
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
 
           {dueOverdue && (
             <DueOverdueTasksWidget
@@ -342,34 +350,67 @@ export default function AdminDashboard() {
             {/* Recent Cases */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-xs font-black text-secondary uppercase tracking-widest">Recent Cases</h3>
-                <button onClick={() => navigate("/admin/cases")} className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest">View All</button>
+                <h3 className="text-xs font-black text-secondary uppercase tracking-widest">
+                  Recent Cases
+                </h3>
+                <button
+                  onClick={() => navigate("/admin/cases")}
+                  className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest"
+                >
+                  View All
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-50 text-left border-b border-gray-100">
-                      {["Case ID", "Candidate", "Visa Type", "Status"].map((h) => (
-                        <th key={h} className="px-5 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                      ))}
+                      {["Case ID", "Candidate", "Visa Type", "Status"].map(
+                        (h) => (
+                          <th
+                            key={h}
+                            className="px-5 py-3 text-[9px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap"
+                          >
+                            {h}
+                          </th>
+                        ),
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {recentCases.map((row) => (
-                      <tr key={row.id} className="hover:bg-gray-50 transition-colors group">
-                        <td className="px-5 py-3.5 font-mono text-[11px] font-bold text-secondary">{row.caseId || `#${row.id}`}</td>
-                        <td className="px-5 py-3.5 text-xs font-bold text-gray-700">
-                          {row.candidate ? `${row.candidate.first_name} ${row.candidate.last_name}` : "Unknown"}
+                      <tr
+                        key={row.id}
+                        className="hover:bg-gray-50 transition-colors group"
+                      >
+                        <td className="px-5 py-3.5 font-mono text-[11px] font-bold text-secondary">
+                          {row.caseId || `#${row.id}`}
                         </td>
-                        <td className="px-5 py-3.5 text-[11px] font-medium text-gray-500">{row.visaType?.name || "N/A"}</td>
+                        <td className="px-5 py-3.5 text-xs font-bold text-gray-700">
+                          {row.candidate
+                            ? `${row.candidate.first_name} ${row.candidate.last_name}`
+                            : "Unknown"}
+                        </td>
+                        <td className="px-5 py-3.5 text-[11px] font-medium text-gray-500">
+                          {row.visaType?.name || "N/A"}
+                        </td>
                         <td className="px-5 py-3.5 flex items-center justify-between">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                            row.status === "Completed" ? "bg-green-50 text-green-700 border-green-100" :
-                            row.status === "Pending" ? "bg-amber-50 text-amber-700 border-amber-100" :
-                            row.status === "Cancelled" ? "bg-red-50 text-red-700 border-red-100" :
-                            "bg-blue-50 text-blue-700 border-blue-100"
-                          }`}>{row.status}</span>
-                          <RiArrowRightSLine size={16} className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                              row.status === "Completed"
+                                ? "bg-green-50 text-green-700 border-green-100"
+                                : row.status === "Pending"
+                                  ? "bg-amber-50 text-amber-700 border-amber-100"
+                                  : row.status === "Cancelled"
+                                    ? "bg-red-50 text-red-700 border-red-100"
+                                    : "bg-blue-50 text-blue-700 border-blue-100"
+                            }`}
+                          >
+                            {row.status}
+                          </span>
+                          <RiArrowRightSLine
+                            size={16}
+                            className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                          />
                         </td>
                       </tr>
                     ))}
@@ -381,17 +422,30 @@ export default function AdminDashboard() {
             {/* Escalations */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col min-h-[400px]">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xs font-black text-secondary uppercase tracking-widest">🚩 Active Escalations</h3>
-                <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest rounded border border-red-100">Action Required</span>
+                <h3 className="text-xs font-black text-secondary uppercase tracking-widest">
+                  🚩 Active Escalations
+                </h3>
+                <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest rounded border border-red-100">
+                  Action Required
+                </span>
               </div>
               <div className="space-y-3 flex-1 overflow-y-auto pr-1">
                 {dashboardStats?.escalations?.length > 0 ? (
                   dashboardStats.escalations.map((esc, i) => (
-                    <div key={esc.id || i} className="flex items-start gap-3 p-4 rounded-xl border border-gray-100 hover:border-red-200 transition-colors group cursor-pointer">
-                      <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${esc.severity === "Critical" ? "bg-red-500 animate-pulse" : "bg-amber-500"}`} />
+                    <div
+                      key={esc.id || i}
+                      className="flex items-start gap-3 p-4 rounded-xl border border-gray-100 hover:border-red-200 transition-colors group cursor-pointer"
+                    >
+                      <div
+                        className={`mt-1 w-2 h-2 rounded-full shrink-0 ${esc.severity === "Critical" ? "bg-red-500 animate-pulse" : "bg-amber-500"}`}
+                      />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-black text-secondary uppercase tracking-tight">{esc.caseId} — {esc.triggerType || "Issue"}</p>
-                        <p className="text-[10px] text-gray-500 mt-1 line-clamp-2">{esc.trigger || esc.candidate}</p>
+                        <p className="text-[11px] font-black text-secondary uppercase tracking-tight">
+                          {esc.caseId} — {esc.triggerType || "Issue"}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1 line-clamp-2">
+                          {esc.trigger || esc.candidate}
+                        </p>
                       </div>
                       <RiArrowRightSLine className="text-gray-300 group-hover:text-red-500 transition-colors" />
                     </div>
@@ -399,7 +453,9 @@ export default function AdminDashboard() {
                 ) : (
                   <div className="flex flex-col items-center justify-center py-10 text-center opacity-40">
                     <RiCheckLine size={32} className="text-green-500 mb-2" />
-                    <p className="text-[10px] font-black uppercase tracking-widest">No active escalations</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest">
+                      No active escalations
+                    </p>
                   </div>
                 )}
               </div>
@@ -407,14 +463,13 @@ export default function AdminDashboard() {
           </div>
 
           {/* Recent Activity + Recent Messages */}
-          <motion.div
-            className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-            {...fade(0.4)}
-          >
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <motion.div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-sm font-black text-secondary">Recent Activity</h3>
-              </motion.div>
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="text-sm font-black text-secondary">
+                  Recent Activity
+                </h3>
+              </div>
               <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto custom-scrollbar">
                 {recentActivities.length > 0 ? (
                   recentActivities.map((activity, i) => (
@@ -423,8 +478,12 @@ export default function AdminDashboard() {
                       className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
                     >
                       <div className="min-w-0 pr-4">
-                        <p className="text-sm font-bold text-secondary truncate">{activity.title}</p>
-                        <p className="text-xs text-gray-400 truncate">{activity.description}</p>
+                        <p className="text-sm font-bold text-secondary truncate">
+                          {activity.title}
+                        </p>
+                        <p className="text-xs text-gray-400 truncate">
+                          {activity.description}
+                        </p>
                       </div>
                       <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap bg-gray-50 px-2 py-1 rounded-lg">
                         {activity.createdAt
@@ -443,7 +502,9 @@ export default function AdminDashboard() {
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
               <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-sm font-black text-secondary">Recent Messages</h3>
+                <h3 className="text-sm font-black text-secondary">
+                  Recent Messages
+                </h3>
                 <button
                   type="button"
                   onClick={() => navigate("/admin/messages")}
@@ -455,11 +516,13 @@ export default function AdminDashboard() {
               <div className="flex-1 divide-y divide-gray-50 max-h-[350px] overflow-y-auto custom-scrollbar">
                 {recentMessages.length > 0 ? (
                   recentMessages.map((conv) => (
-                    <motion.div
+                    <div
                       key={conv.id}
                       onClick={() =>
                         conv.user?.id &&
-                        navigate("/admin/messages", { state: { userId: conv.user.id } })
+                        navigate("/admin/messages", {
+                          state: { userId: conv.user.id },
+                        })
                       }
                       className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer group"
                     >
@@ -481,7 +544,9 @@ export default function AdminDashboard() {
                           </p>
                           <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap ml-2">
                             {conv.lastMessage?.createdAt
-                              ? new Date(conv.lastMessage.createdAt).toLocaleDateString()
+                              ? new Date(
+                                  conv.lastMessage.createdAt,
+                                ).toLocaleDateString()
                               : ""}
                           </span>
                         </div>
@@ -496,7 +561,7 @@ export default function AdminDashboard() {
                           </div>
                         )}
                       </div>
-                    </motion.div>
+                    </div>
                   ))
                 ) : (
                   <div className="px-6 py-10 text-center text-gray-400 opacity-40">
@@ -509,7 +574,8 @@ export default function AdminDashboard() {
                 className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 shrink-0"
                 onClick={() => navigate("/admin/messages")}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") navigate("/admin/messages");
+                  if (e.key === "Enter" || e.key === " ")
+                    navigate("/admin/messages");
                 }}
                 role="button"
                 tabIndex={0}
@@ -527,16 +593,15 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Notifications Section */}
-          <motion.div
-            className="grid grid-cols-1 mt-6"
-            {...fade(0.5)}
-          >
+          <div className="grid grid-cols-1 mt-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
               <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-sm font-black text-secondary">Recent Notifications</h3>
+                <h3 className="text-sm font-black text-secondary">
+                  Recent Notifications
+                </h3>
                 <button
                   type="button"
                   onClick={() => navigate("/admin/notifications")}
@@ -548,49 +613,53 @@ export default function AdminDashboard() {
               <div className="flex-1 divide-y divide-gray-50 max-h-[350px] overflow-y-auto custom-scrollbar">
                 {notifications.length > 0 ? (
                   notifications.map((notif) => (
-                    <motion.div
+                    <div
                       key={notif.id}
                       onClick={() => handleNotificationClick(notif)}
-                      className={`flex items-center gap-4 px-6 py-4 transition-colors cursor-pointer group ${notif.isRead ? 'hover:bg-gray-50' : 'bg-blue-50/30 hover:bg-blue-50/50'}`}
+                      className={`flex items-center gap-4 px-6 py-4 transition-colors cursor-pointer group ${notif.isRead ? "hover:bg-gray-50" : "bg-blue-50/30 hover:bg-blue-50/50"}`}
                     >
                       <div className="flex-1 min-w-0 pr-2">
                         <div className="flex items-center justify-between mb-0.5">
-                          <p className={`text-sm font-bold truncate transition-colors ${notif.isRead ? 'text-secondary group-hover:text-primary' : 'text-primary'}`}>
+                          <p
+                            className={`text-sm font-bold truncate transition-colors ${notif.isRead ? "text-secondary group-hover:text-primary" : "text-primary"}`}
+                          >
                             {notif.title}
                           </p>
                           <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap ml-2">
-                            {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : ""}
+                            {notif.createdAt
+                              ? new Date(notif.createdAt).toLocaleDateString()
+                              : ""}
                           </span>
                         </div>
                         <p className="text-xs text-gray-500 truncate leading-relaxed">
                           {notif.message}
                         </p>
                       </div>
-                    </motion.div>
+                    </div>
                   ))
                 ) : (
                   <div className="px-6 py-10 text-center text-gray-400 opacity-40">
-                    <RiAlarmWarningLine size={32} className="mx-auto mb-2 opacity-20" />
+                    <RiAlarmWarningLine
+                      size={32}
+                      className="mx-auto mb-2 opacity-20"
+                    />
                     <p className="text-xs font-bold">No recent notifications</p>
                   </div>
                 )}
               </div>
             </div>
-          </motion.div>
-
-        </motion.div>
+          </div>
+        </div>
       </Skeleton>
 
       {/* Notification Details Modal */}
       {selectedNotification && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden"
-          >
+          <div className="bg-white rounded-xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-              <h3 className="text-sm font-black text-secondary">Notification Details</h3>
+              <h3 className="text-sm font-black text-secondary">
+                Notification Details
+              </h3>
               <button
                 onClick={() => setSelectedNotification(null)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -600,51 +669,81 @@ export default function AdminDashboard() {
             </div>
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-bold text-secondary">{selectedNotification.title}</h4>
+                <h4 className="text-lg font-bold text-secondary">
+                  {selectedNotification.title}
+                </h4>
                 {selectedNotification.priority && (
-                  <span className={`px-2 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${
-                    selectedNotification.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                    selectedNotification.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                    selectedNotification.priority === 'low' ? 'bg-gray-100 text-gray-700' :
-                    'bg-blue-100 text-blue-700'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                      selectedNotification.priority === "urgent"
+                        ? "bg-red-100 text-red-700"
+                        : selectedNotification.priority === "high"
+                          ? "bg-orange-100 text-orange-700"
+                          : selectedNotification.priority === "low"
+                            ? "bg-gray-100 text-gray-700"
+                            : "bg-blue-100 text-blue-700"
+                    }`}
+                  >
                     {selectedNotification.priority} Priority
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-600 mb-6 whitespace-pre-wrap leading-relaxed">{selectedNotification.message}</p>
-              
-              {selectedNotification.metadata && Object.keys(selectedNotification.metadata).length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
-                  <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Notification Details</h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
-                    {Object.entries(selectedNotification.metadata).map(([key, value]) => (
-                      <div key={key}>
-                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                          {key.replace(/([A-Z])/g, ' $1').trim()}
-                        </div>
-                        <div className="text-sm font-semibold text-secondary mt-0.5 break-words">
-                          {Array.isArray(value) ? value.join(', ') : String(value)}
-                        </div>
-                      </div>
-                    ))}
+              <p className="text-sm text-gray-600 mb-6 whitespace-pre-wrap leading-relaxed">
+                {selectedNotification.message}
+              </p>
+
+              {selectedNotification.metadata &&
+                Object.keys(selectedNotification.metadata).length > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
+                    <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                      Notification Details
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
+                      {Object.entries(selectedNotification.metadata).map(
+                        ([key, value]) => (
+                          <div key={key}>
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                              {key.replace(/([A-Z])/g, " $1").trim()}
+                            </div>
+                            <div className="text-sm font-semibold text-secondary mt-0.5 break-words">
+                              {Array.isArray(value)
+                                ? value.join(", ")
+                                : String(value)}
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-              
+                )}
+
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
-                Received: {new Date(selectedNotification.createdAt).toLocaleString()}
+                Received:{" "}
+                {new Date(selectedNotification.createdAt).toLocaleString()}
               </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
-              <Button variant="primary" onClick={() => setSelectedNotification(null)}>
+              <Button
+                variant="primary"
+                onClick={() => setSelectedNotification(null)}
+              >
                 Close
               </Button>
             </div>
-          </motion.div>
+          </div>
         </div>
       )}
     </div>

@@ -13,7 +13,7 @@ import { useDispatch, useSelector } from"react-redux";
 import { useNavigate, useLocation, Link } from"react-router-dom";
 import { logout } from"../store/slices/authSlice";
 import { getProfileMenuPaths } from "../utils/authResponse";
-import NotificationDropdown from"./Notifications/NotificationDropdown";
+import NotificationDropdown from"./notifications/NotificationDropdown";
 import MessageDropdown from"./notifications/MessageDropdown";
 import { resolveAssetUrl } from "../utils/assetUrl";
 

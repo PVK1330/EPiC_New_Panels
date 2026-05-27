@@ -1,10 +1,24 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
-  FiCalendar, FiDownload, FiSearch, FiChevronLeft, FiChevronRight,
-  FiX, FiEye, FiUser, FiCheckCircle, FiAlertCircle, FiClock,
-  FiTrendingUp, FiTrendingDown, FiStar, FiFileText, FiArrowLeft,
-  FiFilter, FiLoader, FiRefreshCw
+  FiCalendar,
+  FiDownload,
+  FiSearch,
+  FiChevronLeft,
+  FiChevronRight,
+  FiX,
+  FiEye,
+  FiUser,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiClock,
+  FiTrendingUp,
+  FiTrendingDown,
+  FiStar,
+  FiFileText,
+  FiArrowLeft,
+  FiFilter,
+  FiLoader,
+  FiRefreshCw,
 } from "react-icons/fi";
 import { RiBarChartLine } from "react-icons/ri";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
@@ -40,8 +54,18 @@ const TABS = [
 ];
 
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 const DAY_NAMES = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
@@ -52,7 +76,11 @@ const tableHead =
 
 function formatDate(date) {
   if (!date) return "";
-  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function sameDay(a, b) {
@@ -109,11 +137,17 @@ function StarRating({ value }) {
         <FiStar
           key={s}
           size={11}
-          className={s <= Math.round(value) ? "text-amber-400 fill-amber-400" : "text-gray-200"}
+          className={
+            s <= Math.round(value)
+              ? "text-amber-400 fill-amber-400"
+              : "text-gray-200"
+          }
           style={s <= Math.round(value) ? { fill: "currentColor" } : {}}
         />
       ))}
-      <span className="ml-1 text-[11px] font-bold text-gray-600">{value.toFixed(1)}</span>
+      <span className="ml-1 text-[11px] font-bold text-gray-600">
+        {value.toFixed(1)}
+      </span>
     </div>
   );
 }
@@ -121,7 +155,13 @@ function StarRating({ value }) {
 // Mini sparkline using SVG
 function Sparkline({ data, color = "#6366f1" }) {
   if (!data || data.length === 0) {
-    return <svg width={80} height={30} className="overflow-visible"><text x={5} y={20} fontSize={10} fill="#999">No data</text></svg>;
+    return (
+      <svg width={80} height={30} className="overflow-visible">
+        <text x={5} y={20} fontSize={10} fill="#999">
+          No data
+        </text>
+      </svg>
+    );
   }
 
   const max = Math.max(...data);
@@ -164,17 +204,20 @@ function DateRangePicker({ startDate, endDate, onChange }) {
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [rightYear, setRightYear] = useState(
-    today.getMonth() === 11 ? today.getFullYear() + 1 : today.getFullYear()
+    today.getMonth() === 11 ? today.getFullYear() + 1 : today.getFullYear(),
   );
   const [rightMonth, setRightMonth] = useState(
-    today.getMonth() === 11 ? 0 : today.getMonth() + 1
+    today.getMonth() === 11 ? 0 : today.getMonth() + 1,
   );
   const ref = useRef(null);
 
   useEffect(() => {
     let ry = viewYear;
     let rm = viewMonth + 1;
-    if (rm > 11) { rm = 0; ry += 1; }
+    if (rm > 11) {
+      rm = 0;
+      ry += 1;
+    }
     setRightYear(ry);
     setRightMonth(rm);
   }, [viewYear, viewMonth]);
@@ -188,13 +231,17 @@ function DateRangePicker({ startDate, endDate, onChange }) {
   }, []);
 
   function prevMonth() {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
-    else setViewMonth(m => m - 1);
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear((y) => y - 1);
+    } else setViewMonth((m) => m - 1);
   }
 
   function nextMonth() {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
-    else setViewMonth(m => m + 1);
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear((y) => y + 1);
+    } else setViewMonth((m) => m + 1);
   }
 
   function handleDayClick(date) {
@@ -213,11 +260,15 @@ function DateRangePicker({ startDate, endDate, onChange }) {
   const effectiveStart = selecting || startDate;
   const effectiveEnd = selecting
     ? hovered && !sameDay(hovered, selecting)
-      ? isBefore(selecting, hovered) ? hovered : selecting
+      ? isBefore(selecting, hovered)
+        ? hovered
+        : selecting
       : null
     : endDate;
   const effectiveStartFinal =
-    selecting && hovered && isBefore(hovered, selecting) ? hovered : effectiveStart;
+    selecting && hovered && isBefore(hovered, selecting)
+      ? hovered
+      : effectiveStart;
 
   function renderMonth(year, month) {
     const days = getDaysInMonth(year, month);
@@ -233,16 +284,27 @@ function DateRangePicker({ startDate, endDate, onChange }) {
           {MONTH_NAMES[month]} {year}
         </p>
         <div className="grid grid-cols-7 mb-1">
-          {DAY_NAMES.map(d => (
-            <div key={d} className="text-center text-[10px] font-bold text-gray-400 uppercase py-1">{d}</div>
+          {DAY_NAMES.map((d) => (
+            <div
+              key={d}
+              className="text-center text-[10px] font-bold text-gray-400 uppercase py-1"
+            >
+              {d}
+            </div>
           ))}
         </div>
         <div className="grid grid-cols-7 gap-y-0.5">
           {cells.map((date, i) => {
             if (!date) return <div key={`e-${i}`} />;
-            const isStart = sameDay(date, effectiveStart) || sameDay(date, effectiveStartFinal);
+            const isStart =
+              sameDay(date, effectiveStart) ||
+              sameDay(date, effectiveStartFinal);
             const isEnd = sameDay(date, effectiveEnd);
-            const isInRange = inRange(date, effectiveStartFinal || effectiveStart, effectiveEnd);
+            const isInRange = inRange(
+              date,
+              effectiveStartFinal || effectiveStart,
+              effectiveEnd,
+            );
             const isToday = sameDay(date, today);
 
             let bg = "";
@@ -252,11 +314,12 @@ function DateRangePicker({ startDate, endDate, onChange }) {
             if (isStart || isEnd) {
               bg = "bg-secondary";
               text = "text-white";
-              rounded = isStart && isEnd
-                ? "rounded-lg"
-                : isStart
-                  ? "rounded-l-lg rounded-r-none"
-                  : "rounded-r-lg rounded-l-none";
+              rounded =
+                isStart && isEnd
+                  ? "rounded-lg"
+                  : isStart
+                    ? "rounded-l-lg rounded-r-none"
+                    : "rounded-r-lg rounded-l-none";
             } else if (isInRange) {
               bg = "bg-secondary/10";
               text = "text-secondary font-semibold";
@@ -290,9 +353,12 @@ function DateRangePicker({ startDate, endDate, onChange }) {
       </label>
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
-        className={`inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-xl bg-white transition-all w-full sm:w-auto sm:min-w-[260px] ${open ? "border-secondary/50 ring-2 ring-secondary/20 shadow-sm" : "border-gray-200 hover:border-gray-300"
-          }`}
+        onClick={() => setOpen((o) => !o)}
+        className={`inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-xl bg-white transition-all w-full sm:w-auto sm:min-w-[260px] ${
+          open
+            ? "border-secondary/50 ring-2 ring-secondary/20 shadow-sm"
+            : "border-gray-200 hover:border-gray-300"
+        }`}
       >
         <FiCalendar size={14} className="text-gray-400 shrink-0" />
         {hasRange ? (
@@ -300,7 +366,9 @@ function DateRangePicker({ startDate, endDate, onChange }) {
             {formatDate(startDate)} → {formatDate(endDate)}
           </span>
         ) : (
-          <span className="text-gray-400 flex-1 text-left">Select your date</span>
+          <span className="text-gray-400 flex-1 text-left">
+            Select your date
+          </span>
         )}
         {hasRange && (
           <span
@@ -311,7 +379,9 @@ function DateRangePicker({ startDate, endDate, onChange }) {
               onChange({ start: null, end: null });
               setSelecting(null);
             }}
-            onKeyDown={(e) => e.key === "Enter" && onChange({ start: null, end: null })}
+            onKeyDown={(e) =>
+              e.key === "Enter" && onChange({ start: null, end: null })
+            }
             className="ml-auto text-gray-300 hover:text-gray-500 transition-colors"
           >
             <FiX size={13} />
@@ -319,99 +389,122 @@ function DateRangePicker({ startDate, endDate, onChange }) {
         )}
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.97 }}
-            transition={{ duration: 0.15 }}
-            className="absolute left-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 min-w-[340px] sm:min-w-[600px]"
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                {selecting ? "Now pick an end date" : "Pick a start date"}
-              </span>
-              {selecting && (
+      {open && (
+        <div className="absolute left-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 min-w-[340px] sm:min-w-[600px]">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+              {selecting ? "Now pick an end date" : "Pick a start date"}
+            </span>
+            {selecting && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelecting(null);
+                  onChange({ start: null, end: null });
+                }}
+                className="text-[11px] text-gray-400 hover:text-gray-600 underline"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-2">
                 <button
                   type="button"
-                  onClick={() => { setSelecting(null); onChange({ start: null, end: null }); }}
-                  className="text-[11px] text-gray-400 hover:text-gray-600 underline"
+                  onClick={prevMonth}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
                 >
-                  Reset
+                  <FiChevronLeft size={15} />
                 </button>
-              )}
-            </div>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <button type="button" onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
-                    <FiChevronLeft size={15} />
-                  </button>
-                  <span />
-                  <button type="button" onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 sm:invisible">
-                    <FiChevronRight size={15} />
-                  </button>
-                </div>
-                {renderMonth(viewYear, viewMonth)}
-              </div>
-              <div className="hidden sm:block w-px bg-gray-100 self-stretch" />
-              <div className="flex-1 hidden sm:block">
-                <div className="flex items-center justify-between mb-2">
-                  <span />
-                  <button type="button" onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
-                    <FiChevronRight size={15} />
-                  </button>
-                </div>
-                {renderMonth(rightYear, rightMonth)}
-              </div>
-            </div>
-            <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-2">
-              {[
-                {
-                  label: "This month",
-                  fn: () => {
-                    const n = new Date();
-                    onChange({ start: new Date(n.getFullYear(), n.getMonth(), 1), end: new Date(n.getFullYear(), n.getMonth() + 1, 0) });
-                    setSelecting(null); setOpen(false);
-                  },
-                },
-                {
-                  label: "Last 30 days",
-                  fn: () => {
-                    const e = new Date(); const s = new Date(); s.setDate(s.getDate() - 29);
-                    onChange({ start: s, end: e }); setSelecting(null); setOpen(false);
-                  },
-                },
-                {
-                  label: "Last 90 days",
-                  fn: () => {
-                    const e = new Date(); const s = new Date(); s.setDate(s.getDate() - 89);
-                    onChange({ start: s, end: e }); setSelecting(null); setOpen(false);
-                  },
-                },
-                {
-                  label: "This year",
-                  fn: () => {
-                    const n = new Date();
-                    onChange({ start: new Date(n.getFullYear(), 0, 1), end: new Date(n.getFullYear(), 11, 31) });
-                    setSelecting(null); setOpen(false);
-                  },
-                },
-              ].map(p => (
+                <span />
                 <button
-                  key={p.label}
                   type="button"
-                  onClick={p.fn}
-                  className="px-3 py-1 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
+                  onClick={nextMonth}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 sm:invisible"
                 >
-                  {p.label}
+                  <FiChevronRight size={15} />
                 </button>
-              ))}
+              </div>
+              {renderMonth(viewYear, viewMonth)}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <div className="hidden sm:block w-px bg-gray-100 self-stretch" />
+            <div className="flex-1 hidden sm:block">
+              <div className="flex items-center justify-between mb-2">
+                <span />
+                <button
+                  type="button"
+                  onClick={nextMonth}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
+                >
+                  <FiChevronRight size={15} />
+                </button>
+              </div>
+              {renderMonth(rightYear, rightMonth)}
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-2">
+            {[
+              {
+                label: "This month",
+                fn: () => {
+                  const n = new Date();
+                  onChange({
+                    start: new Date(n.getFullYear(), n.getMonth(), 1),
+                    end: new Date(n.getFullYear(), n.getMonth() + 1, 0),
+                  });
+                  setSelecting(null);
+                  setOpen(false);
+                },
+              },
+              {
+                label: "Last 30 days",
+                fn: () => {
+                  const e = new Date();
+                  const s = new Date();
+                  s.setDate(s.getDate() - 29);
+                  onChange({ start: s, end: e });
+                  setSelecting(null);
+                  setOpen(false);
+                },
+              },
+              {
+                label: "Last 90 days",
+                fn: () => {
+                  const e = new Date();
+                  const s = new Date();
+                  s.setDate(s.getDate() - 89);
+                  onChange({ start: s, end: e });
+                  setSelecting(null);
+                  setOpen(false);
+                },
+              },
+              {
+                label: "This year",
+                fn: () => {
+                  const n = new Date();
+                  onChange({
+                    start: new Date(n.getFullYear(), 0, 1),
+                    end: new Date(n.getFullYear(), 11, 31),
+                  });
+                  setSelecting(null);
+                  setOpen(false);
+                },
+              },
+            ].map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={p.fn}
+                className="px-3 py-1 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -432,24 +525,18 @@ function DateRangeBadge({ startDate, endDate }) {
     days = Math.round(diff / (1000 * 60 * 60 * 24)) + 1;
   }
   return (
-    <AnimatePresence>
-      <motion.div
-        key="badge"
-        initial={{ opacity: 0, scale: 0.92, x: 8 }}
-        animate={{ opacity: 1, scale: 1, x: 0 }}
-        exit={{ opacity: 0, scale: 0.92 }}
-        transition={{ duration: 0.2 }}
-        className="inline-flex items-center gap-2 px-4 py-2.5 bg-secondary/5 border border-secondary/20 rounded-xl text-sm font-bold text-secondary shadow-sm"
-      >
-        <FiCalendar size={13} className="shrink-0 opacity-70" />
-        <span>{label}</span>
-        {days !== null && (
-          <span className="ml-1 px-1.5 py-0.5 rounded-md bg-secondary/15 text-[10px] font-black text-secondary">
-            {days}d
-          </span>
-        )}
-      </motion.div>
-    </AnimatePresence>
+    <div
+      key="badge"
+      className="inline-flex items-center gap-2 px-4 py-2.5 bg-secondary/5 border border-secondary/20 rounded-xl text-sm font-bold text-secondary shadow-sm"
+    >
+      <FiCalendar size={13} className="shrink-0 opacity-70" />
+      <span>{label}</span>
+      {days !== null && (
+        <span className="ml-1 px-1.5 py-0.5 rounded-md bg-secondary/15 text-[10px] font-black text-secondary">
+          {days}d
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -459,171 +546,259 @@ function PerformanceDetailModal({ caseworker, onClose, showToast }) {
   if (!caseworker) return null;
 
   return (
-    <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm overflow-y-auto py-8 px-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={(e) => e.target === e.currentTarget && onClose()}
-      >
-        <motion.div
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl border border-gray-100"
-          initial={{ opacity: 0, y: 24, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 12, scale: 0.97 }}
-          transition={{ duration: 0.22 }}
-        >
-          {/* Modal Header */}
-          <div className="flex items-center justify-between p-5 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0 ${caseworker.avatarBg || "bg-blue-500"}`}>
-                {caseworker.initials || "N/A"}
-              </div>
-              <div>
-                <h2 className="text-base font-black text-secondary">{caseworker.name || "N/A"}</h2>
-                <p className="text-xs text-gray-400">{caseworker.id || "N/A"} · {caseworker.department || "General"} · Joined {caseworker.joinDate || new Date().toLocaleDateString("en-GB")}</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm overflow-y-auto py-8 px-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl border border-gray-100">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0 ${caseworker.avatarBg || "bg-blue-500"}`}
             >
-              <FiX size={18} />
-            </button>
+              {caseworker.initials || "N/A"}
+            </div>
+            <div>
+              <h2 className="text-base font-black text-secondary">
+                {caseworker.name || "N/A"}
+              </h2>
+              <p className="text-xs text-gray-400">
+                {caseworker.id || "N/A"} · {caseworker.department || "General"}{" "}
+                · Joined{" "}
+                {caseworker.joinDate || new Date().toLocaleDateString("en-GB")}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <FiX size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* KPI Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              {
+                label: "Total Cases",
+                value: caseworker.totalCases || 0,
+                icon: <FiFileText size={14} />,
+                color: "text-blue-600",
+                bg: "bg-blue-50",
+              },
+              {
+                label: "SLA Met",
+                value: `${caseworker.slaMetPct || 0}%`,
+                icon: <FiCheckCircle size={14} />,
+                color: "text-green-600",
+                bg: "bg-green-50",
+              },
+              {
+                label: "Avg Days",
+                value: `${caseworker.avgCompletionDays || 0}d`,
+                icon: <FiClock size={14} />,
+                color: "text-amber-700",
+                bg: "bg-amber-50",
+              },
+              {
+                label: "Escalations",
+                value: caseworker.escalations || 0,
+                icon: <FiAlertCircle size={14} />,
+                color: "text-red-600",
+                bg: "bg-red-50",
+              },
+            ].map((k) => (
+              <div
+                key={k.label}
+                className={`rounded-xl p-3.5 ${k.bg} border border-white`}
+              >
+                <div className={`flex items-center gap-1.5 mb-1 ${k.color}`}>
+                  {k.icon}
+                  <span className="text-[10px] font-black uppercase tracking-wide">
+                    {k.label}
+                  </span>
+                </div>
+                <p className={`text-2xl font-black ${k.color}`}>{k.value}</p>
+              </div>
+            ))}
           </div>
 
-          <div className="p-5 space-y-5">
-            {/* KPI Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: "Total Cases", value: caseworker.totalCases || 0, icon: <FiFileText size={14} />, color: "text-blue-600", bg: "bg-blue-50" },
-                { label: "SLA Met", value: `${caseworker.slaMetPct || 0}%`, icon: <FiCheckCircle size={14} />, color: "text-green-600", bg: "bg-green-50" },
-                { label: "Avg Days", value: `${caseworker.avgCompletionDays || 0}d`, icon: <FiClock size={14} />, color: "text-amber-700", bg: "bg-amber-50" },
-                { label: "Escalations", value: caseworker.escalations || 0, icon: <FiAlertCircle size={14} />, color: "text-red-600", bg: "bg-red-50" },
-              ].map((k) => (
-                <div key={k.label} className={`rounded-xl p-3.5 ${k.bg} border border-white`}>
-                  <div className={`flex items-center gap-1.5 mb-1 ${k.color}`}>
-                    {k.icon}
-                    <span className="text-[10px] font-black uppercase tracking-wide">{k.label}</span>
-                  </div>
-                  <p className={`text-2xl font-black ${k.color}`}>{k.value}</p>
-                </div>
-              ))}
+          {/* Satisfaction + Trend */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">
+                Client Satisfaction
+              </p>
+              <StarRating value={caseworker.clientSatisfaction || 3} />
+              <p className="text-xs text-gray-400 mt-1.5">
+                {caseworker.completedCases || 0} completed cases reviewed
+              </p>
             </div>
-
-            {/* Satisfaction + Trend */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">Client Satisfaction</p>
-                <StarRating value={caseworker.clientSatisfaction || 3} />
-                <p className="text-xs text-gray-400 mt-1.5">{caseworker.completedCases || 0} completed cases reviewed</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">12-Month Case Trend</p>
-                <Sparkline data={caseworker.monthlyTrend || Array(12).fill(0)} color="#6366f1" />
-                {caseworker.monthlyTrend && caseworker.monthlyTrend.length > 0 ? (
-                  <p className="text-xs text-gray-400 mt-1">
-                    {caseworker.monthlyTrend[caseworker.monthlyTrend.length - 1] > caseworker.monthlyTrend[0]
-                      ? <span className="text-green-600 font-bold">↑ Improving</span>
-                      : <span className="text-red-500 font-bold">↓ Declining</span>}
-                  </p>
-                ) : (
-                  <p className="text-xs text-gray-400 mt-1">No trend data</p>
-                )}
-              </div>
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">
+                12-Month Case Trend
+              </p>
+              <Sparkline
+                data={caseworker.monthlyTrend || Array(12).fill(0)}
+                color="#6366f1"
+              />
+              {caseworker.monthlyTrend && caseworker.monthlyTrend.length > 0 ? (
+                <p className="text-xs text-gray-400 mt-1">
+                  {caseworker.monthlyTrend[caseworker.monthlyTrend.length - 1] >
+                  caseworker.monthlyTrend[0] ? (
+                    <span className="text-green-600 font-bold">
+                      ↑ Improving
+                    </span>
+                  ) : (
+                    <span className="text-red-500 font-bold">↓ Declining</span>
+                  )}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-400 mt-1">No trend data</p>
+              )}
             </div>
+          </div>
 
-            {/* Visa Breakdown */}
-            <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">Cases by Visa Type</p>
-              {caseworker.visaBreakdown && caseworker.visaBreakdown.length > 0 ? (
-                <div className="space-y-2">
-                  {caseworker.visaBreakdown.map((v) => {
-                    const pct = caseworker.totalCases > 0 ? Math.round((v.count / caseworker.totalCases) * 100) : 0;
-                    return (
-                      <div key={v.type}>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-semibold text-gray-700">{v.type}</span>
-                          <span className="text-gray-500 font-mono">{v.count} ({pct}%)</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <motion.div
-                            className="h-full rounded-full bg-secondary"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
-                            transition={{ duration: 0.5, ease: "easeOut" }}
-                          />
-                        </div>
+          {/* Visa Breakdown */}
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">
+              Cases by Visa Type
+            </p>
+            {caseworker.visaBreakdown && caseworker.visaBreakdown.length > 0 ? (
+              <div className="space-y-2">
+                {caseworker.visaBreakdown.map((v) => {
+                  const pct =
+                    caseworker.totalCases > 0
+                      ? Math.round((v.count / caseworker.totalCases) * 100)
+                      : 0;
+                  return (
+                    <div key={v.type}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="font-semibold text-gray-700">
+                          {v.type}
+                        </span>
+                        <span className="text-gray-500 font-mono">
+                          {v.count} ({pct}%)
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-xs text-gray-400">No visa type data available</p>
-              )}
-            </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-secondary"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">
+                No visa type data available
+              </p>
+            )}
+          </div>
 
-            {/* Recent Cases */}
-            <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">Recent Cases</p>
-              {caseworker.recentCases && caseworker.recentCases.length > 0 ? (
-                <div className="rounded-xl border border-gray-100 overflow-hidden">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-gray-50 text-left">
-                        {["Case ID", "Client", "Visa Type", "Status", "Date", "SLA"].map(h => (
-                          <th key={h} className="px-3 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {caseworker.recentCases.map((c) => (
-                        <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
-                          <td className="px-3 py-2.5 font-mono text-secondary font-bold">{c.id || c.caseId || "N/A"}</td>
-                          <td className="px-3 py-2.5 font-medium text-gray-700 whitespace-nowrap">{c.client || "N/A"}</td>
-                          <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">{c.type || "N/A"}</td>
-                          <td className="px-3 py-2.5">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${getCaseStatusChip(c.status)}`}>{c.status || "N/A"}</span>
-                          </td>
-                          <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">{c.date || "N/A"}</td>
-                          <td className="px-3 py-2.5">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${getSlaStatusChip(c.sla)}`}>{c.sla || "N/A"}</span>
-                          </td>
-                        </tr>
+          {/* Recent Cases */}
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">
+              Recent Cases
+            </p>
+            {caseworker.recentCases && caseworker.recentCases.length > 0 ? (
+              <div className="rounded-xl border border-gray-100 overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 text-left">
+                      {[
+                        "Case ID",
+                        "Client",
+                        "Visa Type",
+                        "Status",
+                        "Date",
+                        "SLA",
+                      ].map((h) => (
+                        <th
+                          key={h}
+                          className="px-3 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                        >
+                          {h}
+                        </th>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-6 text-gray-400">
-                  <p className="text-sm">No recent cases available</p>
-                </div>
-              )}
-            </div>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {caseworker.recentCases.map((c) => (
+                      <tr
+                        key={c.id}
+                        className="hover:bg-gray-50/60 transition-colors"
+                      >
+                        <td className="px-3 py-2.5 font-mono text-secondary font-bold">
+                          {c.id || c.caseId || "N/A"}
+                        </td>
+                        <td className="px-3 py-2.5 font-medium text-gray-700 whitespace-nowrap">
+                          {c.client || "N/A"}
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">
+                          {c.type || "N/A"}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${getCaseStatusChip(c.status)}`}
+                          >
+                            {c.status || "N/A"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">
+                          {c.date || "N/A"}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${getSlaStatusChip(c.sla)}`}
+                          >
+                            {c.sla || "N/A"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-400">
+                <p className="text-sm">No recent cases available</p>
+              </div>
+            )}
           </div>
+        </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50/60 rounded-b-2xl">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-xl"
-              onClick={onClose}
-            >
-              Close
-            </Button>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50/60 rounded-b-2xl">
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-xl"
+            onClick={onClose}
+          >
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
 // ─── Performance Tab ──────────────────────────────────────────────────────────
 
-function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, refreshTrigger }) {
+function PerformanceTab({
+  dateRange,
+  performanceData,
+  deptOptions,
+  showToast,
+  refreshTrigger,
+}) {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [slaFilter, setSlaFilter] = useState("all");
@@ -633,9 +808,7 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
   const [error, setError] = useState(null);
   const [searchTimeout, setSearchTimeout] = useState(null);
 
-  const DEPT_OPTIONS = [
-    { value: "all", label: "All departments" },
-  ];
+  const DEPT_OPTIONS = [{ value: "all", label: "All departments" }];
 
   const SLA_OPTIONS = [
     { value: "all", label: "All SLA levels" },
@@ -645,68 +818,73 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
   ];
 
   // API-based fetch using standard reporting wrapper
-  const fetchFilteredCaseworkers = useCallback(async (searchTerm = "", dept = "all", sla = "all") => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = {};
-      if (dateRange?.start) {
-        params.startDate = dateRange.start.toISOString().split('T')[0];
-      }
-      if (dateRange?.end) {
-        params.endDate = dateRange.end.toISOString().split('T')[0];
-      }
+  const fetchFilteredCaseworkers = useCallback(
+    async (searchTerm = "", dept = "all", sla = "all") => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = {};
+        if (dateRange?.start) {
+          params.startDate = dateRange.start.toISOString().split("T")[0];
+        }
+        if (dateRange?.end) {
+          params.endDate = dateRange.end.toISOString().split("T")[0];
+        }
 
-      const response = await getPerformanceReport(params);
-      let rawList = response.data?.data || [];
+        const response = await getPerformanceReport(params);
+        let rawList = response.data?.data || [];
 
-      // Client-side filtering to mimic local search/sla filtering
-      if (searchTerm.trim()) {
-        const q = searchTerm.trim().toLowerCase();
-        rawList = rawList.filter(cw =>
-          (cw.name || '').toLowerCase().includes(q) ||
-          (cw.id || '').toLowerCase().includes(q) ||
-          (cw.email || '').toLowerCase().includes(q)
-        );
-      }
+        // Client-side filtering to mimic local search/sla filtering
+        if (searchTerm.trim()) {
+          const q = searchTerm.trim().toLowerCase();
+          rawList = rawList.filter(
+            (cw) =>
+              (cw.name || "").toLowerCase().includes(q) ||
+              (cw.id || "").toLowerCase().includes(q) ||
+              (cw.email || "").toLowerCase().includes(q),
+          );
+        }
 
-      if (sla !== "all") {
-        rawList = rawList.filter(cw => {
+        if (sla !== "all") {
+          rawList = rawList.filter((cw) => {
+            const pct = cw.slaMetPct || 0;
+            if (sla === "high") return pct >= 90;
+            if (sla === "mid") return pct >= 75 && pct < 90;
+            if (sla === "low") return pct < 75;
+            return true;
+          });
+        }
+
+        // Normalize data to fit component UI expectations perfectly
+        const normalizedData = rawList.map((cw) => {
           const pct = cw.slaMetPct || 0;
-          if (sla === "high") return pct >= 90;
-          if (sla === "mid") return pct >= 75 && pct < 90;
-          if (sla === "low") return pct < 75;
-          return true;
+          return {
+            ...cw,
+            id: cw.id,
+            caseworker_id: cw.id,
+            name: cw.name || "N/A",
+            email: cw.email || "N/A",
+            department: cw.department || "Immigration",
+            active_cases: cw.activeCases || 0,
+            completed_cases: cw.completedCases || 0,
+            workload_percentage: pct,
+            health_status:
+              pct >= 80 ? "healthy" : pct >= 60 ? "moderate" : "stressed",
+            initials: cw.initials || "CW",
+            avatarBg: cw.avatarBg || "bg-blue-500",
+          };
         });
+
+        setCaseworkers(normalizedData);
+      } catch (err) {
+        console.error("Error fetching caseworkers performance report:", err);
+        setError("Failed to load caseworker performance data");
+      } finally {
+        setLoading(false);
       }
-
-      // Normalize data to fit component UI expectations perfectly
-      const normalizedData = rawList.map(cw => {
-        const pct = cw.slaMetPct || 0;
-        return {
-          ...cw,
-          id: cw.id,
-          caseworker_id: cw.id,
-          name: cw.name || 'N/A',
-          email: cw.email || 'N/A',
-          department: cw.department || 'Immigration',
-          active_cases: cw.activeCases || 0,
-          completed_cases: cw.completedCases || 0,
-          workload_percentage: pct,
-          health_status: pct >= 80 ? 'healthy' : pct >= 60 ? 'moderate' : 'stressed',
-          initials: cw.initials || 'CW',
-          avatarBg: cw.avatarBg || 'bg-blue-500',
-        };
-      });
-
-      setCaseworkers(normalizedData);
-    } catch (err) {
-      console.error("Error fetching caseworkers performance report:", err);
-      setError("Failed to load caseworker performance data");
-    } finally {
-      setLoading(false);
-    }
-  }, [dateRange]);
+    },
+    [dateRange],
+  );
 
   // Fetch on component mount or global refresh trigger
   useEffect(() => {
@@ -714,31 +892,40 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
   }, [fetchFilteredCaseworkers, refreshTrigger]);
 
   // Handle search input with debouncing
-  const handleSearchChange = useCallback((value) => {
-    setSearch(value);
+  const handleSearchChange = useCallback(
+    (value) => {
+      setSearch(value);
 
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
 
-    const timeout = setTimeout(() => {
-      fetchFilteredCaseworkers(value, deptFilter, slaFilter);
-    }, 300);
+      const timeout = setTimeout(() => {
+        fetchFilteredCaseworkers(value, deptFilter, slaFilter);
+      }, 300);
 
-    setSearchTimeout(timeout);
-  }, [deptFilter, slaFilter, fetchFilteredCaseworkers, searchTimeout]);
+      setSearchTimeout(timeout);
+    },
+    [deptFilter, slaFilter, fetchFilteredCaseworkers, searchTimeout],
+  );
 
   // Handle department filter change
-  const handleDeptFilterChange = useCallback((newDept) => {
-    setDeptFilter(newDept);
-    fetchFilteredCaseworkers(search, newDept, slaFilter);
-  }, [search, slaFilter, fetchFilteredCaseworkers]);
+  const handleDeptFilterChange = useCallback(
+    (newDept) => {
+      setDeptFilter(newDept);
+      fetchFilteredCaseworkers(search, newDept, slaFilter);
+    },
+    [search, slaFilter, fetchFilteredCaseworkers],
+  );
 
   // Handle SLA filter change
-  const handleSlaFilterChange = useCallback((newSla) => {
-    setSlaFilter(newSla);
-    fetchFilteredCaseworkers(search, deptFilter, newSla);
-  }, [search, deptFilter, fetchFilteredCaseworkers]);
+  const handleSlaFilterChange = useCallback(
+    (newSla) => {
+      setSlaFilter(newSla);
+      fetchFilteredCaseworkers(search, deptFilter, newSla);
+    },
+    [search, deptFilter, fetchFilteredCaseworkers],
+  );
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -751,15 +938,27 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
 
   // Summary KPIs
   const data = caseworkers || [];
-  const avgSla = data.length > 0
-    ? (data.reduce((s, c) => s + (c.workload_percentage || 0), 0) / data.length).toFixed(1)
-    : 0;
+  const avgSla =
+    data.length > 0
+      ? (
+          data.reduce((s, c) => s + (c.workload_percentage || 0), 0) /
+          data.length
+        ).toFixed(1)
+      : 0;
 
-  const totalCases = data.reduce((s, c) => s + (c.active_cases || 0) + (c.completed_cases || 0), 0);
+  const totalCases = data.reduce(
+    (s, c) => s + (c.active_cases || 0) + (c.completed_cases || 0),
+    0,
+  );
 
-  const topPerformer = data.length > 0
-    ? data.reduce((max, c) => (c.workload_percentage || 0) > (max.workload_percentage || 0) ? c : max)
-    : null;
+  const topPerformer =
+    data.length > 0
+      ? data.reduce((max, c) =>
+          (c.workload_percentage || 0) > (max.workload_percentage || 0)
+            ? c
+            : max,
+        )
+      : null;
 
   // Handle download report triggers general export workbook
   const handleDownloadReport = async (caseworkerId) => {
@@ -769,8 +968,10 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
     });
     try {
       const params = {};
-      if (dateRange?.start) params.startDate = dateRange.start.toISOString().split('T')[0];
-      if (dateRange?.end) params.endDate = dateRange.end.toISOString().split('T')[0];
+      if (dateRange?.start)
+        params.startDate = dateRange.start.toISOString().split("T")[0];
+      if (dateRange?.end)
+        params.endDate = dateRange.end.toISOString().split("T")[0];
 
       const res = await exportReportingExcel(params);
       const filename = `performance_metrics_${caseworkerId}_${new Date().toISOString().split("T")[0]}.xlsx`;
@@ -784,18 +985,26 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
       document.body.removeChild(a);
     } catch (e) {
       console.error("Performance report download failed:", e);
-      showToast?.({ message: "Failed to export metrics workbook.", variant: "danger" });
+      showToast?.({
+        message: "Failed to export metrics workbook.",
+        variant: "danger",
+      });
     }
   };
 
   // Handle view performance details
   const handleViewPerformance = (caseworkerId) => {
     if (!caseworkerId) return;
-    const target = caseworkers.find(c => c.id === caseworkerId || c.caseworker_id === caseworkerId);
+    const target = caseworkers.find(
+      (c) => c.id === caseworkerId || c.caseworker_id === caseworkerId,
+    );
     if (target) {
       setSelectedCW(target);
     } else {
-      showToast?.({ message: "Performance details not found in current view.", variant: "warning" });
+      showToast?.({
+        message: "Performance details not found in current view.",
+        variant: "warning",
+      });
     }
   };
 
@@ -809,36 +1018,43 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
         />
       )}
 
-      <motion.div
-        key="performance"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
-        className="space-y-5"
-      >
+      <div key="performance" className="space-y-5">
         {/* Summary KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Total Cases Card */}
           <div className="rounded-xl border border-blue-100 p-4 bg-blue-50">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">Total Cases (All Staff)</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">
+              Total Cases (All Staff)
+            </p>
             <p className="text-4xl font-black text-blue-600">{totalCases}</p>
             <p className="text-xs text-gray-500 mt-1">across all caseworkers</p>
           </div>
 
           {/* Avg Performance Card */}
           <div className="rounded-xl border border-green-100 p-4 bg-green-50">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">Avg Performance</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">
+              Avg Performance
+            </p>
             <p className="text-4xl font-black text-green-600">{avgSla}%</p>
-            <p className="text-xs text-gray-500 mt-1">team average this period</p>
+            <p className="text-xs text-gray-500 mt-1">
+              team average this period
+            </p>
           </div>
 
           {/* Top Performer Card */}
           <div className="rounded-xl border border-amber-100 p-4 bg-amber-50">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">Top Performer</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">
+              Top Performer
+            </p>
             {topPerformer ? (
               <div>
-                <p className="text-lg font-black text-amber-700">{topPerformer.name || "N/A"}</p>
-                <p className="text-xs text-gray-500 mt-2">{(topPerformer.workload_percentage || 0).toFixed(1)}% · {topPerformer.active_cases || 0} active</p>
+                <p className="text-lg font-black text-amber-700">
+                  {topPerformer.name || "N/A"}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  {(topPerformer.workload_percentage || 0).toFixed(1)}% ·{" "}
+                  {topPerformer.active_cases || 0} active
+                </p>
               </div>
             ) : (
               <p className="text-sm text-gray-500">No data available</p>
@@ -850,7 +1066,9 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-3">
             <FiFilter size={13} className="text-gray-400" />
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Filter Caseworkers</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+              Filter Caseworkers
+            </p>
           </div>
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-end">
             {/* Search */}
@@ -859,7 +1077,10 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
                 Search by name or ID
               </label>
               <div className="relative">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                <FiSearch
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={15}
+                />
                 <input
                   type="search"
                   value={search}
@@ -900,21 +1121,32 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <h2 className="text-sm font-black text-secondary">Caseworker Performance Report</h2>
+              <h2 className="text-sm font-black text-secondary">
+                Caseworker Performance Report
+              </h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Showing {caseworkers.length} caseworker{caseworkers.length !== 1 ? "s" : ""}
+                Showing {caseworkers.length} caseworker
+                {caseworkers.length !== 1 ? "s" : ""}
               </p>
             </div>
           </div>
 
           {loading ? (
             <div className="px-5 py-12 text-center">
-              <FiLoader className="animate-spin inline-block text-secondary mb-2" size={24} />
-              <p className="text-sm text-gray-500">Loading caseworker data...</p>
+              <FiLoader
+                className="animate-spin inline-block text-secondary mb-2"
+                size={24}
+              />
+              <p className="text-sm text-gray-500">
+                Loading caseworker data...
+              </p>
             </div>
           ) : error ? (
             <div className="px-5 py-12 text-center">
-              <FiAlertCircle className="inline-block text-red-500 mb-2" size={24} />
+              <FiAlertCircle
+                className="inline-block text-red-500 mb-2"
+                size={24}
+              />
               <p className="text-sm text-red-500">{error}</p>
             </div>
           ) : (
@@ -922,15 +1154,32 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
               <table className="w-full min-w-[800px]">
                 <thead>
                   <tr className="bg-gray-50 text-left">
-                    {["Caseworker", "Email", "Department", "Active", "Completed", "Workload %", "Status", "Actions"].map((h) => (
-                      <th key={h} className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    {[
+                      "Caseworker",
+                      "Email",
+                      "Department",
+                      "Active",
+                      "Completed",
+                      "Workload %",
+                      "Status",
+                      "Actions",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                      >
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {caseworkers.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
+                      <td
+                        colSpan={8}
+                        className="px-4 py-12 text-center text-sm text-gray-400"
+                      >
                         <div className="flex flex-col items-center gap-2">
                           <FiUser size={28} className="text-gray-200" />
                           <span>No caseworkers match your filters.</span>
@@ -939,43 +1188,53 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
                     </tr>
                   ) : (
                     caseworkers.map((cw) => (
-                      <motion.tr
+                      <tr
                         key={cw.id}
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
                         className="hover:bg-gray-50/80 transition-colors group"
                       >
                         {/* Caseworker */}
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-2.5">
-                            <p className={`text-xs font-bold text-white ${cw.avatarBg || "bg-blue-500"} rounded-full w-8 h-8 flex items-center justify-center shrink-0`}>
+                            <p
+                              className={`text-xs font-bold text-white ${cw.avatarBg || "bg-blue-500"} rounded-full w-8 h-8 flex items-center justify-center shrink-0`}
+                            >
                               {cw.initials || "N/A"}
                             </p>
-                            <p className="text-sm font-bold text-secondary whitespace-nowrap">{cw.name || "N/A"}</p>
+                            <p className="text-sm font-bold text-secondary whitespace-nowrap">
+                              {cw.name || "N/A"}
+                            </p>
                           </div>
                         </td>
 
-
                         {/* Email */}
                         <td className="px-4 py-3.5">
-                          <p className="text-[10px] text-gray-400 whitespace-nowrap">{cw.email || "N/A"}</p>
+                          <p className="text-[10px] text-gray-400 whitespace-nowrap">
+                            {cw.email || "N/A"}
+                          </p>
                         </td>
                         {/* Dept */}
-                        <td className="px-4 py-3.5">
-                        </td>
+                        <td className="px-4 py-3.5"></td>
                         {/* Active */}
-                        <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.active_cases || 0}</td>
+                        <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">
+                          {cw.active_cases || 0}
+                        </td>
                         {/* Completed */}
-                        <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">{cw.completed_cases || 0}</td>
+                        <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 tabular-nums">
+                          {cw.completed_cases || 0}
+                        </td>
                         {/* Workload % */}
                         <td className="px-4 py-3.5">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getSlaColor(cw.workload_percentage || 0)}`}>
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getSlaColor(cw.workload_percentage || 0)}`}
+                          >
                             {(cw.workload_percentage || 0).toFixed(1)}%
                           </span>
                         </td>
                         {/* Status */}
                         <td className="px-4 py-3.5">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${cw.health_status === 'healthy' ? 'bg-green-100 text-green-700' : cw.health_status === 'moderate' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700'}`}>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${cw.health_status === "healthy" ? "bg-green-100 text-green-700" : cw.health_status === "moderate" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-700"}`}
+                          >
                             {cw.health_status || "Unknown"}
                           </span>
                         </td>
@@ -984,7 +1243,9 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => handleViewPerformance(cw.id || cw.caseworker_id)}
+                              onClick={() =>
+                                handleViewPerformance(cw.id || cw.caseworker_id)
+                              }
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-secondary/30 text-secondary bg-secondary/5 hover:bg-secondary/10 transition-colors whitespace-nowrap"
                             >
                               <FiEye size={12} />
@@ -992,7 +1253,9 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDownloadReport(cw.id || cw.caseworker_id)}
+                              onClick={() =>
+                                handleDownloadReport(cw.id || cw.caseworker_id)
+                              }
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors whitespace-nowrap"
                             >
                               <FiDownload size={12} />
@@ -1000,7 +1263,7 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
                             </button>
                           </div>
                         </td>
-                      </motion.tr>
+                      </tr>
                     ))
                   )}
                 </tbody>
@@ -1010,46 +1273,49 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
           {/* Table footer */}
           {caseworkers.length > 0 && (
             <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
-              <span>{caseworkers.length} result{caseworkers.length !== 1 ? "s" : ""}</span>
+              <span>
+                {caseworkers.length} result{caseworkers.length !== 1 ? "s" : ""}
+              </span>
               <span className="font-mono">
-                Team avg workload: <span className="font-black text-secondary">{avgSla}%</span>
+                Team avg workload:{" "}
+                <span className="font-black text-secondary">{avgSla}%</span>
               </span>
             </div>
           )}
         </div>
-        </motion.div>
-      </>
-    );
-  }
+      </div>
+    </>
+  );
+}
 
-  // ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
-  export default function AdminReports() {
-    const { showToast } = useToast();
-    const [activeTab, setActiveTab] = useState("cases");
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const [reportExporting, setReportExporting] = useState(false);
-    const [performanceData, setPerformanceData] = useState(null);
-    const [deptOptions, setDeptOptions] = useState([]);
-    const [dateRange, setDateRange] = useState({ start: null, end: null });
-    const [visaFilter, setVisaFilter] = useState("all");
-    
-    // Case Type Data
-    const [caseTypes, setCaseTypes] = useState([]);
-    const [caseTypesLoading, setCaseTypesLoading] = useState(false);
-    const [caseTypesError, setCaseTypesError] = useState(null);
+export default function AdminReports() {
+  const { showToast } = useToast();
+  const [activeTab, setActiveTab] = useState("cases");
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [reportExporting, setReportExporting] = useState(false);
+  const [performanceData, setPerformanceData] = useState(null);
+  const [deptOptions, setDeptOptions] = useState([]);
+  const [dateRange, setDateRange] = useState({ start: null, end: null });
+  const [visaFilter, setVisaFilter] = useState("all");
 
-    // Workload Data
-    const [workload, setWorkload] = useState([]);
-    const [workloadLoading, setWorkloadLoading] = useState(false);
-    const [workloadError, setWorkloadError] = useState(null);
-    const [workloadSearch, setWorkloadSearch] = useState("");
+  // Case Type Data
+  const [caseTypes, setCaseTypes] = useState([]);
+  const [caseTypesLoading, setCaseTypesLoading] = useState(false);
+  const [caseTypesError, setCaseTypesError] = useState(null);
+
+  // Workload Data
+  const [workload, setWorkload] = useState([]);
+  const [workloadLoading, setWorkloadLoading] = useState(false);
+  const [workloadError, setWorkloadError] = useState(null);
+  const [workloadSearch, setWorkloadSearch] = useState("");
 
   // Financial Data
   const [revenueByVisa, setRevenueByVisa] = useState([]);
   const [revenueBySponsor, setRevenueBySponsor] = useState([]);
   const [financeLoading, setFinanceLoading] = useState(false);
-  const [financeError, setFinanceError] = useState(null);   
+  const [financeError, setFinanceError] = useState(null);
   const [financeSearch, setFinanceSearch] = useState("");
   const [usingMockData, setUsingMockData] = useState(false);
   const apiLoading = caseTypesLoading || workloadLoading || financeLoading;
@@ -1062,10 +1328,10 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
   const buildParams = useCallback(() => {
     const params = {};
     if (dateRange?.start) {
-      params.startDate = dateRange.start.toISOString().split('T')[0];
+      params.startDate = dateRange.start.toISOString().split("T")[0];
     }
     if (dateRange?.end) {
-      params.endDate = dateRange.end.toISOString().split('T')[0];
+      params.endDate = dateRange.end.toISOString().split("T")[0];
     }
     return params;
   }, [dateRange]);
@@ -1077,7 +1343,12 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
     try {
       const response = await getCaseAnalytics(buildParams());
       if (response.data?.data?.byVisaType) {
-        setCaseTypes(response.data.data.byVisaType.map(v => ({ type: v.name, count: v.count })));
+        setCaseTypes(
+          response.data.data.byVisaType.map((v) => ({
+            type: v.name,
+            count: v.count,
+          })),
+        );
       } else {
         setCaseTypes([]);
       }
@@ -1098,16 +1369,31 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
     try {
       const response = await getWorkloadReport(buildParams());
       if (response.data?.data?.caseworkers) {
-        const mapped = response.data.data.caseworkers.map(c => ({
+        const mapped = response.data.data.caseworkers.map((c) => ({
           caseworker_id: c.id,
           caseworker_name: c.name,
           email: c.email,
           active_cases: c.activeCases || 0,
-          overdue: Math.max(0, (c.totalCases || 0) - (c.completedCases || 0) - (c.activeCases || 0)),
+          overdue: Math.max(
+            0,
+            (c.totalCases || 0) -
+              (c.completedCases || 0) -
+              (c.activeCases || 0),
+          ),
           tasks_pending: 0,
           workload_percentage: c.slaMetPct || 0,
-          health_status: (c.slaMetPct || 0) >= 80 ? 'healthy' : (c.slaMetPct || 0) >= 60 ? 'moderate' : 'stressed',
-          health_color: (c.slaMetPct || 0) >= 80 ? 'green' : (c.slaMetPct || 0) >= 60 ? 'amber' : 'red',
+          health_status:
+            (c.slaMetPct || 0) >= 80
+              ? "healthy"
+              : (c.slaMetPct || 0) >= 60
+                ? "moderate"
+                : "stressed",
+          health_color:
+            (c.slaMetPct || 0) >= 80
+              ? "green"
+              : (c.slaMetPct || 0) >= 60
+                ? "amber"
+                : "red",
         }));
         setWorkload(mapped);
       } else {
@@ -1131,16 +1417,32 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
       const response = await getFinancialReport(buildParams());
       if (response.data?.data) {
         const { byVisaType, bySponsor } = response.data.data;
-        setRevenueByVisa((byVisaType || []).map(v => ({ visa_type: v.name, total_amount: v.total })));
-        setRevenueBySponsor((bySponsor || []).map(s => ({ sponsor_name: s.name, total_amount: s.total })));
+        setRevenueByVisa(
+          (byVisaType || []).map((v) => ({
+            visa_type: v.name,
+            total_amount: v.total,
+          })),
+        );
+        setRevenueBySponsor(
+          (bySponsor || []).map((s) => ({
+            sponsor_name: s.name,
+            total_amount: s.total,
+          })),
+        );
       }
     } catch (err) {
       console.error("Error fetching financial reports:", err);
       setRevenueByVisa(
-        MOCK_REPORT_FINANCE.byVisaType.map((v) => ({ visa_type: v.name, total_amount: v.total })),
+        MOCK_REPORT_FINANCE.byVisaType.map((v) => ({
+          visa_type: v.name,
+          total_amount: v.total,
+        })),
       );
       setRevenueBySponsor(
-        MOCK_REPORT_FINANCE.bySponsor.map((s) => ({ sponsor_name: s.name, total_amount: s.total })),
+        MOCK_REPORT_FINANCE.bySponsor.map((s) => ({
+          sponsor_name: s.name,
+          total_amount: s.total,
+        })),
       );
       setFinanceError(null);
       setUsingMockData(true);
@@ -1154,7 +1456,12 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
     if (activeTab === "cases") fetchCaseTypeReport();
     if (activeTab === "workload") fetchWorkloadReport();
     if (activeTab === "finance") fetchFinancialReports();
-  }, [activeTab, fetchCaseTypeReport, fetchWorkloadReport, fetchFinancialReports]);
+  }, [
+    activeTab,
+    fetchCaseTypeReport,
+    fetchWorkloadReport,
+    fetchFinancialReports,
+  ]);
 
   // Handle tab change - lazy load data when tab is clicked
   const handleTabChange = (tabId) => {
@@ -1208,29 +1515,30 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
   const filteredWorkload = useMemo(() => {
     const q = workloadSearch.trim().toLowerCase();
     if (!q) return workload;
-    return workload.filter((r) => (r.caseworker_name || "").toLowerCase().includes(q));
+    return workload.filter((r) =>
+      (r.caseworker_name || "").toLowerCase().includes(q),
+    );
   }, [workloadSearch, workload]);
 
   // Filter finance data
   const filteredFinanceVisa = useMemo(() => {
     const q = financeSearch.trim().toLowerCase();
     if (!q) return revenueByVisa;
-    return revenueByVisa.filter((r) => (r.visa_type || "").toLowerCase().includes(q));
+    return revenueByVisa.filter((r) =>
+      (r.visa_type || "").toLowerCase().includes(q),
+    );
   }, [financeSearch, revenueByVisa]);
 
   const filteredFinanceSponsor = useMemo(() => {
     const q = financeSearch.trim().toLowerCase();
     if (!q) return revenueBySponsor;
-    return revenueBySponsor.filter((r) => (r.sponsor_name || "").toLowerCase().includes(q));
+    return revenueBySponsor.filter((r) =>
+      (r.sponsor_name || "").toLowerCase().includes(q),
+    );
   }, [financeSearch, revenueBySponsor]);
 
   return (
-    <motion.div
-      className="relative space-y-6 pb-10"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
+    <div className="relative space-y-6 pb-10">
       {/* Loading overlay */}
       {apiLoading && (
         <div className="absolute inset-0 z-30 bg-white/60 backdrop-blur-[1px] flex items-start justify-center pt-24 rounded-xl">
@@ -1266,12 +1574,15 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
             disabled={apiLoading}
             onClick={() => {
               refreshActiveView();
-              setRefreshTrigger(t => t + 1);
+              setRefreshTrigger((t) => t + 1);
             }}
             className="p-2 rounded-xl border border-gray-200 bg-white text-gray-400 hover:text-primary hover:border-primary/30 transition-colors"
             title="Refresh data"
           >
-            <FiRefreshCw size={15} className={apiLoading ? 'animate-spin' : ''} />
+            <FiRefreshCw
+              size={15}
+              className={apiLoading ? "animate-spin" : ""}
+            />
           </button>
           <Button
             type="button"
@@ -1292,7 +1603,9 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
 
       {/* ── Filters ── */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-3">Filters</p>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-3">
+          Filters
+        </p>
         <div className="flex flex-col lg:flex-row flex-wrap gap-4 lg:items-end">
           <DateRangePicker
             startDate={dateRange.start}
@@ -1309,7 +1622,10 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
                 Search caseworker
               </label>
               <div className="relative">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <FiSearch
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={16}
+                />
                 <input
                   id="workload-search"
                   type="search"
@@ -1331,7 +1647,10 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
                 Search revenue lines
               </label>
               <div className="relative">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <FiSearch
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={16}
+                />
                 <input
                   id="finance-search"
                   type="search"
@@ -1350,26 +1669,25 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
         tabs={TABS}
         activeId={activeTab}
         onChange={handleTabChange}
-        layoutId="admin-reports-tab"
       />
 
       {/* ── Cases Tab ── */}
       {activeTab === "cases" && (
-        <motion.div
-          key="cases"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-6"
-        >
+        <div key="cases" className="space-y-6">
           {caseTypesLoading ? (
             <div className="text-center py-12">
-              <FiLoader className="animate-spin inline-block text-secondary mb-2" size={28} />
+              <FiLoader
+                className="animate-spin inline-block text-secondary mb-2"
+                size={28}
+              />
               <p className="text-sm text-gray-500">Loading case reports...</p>
             </div>
           ) : caseTypesError ? (
             <div className="text-center py-12">
-              <FiAlertCircle className="inline-block text-red-500 mb-2" size={28} />
+              <FiAlertCircle
+                className="inline-block text-red-500 mb-2"
+                size={28}
+              />
               <p className="text-sm text-red-500">{caseTypesError}</p>
             </div>
           ) : (
@@ -1378,26 +1696,40 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
                 Cases by Type
               </h2>
               {caseTypes.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">No case type data available.</p>
+                <p className="text-sm text-gray-400 text-center py-8">
+                  No case type data available.
+                </p>
               ) : (
                 <div className="space-y-4">
                   {caseTypes.map((row, idx) => {
-                    const total = caseTypes.reduce((sum, c) => sum + (c.count || 0), 0);
-                    const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;
-                    const colors = ["bg-blue-500", "bg-purple-500", "bg-green-500", "bg-amber-400", "bg-red-500"];
+                    const total = caseTypes.reduce(
+                      (sum, c) => sum + (c.count || 0),
+                      0,
+                    );
+                    const pct =
+                      total > 0 ? Math.round((row.count / total) * 100) : 0;
+                    const colors = [
+                      "bg-blue-500",
+                      "bg-purple-500",
+                      "bg-green-500",
+                      "bg-amber-400",
+                      "bg-red-500",
+                    ];
 
                     return (
                       <div key={row.type || idx}>
                         <div className="flex justify-between text-xs sm:text-sm mb-1.5">
-                          <span className="font-semibold text-gray-700">{row.type || "Unknown"}</span>
-                          <span className="font-mono text-gray-500">{row.count || 0} cases ({pct}%)</span>
+                          <span className="font-semibold text-gray-700">
+                            {row.type || "Unknown"}
+                          </span>
+                          <span className="font-mono text-gray-500">
+                            {row.count || 0} cases ({pct}%)
+                          </span>
                         </div>
                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <motion.div
+                          <div
                             className={`h-full rounded-full ${colors[idx % colors.length]}`}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
-                            transition={{ duration: 0.5, ease: "easeOut" }}
+                            style={{ width: `${pct}%` }}
                           />
                         </div>
                       </div>
@@ -1407,16 +1739,13 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
               )}
             </div>
           )}
-        </motion.div>
+        </div>
       )}
 
       {/* ── Workload Tab ── */}
       {activeTab === "workload" && (
-        <motion.div
+        <div
           key="workload"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
           className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
         >
           <div className="px-5 py-4 border-b border-gray-100">
@@ -1428,12 +1757,18 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
 
           {workloadLoading ? (
             <div className="px-5 py-12 text-center">
-              <FiLoader className="animate-spin inline-block text-secondary mb-2" size={28} />
+              <FiLoader
+                className="animate-spin inline-block text-secondary mb-2"
+                size={28}
+              />
               <p className="text-sm text-gray-500">Loading workload data...</p>
             </div>
           ) : workloadError ? (
             <div className="px-5 py-12 text-center">
-              <FiAlertCircle className="inline-block text-red-500 mb-2" size={28} />
+              <FiAlertCircle
+                className="inline-block text-red-500 mb-2"
+                size={28}
+              />
               <p className="text-sm text-red-500">{workloadError}</p>
             </div>
           ) : (
@@ -1441,37 +1776,70 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
               <table className="w-full min-w-[640px]">
                 <thead>
                   <tr className="bg-gray-50 text-left">
-                    {["Caseworker", "Email", "Active", "Overdue", "Pending Tasks", "Workload %", "Health"].map((h) => (
-                      <th key={h} className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    {[
+                      "Caseworker",
+                      "Email",
+                      "Active",
+                      "Overdue",
+                      "Pending Tasks",
+                      "Workload %",
+                      "Health",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                      >
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredWorkload.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-400">
+                      <td
+                        colSpan={7}
+                        className="px-4 py-10 text-center text-sm text-gray-400"
+                      >
                         No caseworkers match your search.
                       </td>
                     </tr>
                   ) : (
                     filteredWorkload.map((r) => (
-                      <tr key={r.caseworker_id} className="hover:bg-gray-50/80 transition-colors">
+                      <tr
+                        key={r.caseworker_id}
+                        className="hover:bg-gray-50/80 transition-colors"
+                      >
                         <td className="px-4 py-3">
-                          <span className="text-sm font-bold text-secondary whitespace-nowrap">{r.caseworker_name || "Unknown"}</span>
+                          <span className="text-sm font-bold text-secondary whitespace-nowrap">
+                            {r.caseworker_name || "Unknown"}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-xs text-gray-500 whitespace-nowrap">{r.email || "N/A"}</span>
+                          <span className="text-xs text-gray-500 whitespace-nowrap">
+                            {r.email || "N/A"}
+                          </span>
                         </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-800 tabular-nums">{r.active_cases || 0}</td>
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-800 tabular-nums">{r.overdue || 0}</td>
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-800 tabular-nums">{r.tasks_pending || 0}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-800 tabular-nums">
+                          {r.active_cases || 0}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-800 tabular-nums">
+                          {r.overdue || 0}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-800 tabular-nums">
+                          {r.tasks_pending || 0}
+                        </td>
                         <td className="px-4 py-3">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getSlaColor(r.workload_percentage || 0)}`}>
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getSlaColor(r.workload_percentage || 0)}`}
+                          >
                             {(r.workload_percentage || 0).toFixed(1)}%
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${r.health_color === 'green' ? 'bg-green-100 text-green-700' : r.health_color === 'amber' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700'}`}>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${r.health_color === "green" ? "bg-green-100 text-green-700" : r.health_color === "amber" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-700"}`}
+                          >
                             {r.health_status || "Unknown"}
                           </span>
                         </td>
@@ -1482,18 +1850,12 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
               </table>
             </div>
           )}
-        </motion.div>
+        </div>
       )}
 
       {/* ── Finance Tab ── */}
       {activeTab === "finance" && (
-        <motion.div
-          key="finance"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="grid grid-cols-1 xl:grid-cols-2 gap-6"
-        >
+        <div key="finance" className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Revenue by Visa Type */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
             <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
@@ -1501,20 +1863,33 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
             </h2>
             {financeLoading ? (
               <div className="text-center py-8">
-                <FiLoader className="animate-spin inline-block text-secondary" size={20} />
+                <FiLoader
+                  className="animate-spin inline-block text-secondary"
+                  size={20}
+                />
               </div>
             ) : financeError ? (
               <div className="text-center py-8">
-                <FiAlertCircle className="inline-block text-red-500 mb-2" size={20} />
+                <FiAlertCircle
+                  className="inline-block text-red-500 mb-2"
+                  size={20}
+                />
                 <p className="text-xs text-red-500">Failed to load data</p>
               </div>
             ) : filteredFinanceVisa.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">No visa revenue data available.</p>
+              <p className="text-sm text-gray-400 text-center py-8">
+                No visa revenue data available.
+              </p>
             ) : (
               <div className="flex flex-col gap-2.5">
                 {filteredFinanceVisa.map((row) => (
-                  <div key={row.visa_type} className="flex justify-between items-center text-sm gap-4">
-                    <span className="text-gray-700 font-medium">{row.visa_type || "Unknown"}</span>
+                  <div
+                    key={row.visa_type}
+                    className="flex justify-between items-center text-sm gap-4"
+                  >
+                    <span className="text-gray-700 font-medium">
+                      {row.visa_type || "Unknown"}
+                    </span>
                     <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">
                       £{(row.total_amount || 0).toLocaleString()}
                     </span>
@@ -1531,20 +1906,33 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
             </h2>
             {financeLoading ? (
               <div className="text-center py-8">
-                <FiLoader className="animate-spin inline-block text-secondary" size={20} />
+                <FiLoader
+                  className="animate-spin inline-block text-secondary"
+                  size={20}
+                />
               </div>
             ) : financeError ? (
               <div className="text-center py-8">
-                <FiAlertCircle className="inline-block text-red-500 mb-2" size={20} />
+                <FiAlertCircle
+                  className="inline-block text-red-500 mb-2"
+                  size={20}
+                />
                 <p className="text-xs text-red-500">Failed to load data</p>
               </div>
             ) : filteredFinanceSponsor.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">No sponsor revenue data available.</p>
+              <p className="text-sm text-gray-400 text-center py-8">
+                No sponsor revenue data available.
+              </p>
             ) : (
               <div className="flex flex-col gap-2.5">
                 {filteredFinanceSponsor.map((row) => (
-                  <div key={row.sponsor_name} className="flex justify-between items-center text-sm gap-4">
-                    <span className="text-gray-700 font-medium">{row.sponsor_name || "Unknown"}</span>
+                  <div
+                    key={row.sponsor_name}
+                    className="flex justify-between items-center text-sm gap-4"
+                  >
+                    <span className="text-gray-700 font-medium">
+                      {row.sponsor_name || "Unknown"}
+                    </span>
                     <span className="font-mono font-bold text-green-600 tabular-nums shrink-0">
                       £{(row.total_amount || 0).toLocaleString()}
                     </span>
@@ -1553,13 +1941,12 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
               </div>
             )}
           </div>
-
-        </motion.div>
+        </div>
       )}
 
       {/* ── Performance Tab ── */}
       {activeTab === "performance" && (
-        <PerformanceTab 
+        <PerformanceTab
           dateRange={dateRange}
           performanceData={performanceData || []}
           deptOptions={deptOptions || []}
@@ -1567,9 +1954,6 @@ function PerformanceTab({ dateRange, performanceData, deptOptions, showToast, re
           refreshTrigger={refreshTrigger}
         />
       )}
-    </motion.div>
+    </div>
   );
 }
-
-
-

@@ -68,6 +68,7 @@ import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
 import BiometricBookedModal from "../../components/workflow/BiometricBookedModal";
 import CclFeeProposalModal from "../../components/case/CclFeeProposalModal";
 import PrintClientApplicationButton from "../../components/CandidateApplicationForm/PrintClientApplicationButton";
+import CaseworkerApplicationTab from "../../components/caseDetail/CaseworkerApplicationTab";
 import { updatePipelineStage, assignCase } from "../../services/caseApi";
 import { proposeCclFees, getCclStatus, sendBiometricSlot } from "../../services/workflowApi";
 import {
@@ -1368,14 +1369,14 @@ const Cases = () => {
                                 >
                                   <Eye size={14} />
                                 </button>
-                                <button
+                                {/* <button
                                   type="button"
                                   onClick={() => openCaseEdit(c)}
                                   className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-secondary hover:bg-secondary/5 transition-colors"
                                   title="Edit case"
                                 >
                                   <Pencil size={14} />
-                                </button>
+                                </button> */}
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -1975,7 +1976,7 @@ const Cases = () => {
       </Modal>
 
       {/* ─────────────────────── EDIT CASE MODAL ─────────────────────── */}
-      <Modal
+      {/* <Modal
         open={!!editCaseId}
         onClose={closeCaseEdit}
         title={editCaseId ? `Edit case ${editCaseId}` : ""}
@@ -2391,7 +2392,7 @@ const Cases = () => {
             Save changes
           </button>
         </div>
-      </Modal>
+      </Modal> */}
 
       {/* ─────────────────────── REASSIGN MODAL ─────────────────────── */}
       <Modal
@@ -2578,19 +2579,20 @@ const Cases = () => {
                   <ArrowRightLeft size={14} />
                   Reassign
                 </button>
-                <button
+                {/* <button
                   type="button"
                   onClick={() => openCaseEdit(detailCase)}
                   className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/5"
                 >
                   Edit case
-                </button>
+                </button> */}
               </div>
             </div>
 
             <div className="shrink-0 flex gap-0 overflow-x-auto border-b border-gray-100 bg-gray-50/50 px-2 no-scrollbar">
               {[
                 { id: "overview", label: "Overview" },
+                { id: "application", label: "Application" },
                 { id: "documents", label: "Documents" },
                 { id: "tasks", label: "Tasks" },
                 { id: "payments", label: "Payments" },
@@ -2620,6 +2622,12 @@ const Cases = () => {
                   onStageChange={handleWorkflowStageChange}
                   stageSaving={stageSaving}
                   onRefresh={handleRefreshCase}
+                />
+              )}
+              {detailTab === "application" && (
+                <CaseworkerApplicationTab 
+                  caseDetail={detailCase} 
+                  userName={user?.name || "Caseworker"}
                 />
               )}
               {detailTab === "documents" && (
