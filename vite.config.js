@@ -9,10 +9,19 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          redux: ['react-redux', '@reduxjs/toolkit'],
-          ui: ['lucide-react', 'react-hot-toast'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-redux') || id.includes('@reduxjs/toolkit')) {
+              return 'redux';
+            }
+            if (id.includes('lucide-react') || id.includes('react-hot-toast')) {
+              return 'ui';
+            }
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor';
+            }
+            return 'vendor';
+          }
         },
       },
     },
