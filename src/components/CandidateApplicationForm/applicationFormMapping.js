@@ -45,12 +45,12 @@ export function crmVisaToApplication(crmVisa) {
 
 /** Drop answers for custom fields that were removed from the definition list. */
 export function pruneCustomResponsesToDefinitions(application, definitions) {
-  const ids = new Set((definitions || []).map((d) => d.id));
+  const ids = new Set((definitions || []).map((d) => String(d.id)));
   const cr =
     application.customResponses && typeof application.customResponses === "object"
       ? application.customResponses
       : {};
-  const nextCr = Object.fromEntries(Object.entries(cr).filter(([k]) => ids.has(k)));
+  const nextCr = Object.fromEntries(Object.entries(cr).filter(([k]) => ids.has(String(k))));
   return { ...application, customResponses: nextCr };
 }
 
