@@ -1,16 +1,48 @@
-import { createContext, useContext } from 'react';
-import { useSelector } from 'react-redux';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import useAuth from '../hooks/useAuth';
+import { setCredentials } from '../store/slices/authSlice';
+import { normalizeAuthUser } from '../utils/authResponse';
+import { apiClient } from '../services/axios.instance';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const { user, token } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
   const { login, register, logout, isLoading } = useAuth();
+  const dispatch = useDispatch();
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  // Restore session on page refresh via httpOnly cookie
+  useEffect(() => {
+    if (user || sessionChecked) return;
+
+    let cancelled = false;
+    apiClient.get('/api/auth/me')
+      .then((res) => {
+        if (cancelled) return;
+        const data = res.data?.data ?? res.data;
+        if (data?.user) {
+          const normalized = normalizeAuthUser(data.user);
+          dispatch(setCredentials({
+            user: normalized,
+            allowedModules: data.allowedModules ?? [],
+          }));
+        }
+      })
+      .catch(() => {
+        // Not authenticated — cookie missing or expired
+      })
+      .finally(() => {
+        if (!cancelled) setSessionChecked(true);
+      });
+
+    return () => { cancelled = true; };
+  }, [user, sessionChecked, dispatch]);
 
   return (
     <AuthContext.Provider
-      value={{ user, token, isAuthenticated: !!token, login, logout, register, isLoading }}
+      value={{ user, isAuthenticated: !!user, login, logout, register, isLoading, sessionChecked }}
     >
       {children}
     </AuthContext.Provider>

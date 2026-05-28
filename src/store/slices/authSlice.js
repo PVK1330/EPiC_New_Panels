@@ -1,14 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { getToken, getUser, setToken, setUser, clearAuth } from '../../utils/storage';
+import { getUser, setUser, clearAuth, getAllowedModules, setAllowedModules, getToken, setToken } from '../../utils/storage';
 import { normalizeAuthUser } from '../../utils/authResponse';
-
-const getAllowedModules = () => {
-  try {
-    return JSON.parse(localStorage.getItem('epic_allowed_modules') || '[]');
-  } catch {
-    return [];
-  }
-};
 
 const authSlice = createSlice({
   name: 'auth',
@@ -20,13 +12,18 @@ const authSlice = createSlice({
   reducers: {
     setCredentials: (state, action) => {
       const user = normalizeAuthUser(action.payload.user);
-      const allowedModules = action.payload.allowedModules ?? [];
+      const allowedModules = action.payload.allowedModules ?? state.allowedModules;
       state.user = user;
-      state.token = action.payload.token;
       state.allowedModules = allowedModules;
-      setToken(action.payload.token);
       setUser(user);
-      localStorage.setItem('epic_allowed_modules', JSON.stringify(allowedModules));
+      setAllowedModules(allowedModules);
+      
+      if (action.payload.token !== undefined) {
+        state.token = action.payload.token;
+        if (action.payload.token) {
+          setToken(action.payload.token);
+        }
+      }
     },
     updateUser: (state, action) => {
       if (state.user) {
@@ -40,7 +37,6 @@ const authSlice = createSlice({
       state.token = null;
       state.allowedModules = [];
       clearAuth();
-      localStorage.removeItem('epic_allowed_modules');
     },
   },
 });

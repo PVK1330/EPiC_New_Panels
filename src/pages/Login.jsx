@@ -211,9 +211,9 @@ const Login = () => {
         setPendingLogin({ email: form.email, password: form.password });
         setView(VIEWS.twoFactor);
       } else {
-        const { user: userData, token: jwtToken, allowedModules } = getAuthUserAndToken(res);
+        const { user: userData, token, allowedModules } = getAuthUserAndToken(res);
 
-        if (!userData || !jwtToken) {
+        if (!userData) {
           throw new Error(res.message || "Invalid credentials or response structure");
         }
 
@@ -227,10 +227,10 @@ const Login = () => {
         const forceReset = res?.data?.force_password_reset || res?.data?.data?.force_password_reset || res?.force_password_reset;
         
         if (forceReset) {
-          setPendingResetData({ user, token: jwtToken, allowedModules });
+          setPendingResetData({ user, allowedModules });
           setView(VIEWS.forceReset);
         } else {
-          dispatch(setCredentials({ user, token: jwtToken, allowedModules }));
+          dispatch(setCredentials({ user, token, allowedModules }));
           navigate(getDashboardRouteForUser(user));
         }
       }
@@ -305,7 +305,6 @@ const Login = () => {
     try {
       const headers = {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${pendingResetData.token}`
       };
       const orgSlug = getOrganisationSlugFromHost();
       if (orgSlug) {
@@ -314,6 +313,7 @@ const Login = () => {
       
       const response = await fetch(`${API_BASE_URL}/api/user/change-password`, {
         method: 'POST',
+        credentials: 'include',
         headers,
         body: JSON.stringify({ new_password: resetPasswordForm.password })
       });
@@ -349,9 +349,9 @@ const Login = () => {
         throw new Error("No response received from 2FA server");
       }
 
-      const { user: userData, token: jwtToken, allowedModules } = getAuthUserAndToken(res);
+      const { user: userData, token, allowedModules } = getAuthUserAndToken(res);
 
-      if (!userData || !jwtToken) {
+      if (!userData) {
         throw new Error(res.message || "Invalid 2FA code or server response");
       }
 
@@ -361,7 +361,7 @@ const Login = () => {
         role,
         organisation_id: userData.organisation_id ?? null,
       };
-      dispatch(setCredentials({ user, token: jwtToken, allowedModules }));
+      dispatch(setCredentials({ user, allowedModules }));
       navigate(getDashboardRouteForUser(user));
     } catch (err) {
       setTwoFactorError(err.message || "Invalid 2FA code");

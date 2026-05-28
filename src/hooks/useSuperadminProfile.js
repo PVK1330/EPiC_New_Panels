@@ -55,7 +55,6 @@ export default function useSuperadminProfile() {
         setProfile(updated);
         dispatch(setCredentials({
           user: { ...authUser, ...updated },
-          token: localStorage.getItem('epic_token') || sessionStorage.getItem('epic_token'),
           allowedModules: JSON.parse(localStorage.getItem('epic_allowed_modules') || '[]'),
         }));
       }
@@ -78,7 +77,6 @@ export default function useSuperadminProfile() {
         setProfile((prev) => prev ? { ...prev, profile_pic: profilePic } : prev);
         dispatch(setCredentials({
           user: { ...authUser, profile_pic: profilePic },
-          token: localStorage.getItem('epic_token') || sessionStorage.getItem('epic_token'),
           allowedModules: JSON.parse(localStorage.getItem('epic_allowed_modules') || '[]'),
         }));
       }

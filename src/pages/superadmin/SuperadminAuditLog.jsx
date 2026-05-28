@@ -12,8 +12,6 @@ import {
 import Button from '../../components/Button';
 import { fetchPlatformAuditLogs } from '../../services/superadminAudit.service';
 import useDownloads from '../../hooks/useDownloads';
-import { getToken } from '../../utils/storage';
-
 const SuperadminAuditLog = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('All');

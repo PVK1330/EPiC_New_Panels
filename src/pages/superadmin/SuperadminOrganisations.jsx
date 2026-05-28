@@ -26,7 +26,7 @@ import {
 } from '../../services/superadminOrganisation.service';
 import { getOrganisationSubdomainLabel } from '../../utils/organisationHost';
 import { getAuthUserAndToken, getDashboardRouteForUser } from '../../utils/authResponse';
-import { getToken, getUser, saveImpersonatorSession } from '../../utils/storage';
+import { getUser, saveImpersonatorSession } from '../../utils/storage';
 import { buildTenantHandoffUrl } from '../../utils/organisationHost';
 
 const capitalize = (s) =>
@@ -218,9 +218,9 @@ const SuperadminOrganisations = () => {
       const { user, token } = getAuthUserAndToken(res.data);
       if (!token || !user) throw new Error(res.data?.message || 'Impersonation failed');
       const slug = inner?.organisation?.slug || org.slug;
-      const superToken = getToken();
+      // Token is now httpOnly cookie — session restored via /api/auth/me when returning to platform
       const superUser = getUser();
-      if (superToken && superUser) saveImpersonatorSession(superToken, superUser);
+      if (superUser) saveImpersonatorSession(null, superUser);
       window.location.href = buildTenantHandoffUrl(slug, {
         token,
         user,

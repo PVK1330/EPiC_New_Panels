@@ -17,7 +17,7 @@ import Modal from "../../components/Modal";
 import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
 import api from "../../services/api";
-import { setCredentials } from "../../store/slices/authSlice";
+import { updateUser } from "../../store/slices/authSlice";
 
 const InputField = ({
   label,
@@ -50,7 +50,7 @@ const InputField = ({
 );
 
 const MyAccount = () => {
-  const { user, token } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState("profile"); // profile, password, security
   const [saved, setSaved] = useState(false);
@@ -97,14 +97,10 @@ const MyAccount = () => {
         // Update Redux user state with profile pic and other fields
         const roleString = response.data.data.user.role?.name?.toLowerCase() || user.role;
         dispatch(
-          setCredentials({
-            user: {
-              ...user,
-              profile_pic,
-              gender,
-              role: roleString,
-            },
-            token: token,
+          updateUser({
+            profile_pic,
+            gender,
+            role: roleString,
           })
         );
       } catch (error) {
@@ -237,7 +233,6 @@ const MyAccount = () => {
       dispatch(
         setCredentials({
           user: updatedUser,
-          token: token,
         })
       );
 
@@ -536,7 +531,6 @@ const MyAccount = () => {
       >
         {twoFactorMode === "setup" ? (
           <TwoFactorSetup
-            token={token}
             onSetupComplete={() => {
               setTwoFactorEnabled(true);
               setTwoFactorModalOpen(false);
@@ -545,7 +539,6 @@ const MyAccount = () => {
           />
         ) : (
           <TwoFactorDisable
-            token={token}
             onDisableComplete={() => {
               setTwoFactorEnabled(false);
               setTwoFactorModalOpen(false);

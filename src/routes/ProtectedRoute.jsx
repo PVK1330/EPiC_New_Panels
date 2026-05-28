@@ -3,9 +3,9 @@ import { useSelector } from 'react-redux';
 import { getDashboardRouteForUser } from '../utils/authResponse';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { token, user } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
 
-  if (!token || !user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     const target = getDashboardRouteForUser(user);
