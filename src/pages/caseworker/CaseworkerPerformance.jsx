@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import api from "../../services/api";
+import { exportCaseworkerPerformance } from "../../services/caseApi";
+import { useToast } from "../../context/ToastContext";
 
 const StatCard = ({ label, value, color = "secondary", suffix }) => {
   const colorMap = {
@@ -56,6 +58,7 @@ const Pill = ({ variant = "blue", children }) => {
 
 const CaseworkerPerformance = () => {
   const user = useSelector((s) => s.auth.user);
+  const { showToast } = useToast();
   const [performanceData, setPerformanceData] = useState(null);
   const [activityLog, setActivityLog] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +69,30 @@ const CaseworkerPerformance = () => {
     const m = d.toLocaleString("en-GB", { month: "long" });
     return `${m} ${d.getFullYear()}`;
   }, []);
+
+  const handleExport = async () => {
+    try {
+      const response = await exportCaseworkerPerformance();
+
+      // Create a blob URL and download the file
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "caseworker_performance_report.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      showToast({ message: "Performance report exported successfully!", variant: "success" });
+    } catch (error) {
+      console.error("Export failed:", error);
+      showToast({
+        message: error?.response?.data?.message || "Export failed. Please try again.",
+        variant: "danger",
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchPerformanceData = async () => {
@@ -119,6 +146,7 @@ const CaseworkerPerformance = () => {
         </div>
         <button
           type="button"
+          onClick={handleExport}
           className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition"
         >
           Export Report

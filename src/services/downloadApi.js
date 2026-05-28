@@ -52,13 +52,52 @@ export async function downloadSupportingDocumentsZip() {
   return { blob, filename };
 }
 
-export function triggerBlobDownload(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+export async function downloadInvoiceReceiptPdf(payload) {
+  const res = await api.post(
+    "/api/candidate/payments/export-invoice-receipt-pdf",
+    payload,
+    { responseType: "blob", timeout: 120000 },
+  );
+  const blob = res.data;
+  const filename =
+    parseFilenameFromDisposition(res.headers["content-disposition"]) ||
+    `Receipt_${payload?.caseId || "invoice"}.pdf`;
+  return { blob, filename };
+}
+
+export async function downloadAdminCandidateApplicationPdf(candidateId) {
+  const res = await api.get(
+    `/api/admin/candidates/${encodeURIComponent(candidateId)}/application-pdf`,
+    { responseType: "blob", timeout: 120000 },
+  );
+  const blob = res.data;
+  const filename =
+    parseFilenameFromDisposition(res.headers["content-disposition"]) ||
+    `application-${candidateId}.pdf`;
+  return { blob, filename };
+}
+
+
+export async function downloadCosSummaryExcel() {
+  const res = await api.get("/api/sponsor/licence/cos/export/summary", {
+    responseType: "blob",
+    timeout: 120000,
+  });
+  const blob = res.data;
+  const filename =
+    parseFilenameFromDisposition(res.headers["content-disposition"]) ||
+    `cos_summary_${new Date().toISOString().split("T")[0]}.xlsx`;
+  return { blob, filename };
+}
+
+export async function downloadCosRequestsExcel() {
+  const res = await api.get("/api/sponsor/licence/cos/export/requests", {
+    responseType: "blob",
+    timeout: 120000,
+  });
+  const blob = res.data;
+  const filename =
+    parseFilenameFromDisposition(res.headers["content-disposition"]) ||
+    `cos_requests_${new Date().toISOString().split("T")[0]}.xlsx`;
+  return { blob, filename };
 }

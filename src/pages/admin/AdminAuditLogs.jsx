@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import api from "../../services/api";
+import useDownloads from "../../hooks/useDownloads";
 import {
   FiClipboard, FiCheckCircle, FiXCircle, FiClock,
   FiFileText, FiDownload, FiRefreshCw,
@@ -83,11 +84,19 @@ export default function AdminAuditLogs() {
   const [loading,    setLoading]    = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
   const [error,      setError]      = useState(null);
-  const [exporting,  setExporting]  = useState(false);
   const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
+  const { exportAuditLogsList } = useDownloads();
 
-  // Debounce user search
   const debounceRef = useRef(null);
+
+  const listQueryParams = useCallback(() => {
+    const params = {
+      dateRange: filters.dateRange !== "all" ? filters.dateRange : undefined,
+      status:    filters.status    !== "all" ? filters.status    : undefined,
+    };
+    Object.keys(params).forEach(k => params[k] === undefined && delete params[k]);
+    return params;
+  }, [filters]);
 
   // ─── Fetch stats ────────────────────────────────────────────────────────────
   const fetchStats = useCallback(async () => {
@@ -163,31 +172,13 @@ export default function AdminAuditLogs() {
   }, [filters, fetchLogs]);
 
   // ─── Export ─────────────────────────────────────────────────────────────────
-  const handleExport = useCallback(async () => {
-    setExporting(true);
-    try {
-      const params = {
-        dateRange: filters.dateRange !== "all" ? filters.dateRange : undefined,
-        status:    filters.status    !== "all" ? filters.status    : undefined,
-      };
-      Object.keys(params).forEach(k => params[k] === undefined && delete params[k]);
-
-      const res = await api.get("/api/audit-logs/export", { params, responseType: "blob" });
-      const url  = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href  = url;
-      link.setAttribute("download", `audit-export-${new Date().toISOString().slice(0, 10)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Export failed:", err);
+  const handleExport = async () => {
+    const result = await exportAuditLogsList(listQueryParams());
+    if (!result.ok) {
+      console.error("Export failed:", result.error);
       setError("Export failed. Please try again.");
-    } finally {
-      setExporting(false);
     }
-  }, [filters]);
+  };
 
   // ─── Refresh ─────────────────────────────────────────────────────────────────
   const handleRefresh = useCallback(() => {
@@ -229,10 +220,10 @@ export default function AdminAuditLogs() {
             variant="ghost"
             className="rounded-xl inline-flex items-center gap-2"
             onClick={handleExport}
-            disabled={exporting || loading}
+            disabled={loading}
           >
             <FiDownload size={15} />
-            {exporting ? "Exporting…" : "Export audit"}
+            Export audit
           </Button>
           <Button
             type="button"

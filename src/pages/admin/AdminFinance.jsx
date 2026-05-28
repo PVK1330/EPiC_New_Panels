@@ -4,7 +4,8 @@ import { DollarSign, Clock, CheckCircle, TrendingUp, CreditCard, Landmark, Globe
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import { getFinancialReport, getFinancialTransactions } from "../../services/reportingApi";
-import { createAdminInvoice, exportAdminTransactionsCsv } from "../../services/adminFinanceApi";
+import { createAdminInvoice } from "../../services/adminFinanceApi";
+import useDownloads from "../../hooks/useDownloads";
 import MockDataBanner from "../../components/admin/MockDataBanner";
 import { MOCK_FINANCE_STATS, MOCK_FINANCE_TRANSACTIONS } from "../../data/adminMockData";
 
@@ -77,6 +78,7 @@ export default function AdminFinance() {
   const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData]   = useState(emptyForm());
   const [errors, setErrors]       = useState({});
+  const { exportFinanceTransactions } = useDownloads();
 
   const [financeStats, setFinanceStats] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -267,18 +269,9 @@ export default function AdminFinance() {
           <Button
             variant="ghost"
             onClick={async () => {
-              try {
-                const res = await exportAdminTransactionsCsv();
-                const url = window.URL.createObjectURL(new Blob([res.data]));
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `finance-export-${new Date().toISOString().slice(0, 10)}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
-              } catch (err) {
-                console.error('Export failed:', err);
+              const result = await exportFinanceTransactions();
+              if (!result.ok) {
+                console.error('Export failed:', result.error);
               }
             }}
           >

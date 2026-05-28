@@ -19,7 +19,7 @@ import {
 import { getSponsoredWorkerDetails, updateSponsoredWorker, updateWorkerStatus } from "../../services/sponsoredWorkerApi";
 import { toast } from "react-hot-toast";
 import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
-import { API_BASE_URL } from "../../utils/constants";
+import useDownloads from "../../hooks/useDownloads";
 
 const SponsoredWorkerDetails = () => {
   const [activeTab, setActiveTab] = useState("details");
@@ -34,6 +34,7 @@ const SponsoredWorkerDetails = () => {
   
   const location = useLocation();
   const navigate = useNavigate();
+  const { downloadAssetFile, busy } = useDownloads();
   
   const queryParams = new URLSearchParams(location.search);
   const candidateId = queryParams.get("candidateId");
@@ -102,15 +103,12 @@ const SponsoredWorkerDetails = () => {
     }
   };
 
-  const handleDownload = (path, name) => {
+  const handleDownload = async (path, name) => {
     if (!path) return;
-    const link = document.createElement("a");
-    link.href = `${API_BASE_URL}${path}`;
-    link.setAttribute("download", name || "document");
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const result = await downloadAssetFile(path, name || "document");
+    if (!result.ok) {
+      toast.error(result.message || "Failed to download document");
+    }
   };
 
   const handleStatusUpdate = async () => {

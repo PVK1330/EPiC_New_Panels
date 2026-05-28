@@ -17,10 +17,11 @@ import {
 } from "lucide-react";
 import { uploadLicenceDocument, getLicenceDocuments, getMyLicenceApplications } from "../../services/licenceApi";
 import { useToast } from "../../context/ToastContext";
-import { API_BASE_URL } from "../../utils/constants";
+import useDownloads from "../../hooks/useDownloads";
 
 const LicenceDocuments = () => {
   const { showToast } = useToast();
+  const { downloadAssetFile, busy } = useDownloads();
   const [loading, setLoading] = useState(true);
   const [documents, setDocuments] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -119,17 +120,15 @@ const LicenceDocuments = () => {
 
   const handleView = (doc) => {
     const fullPath = doc.path.replace(/\\/g, '/');
-    window.open(`${API_BASE_URL}/${fullPath}`, "_blank");
+    window.open(`${window.location.origin}/${fullPath}`, "_blank");
   };
 
-  const handleDownload = (doc) => {
+  const handleDownload = async (doc) => {
     const fullPath = doc.path.replace(/\\/g, '/');
-    const link = document.createElement("a");
-    link.href = `${API_BASE_URL}/${fullPath}`;
-    link.download = doc.name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const result = await downloadAssetFile(fullPath, doc.name);
+    if (!result.ok) {
+      showToast({ message: result.message || "Failed to download document", variant: "danger" });
+    }
   };
 
   const handleDelete = (docId) => {

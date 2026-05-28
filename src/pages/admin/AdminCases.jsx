@@ -29,7 +29,7 @@ import {
   getAllUsers,
   getCaseworkers,
   updateCaseStatus,
-  exportCases,
+  exportAllCases,
   getDepartments,
 } from "../../services/caseApi";
 import { useToast } from "../../context/ToastContext";
@@ -1217,7 +1217,7 @@ export default function AdminCases() {
       if (priorityFilter !== "all") params.priority = priorityFilter;
       if (visaTypeFilter !== "all") params.visaType = visaTypeFilter;
 
-      const response = await exportCases(params);
+      const response = await exportAllCases(params);
 
       // Create a blob URL and download the file
       const url = window.URL.createObjectURL(new Blob([response.data]));

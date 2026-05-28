@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiX, FiUpload, FiDownload, FiCheckCircle, FiAlertCircle, FiFile, FiTrash2 } from "react-icons/fi";
+import useDownloads from "../hooks/useDownloads";
 
 // ── CSV → row mapper ──────────────────────────────────────────────────────────
 const COLUMN_MAP = {
@@ -143,21 +144,15 @@ John,Doe,1990-05-15,Male,British,United Kingdom,john.doe@example.com,+44 7700 12
 Jane,Smith,1992-08-22,Female,Australian,Australia,jane.smith@example.com,+44 7700 654321,7 Park Lane,Manchester,M1 2AB,United Kingdom,P7654321B,2029-11-15,CD 23 45 67 E,BRP00654321,Graduate Visa,2026-09-30,In Review,Pending,Data Analyst,Apex Consulting,2023-03-01,Partial,£1800
 `;
 
-const downloadTemplate = () => {
-  const blob = new Blob([TEMPLATE_CSV], { type: "text/csv" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href     = url;
-  a.download = "candidate_import_template.csv";
-  a.click();
-  URL.revokeObjectURL(url);
-};
-
-// ── Component ─────────────────────────────────────────────────────────────────
 const BulkImportModal = ({ open, onClose, onImport, existingCount = 0 }) => {
+  const { downloadTextFile } = useDownloads();
   const [file, setFile]           = useState(null);
   const [preview, setPreview]     = useState([]);
   const [error, setError]         = useState("");
+
+  const downloadTemplate = () => {
+    downloadTextFile(TEMPLATE_CSV, "candidate_import_template.csv", "text/csv");
+  };
   const [importing, setImporting] = useState(false);
   const [success, setSuccess]     = useState(false);
   const [dragging, setDragging]   = useState(false);

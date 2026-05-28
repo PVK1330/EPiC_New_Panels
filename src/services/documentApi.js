@@ -59,22 +59,8 @@ export const deleteDocument = (documentId) =>
 export const updateDocumentStatus = (documentId, data) =>
   api.patch(`${BASE}/status/${documentId}`, data);
 
-/** Download a document — returns a blob */
 export const downloadDocument = (documentId) =>
   api.get(`${BASE}/download/${documentId}`, { responseType: "blob" });
 
-/** Trigger a browser download for a document blob */
-export const triggerDownload = (blob, filename) => {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-};
-
-/** Get checklist by visa type */
 export const getChecklistByVisaType = (visaTypeId) =>
   api.get(`${BASE}/checklist/visa/${visaTypeId}`);

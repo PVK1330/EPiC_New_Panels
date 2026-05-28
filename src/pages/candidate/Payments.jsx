@@ -18,7 +18,7 @@ import {
   createCaseCheckoutSession,
   verifyCheckoutSession,
 } from "../../services/candidatePaymentApi";
-import { downloadInvoicePdf } from "../../utils/exportInvoicePdf";
+import useDownloads from "../../hooks/useDownloads";
 
 const CASE_ID_FALLBACK = "—";
 
@@ -33,6 +33,7 @@ const Payments = () => {
   const [scheduleError, setScheduleError] = useState("");
   const [payError, setPayError] = useState("");
   const [redirectState, setRedirectState] = useState("idle");
+  const { downloadInvoiceReceiptPdf } = useDownloads();
 
   const loadSchedule = useCallback(async () => {
     try {
@@ -360,16 +361,27 @@ const Payments = () => {
                       {row.receipt ? (
                         <button
                           type="button"
-                          onClick={() => downloadInvoicePdf({
-                            caseId: caseId,
-                            amount: row.amount.replace('£', '').replace(/,/g, ''),
-                            date: row.date,
-                            description: row.description,
-                            isReceipt: true,
-                            candidateName: user ? `${user.first_name || ""} ${user.last_name || ""}`.trim() : "Client",
-                            logoUrl: logoUrl,
-                            platformName: platformName
-                          })}
+                          onClick={async () => {
+                            try {
+                              await downloadInvoiceReceiptPdf({
+                                caseId: caseId,
+                                amount: row.amount.replace("£", "").replace(/,/g, ""),
+                                date: row.date,
+                                description: row.description,
+                                isReceipt: true,
+                                candidateName: user
+                                  ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+                                  : "Client",
+                                platformName: platformName,
+                              });
+                            } catch (e) {
+                              setPayError(
+                                e?.message ||
+                                  e?.response?.data?.message ||
+                                  "Failed to download receipt",
+                              );
+                            }
+                          }}
                           className="inline-flex items-center gap-1 text-xs font-bold text-secondary hover:underline"
                         >
                           <Download size={14} />

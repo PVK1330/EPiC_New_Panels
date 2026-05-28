@@ -481,7 +481,7 @@ const AdminCaseDetail = () => {
     try {
       const cleanId = caseId.replace(/^#/, "");
       const response = await exportPDFHandler(cleanId);
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `Case_${cleanId}_Report.pdf`);
@@ -499,10 +499,10 @@ const AdminCaseDetail = () => {
     try {
       const cleanId = caseId.replace(/^#/, "");
       const response = await exportCSVHandler(cleanId);
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `Case_${cleanId}_Data.csv`);
+      link.setAttribute("download", `Case_${cleanId}_Data.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();

@@ -13,7 +13,8 @@ import {
 import Button from "../../components/Button";
 import { useToast } from "../../context/ToastContext";
 import useCandidate from "../../hooks/useCandidate";
-import { acceptCcl, getCandidateCcl, downloadCandidateCcl } from "../../services/workflowApi";
+import { acceptCcl, getCandidateCcl } from "../../services/workflowApi";
+import useDownloads from "../../hooks/useDownloads";
 import { resolveCaseStage, getStepById } from "../../constants/immigrationCaseProcess";
 
 const FIRM_NAME = import.meta.env.VITE_FIRM_NAME || "Your immigration firm";
@@ -117,6 +118,7 @@ function CclLetterCard({ templateMeta, caseData, issuedDocument, onDownload }) {
 export default function CandidateCCL() {
   const { showToast } = useToast();
   const { myApplication, getMyApplication } = useCandidate();
+  const { downloadCandidateCclLetter } = useDownloads();
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [cclBundle, setCclBundle] = useState(null);
@@ -192,21 +194,9 @@ export default function CandidateCCL() {
   };
 
   const handleDownloadLetter = async () => {
-    try {
-      const res = await downloadCandidateCcl();
-      const fileName =
-        issuedDocument?.userFileName ||
-        issuedDocument?.documentName ||
-        templateMeta?.fileName ||
-        "client-care-letter.docx";
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = fileName;
-      link.click();
-      window.URL.revokeObjectURL(url);
-    } catch {
-      showToast({ variant: "danger", message: "Could not download Client Care Letter" });
+    const result = await downloadCandidateCclLetter();
+    if (!result.ok) {
+      showToast({ variant: "danger", message: result.message || "Could not download Client Care Letter" });
     }
   };
 

@@ -18,8 +18,8 @@ import {
   createAdmin,
   updateAdmin,
   deleteAdmin,
-  exportAdmins,
 } from "../../services/adminService";
+import useDownloads from "../../hooks/useDownloads";
 import { useSelector, useDispatch } from "react-redux";
 import { updateUser } from "../../store/slices/authSlice";
 
@@ -109,6 +109,7 @@ function fullName(admin) {
 export default function AdminUsers() {
   const { showToast } = useToast();
   const { admins, pagination, loading, fetchAdmins } = useAdmin();
+  const { exportAdminsList } = useDownloads();
   const dispatch = useDispatch();
   const currentUser = useSelector((state) => state.auth.user);
 
@@ -415,32 +416,16 @@ export default function AdminUsers() {
 
   const handleExport = async () => {
     setExporting(true);
-    try {
-      const res = await exportAdmins({
-        search: debouncedSearch.trim(),
-        status: statusParam,
-      });
-
-      // Create a blob from the response
-      const blob = new Blob([res.data], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `admins_export_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      showToast({
-        message: "Admins exported successfully",
-        variant: "success",
-      });
-    } catch (e) {
-      showToast({ message: getApiError(e), variant: "danger" });
-    } finally {
-      setExporting(false);
+    const result = await exportAdminsList({
+      search: debouncedSearch.trim(),
+      status: statusParam,
+    });
+    if (result.ok) {
+      showToast({ message: "Admins exported successfully", variant: "success" });
+    } else {
+      showToast({ message: result.message || getApiError(result.error), variant: "danger" });
     }
+    setExporting(false);
   };
 
   const isFormModal = modal.type === "create" || modal.type === "edit";
