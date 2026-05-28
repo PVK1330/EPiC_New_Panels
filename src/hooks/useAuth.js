@@ -44,6 +44,9 @@ const useAuth = () => {
     try {
       await registerUser(data);
       sessionStorage.setItem("pending_otp_email", data.email);
+      if (data.organisation_id) {
+        sessionStorage.setItem("pending_otp_org_id", data.organisation_id);
+      }
       navigate("/verify-otp");
       return { success: true };
     } finally {

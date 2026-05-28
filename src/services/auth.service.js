@@ -32,9 +32,11 @@ export const verifyOtp = async (data) => {
   }
 };
 
-export const resendOtp = async (email) => {
+export const resendOtp = async (email, organisationId) => {
   try {
-    const response = await apiClient.post("/api/auth/resend-otp", { email });
+    const payload = { email };
+    if (organisationId) payload.organisation_id = organisationId;
+    const response = await apiClient.post("/api/auth/resend-otp", payload);
     return response.data;
   } catch (error) {
     extractError(error, "Failed to resend OTP");
