@@ -72,6 +72,11 @@ const AdminLicenceApplications = lazy(() => import('../pages/admin/AdminLicenceA
 const AdminEnquiryInbox = lazy(() => import('../pages/admin/AdminEnquiryInbox'));
 const AdminCclFeeApprovals = lazy(() => import('../pages/admin/AdminCclFeeApprovals'));
 const AdminAnnouncements = lazy(() => import('../pages/admin/AdminAnnouncements'));
+const AdminActivityCenter = lazy(() => import('../pages/admin/ActivityCenter'));
+const AdminTimelineExplorer = lazy(() => import('../pages/admin/TimelineExplorer'));
+const AdminChangeRequests = lazy(() => import('../pages/admin/ChangeRequests'));
+const AdminUserActivity = lazy(() => import('../pages/admin/UserActivity'));
+const AdminLoginActivity = lazy(() => import('../pages/admin/LoginActivity'));
 
 // ── Business pages ───────────────────────────────────────────────────────────
 const BusinessDashboard = lazy(() => import('../pages/business/BusinessDashboard'));
@@ -205,6 +210,11 @@ const AppRouter = () => {
           <Route path="documents" element={<AdminDocuments />} />
           <Route path="messages" element={<AdminMessages />} />
           <Route path="licence-requests" element={<AdminLicenceApplications />} />
+          <Route path="activity-center" element={<AdminActivityCenter />} />
+          <Route path="timeline-explorer" element={<AdminTimelineExplorer />} />
+          <Route path="change-requests" element={<AdminChangeRequests />} />
+          <Route path="user-activity" element={<AdminUserActivity />} />
+          <Route path="login-activity" element={<AdminLoginActivity />} />
         </Route>
 
         <Route

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Search, Settings, Grid3x3, List, Calendar as CalendarIcon, Clock, MapPin, Users, Video, Phone, X, Edit, Trash2, Eye, UserCheck, CheckCircle2 } from "lucide-react";
 import MicrosoftConnect from "../../components/MicrosoftConnect";
+import GoogleConnect from "../../components/GoogleConnect";
 import CreateMeetingModal from "../../components/CreateMeetingModal";
 import { getUpcomingMeetings } from "../../services/teamsApi";
 import { getMyAppointments } from "../../services/appointmentApi";
@@ -302,8 +303,11 @@ const Calendar = () => {
         </div>
       </div>
 
-      {/* Microsoft Teams Connection */}
-      <MicrosoftConnect />
+      {/* Integrations */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <MicrosoftConnect />
+        <GoogleConnect />
+      </div>
 
       {/* Controls Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200">

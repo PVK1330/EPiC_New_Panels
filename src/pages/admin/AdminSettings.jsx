@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { updateUser } from "../../store/slices/authSlice";
 import Swal from "sweetalert2";
@@ -48,6 +48,8 @@ import OrganisationSettings from "../../components/admin/settings/OrganisationSe
 import RolesAndPermissionsPanel from "../../components/permissions/RolesAndPermissionsPanel";
 import UsersAndRolesPanel from "../../components/permissions/UsersAndRolesPanel";
 import { TAB_IDS, TABS } from "../../components/permissions/permissionsData";
+import MicrosoftConnect from "../../components/MicrosoftConnect";
+import GoogleConnect from "../../components/GoogleConnect";
 
 // Services
 import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from "../../services/caseWorker";
@@ -95,6 +97,7 @@ const CONFIG_TABS = [
   { id: "categories", label: "Case Categories", icon: <FiFolder />, color: "text-emerald-500", bg: "bg-emerald-50" },
   { id: "departments", label: "Departments", icon: <FiFolder />, color: "text-violet-500", bg: "bg-violet-50" },
   { id: "roles", label: "Role Permissions", icon: <FiShield />, color: "text-amber-500", bg: "bg-amber-50" },
+  { id: "integrations", label: "Integrations", icon: <RiTeamLine />, color: "text-purple-500", bg: "bg-purple-50" },
   { id: "email", label: "Email Templates", icon: <FiMail />, color: "text-rose-500", bg: "bg-rose-50" },
   { id: "smtp", label: "SMTP / Mail", icon: <FiMail />, color: "text-pink-500", bg: "bg-pink-50" },
   { id: "payment", label: "Payment Config", icon: <FiCreditCard />, color: "text-cyan-500", bg: "bg-cyan-50" },
@@ -112,7 +115,9 @@ function getApiError(error) {
 export default function AdminSettings() {
   const dispatch = useDispatch();
   const { showToast } = useToast();
-  const [configTab, setConfigTab] = useState("account");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "account";
+  const [configTab, setConfigTab] = useState(initialTab);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // States
@@ -263,6 +268,31 @@ export default function AdminSettings() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && tab !== configTab) {
+      setConfigTab(tab);
+    }
+    const sync = searchParams.get("sync");
+    if (sync?.startsWith("google_")) {
+      const messages = {
+        google_success: "Google Calendar connected successfully.",
+        google_access_denied:
+          "Google access was denied. Add your Gmail as a test user in Google Cloud Console.",
+        google_error: "Google connection failed. Please try again.",
+      };
+      if (messages[sync]) {
+        showToast({
+          message: messages[sync],
+          variant: sync === "google_success" ? "success" : "danger",
+        });
+      }
+      const next = new URLSearchParams(searchParams);
+      next.delete("sync");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, configTab, setSearchParams, showToast]);
 
   // Account Handlers (DYNAMIC)
   const handleProfileSave = async () => {
@@ -715,6 +745,15 @@ export default function AdminSettings() {
                 </AnimatePresence>
               </div>
             )}
+
+              {configTab === "integrations" && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <MicrosoftConnect />
+                    <GoogleConnect />
+                  </div>
+                </div>
+              )}
 
             {configTab === "email" && (
               <EmailSettings 

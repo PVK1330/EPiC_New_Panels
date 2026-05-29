@@ -19,7 +19,7 @@ import NotificationDropdown from "../notifications/NotificationDropdown";
 import MessageDropdown from "../notifications/MessageDropdown";
 import eliteLogo from "../../assets/elitepic_logo.png";
 import { getOrganisationBranding } from "../../services/settingsService";
-import { resolveAssetUrl } from "../../utils/assetUrl";
+import { resolveAssetUrl, resolveOrganisationLogoUrl } from "../../utils/assetUrl";
 import { getProfileMenuPaths } from "../../utils/authResponse";
 
 const AdminLayout = () => {
@@ -46,8 +46,8 @@ const AdminLayout = () => {
   const fetchOrganisationBranding = useCallback(async () => {
     try {
       const res = await getOrganisationBranding();
-      const url = res.data?.data?.organisation?.logoUrl;
-      setOrgLogoUrl(url ? resolveAssetUrl(url) : null);
+      const organisation = res.data?.data?.organisation;
+      setOrgLogoUrl(resolveOrganisationLogoUrl(organisation));
     } catch {
       setOrgLogoUrl(null);
     }
