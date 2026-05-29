@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getAuditLogs, exportAuditLogs } from '../../services/audit.service';
-import socketService from '../../services/socket.service';
 
 const AdminAuditLogs = () => {
   const [logs, setLogs] = useState([]);
@@ -33,20 +32,7 @@ const AdminAuditLogs = () => {
 
   useEffect(() => {
     fetchLogs();
-
-    const handleUpdate = () => {
-      // Only refresh if on page 1 to prevent jumping
-      if (filters.page === 1) fetchLogs();
-    };
-
-    socketService.on('dashboard:update', handleUpdate);
-    socketService.on('timeline:update', handleUpdate);
-    
-    return () => {
-      socketService.off('dashboard:update', handleUpdate);
-      socketService.off('timeline:update', handleUpdate);
-    };
-  }, [fetchLogs, filters.page]);
+  }, [fetchLogs]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;

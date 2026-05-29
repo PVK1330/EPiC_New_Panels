@@ -6,27 +6,29 @@ export const getAuditLogs = async (params) => {
 };
 
 export const exportAuditLogs = async (params) => {
-  const response = await api.get('/api/audit-logs/export', { 
+  const response = await api.get('/api/audit-logs/export', {
     params,
-    responseType: 'blob' 
+    responseType: 'blob',
   });
-  
-  const url = window.URL.createObjectURL(new Blob([response.data]));
-  const link = document.createElement('href');
-  link.href = url;
-  
-  // Extract filename from header or fallback
-  let filename = 'Audit_Export.xlsx';
-  const disposition = response.headers['content-disposition'];
+
+  let filename = `Audit_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const disposition = response.headers?.['content-disposition'];
   if (disposition && disposition.includes('filename=')) {
-    filename = disposition.split('filename=')[1].replace(/"/g, '');
+    filename = disposition.split('filename=')[1].replace(/"/g, '').trim();
   }
-  
+
+  const blob = new Blob([response.data], {
+    type: response.headers?.['content-type'] ||
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
   link.setAttribute('download', filename);
   document.body.appendChild(link);
   link.click();
   link.parentNode.removeChild(link);
   window.URL.revokeObjectURL(url);
-  
+
   return true;
 };

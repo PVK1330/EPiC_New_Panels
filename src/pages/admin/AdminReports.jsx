@@ -975,7 +975,11 @@ function PerformanceTab({
 
       const res = await exportReportingExcel(params);
       const filename = `performance_metrics_${caseworkerId}_${new Date().toISOString().split("T")[0]}.xlsx`;
-      const url = window.URL.createObjectURL(res.data);
+      const blob = new Blob([res.data], {
+        type: res.headers?.["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -1482,9 +1486,13 @@ export default function AdminReports() {
   const handleExportWorkbook = async () => {
     setReportExporting(true);
     try {
-      const res = await exportReportingExcel({});
+      const res = await exportReportingExcel(buildParams());
       const filename = `reports_${new Date().toISOString().split("T")[0]}.xlsx`;
-      const url = window.URL.createObjectURL(res.data);
+      const blob = new Blob([res.data], {
+        type: res.headers?.["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;

@@ -440,11 +440,14 @@ const Cases = () => {
       };
       const response = await exportCases(params);
 
-      // Create a blob URL and download the file
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const blob = new Blob([response.data], {
+        type: response.headers?.["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "caseworker_cases_export.csv");
+      link.setAttribute("download", `caseworker_cases_${new Date().toISOString().split("T")[0]}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();

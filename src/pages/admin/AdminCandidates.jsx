@@ -755,6 +755,8 @@ export default function AdminCandidates() {
       const res = await exportCandidateApplicationsExcel({
         search: debouncedSearch.trim(),
         status: statusParam,
+        visaType: visaParam,
+        paymentStatus: payParam,
       });
 
       const blob = new Blob([res.data], {

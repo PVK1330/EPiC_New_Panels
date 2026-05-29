@@ -74,11 +74,14 @@ const CaseworkerPerformance = () => {
     try {
       const response = await exportCaseworkerPerformance();
 
-      // Create a blob URL and download the file
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const blob = new Blob([response.data], {
+        type: response.headers?.["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "caseworker_performance_report.csv");
+      link.setAttribute("download", `caseworker_performance_${new Date().toISOString().split("T")[0]}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();

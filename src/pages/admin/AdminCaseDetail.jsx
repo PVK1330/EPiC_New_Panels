@@ -481,16 +481,21 @@ const AdminCaseDetail = () => {
     try {
       const cleanId = caseId.replace(/^#/, "");
       const response = await exportPDFHandler(cleanId);
-      const url = window.URL.createObjectURL(response.data);
+      const blob = new Blob([response.data], {
+        type: response.headers?.["content-type"] || "application/pdf",
+      });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `Case_${cleanId}_Report.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
       setExportOpen(false);
     } catch (error) {
       console.error("PDF Export failed:", error);
+      showToast({ message: "Failed to export PDF", variant: "danger" });
     }
   };
 
@@ -499,16 +504,22 @@ const AdminCaseDetail = () => {
     try {
       const cleanId = caseId.replace(/^#/, "");
       const response = await exportCSVHandler(cleanId);
-      const url = window.URL.createObjectURL(response.data);
+      const blob = new Blob([response.data], {
+        type: response.headers?.["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `Case_${cleanId}_Data.pdf`);
+      link.setAttribute("download", `Case_${cleanId}_Data.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
       setExportOpen(false);
     } catch (error) {
-      console.error("CSV Export failed:", error);
+      console.error("Excel Export failed:", error);
+      showToast({ message: "Failed to export data", variant: "danger" });
     }
   };
 
@@ -808,7 +819,7 @@ const AdminCaseDetail = () => {
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors font-semibold"
                           >
                             <FiTable className="text-green-600" />
-                            Data Export (CSV)
+                            Data Export (Excel)
                           </button>
                         </motion.div>
                       </>
