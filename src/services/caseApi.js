@@ -40,6 +40,8 @@ export const updateCaseStatus = (id, status) => api.put(`/api/cases/${id}`, { st
 
 export const exportCases = (params = {}) => api.get(`/api/caseworker/cases/export`, { params, responseType: 'blob' });
 
+export const exportAllCases = (params = {}) => api.get(`/api/cases/export`, { params, responseType: 'blob' });
+
 export const getCaseworkerCases = (params = {}) => api.get(`/api/caseworker/cases`, { params });
 
 export const getCaseworkerPipelineCases = () => api.get(`/api/caseworker/cases/pipeline`);
@@ -92,3 +94,6 @@ export const createTask = (data) => api.post('/api/tasks', data);
 export const updateTask = (id, data) => api.put(`/api/tasks/${id}`, data);
 
 export const deleteTask = (id) => api.delete(`/api/tasks/${id}`);
+
+// Performance export API
+export const exportCaseworkerPerformance = (params = {}) => api.get(`/api/caseworker/performance/export`, { params, responseType: 'blob' });

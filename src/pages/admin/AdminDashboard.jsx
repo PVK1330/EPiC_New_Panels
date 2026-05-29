@@ -1,9 +1,4 @@
-import { useState, useEffect, useRef } from "react";
-import { toPng } from "html-to-image";
-import {
-  cloneWithResolvedStyles,
-  removeCloneHost,
-} from "../../utils/canvasExportUtils";
+import { useState, useEffect, useRef } from "react"; 
 import { useNavigate } from "react-router-dom";
 
 import { Skeleton } from "boneyard-js/react";
@@ -30,6 +25,7 @@ import {
   getRecentActivities,
   getDueOverdueTasks,
 } from "../../services/dashboardApi";
+import useDownloads from "../../hooks/useDownloads";
 import DueOverdueTasksWidget from "../../components/dashboard/DueOverdueTasksWidget";
 import { getConversations } from "../../services/messagingApi";
 import {
@@ -69,6 +65,7 @@ export default function AdminDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const dashboardRef = useRef(null);
+  const { downloadDashboardPdf } = useDownloads();
 
   const applyDemoDashboard = () => {
     setDashboardStats(MOCK_DASHBOARD_STATS);
@@ -177,23 +174,12 @@ export default function AdminDashboard() {
   }, [dashboardFilter]);
 
   const handleExport = async () => {
-    if (!dashboardRef.current) return;
-    const { clone, host } = cloneWithResolvedStyles(dashboardRef.current);
     try {
       setIsExporting(true);
-      const dataUrl = await toPng(clone, {
-        cacheBust: true,
-        backgroundColor: "#f9fafb",
-        style: { borderRadius: "0" },
-      });
-      const link = document.createElement("a");
-      link.download = `EPiC_Dashboard_Snapshot_${new Date().toISOString().split("T")[0]}.png`;
-      link.href = dataUrl;
-      link.click();
+      await downloadDashboardPdf();
     } catch (error) {
       console.error("Export failed:", error);
     } finally {
-      removeCloneHost(host);
       setIsExporting(false);
     }
   };

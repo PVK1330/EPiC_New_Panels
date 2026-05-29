@@ -3,7 +3,8 @@ import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { FileText, Upload, Download, Eye, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import Modal from "../../components/Modal";
-import { getUserDocuments, downloadDocument, triggerDownload } from "../../services/documentApi";
+import { getUserDocuments } from "../../services/documentApi";
+import useDownloads from "../../hooks/useDownloads";
 import { useToast } from "../../context/ToastContext";
 
 const DocumentItem = ({ doc, onView, onDownload }) => {
@@ -83,6 +84,7 @@ const Documents = () => {
   const [viewDoc, setViewDoc] = useState(null);
   const [downloading, setDownloading] = useState(false);
   const { showToast } = useToast();
+  const { downloadDocument } = useDownloads();
 
   const loadDocs = useCallback(async () => {
     if (!userId) return;
@@ -105,8 +107,7 @@ const Documents = () => {
   const handleDownload = async (doc) => {
     setDownloading(true);
     try {
-      const res = await downloadDocument(doc.id);
-      triggerDownload(res.data, doc.userFileName || doc.documentName);
+      await downloadDocument(doc.id, doc.userFileName || doc.documentName);
       showToast({ message: "Document download started.", variant: "success" });
     } catch {
       showToast({ message: "Failed to download document.", variant: "danger" });

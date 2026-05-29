@@ -1,5 +1,5 @@
-import { NavLink, useLocation } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   RiDashboardLine,
@@ -33,6 +33,7 @@ import {
 } from "../../store/slices/platformBrandingSlice";
 import useModuleAccess from "../../hooks/useModuleAccess";
 import { resolveAssetUrl } from "../../utils/assetUrl";
+import { logout } from "../../store/slices/authSlice";
 
 const sidebarVariants = {
   open: {
@@ -128,6 +129,9 @@ const NavItem = ({ item, onClose }) => {
 };
 
 const SuperadminSidebar = ({ isOpen, onClose }) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
   // Live branding from Redux — updated instantly when IdentityTab saves/uploads
   const platformName = useSelector(selectPlatformName);
   const logoUrl      = useSelector(selectLogoUrl);
@@ -135,8 +139,15 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
   // Use the uploaded logo if available, otherwise fall back to the bundled asset
   const logoSrc = logoUrl || eliteLogo;
 
+  // Module access hook — must be at component top level, not inside nested functions
+  const { canAccess } = useModuleAccess();
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login");
+  };
+
   const SidebarContent = () => {
-    const { canAccess } = useModuleAccess();
 
     const visibleSections = navSections
       .map((section) => ({
@@ -230,7 +241,7 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
             <motion.button
               whileHover={{ scale: 1.15, rotate: 10 }}
               whileTap={{ scale: 0.9 }}
-              onClick={(e) => { e.preventDefault(); /* Handle logout */ }}
+              onClick={handleLogout}
               className="p-2 text-blue-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-300 shadow-md shadow-blue-500/10 group-hover:shadow-red-500/20"
             >
               <RiLogoutBoxRLine size={18} />

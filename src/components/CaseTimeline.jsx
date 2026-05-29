@@ -290,7 +290,7 @@ const CaseTimeline = ({ caseId, currentUser }) => {
                       )}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">{formatDate(item.actionDate)}</p>
-                    <p className="text-sm text-gray-600 mt-2">{item.description}</p>
+                    <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap">{item.description}</p>
                     {item.performer && (
                       <p className="text-xs text-gray-400 mt-1">
                         by {item.performer.first_name} {item.performer.last_name}

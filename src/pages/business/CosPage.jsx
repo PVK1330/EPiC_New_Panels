@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { getCosSummary, requestCosAllocation, getCosRequests, updateCosRequest, deleteCosRequest } from "../../services/licenceApi";
 import toast from "react-hot-toast";
 import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
+import useDownloads from "../../hooks/useDownloads";
 import {
   LayoutDashboard,
   Hash,
@@ -39,6 +40,8 @@ const COSPage = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [visaTypeOptions, setVisaTypeOptions] = useState([]);
+
+  const { downloadCosSummaryExcel, downloadCosRequestsExcel, busy } = useDownloads();
 
   useEffect(() => {
     fetchCosSummary();
@@ -100,33 +103,21 @@ const COSPage = () => {
     }
   };
 
-  const handleDownload = () => {
-    const dataToExport = activeTab === 'summary' ? cosList : requests;
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + (activeTab === 'summary' 
-          ? "Visa Type,Allocated,Used,Remaining\n" + dataToExport.map(r => `${r.visaType},${r.allocated},${r.used},${r.remaining}`).join("\n")
-          : "ID,Visa Type,Amount,Status,Date\n" + dataToExport.map(r => `${r.id},${r.licenceType},${r.cosAllocation},${r.status},${new Date(r.createdAt).toLocaleDateString()}`).join("\n")
-        );
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `cos_${activeTab}_report.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = async () => {
+    const result = activeTab === 'summary' 
+      ? await downloadCosSummaryExcel()
+      : await downloadCosRequestsExcel();
+    
+    if (!result.ok) {
+      toast.error(result.message || 'Export failed');
+    }
   };
 
-  const handleDownloadRow = (item) => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "Visa Type,Allocated,Used,Remaining,Expiry Date,Last Used\n"
-      + `${item.visaType},${item.allocated},${item.used},${item.remaining},${item.expiryDate},${item.lastUsed}`;
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `cos_${item.visaType}_report.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadRow = async () => {
+    const result = await downloadCosSummaryExcel();
+    if (!result.ok) {
+      toast.error(result.message || 'Export failed');
+    }
   };
 
   const containerVariants = {
@@ -278,7 +269,8 @@ const COSPage = () => {
             </div>
             <button
               onClick={handleDownload}
-              className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600 transition"
+              disabled={busy.cosSummaryExcel || busy.cosRequestsExcel}
+              className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600 transition disabled:opacity-50"
               title="Download Report"
             >
               <Download size={20} />
@@ -382,8 +374,9 @@ const COSPage = () => {
                           <Pencil size={14} />
                         </button>
                         <button 
-                          onClick={() => handleDownloadRow(item)}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition"
+                          onClick={handleDownloadRow}
+                          disabled={busy.cosSummaryExcel}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition disabled:opacity-50"
                           title="Download Report"
                         >
                           <Download size={14} />

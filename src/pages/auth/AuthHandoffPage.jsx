@@ -3,9 +3,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "../../store/slices/authSlice";
 import { normalizeAuthUser, getDashboardRouteForUser } from "../../utils/authResponse";
+import { apiClient } from "../../services/axios.instance";
 
 /**
  * Receives impersonation / cross-domain session from query (?session=base64).
+ * Sends the token to POST /api/auth/handoff which verifies and sets the httpOnly cookie,
+ * then returns user data for Redux state.
  */
 export default function AuthHandoffPage() {
   const [searchParams] = useSearchParams();
@@ -19,20 +22,36 @@ export default function AuthHandoffPage() {
       setError("Missing session. Try Login as again from superadmin.");
       return;
     }
+    let token, user, next;
     try {
       const decoded = JSON.parse(atob(decodeURIComponent(raw)));
-      const { token, user, next } = decoded || {};
-      if (!token || !user) {
-        setError("Invalid session payload.");
-        return;
-      }
-      const normalized = normalizeAuthUser(user);
-      dispatch(setCredentials({ token, user: normalized }));
-      const target = next || getDashboardRouteForUser(normalized);
-      navigate(target, { replace: true });
+      token = decoded?.token;
+      user = decoded?.user;
+      next = decoded?.next;
     } catch {
-      setError("Could not complete sign-in handoff.");
+      setError("Invalid session payload.");
+      return;
     }
+    if (!token || !user) {
+      setError("Invalid session payload.");
+      return;
+    }
+
+    // Call handoff endpoint to set httpOnly cookie
+    apiClient.post("/api/auth/handoff", { token })
+      .then((res) => {
+        const data = res.data?.data ?? res.data;
+        const normalized = normalizeAuthUser(data?.user ?? user);
+        dispatch(setCredentials({
+          user: normalized,
+          allowedModules: data?.allowedModules ?? [],
+        }));
+        const target = next || getDashboardRouteForUser(normalized);
+        navigate(target, { replace: true });
+      })
+      .catch((err) => {
+        setError(err?.response?.data?.message || "Could not complete sign-in handoff.");
+      });
   }, [searchParams, dispatch, navigate]);
 
   return (

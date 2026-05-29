@@ -3,7 +3,7 @@ import { selectAllowedModules } from '../store/slices/authSlice';
 
 export default function useModuleAccess() {
   const allowedModules = useSelector(selectAllowedModules);
-  const token = useSelector((state) => state.auth.token);
+
   const user = useSelector((state) => state.auth.user);
   const isPlatformPanel =
     user?.role === 'superadmin' &&
@@ -11,10 +11,10 @@ export default function useModuleAccess() {
 
   const canAccess = (moduleKey) => {
     if (!moduleKey) return true;
-    if (!token) return false;
+    if (!user) return false;
     if (isPlatformPanel) return true;
+    if (!allowedModules || !Array.isArray(allowedModules) || allowedModules.length === 0) return true;
     if (allowedModules.includes('*')) return true;
-    if (!allowedModules || allowedModules.length === 0) return true;
     return allowedModules.includes(moduleKey);
   };
 

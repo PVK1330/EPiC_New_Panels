@@ -8,7 +8,7 @@ import { getAuthUserAndToken, getDashboardRouteForUser, resolveLoginRole } from 
 const useAuth = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, token } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
   const [isLoading, setIsLoading] = useState(false);
 
   const login = async (email, password) => {
@@ -21,8 +21,8 @@ const useAuth = () => {
         navigate("/2fa");
         return { twoFactorRequired: true };
       }
-      const { user: userData, token: jwtToken, allowedModules } = getAuthUserAndToken(res);
-      if (!userData || !jwtToken) {
+      const { user: userData, allowedModules } = getAuthUserAndToken(res);
+      if (!userData) {
         throw new Error(res?.message || "Invalid login response");
       }
       const role = resolveLoginRole(userData);
@@ -31,7 +31,7 @@ const useAuth = () => {
         role,
         organisation_id: userData.organisation_id ?? null,
       };
-      dispatch(setCredentials({ user, token: jwtToken, allowedModules }));
+      dispatch(setCredentials({ user, allowedModules }));
       navigate(getDashboardRouteForUser(user));
       return { success: true };
     } finally {
@@ -61,8 +61,7 @@ const useAuth = () => {
 
   return {
     user,
-    token,
-    isAuthenticated: !!token,
+    isAuthenticated: !!user,
     isLoading,
     login,
     register,

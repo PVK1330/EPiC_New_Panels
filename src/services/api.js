@@ -1,5 +1,4 @@
 import axios from "axios";
-import { getToken } from "../utils/storage";
 import store from "../store";
 import { logout } from "../store/slices/authSlice";
 import { API_BASE_URL } from "../utils/constants";
@@ -11,17 +10,15 @@ const api = axios.create({
   withCredentials: true,
 });
 
-
-
-// Attach token from localStorage on every request
+// Attach organisation slug header and fallback Authorization token
 api.interceptors.request.use((config) => {
-  const token = getToken() || localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
   const orgSlug = getOrganisationSlugFromHost();
   if (orgSlug) {
     config.headers["X-Organisation-Slug"] = orgSlug;
+  }
+  const token = store.getState()?.auth?.token;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });

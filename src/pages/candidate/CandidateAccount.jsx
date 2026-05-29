@@ -20,7 +20,6 @@ import TwoFactorDisable from "../../components/TwoFactorDisable";
 import { useToast } from "../../context/ToastContext";
 import { setCredentials } from "../../store/slices/authSlice";
 import store from "../../store";
-import { getToken } from "../../utils/storage";
 import {
   fetchCandidateAccount,
   patchCandidatePreferences,
@@ -389,9 +388,8 @@ const CandidateAccount = () => {
   const applyUserToStore = useCallback(
     (u) => {
       if (!u) return;
-      const token = getToken();
-      if (!token) return;
       const prev = store.getState().auth.user;
+      if (!prev) return;
       dispatch(
         setCredentials({
           user: {

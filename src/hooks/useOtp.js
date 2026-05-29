@@ -41,15 +41,15 @@ const useOtp = (type = "register") => {
       if (type === "register") {
         const res = await verifyOtp({ email, otp });
         sessionStorage.removeItem("pending_otp_email");
-        const { user: userData, token: jwtToken, allowedModules } = getAuthUserAndToken(res);
-        if (userData && jwtToken) {
+        const { user: userData, allowedModules } = getAuthUserAndToken(res);
+        if (userData) {
           const role = resolveLoginRole(userData);
           const user = {
             ...userData,
             role,
             organisation_id: userData.organisation_id ?? null,
           };
-          dispatch(setCredentials({ user, token: jwtToken, allowedModules }));
+          dispatch(setCredentials({ user, allowedModules }));
           navigate(getDashboardRouteForUser(user));
         } else {
           navigate("/login");

@@ -427,6 +427,39 @@ const Cases = () => {
     setDetailCase(card);
   }, []);
 
+  const handleExport = async () => {
+    try {
+      const params = {
+        search,
+        status: chip === "all" ? "" : chip,
+        priority:
+          priorityFilter === "All priorities"
+            ? ""
+            : priorityFilter.toLowerCase(),
+        visaTypeId: visaFilter === "All visa types" ? "" : visaFilter,
+      };
+      const response = await exportCases(params);
+
+      // Create a blob URL and download the file
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "caseworker_cases_export.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      showToast({ message: "Export successful!", variant: "success" });
+    } catch (error) {
+      console.error("Export failed:", error);
+      showToast({
+        message: error?.response?.data?.message || "Export failed. Please try again.",
+        variant: "danger",
+      });
+    }
+  };
+
   // Fetch cases from API
   useEffect(() => {
     const fetchCases = async () => {
@@ -1104,9 +1137,7 @@ const Cases = () => {
           </button>
           <button
             type="button"
-            onClick={() =>
-              window.alert("Demo: export would download a CSV/spreadsheet.")
-            }
+            onClick={handleExport}
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 shadow-sm hover:bg-gray-50"
           >
             <Download size={18} />

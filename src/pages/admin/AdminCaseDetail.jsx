@@ -402,10 +402,12 @@ const AdminCaseDetail = () => {
         phone: candidate?.mobile || candidate?.phone || "N/A",
       },
       sponsor: {
-        company: business?.businessId || "N/A",
-        licenceNo: business?.businessId || "N/A",
-        licenceStatus: "Active",
-        licenceExpiry: "N/A",
+        company: business?.sponsor?.sponsorProfile?.companyName || business?.businessId || "N/A",
+        licenceNo: business?.sponsor?.sponsorProfile?.sponsorLicenceNumber || "N/A",
+        licenceStatus: business?.sponsor?.sponsorProfile?.licenceStatus || "N/A",
+        licenceExpiry: business?.sponsor?.sponsorProfile?.licenceExpiryDate
+          ? new Date(business.sponsor.sponsorProfile.licenceExpiryDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+          : "N/A",
         contact: business?.sponsor
           ? `${business.sponsor.first_name} ${business.sponsor.last_name}`
           : "N/A",
@@ -415,12 +417,14 @@ const AdminCaseDetail = () => {
             .join(", ") || "Unassigned",
       },
       case: {
-        visaType: visaType?.name || "Unknown",
+        visaType: visaType?.name || candidate?.visaType || "Unknown",
         caseStage: overview?.caseStage,
         caseStatus: overview?.status || "Unknown",
         dateOpened: keyDates?.submitted || "N/A",
         targetDate: keyDates?.targetSubmissionDate || "N/A",
-        visaExpiry: "N/A",
+        visaExpiry: candidate?.visaEndDate
+          ? new Date(candidate.visaEndDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+          : "N/A",
         paymentStatus: financial?.amountStatus || (totalFee === 0 ? "Pending" : outstanding === 0 ? "Fully Paid" : "Partially Paid"),
         biometricsDate: overview?.biometricsDate || keyDates?.biometricsDate,
         biometricLocation: overview?.biometricLocation,
@@ -477,7 +481,7 @@ const AdminCaseDetail = () => {
     try {
       const cleanId = caseId.replace(/^#/, "");
       const response = await exportPDFHandler(cleanId);
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `Case_${cleanId}_Report.pdf`);
@@ -495,10 +499,10 @@ const AdminCaseDetail = () => {
     try {
       const cleanId = caseId.replace(/^#/, "");
       const response = await exportCSVHandler(cleanId);
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `Case_${cleanId}_Data.csv`);
+      link.setAttribute("download", `Case_${cleanId}_Data.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();

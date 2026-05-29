@@ -31,7 +31,7 @@ export default function CaseworkerApplicationTab({ caseDetail, userName }) {
   const customDefsForForm = useMemo(
     () =>
       applicationCustomFields.map((cf) => ({
-        id: cf.field_id,
+        id: String(cf.field_id),
         label: cf.label,
         type: cf.field_type,
       })),
@@ -102,6 +102,16 @@ export default function CaseworkerApplicationTab({ caseDetail, userName }) {
     }
   };
 
+  const fieldVisibilityMap = useMemo(() => {
+    const vis = {};
+    if (applicationFieldSettings) {
+      for (const row of applicationFieldSettings) {
+        vis[row.field_key] = row.is_visible !== false;
+      }
+    }
+    return vis;
+  }, [applicationFieldSettings]);
+
   if (loading) {
     return <div className="p-6 text-sm text-gray-500">Loading application data...</div>;
   }
@@ -115,6 +125,8 @@ export default function CaseworkerApplicationTab({ caseDetail, userName }) {
       onAdminSaveDraft={handleSave}
       adminSubmitBusy={saving}
       adminShowAllBuiltinFields={true}
+      customFieldDefinitions={customDefsForForm}
+      fieldVisibility={fieldVisibilityMap}
     />
   );
 }

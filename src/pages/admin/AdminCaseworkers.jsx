@@ -19,6 +19,7 @@ import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 import useCaseworker from "../../hooks/useCaseworker";
+import useDownloads from "../../hooks/useDownloads";
 import { useToast } from "../../context/ToastContext";
 import {
   createCaseworker,
@@ -553,11 +554,11 @@ export default function AdminCaseworkers() {
       });
       
       // Create a blob from the response
-      const blob = new Blob([res.data], { type: 'text/csv' });
+      const blob = res.data;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `caseworkers_export_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `caseworkers_export_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

@@ -42,6 +42,7 @@ import {
   MOCK_REPORT_WORKLOAD,
   MOCK_REPORT_FINANCE,
 } from "../../data/adminMockData";
+import useDownloads from "../../hooks/useDownloads";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -539,49 +540,6 @@ function DateRangeBadge({ startDate, endDate }) {
   );
 }
 
-// ─── Export Utility ────────────────────────────────────────────────────────────
-
-const exportToCsv = (filename, rows, notify) => {
-  if (!rows || !rows.length) {
-    notify?.({
-      message: "Nothing to export for the current selection.",
-      variant: "warning",
-    });
-    return;
-  }
-  const separator = ",";
-  const keys = Object.keys(rows[0]);
-  const csvContent =
-    keys.join(separator) +
-    "\n" +
-    rows
-      .map((row) => {
-        return keys
-          .map((k) => {
-            let cell = row[k] === null || row[k] === undefined ? "" : row[k];
-            cell =
-              cell instanceof Date
-                ? cell.toLocaleString()
-                : String(cell).replace(/"/g, '""');
-            if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-            return cell;
-          })
-          .join(separator);
-      })
-      .join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", filename);
-  link.style.visibility = "hidden";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
-
 // ─── Performance Detail Modal ─────────────────────────────────────────────────
 
 function PerformanceDetailModal({ caseworker, onClose, showToast }) {
@@ -1016,15 +974,11 @@ function PerformanceTab({
         params.endDate = dateRange.end.toISOString().split("T")[0];
 
       const res = await exportReportingExcel(params);
-      const blob = new Blob([res.data], {
-        type:
-          res.headers["content-type"] ||
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      const url = window.URL.createObjectURL(blob);
+      const filename = `performance_metrics_${caseworkerId}_${new Date().toISOString().split("T")[0]}.xlsx`;
+      const url = window.URL.createObjectURL(res.data);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `performance_metrics_${caseworkerId}_${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -1529,15 +1483,11 @@ export default function AdminReports() {
     setReportExporting(true);
     try {
       const res = await exportReportingExcel({});
-      const blob = new Blob([res.data], {
-        type:
-          res.headers["content-type"] ||
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      const url = window.URL.createObjectURL(blob);
+      const filename = `reports_${new Date().toISOString().split("T")[0]}.xlsx`;
+      const url = window.URL.createObjectURL(res.data);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `reports_${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

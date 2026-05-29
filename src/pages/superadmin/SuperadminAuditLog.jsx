@@ -10,9 +10,8 @@ import {
  RiMoneyPoundCircleLine,
 } from 'react-icons/ri';
 import Button from '../../components/Button';
-import { fetchPlatformAuditLogs, getExportPlatformAuditLogsUrl } from '../../services/superadminAudit.service';
-import { getToken } from '../../utils/storage';
-
+import { fetchPlatformAuditLogs } from '../../services/superadminAudit.service';
+import useDownloads from '../../hooks/useDownloads';
 const SuperadminAuditLog = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('All');
@@ -21,6 +20,7 @@ const SuperadminAuditLog = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLogs, setTotalLogs] = useState(0);
+  const { exportPlatformAuditLogs } = useDownloads();
 
   const categories = ['All', 'Authentication', 'Organisation', 'Billing', 'System'];
 
@@ -75,24 +75,9 @@ const SuperadminAuditLog = () => {
   };
 
   const handleDownloadCsv = async () => {
-    try {
-      const token = getToken() || localStorage.getItem('token');
-      const url = getExportPlatformAuditLogsUrl();
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      const blob = await res.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.setAttribute("download", `EPiC_Platform_Audit_Logs_${new Date().toISOString().split("T")[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-    } catch (err) {
-      console.error("CSV download failed:", err);
+    const result = await exportPlatformAuditLogs();
+    if (!result.ok) {
+      console.error("CSV download failed:", result.error);
     }
   };
 
@@ -104,7 +89,7 @@ const SuperadminAuditLog = () => {
         <p className="text-xs text-gray-400 mt-0.5 font-medium uppercase tracking-widest">Complete record of system activities</p>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleDownloadCsv} className="text-xs font-bold">
-            <RiFileDownloadLine size={16} className="inline mr-1"/> Download CSV
+            <RiFileDownloadLine size={16} className="inline mr-1"/> Download Excel
           </Button>
         </div>
       </div>

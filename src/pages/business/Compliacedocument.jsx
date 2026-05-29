@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getComplianceDocuments } from "../../services/licenceApi";
-import { API_BASE_URL } from "../../utils/constants";
+import useDownloads from "../../hooks/useDownloads";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -21,6 +21,7 @@ import {
 // Mock data removed for dynamic implementation
 
 const DocumentList = () => {
+  const { downloadAssetFile, busy } = useDownloads();
   const [filter, setFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -98,15 +99,12 @@ const DocumentList = () => {
     setShowViewModal(true);
   };
 
-  const handleDownload = (doc) => {
+  const handleDownload = async (doc) => {
     if (!doc.path) return alert("No file path available for this document.");
-    const link = document.createElement("a");
-    link.href = `${API_BASE_URL}${doc.path}`;
-    link.setAttribute("download", doc.name);
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const result = await downloadAssetFile(doc.path, doc.name);
+    if (!result.ok) {
+      alert(result.message || "Failed to download document");
+    }
   };
 
   const handleDelete = async (docId, source) => {

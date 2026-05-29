@@ -25,7 +25,7 @@ import CandidateApplicationForm from "../../components/CandidateApplicationForm/
 import CandidateApplicationReadonly, {
   printCandidateApplication,
 } from "../../components/CandidateApplicationForm/CandidateApplicationReadonly";
-import { downloadCandidateApplicationPdf } from "../../utils/exportCandidateApplicationPdf";
+import useDownloads from "../../hooks/useDownloads";
 import {
   APPLICATION_FIELD_LABELS,
   getInitialApplicationFormData,
@@ -197,6 +197,7 @@ export default function AdminCandidates() {
     addApplicationCustomField,
     removeApplicationCustomField,
   } = useAdmin();
+  const { downloadAdminCandidateApplicationPdf } = useDownloads();
 
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -1011,13 +1012,21 @@ export default function AdminCandidates() {
                 candidates.map((c, idx) => {
                   // Use application data from CandidateApplication table
                   const app = c.application || {};
+                  const caseRecord = c.cases?.[0] || {};
                   const dob = app.dob ? formatDate(app.dob) : c.dob ? formatDate(c.dob) : '—';
-                  const visaType = app.visaType || c.cases?.[0]?.visaType || '—';
-                  const caseStatus = c.cases?.[0]?.status || '—';
-                  const visaExpiry = app.visaEndDate || c.cases?.[0]?.visaExpiry ? formatDate(app.visaEndDate || c.cases[0].visaExpiry) : '—';
-                  const paymentStatus = c.cases?.[0]?.paymentStatus || '—';
-                  const linkedBusiness = c.cases?.[0]?.businessName || '—';
-                  const nationality = app.nationality || c.nationality || '—';
+                  // visaType: prefer application field, then nested visaType name from Case
+                  const visaType = app.visaType || caseRecord.visaType?.name || '—';
+                  const caseStatus = caseRecord.status || '—';
+                  const visaExpiry = app.visaEndDate ? formatDate(app.visaEndDate) : '—';
+                  // Compute payment status from Case amounts
+                  const total = parseFloat(caseRecord.totalAmount || 0);
+                  const paid  = parseFloat(caseRecord.paidAmount  || 0);
+                  const paymentStatus = total === 0 ? '—'
+                    : paid >= total   ? 'Paid'
+                    : paid > 0        ? 'Partial'
+                    : 'Outstanding';
+                  const linkedBusiness = caseRecord.businessName || '—';
+                  const nationality = app.nationality || caseRecord.nationality || c.nationality || '—';
                   
                   return (
                     <tr key={`${c.id}-${idx}`} className="hover:bg-gray-50/70 transition-colors">
@@ -1127,6 +1136,14 @@ export default function AdminCandidates() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
+                  {c.cases?.[0] && (
+                    <a
+                      href={`/admin/case-detail/${c.cases[0].id}`}
+                      className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white hover:bg-indigo-700 inline-flex items-center print:hidden"
+                    >
+                      View Case Dashboard
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={() => printCandidateApplication()}
@@ -1139,11 +1156,9 @@ export default function AdminCandidates() {
                     type="button"
                     onClick={async () => {
                       try {
-                        const name = fullName(c).replace(/\s+/g, "-").toLowerCase() || "client";
-                        await downloadCandidateApplicationPdf(
-                          "candidate-application-print",
-                          `application-${name}.pdf`,
-                        );
+                        const candidateId = c?.id ?? c?.userId;
+                        if (!candidateId) throw new Error("Candidate id not found");
+                        await downloadAdminCandidateApplicationPdf(candidateId);
                         showToast({ message: "PDF downloaded." });
                       } catch (e) {
                         showToast({ message: e.message || "PDF failed", variant: "danger" });
@@ -1167,12 +1182,9 @@ export default function AdminCandidates() {
               <div className="shrink-0 flex gap-0 overflow-x-auto border-b border-gray-100 bg-gray-50/50 px-2 no-scrollbar print:hidden">
                 {[
                   { id: "overview",       label: "Overview"      },
-                  { id: "documents",      label: "Documents"     },
                   { id: "immigration",    label: "Immigration"   },
                   { id: "employment",     label: "Employment"    },
                   { id: "address",        label: "Address"       },
-                  { id: "timeline",       label: "Timeline"      },
-                  { id: "communications", label: "Communication" },
                 ].map((t) => (
                   <button
                     key={t.id}
