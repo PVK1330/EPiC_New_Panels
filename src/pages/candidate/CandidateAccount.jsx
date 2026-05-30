@@ -15,6 +15,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Modal from "../../components/Modal";
+import Input from "../../components/Input";
 import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
 import { useToast } from "../../context/ToastContext";
@@ -1400,23 +1401,20 @@ const CandidateAccount = () => {
               </h2>
               <div className="space-y-4">
                 {[
-                  ["Current password", currentPassword, setCurrentPassword],
-                  ["New password", newPassword, setNewPassword],
-                  ["Confirm new password", confirmPassword, setConfirmPassword],
-                ].map(([label, val, setVal]) => (
-                  <div key={label}>
-                    <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
-                      {label}
-                    </label>
-                    <input
-                      type="password"
-                      value={val}
-                      onChange={(e) => setVal(e.target.value)}
-                      placeholder="••••••••"
-                      disabled={passwordSaving}
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-                    />
-                  </div>
+                  ["Current password", currentPassword, setCurrentPassword, "current_password"],
+                  ["New password", newPassword, setNewPassword, "new_password"],
+                  ["Confirm new password", confirmPassword, setConfirmPassword, "confirm_password"],
+                ].map(([label, val, setVal, name]) => (
+                  <Input
+                    key={name}
+                    label={label}
+                    name={name}
+                    type="password"
+                    value={val}
+                    onChange={(e) => setVal(e.target.value)}
+                    placeholder="••••••••"
+                    readOnly={passwordSaving}
+                  />
                 ))}
                 <button
                   type="button"

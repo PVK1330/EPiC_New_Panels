@@ -13,6 +13,7 @@ import {
   Save,
 } from "lucide-react";
 import Modal from "../../components/Modal";
+import Input from "../../components/Input";
 import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
 import { getBusinessProfile, updateBusinessProfile, changeBusinessPassword } from "../../services/businessProfileApi";
@@ -298,44 +299,32 @@ const BusinessSettings = () => {
                 </h2>
 
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      Current Password
-                    </label>
-                    <input
-                      type="password"
-                      value={passwordForm.current_password}
-                      onChange={(e) => setPasswordForm({...passwordForm, current_password: e.target.value})}
-                      placeholder="Enter current password"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                    />
-                  </div>
+                  <Input
+                    label="Current Password"
+                    name="current_password"
+                    type="password"
+                    value={passwordForm.current_password}
+                    onChange={(e) => setPasswordForm({...passwordForm, current_password: e.target.value})}
+                    placeholder="Enter current password"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      New Password
-                    </label>
-                    <input
-                      type="password"
-                      value={passwordForm.new_password}
-                      onChange={(e) => setPasswordForm({...passwordForm, new_password: e.target.value})}
-                      placeholder="Enter new password"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                    />
-                  </div>
+                  <Input
+                    label="New Password"
+                    name="new_password"
+                    type="password"
+                    value={passwordForm.new_password}
+                    onChange={(e) => setPasswordForm({...passwordForm, new_password: e.target.value})}
+                    placeholder="Enter new password"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      Confirm New Password
-                    </label>
-                    <input
-                      type="password"
-                      value={passwordForm.confirm_password}
-                      onChange={(e) => setPasswordForm({...passwordForm, confirm_password: e.target.value})}
-                      placeholder="Confirm new password"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                    />
-                  </div>
+                  <Input
+                    label="Confirm New Password"
+                    name="confirm_password"
+                    type="password"
+                    value={passwordForm.confirm_password}
+                    onChange={(e) => setPasswordForm({...passwordForm, confirm_password: e.target.value})}
+                    placeholder="Confirm new password"
+                  />
 
                   <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
                     <p className="text-xs font-bold text-amber-700">
