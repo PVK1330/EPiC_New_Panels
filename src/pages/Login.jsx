@@ -223,9 +223,9 @@ const Login = () => {
           role,
           organisation_id: userData.organisation_id ?? null,
         };
-        
+
         const forceReset = res?.data?.force_password_reset || res?.data?.data?.force_password_reset || res?.force_password_reset;
-        
+
         if (forceReset) {
           setPendingResetData({ user, allowedModules });
           setView(VIEWS.forceReset);
@@ -310,7 +310,7 @@ const Login = () => {
       if (orgSlug) {
         headers['X-Organisation-Slug'] = orgSlug;
       }
-      
+
       const response = await fetch(`${API_BASE_URL}/api/user/change-password`, {
         method: 'POST',
         credentials: 'include',
@@ -321,7 +321,7 @@ const Login = () => {
       if (!response.ok) {
         throw new Error(data?.message || data?.error || "Failed to update password");
       }
-      
+
       dispatch(setCredentials(pendingResetData));
       navigate(getDashboardRouteForUser(pendingResetData.user));
     } catch (err) {

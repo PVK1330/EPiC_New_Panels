@@ -6,6 +6,7 @@ import AdminLayout from '../layouts/AdminLayout';
 import SuperadminLayout from '../layouts/SuperadminLayout';
 import NotFoundPage from '../pages/NotFoundPage';
 import { getDashboardRouteForUser } from '../utils/authResponse';
+import { useAuthContext } from '../context/AuthContext';
 
 // ── Candidate pages ──────────────────────────────────────────────────────────
 const CandidateDashboard = lazy(() => import('../pages/candidate/CandidateDashboard'));
@@ -137,18 +138,19 @@ const Fallback = () => (
 );
 
 const AppRouter = () => {
-  const { user, token } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
+  const { sessionChecked } = useAuthContext();
 
   return (
     <Suspense fallback={<Fallback />}>
       <Routes>
         <Route
           path="/login"
-          element={token && user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <LoginPage />}
+          element={user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <LoginPage />}
         />
         <Route
           path="/register"
-          element={token && user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <RegisterPage />}
+          element={user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <RegisterPage />}
         />
         <Route path="/verify-otp" element={<VerifyOtpPage />} />
         <Route path="/2fa" element={<TwoFactorPage />} />
@@ -169,9 +171,11 @@ const AppRouter = () => {
         <Route
           path="/"
           element={
-            token && user
-              ? <Navigate to={getDashboardRouteForUser(user)} replace />
-              : <Navigate to="/login" replace />
+            !sessionChecked
+              ? <Fallback />
+              : user
+                ? <Navigate to={getDashboardRouteForUser(user)} replace />
+                : <Navigate to="/login" replace />
           }
         />
 

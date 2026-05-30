@@ -26,6 +26,7 @@ export function AuthProvider({ children }) {
           const normalized = normalizeAuthUser(data.user);
           dispatch(setCredentials({
             user: normalized,
+            token: 'httpOnly',
             allowedModules: data.allowedModules ?? [],
           }));
         }
