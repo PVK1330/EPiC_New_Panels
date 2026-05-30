@@ -50,6 +50,7 @@ import UsersAndRolesPanel from "../../components/permissions/UsersAndRolesPanel"
 import { TAB_IDS, TABS } from "../../components/permissions/permissionsData";
 import MicrosoftConnect from "../../components/MicrosoftConnect";
 import GoogleConnect from "../../components/GoogleConnect";
+import IntegrationCredentials from "../../components/admin/settings/IntegrationCredentials";
 
 // Services
 import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from "../../services/caseWorker";
@@ -752,6 +753,7 @@ export default function AdminSettings() {
                     <MicrosoftConnect />
                     <GoogleConnect />
                   </div>
+                  <IntegrationCredentials />
                 </div>
               )}
 
