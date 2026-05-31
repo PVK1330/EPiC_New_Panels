@@ -25,6 +25,7 @@ import {
   createManualNotification,
   getAllNotifications,
 } from "../../services/notificationApi";
+import { formatDateLong } from "../../utils/datetime";
 
 const ICON_MAP = {
   info: FiInfo,
@@ -240,7 +241,7 @@ export default function AdminNotifications() {
     if (diffMins < 60) return `${diffMins} minutes ago`;
     if (diffHours < 24) return `${diffHours} hours ago`;
     if (diffDays < 7) return `${diffDays} days ago`;
-    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatDateLong(date, { month: 'short' });
   };
 
   const getIconBg = (type) => {

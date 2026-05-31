@@ -25,7 +25,8 @@ import CandidateApplicationReadonly from "../../components/CandidateApplicationF
 import { getCandidateById } from "../../services/candidateApi";
 import { createEscalation } from "../../services/escalationApi";
 import { useToast } from "../../context/ToastContext";
-import { 
+import { formatDate, formatDateTime, formatDateLong } from "../../utils/datetime";
+import {
   getCaseDetails,
   updateCaseStatus,
   getDocumentsByCaseId, 
@@ -280,7 +281,7 @@ const AdminCaseDetail = () => {
           ? `${n.author.first_name} ${n.author.last_name}`
           : "Unknown",
         date: n.created_at
-          ? new Date(n.created_at).toLocaleDateString()
+          ? formatDate(n.created_at)
           : "N/A",
         body: n.content || "",
       })),
@@ -297,7 +298,7 @@ const AdminCaseDetail = () => {
         doc.uploader
           ? `Uploaded by ${doc.uploader.first_name} ${doc.uploader.last_name}`
           : null,
-        doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : null,
+        doc.uploadedAt ? formatDate(doc.uploadedAt) : null,
         doc.documentType || null,
       ]
         .filter(Boolean)
@@ -341,7 +342,7 @@ const AdminCaseDetail = () => {
     const timelineList = (timeline || []).map((item) => ({
       id: item.id,
       dot: TIMELINE_DOT[item.actionType] || "done",
-      time: item.actionDate ? new Date(item.actionDate).toLocaleString() : "N/A",
+      time: item.actionDate ? formatDateTime(item.actionDate) : "N/A",
       desc: item.description,
       user: item.performer
         ? `by ${item.performer.first_name} ${item.performer.last_name}`
@@ -390,11 +391,7 @@ const AdminCaseDetail = () => {
           ? `${candidate.first_name} ${candidate.last_name}`
           : "Unknown",
         dob: candidate?.dob
-          ? new Date(candidate.dob).toLocaleDateString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })
+          ? formatDateLong(candidate.dob, { month: "short" })
           : "N/A",
         nationality: candidate?.nationality || "N/A",
         passport: candidate?.passport_number || candidate?.passportNumber || "N/A",
@@ -406,7 +403,7 @@ const AdminCaseDetail = () => {
         licenceNo: business?.sponsor?.sponsorProfile?.sponsorLicenceNumber || "N/A",
         licenceStatus: business?.sponsor?.sponsorProfile?.licenceStatus || "N/A",
         licenceExpiry: business?.sponsor?.sponsorProfile?.licenceExpiryDate
-          ? new Date(business.sponsor.sponsorProfile.licenceExpiryDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+          ? formatDateLong(business.sponsor.sponsorProfile.licenceExpiryDate, { month: "short" })
           : "N/A",
         contact: business?.sponsor
           ? `${business.sponsor.first_name} ${business.sponsor.last_name}`
@@ -423,7 +420,7 @@ const AdminCaseDetail = () => {
         dateOpened: keyDates?.submitted || "N/A",
         targetDate: keyDates?.targetSubmissionDate || "N/A",
         visaExpiry: candidate?.visaEndDate
-          ? new Date(candidate.visaEndDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+          ? formatDateLong(candidate.visaEndDate, { month: "short" })
           : "N/A",
         paymentStatus: financial?.amountStatus || (totalFee === 0 ? "Pending" : outstanding === 0 ? "Fully Paid" : "Partially Paid"),
         biometricsDate: overview?.biometricsDate || keyDates?.biometricsDate,

@@ -30,6 +30,7 @@ import {
   PLATFORM_MODULE_COUNT,
   formatPlatformRoleName,
 } from '../../constants/platformModules';
+import { formatDateTime } from '../../utils/datetime';
 
 const MODULE_COUNT = PLATFORM_MODULE_COUNT;
 
@@ -455,7 +456,7 @@ const SuperadminTeam = () => {
  member.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'
  }`} />
  <span className="text-sm font-bold text-gray-400">
-   {member.lastActive ? new Date(member.lastActive).toLocaleString() : '—'}
+   {member.lastActive ? formatDateTime(member.lastActive) : '—'}
  </span>
  </div>
  </td>

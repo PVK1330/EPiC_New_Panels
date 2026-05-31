@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
-import { logout } from "../store/slices/authSlice";
+import { performLogout } from "../utils/performLogout";
 import SuperadminSidebar from "../components/superadmin/SuperadminSidebar";
 import PlatformNotificationDropdown from "../components/superadmin/PlatformNotificationDropdown";
 import useIdleTimer from "../hooks/useIdleTimer";
@@ -36,8 +36,7 @@ const SuperadminLayout = () => {
   useIdleTimer();
 
   const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login");
+    performLogout(dispatch, navigate);
   };
 
   const closeAll = () => {

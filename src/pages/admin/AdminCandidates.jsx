@@ -52,6 +52,7 @@ const PASSWORD_MIN = 6;
 const ADMIN_CREATE_APPLICATION_DRAFT_KEY = "elitepic_admin_create_application_draft";
 
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
+import { formatDateLong } from "../../utils/datetime";
 
 const CASE_CHIPS = {
   "On Track": "bg-green-100 text-green-700",
@@ -178,10 +179,7 @@ function fullName(row) {
 }
 
 function formatDate(date) {
-  if (!date) return "—";
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatDateLong(date, { month: 'short' }) || "—";
 }
 
 export default function AdminCandidates() {

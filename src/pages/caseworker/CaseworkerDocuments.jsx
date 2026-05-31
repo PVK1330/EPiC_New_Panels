@@ -6,6 +6,7 @@ import { getCaseChecklist } from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 import useDownloads from "../../hooks/useDownloads";
+import { formatDateLong } from "../../utils/datetime";
 
 const DOC_TYPES = DOCUMENT_TYPE_OPTIONS;
 
@@ -389,11 +390,7 @@ export default function CaseworkerDocuments() {
 
   const formatDate = (dateString) => {
     if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return formatDateLong(dateString, { month: "short" });
   };
 
   const getStatusTone = (status) => {

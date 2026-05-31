@@ -12,6 +12,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import api from "../../services/api";
+import { formatDateLong } from "../../utils/datetime";
 
 const InputField = ({
   label,
@@ -152,11 +153,7 @@ const RescheduleForm = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return formatDateLong(dateString, { month: "short" });
   };
 
   return (

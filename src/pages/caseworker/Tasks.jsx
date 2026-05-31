@@ -5,6 +5,7 @@ import Modal from "../../components/Modal";
 import { INITIAL_CASES } from "../../data/casesData";
 import api from "../../services/api";
 import { classifyTaskDue } from "../../utils/taskDueStatus";
+import { formatDateLong } from "../../utils/datetime";
 
 const todayIso = () => new Date().toISOString().split("T")[0];
 const TODAY_ISO = todayIso();
@@ -97,12 +98,7 @@ const INITIAL_TASKS = [
 ];
 
 function formatDue(iso) {
-  const d = new Date(iso + "T12:00:00");
-  return d.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateLong(iso + "T12:00:00", { month: "short" });
 }
 
 function badgeStatus(tone) {

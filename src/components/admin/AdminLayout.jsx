@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { logout } from "../../store/slices/authSlice";
+import { performLogout } from "../../utils/performLogout";
 import AdminSidebar from "./AdminSidebar";
 import CaseworkerSidebar from "../CaseworkerSidebar";
 import BusinessSidebar from "../business/BusinessSidebar";
@@ -65,8 +65,7 @@ const AdminLayout = () => {
   }, [fetchOrganisationBranding]);
 
   const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login");
+    performLogout(dispatch, navigate);
   };
 
   const closeAll = () => {

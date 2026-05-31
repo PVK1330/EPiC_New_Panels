@@ -1,4 +1,5 @@
 import { NotificationPriority, NotificationType } from '../types/notificationTypes';
+import { formatDate } from './datetime';
 
 export const getNotificationIcon = (type) => {
   const iconMap = {
@@ -41,7 +42,7 @@ export const formatNotificationTime = (timestamp) => {
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
   
-  return date.toLocaleDateString();
+  return formatDate(date);
 };
 
 export const getNotificationActionText = (notification) => {

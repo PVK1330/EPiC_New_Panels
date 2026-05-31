@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getGlobalTimeline } from '../../services/timeline.service';
 import socketService from '../../services/socket.service';
+import { formatDateTime } from '../../utils/datetime';
 
 const TimelineExplorer = () => {
   const [events, setEvents] = useState([]);
@@ -69,7 +70,7 @@ const TimelineExplorer = () => {
             <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white dark:bg-gray-800 p-4 rounded border border-slate-200 dark:border-gray-700 shadow">
               <div className="flex items-center justify-between mb-1">
                 <div className="font-bold text-slate-900 dark:text-white">{event.action_type?.replace(/_/g, ' ').toUpperCase()}</div>
-                <time className="font-caveat font-medium text-indigo-500">{new Date(event.created_at).toLocaleString()}</time>
+                <time className="font-caveat font-medium text-indigo-500">{formatDateTime(event.created_at)}</time>
               </div>
               <div className="text-slate-500 dark:text-gray-300">{event.description}</div>
               <div className="text-sm mt-2 text-gray-400">By: {event.performer?.first_name} {event.performer?.last_name}</div>

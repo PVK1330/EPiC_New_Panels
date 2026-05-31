@@ -4,6 +4,7 @@ import {
   getNotifications,
   markNotificationAsRead,
 } from "../../services/notificationApi";
+import { formatDateLong } from "../../utils/datetime";
 
 export default function CandidateNotifications() {
   const [filter, setFilter] = useState("all");
@@ -52,7 +53,7 @@ export default function CandidateNotifications() {
     if (diffMins < 60) return `${diffMins} minutes ago`;
     if (diffHours < 24) return `${diffHours} hours ago`;
     if (diffDays < 7) return `${diffDays} days ago`;
-    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatDateLong(date, { month: 'short' });
   };
 
   const getIconForType = (type) => {

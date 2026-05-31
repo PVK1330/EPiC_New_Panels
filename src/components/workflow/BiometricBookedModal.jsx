@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Button from "../Button";
 import Input from "../Input";
+import { formatDateLong } from "../../utils/datetime";
 
 const DAYS = [
   "Monday",
@@ -65,11 +66,7 @@ export default function BiometricBookedModal({
   }, [appointmentDate]);
 
   const formattedDate = appointmentDate
-    ? new Date(`${appointmentDate}T12:00:00`).toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
+    ? formatDateLong(`${appointmentDate}T12:00:00`, { month: "long" })
     : "";
 
   const handleNext = () => {

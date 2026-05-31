@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../../store/slices/authSlice';
+import { logoutUser } from '../../services/auth.service';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -34,6 +35,14 @@ const SessionTimeout = ({ children }) => {
       });
     } catch (err) {
       // Ignore if it fails, we still need to logout
+    }
+
+    // Clear the server session + httpOnly auth cookies, otherwise /api/auth/me
+    // would silently restore the session on the next page load.
+    try {
+      await logoutUser();
+    } catch (err) {
+      // Ignore — local state is cleared regardless.
     }
 
     dispatch(logout());

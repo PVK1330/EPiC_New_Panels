@@ -5,6 +5,7 @@ import { RiBarChartLine } from "react-icons/ri";
 import { Loader2 } from "lucide-react";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
 import api from "../../services/api";
+import { formatDateLong } from "../../utils/datetime";
 import { useToast } from "../../context/ToastContext";
 import useDownloads from "../../hooks/useDownloads";
 import MockDataBanner from "../../components/admin/MockDataBanner";
@@ -139,11 +140,7 @@ const AdminWorkload = () => {
       caseId: task.case_id ? `VF-${task.case_id}` : "N/A",
       assigned: task.assigned_caseworker_name || "Unassigned",
       due: dueDate
-        ? dueDate.toLocaleDateString("en-GB", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          })
+        ? formatDateLong(dueDate, { month: "short" })
         : "No due date",
       dueClass: isOverdue
         ? "text-red-600 font-bold"
@@ -209,11 +206,7 @@ const AdminWorkload = () => {
         caseItem.caseworker ||
         "Unassigned",
       deadline: deadline
-        ? deadline.toLocaleDateString("en-GB", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          })
+        ? formatDateLong(deadline, { month: "short" })
         : "No deadline",
       deadlineClass: deadlineClass,
       daysRemaining: daysRemaining !== null ? daysRemaining.toString() : "N/A",

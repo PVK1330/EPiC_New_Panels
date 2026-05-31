@@ -6,14 +6,11 @@ import { useToast } from "../../context/ToastContext";
 import { getPipelineCases } from "../../services/caseApi";
 import CaseWorkflowBadge from "../../components/case/CaseWorkflowBadge";
 import AssignCaseworkerModal from "../../components/admin/AssignCaseworkerModal";
+import { formatDateLong } from "../../utils/datetime";
 
 function formatDate(value) {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateLong(value, { month: "short" });
 }
 
 function enquiryFromCase(c) {

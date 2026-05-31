@@ -35,6 +35,7 @@ import {
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 import { Skeleton } from "boneyard-js/react";
+import { formatDate, formatDateLong } from "../../utils/datetime";
 
 const LicenceStatus = () => {
   const navigate = useNavigate();
@@ -87,7 +88,7 @@ const LicenceStatus = () => {
             used: s.cos?.used ?? s.cosAllocation?.used ?? 0,
             available: s.cos?.available ?? s.cosAllocation?.available ?? 0,
           },
-          renewalDue: s.expiryDate ? new Date(s.expiryDate).toLocaleDateString("en-GB") : "N/A",
+          renewalDue: s.expiryDate ? formatDate(s.expiryDate) : "N/A",
         });
       } else {
         const latestApproved = data.find((app) => app.status === "Approved");
@@ -107,7 +108,7 @@ const LicenceStatus = () => {
             available: latestApproved ? parseInt(latestApproved.cosAllocation, 10) || 0 : 0,
           },
           renewalDue: latestApproved?.proposedStartDate
-            ? new Date(latestApproved.proposedStartDate).toLocaleDateString("en-GB")
+            ? formatDate(latestApproved.proposedStartDate)
             : "N/A",
         });
       }
@@ -374,7 +375,7 @@ const LicenceStatus = () => {
                         </td>
                         <td className="px-8 py-6">
                           <p className="text-xs font-black text-secondary">
-                            {new Date(app.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {formatDateLong(app.createdAt, { month: 'short' })}
                           </p>
                         </td>
                         <td className="px-8 py-6 text-right">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, Edit, Trash2, Filter, Plus, ChevronDown } from 'lucide-react';
 import { getCaseTimeline, addTimelineEntry, deleteTimelineEntry } from '../services/timelineService';
+import { formatWithOptions } from '../utils/datetime';
 
 const ACTION_TYPES = [
   'case_created',
@@ -120,8 +121,7 @@ const CaseTimeline = ({ caseId, currentUser }) => {
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleString('en-GB', {
+    return formatWithOptions(dateString, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',

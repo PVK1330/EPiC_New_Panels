@@ -5,6 +5,7 @@ import { useToast } from "../../context/ToastContext";
 import Button from "../Button";
 import CclFeeProposalModal from "./CclFeeProposalModal";
 import CaseWorkflowPostCcl from "./CaseWorkflowPostCcl";
+import { formatDate } from "../../utils/datetime";
 import {
   getCaseWorkflowBundle,
   getDataCapture,
@@ -258,7 +259,7 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
                 {instalments.map((row, i) => (
                   <li key={i}>
                     {row.label}: £{Number(row.amount).toFixed(2)}
-                    {row.dueDate ? ` — due ${new Date(row.dueDate).toLocaleDateString("en-GB")}` : ""}
+                    {row.dueDate ? ` — due ${formatDate(row.dueDate)}` : ""}
                   </li>
                 ))}
               </ul>

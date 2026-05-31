@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { io } from "socket.io-client";
 import messagingApi from "../services/messagingApi";
 import { getMessagingSocketUrl } from "../utils/socketOrigin";
+import { formatTime, formatDateLong } from "../utils/datetime";
 
 const readListFromEnvelope = (resData, key) => {
   if (!resData) return [];
@@ -54,9 +55,9 @@ const formatThreadListTime = (iso) => {
   if (Number.isNaN(d.getTime())) return "";
   const now = new Date();
   if (d.toDateString() === now.toDateString()) {
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return formatTime(d);
   }
-  return d.toLocaleDateString([], { day: "2-digit", month: "short" });
+  return formatDateLong(d, { month: "short" });
 };
 
 const sortThreadsByRecent = (list) =>
@@ -88,10 +89,7 @@ const mapApiMessageToUi = (msg, myId) => {
     id: msg.id,
     from: Number(msg.senderId) === Number(myId) ? "me" : "them",
     text: textStr || (typeof msg.content === 'string' && !msg.content.startsWith('{') ? msg.content : ""),
-    meta: new Date(msg.createdAt).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
+    meta: formatTime(msg.createdAt),
     attachment: msg.messageType === "file" ? (originalName || "Attachment") : null,
     attachmentUrl: msg.messageType === "file" ? attachmentUrl : null,
     isRead: Boolean(msg.isRead),

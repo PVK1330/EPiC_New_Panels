@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { getPipelineCases } from "../../services/caseApi";
 import { getPendingCclFeeApprovals } from "../../services/workflowApi";
 import { motion } from "framer-motion";
-import { logout } from "../../store/slices/authSlice";
+import { performLogout } from "../../utils/performLogout";
 import useModuleAccess from "../../hooks/useModuleAccess";
 import {
   RiDashboardLine,
@@ -121,8 +121,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
   }, []);
 
   const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login");
+    performLogout(dispatch, navigate);
   };
 
   return (

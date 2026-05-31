@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { getComplianceSummary, getReportingObligations } from "../../services/licenceApi";
+import { formatDate } from "../../utils/datetime";
 
 const DEFAULT_RISK_ROWS = [
   {
@@ -166,7 +167,7 @@ const BusinessCompliance = () => {
             : "Review visa dates";
       const expiryDate =
         worker.visaExpiry != null
-          ? new Date(worker.visaExpiry).toLocaleDateString("en-GB")
+          ? formatDate(worker.visaExpiry)
           : "N/A";
       const status =
         worker.riskFlag === "high"

@@ -11,7 +11,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from"react";
 import { useDispatch, useSelector } from"react-redux";
 import { useNavigate, useLocation, Link } from"react-router-dom";
-import { logout } from"../store/slices/authSlice";
+import { performLogout } from"../utils/performLogout";
 import { getProfileMenuPaths } from "../utils/authResponse";
 import NotificationDropdown from"./notifications/NotificationDropdown";
 import MessageDropdown from"./notifications/MessageDropdown";
@@ -43,8 +43,7 @@ const Header = ({ onMenuClick }) => {
  const profilePicUrl = user?.profile_pic || user?.avatar_url ? resolveAssetUrl(user?.profile_pic || user?.avatar_url) : null;
 
  const handleLogout = () => {
- dispatch(logout());
- navigate("/login");
+ performLogout(dispatch, navigate);
  };
 
  const pathnames = location.pathname.split("/").filter((x) => x);

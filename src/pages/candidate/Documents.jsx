@@ -6,13 +6,13 @@ import Modal from "../../components/Modal";
 import { getUserDocuments } from "../../services/documentApi";
 import useDownloads from "../../hooks/useDownloads";
 import { useToast } from "../../context/ToastContext";
+import { formatDateLong, formatTime } from "../../utils/datetime";
 
 const DocumentItem = ({ doc, onView, onDownload }) => {
   const isUploaded = doc.status === "uploaded" || doc.status === "approved" || doc.status === "under_review";
   
-  const dDate = new Date(doc.uploadedAt || doc.created_at);
-  const dateStr = dDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-  const timeStr = dDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = formatDateLong(doc.uploadedAt || doc.created_at, { month: "short" });
+  const timeStr = formatTime(doc.uploadedAt || doc.created_at);
 
   const statusLabel =
     doc.status === "uploaded" || doc.status === "under_review"

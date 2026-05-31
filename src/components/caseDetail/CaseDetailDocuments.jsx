@@ -4,6 +4,7 @@ import Modal from "../Modal";
 import Button from "../Button";
 import { getCaseChecklist } from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
+import { formatDate } from "../../utils/datetime";
 
 const REVIEWABLE_STATUSES = new Set(["uploaded", "under_review"]);
 
@@ -377,12 +378,12 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
                         </span>
                         {item.expiryDate && (
                           <span className="text-[10px] text-gray-500">
-                            Expires: {new Date(item.expiryDate).toLocaleDateString()}
+                            Expires: {formatDate(item.expiryDate)}
                           </span>
                         )}
                         {item.uploadedAt && (
                           <span className="text-[10px] text-gray-500">
-                            Uploaded: {new Date(item.uploadedAt).toLocaleDateString()}
+                            Uploaded: {formatDate(item.uploadedAt)}
                           </span>
                         )}
                         {item.status === "rejected" && item.rejectionReason && (

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Calendar } from "lucide-react";
+import { formatDateLong } from "../../utils/datetime";
 import CaseWorkflowProgress from "../case/CaseWorkflowProgress";
 import CaseWorkflowBadge from "../case/CaseWorkflowBadge";
 
@@ -133,11 +134,7 @@ const CaseDetailOverview = ({ data }) => {
             <Field label="Location">{k.biometricLocation || "—"}</Field>
             <Field label="Date">
               {k.biometricsDate
-                ? new Date(k.biometricsDate).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })
+                ? formatDateLong(k.biometricsDate, { month: "short" })
                 : "—"}
               {k.biometricDay ? ` (${k.biometricDay})` : ""}
             </Field>

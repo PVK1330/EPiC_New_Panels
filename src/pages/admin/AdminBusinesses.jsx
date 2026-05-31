@@ -31,6 +31,7 @@ import {
 const PASSWORD_MIN = 6;
 
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
+import { formatDateLong } from "../../utils/datetime";
 
 const LICENCE_CHIPS = {
   Active: "bg-green-100 text-green-700",
@@ -139,7 +140,7 @@ function fullName(row) {
 
 const fmtDate = (iso) => {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
+  return formatDateLong(iso, { month: "short" });
 };
 
 export default function AdminBusinesses() {
@@ -750,7 +751,7 @@ export default function AdminBusinesses() {
                   const userName = `${user.first_name} ${user.last_name}`;
                   const initials = profile.companyName ? profile.companyName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) : initialsFrom(user);
                   const licenceStatus = profile.licenceStatus || "—";
-                  const licenceExpiry = profile.licenceExpiryDate ? new Date(profile.licenceExpiryDate).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" }) : "—";
+                  const licenceExpiry = profile.licenceExpiryDate ? formatDateLong(profile.licenceExpiryDate, { month: "short" }) : "—";
                   const activeCases = profile.activeCases ?? 0;
                   const sponsoredWorkers = profile.sponsoredWorkers ?? 0;
                   const riskLevel = profile.riskLevel || "—";

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { CreditCard, Download, Filter, Search, CheckCircle2, AlertCircle, Eye, LayoutDashboard, DollarSign, Clock, Loader2 } from "lucide-react";
 import { getBusinessPayments } from "../../services/businessProfileApi";
+import { formatDate } from "../../utils/datetime";
 
 const money = (n) => `£${Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -145,7 +146,7 @@ const BusinessPayment = () => {
                   <td className="px-4 py-4 text-xs font-bold text-gray-600">{payment.caseRef}</td>
                   <td className="px-4 py-4 text-xs font-bold text-gray-600">{payment.invoiceNo}</td>
                   <td className="px-4 py-4 text-sm font-black text-secondary">{money(payment.amount)}</td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{payment.date ? new Date(payment.date).toLocaleDateString("en-GB") : "N/A"}</td>
+                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{payment.date ? formatDate(payment.date) : "N/A"}</td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(payment.status)}

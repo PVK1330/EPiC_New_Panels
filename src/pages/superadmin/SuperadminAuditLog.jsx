@@ -12,6 +12,7 @@ import {
 import Button from '../../components/Button';
 import { fetchPlatformAuditLogs } from '../../services/superadminAudit.service';
 import useDownloads from '../../hooks/useDownloads';
+import { formatDateTime } from '../../utils/datetime';
 const SuperadminAuditLog = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('All');
@@ -185,7 +186,7 @@ const SuperadminAuditLog = () => {
                     </td>
                     <td className="px-4 py-2.5">
                       <span className="text-xs text-gray-600 font-semibold">
-                        {log.created_at ? new Date(log.created_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : "N/A"}
+                        {log.created_at ? formatDateTime(log.created_at) : "N/A"}
                       </span>
                     </td>
                     <td className="px-4 py-2.5 text-center">

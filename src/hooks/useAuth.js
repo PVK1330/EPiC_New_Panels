@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { setCredentials, logout } from "../store/slices/authSlice";
+import { setOrgSettings } from "../store/slices/orgSettingsSlice";
 import { loginUser, registerUser, logoutUser } from "../services/auth.service";
 import { getAuthUserAndToken, getDashboardRouteForUser, resolveLoginRole } from "../utils/authResponse";
 
@@ -32,6 +33,9 @@ const useAuth = () => {
         organisation_id: userData.organisation_id ?? null,
       };
       dispatch(setCredentials({ user, allowedModules }));
+      if (userData.organisation) {
+        dispatch(setOrgSettings(userData.organisation));
+      }
       navigate(getDashboardRouteForUser(user));
       return { success: true };
     } finally {

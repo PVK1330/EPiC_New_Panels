@@ -16,6 +16,7 @@ import Modal from '../../components/common/Modal';
 import useBilling from '../../hooks/useBilling';
 import useDownloads from '../../hooks/useDownloads';
 import toast from 'react-hot-toast';
+import { formatDate } from '../../utils/datetime';
 
 const SuperadminBilling = () => {
  const [searchTerm, setSearchTerm] = useState('');
@@ -199,7 +200,7 @@ const SuperadminBilling = () => {
  </span>
  </td>
  <td className="px-5 py-3 text-center font-semibold text-secondary text-xs">£{item.amount}</td>
- <td className="px-5 py-3 text-center text-gray-400 font-bold text-sm">{item.due_at ? new Date(item.due_at).toLocaleDateString() : '—'}</td>
+ <td className="px-5 py-3 text-center text-gray-400 font-bold text-sm">{item.due_at ? formatDate(item.due_at) : '—'}</td>
  <td className="px-4 py-3">
  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-bold tracking-wider border ${
  item.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
@@ -285,7 +286,7 @@ const SuperadminBilling = () => {
  <div className="flex justify-between items-end border-t border-gray-200 pt-3">
  <div>
  <p className="text-sm text-gray-500 font-bold">Tier: {selectedInvoice.subscription?.plan?.name || '—'}</p>
- <p className="text-sm text-gray-500 font-bold">{selectedInvoice.due_at ? new Date(selectedInvoice.due_at).toLocaleDateString() : '—'}</p>
+ <p className="text-sm text-gray-500 font-bold">{selectedInvoice.due_at ? formatDate(selectedInvoice.due_at) : '—'}</p>
  </div>
  <div className="text-right">
  <p className="text-sm font-bold text-gray-400 mb-0.5">Amount</p>

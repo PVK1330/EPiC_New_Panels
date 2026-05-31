@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { logout } from "../store/slices/authSlice";
+import { performLogout } from "../utils/performLogout";
 import { LogOut, X } from "lucide-react";
 import eliteLogo from "../assets/elitepic_logo.png";
 import { caseworkerNavSections } from "./caseworkerNavSections";
@@ -35,8 +35,7 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
   }, []);
 
   const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login");
+    performLogout(dispatch, navigate);
   };
 
   return (

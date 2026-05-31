@@ -7,6 +7,7 @@ import Button from "../Button";
 import { updateCaseFinance } from "../../services/caseDetailApi";
 import { reviewCclFees, getCclStatus } from "../../services/workflowApi";
 import { useToast } from "../../context/ToastContext";
+import { formatDate } from "../../utils/datetime";
 
 const METHODS = [
   { value: "Bank Transfer", label: "Bank Transfer" },
@@ -159,7 +160,7 @@ const CaseDetailPayments = ({ payments, onReload }) => {
                   <li key={i}>
                     {row.label}: £{Number(row.amount).toFixed(2)}
                     {row.dueDate
-                      ? ` — due ${new Date(row.dueDate).toLocaleDateString("en-GB")}`
+                      ? ` — due ${formatDate(row.dueDate)}`
                       : ""}
                   </li>
                 ))}

@@ -76,6 +76,12 @@ import {
   resolveCaseStage,
   getStepById,
 } from "../../constants/immigrationCaseProcess";
+import {
+  formatDate,
+  formatDateLong,
+  formatTime,
+  formatDateTime as fmtDateTime,
+} from "../../utils/datetime";
 
 const PAGE_SIZE = 7;
 
@@ -191,23 +197,11 @@ const emptyReassignForm = () => ({
 });
 
 function formatTarget(iso) {
-  const d = new Date(iso + "T12:00:00");
-  return d.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateLong(iso + "T12:00:00", { month: "short" });
 }
 
 function formatDateTime(date) {
-  return date.toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return fmtDateTime(date);
 }
 
 function badgeStatus(status) {
@@ -3350,13 +3344,13 @@ function DocumentsTab({ caseId, candidateId }) {
                           {item.expiryDate && (
                             <span className="text-[10px] text-gray-500">
                               Expires:{" "}
-                              {new Date(item.expiryDate).toLocaleDateString()}
+                              {formatDate(item.expiryDate)}
                             </span>
                           )}
                           {item.uploadedAt && (
                             <span className="text-[10px] text-gray-500">
                               Uploaded:{" "}
-                              {new Date(item.uploadedAt).toLocaleDateString()}
+                              {formatDate(item.uploadedAt)}
                             </span>
                           )}
                         </div>
@@ -3499,7 +3493,7 @@ function DocumentsTab({ caseId, candidateId }) {
                   {doc.userFileName || doc.documentName}
                 </p>
                 <p className="text-[11px] font-bold text-gray-500">
-                  Uploaded {new Date(doc.uploadedAt).toLocaleDateString()} ·{" "}
+                  Uploaded {formatDate(doc.uploadedAt)} ·{" "}
                   {doc.documentType}
                 </p>
                 {doc.reviewNotes && doc.status === "rejected" && (
@@ -3943,7 +3937,7 @@ function TasksTab({ caseId }) {
               <p className="text-[11px] text-gray-500">
                 {task.status === "completed"
                   ? "Completed"
-                  : `Due ${new Date(task.due_date).toLocaleDateString()}`}
+                  : `Due ${formatDate(task.due_date)}`}
               </p>
             </div>
             <span
@@ -4364,11 +4358,7 @@ function PaymentsTab({ caseDetail, onUpdate }) {
             {paid > 0 ? (
               <tr>
                 <td className="py-2.5 pr-2 whitespace-nowrap">
-                  {new Date().toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
+                  {formatDateLong(new Date(), { month: "short" })}
                 </td>
                 <td className="py-2.5 pr-2 text-gray-600">
                   Initial retainer coverage
@@ -4437,10 +4427,7 @@ function CommsTab({ candidate, caseId }) {
         side: "you",
         sender: "You",
         text: draft.trim(),
-        time: new Date().toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        time: formatTime(new Date()),
       },
     ]);
     setDraft("");
@@ -4577,7 +4564,7 @@ function NotesTab({ caseId, userName }) {
               {note.author?.first_name && note.author?.last_name
                 ? `${note.author.first_name} ${note.author.last_name}`
                 : userName}{" "}
-              · {new Date(note.created_at).toLocaleDateString()}
+              · {formatDate(note.created_at)}
             </p>
             <p className="text-sm font-bold text-gray-800">{note.content}</p>
           </div>

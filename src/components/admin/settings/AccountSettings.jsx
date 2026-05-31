@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { FiUser, FiMail, FiLock, FiGlobe, FiBell, FiShield, FiSave, FiRefreshCw, FiCreditCard, FiLayers } from "react-icons/fi";
 import Button from "../../Button";
 import Input from "../../Input";
+import { TIMEZONE_OPTIONS, DATE_FORMAT_OPTIONS } from "../../../utils/datetime";
 
 const panelMotion = {
   initial: { opacity: 0, y: 10 },
@@ -11,9 +12,9 @@ const panelMotion = {
   transition: { duration: 0.3 }
 };
 
-const timezones = ["UTC-05:00 Eastern Time", "UTC-06:00 Central Time", "UTC-07:00 Mountain Time", "UTC-08:00 Pacific Time"];
+const timezones = TIMEZONE_OPTIONS;
 const languages = ["English", "Spanish", "French", "German"];
-const dateFormats = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"];
+const dateFormats = DATE_FORMAT_OPTIONS;
 
 export default function AccountSettings({ 
   profile, 
@@ -292,7 +293,7 @@ export default function AccountSettings({
                 onChange={onPreferenceChange}
                 className="w-full border border-gray-200 rounded-2xl px-4 py-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
               >
-                {timezones.map(t => <option key={t} value={t}>{t}</option>)}
+                {timezones.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div className="space-y-2">

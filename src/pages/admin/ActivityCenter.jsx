@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getGlobalTimeline } from '../../services/timeline.service';
 import { listChangeRequests } from '../../services/changeRequest.service';
 import socketService from '../../services/socket.service';
+import { formatDate, formatDateTime } from '../../utils/datetime';
 
 const ActivityCenter = () => {
   const [stats, setStats] = useState({ pendingCRs: 0, highRiskCRs: 0, recentEvents: 0 });
@@ -91,7 +92,7 @@ const ActivityCenter = () => {
                 <li key={cr.id} className="py-3 flex justify-between items-center">
                   <div>
                     <p className="font-medium">{cr.field_name} change</p>
-                    <p className="text-xs text-gray-500">{cr.entity_type} • {new Date(cr.created_at).toLocaleDateString()}</p>
+                    <p className="text-xs text-gray-500">{cr.entity_type} • {formatDate(cr.created_at)}</p>
                   </div>
                   <span className={`px-2 py-1 text-xs rounded-full ${cr.risk_level === 'CRITICAL' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
                     {cr.risk_level}
@@ -124,7 +125,7 @@ const ActivityCenter = () => {
                   </div>
                   <div>
                     <p className="text-sm font-medium">{event.description}</p>
-                    <p className="text-xs text-gray-400">{new Date(event.created_at).toLocaleString()}</p>
+                    <p className="text-xs text-gray-400">{formatDateTime(event.created_at)}</p>
                   </div>
                 </div>
               ))}

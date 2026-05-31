@@ -16,6 +16,7 @@ import useCandidate from "../../hooks/useCandidate";
 import { acceptCcl, getCandidateCcl } from "../../services/workflowApi";
 import useDownloads from "../../hooks/useDownloads";
 import { resolveCaseStage, getStepById } from "../../constants/immigrationCaseProcess";
+import { formatDate, formatDateLong } from "../../utils/datetime";
 
 const FIRM_NAME = import.meta.env.VITE_FIRM_NAME || "Your immigration firm";
 const CCL_VISIBLE_MIN_ORDER = 10;
@@ -31,11 +32,7 @@ function isPaidCase(caseData) {
 
 function formatStepDate(value) {
   if (!value) return null;
-  return new Date(value).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateLong(value, { month: "short" });
 }
 
 function StepIcon({ status }) {
@@ -235,7 +232,7 @@ export default function CandidateCCL() {
           <p className="text-sm font-bold text-gray-600 mt-2">
             You accepted the Client Care Letter
             {ccl?.signedAt
-              ? ` on ${new Date(ccl.signedAt).toLocaleDateString("en-GB")}`
+              ? ` on ${formatDate(ccl.signedAt)}`
               : ""}
             .
           </p>
@@ -333,7 +330,7 @@ export default function CandidateCCL() {
                   <span>
                     £{Number(row.amount).toFixed(2)}
                     {row.dueDate
-                      ? ` · due ${new Date(row.dueDate).toLocaleDateString("en-GB")}`
+                      ? ` · due ${formatDate(row.dueDate)}`
                       : ""}
                   </span>
                 </li>

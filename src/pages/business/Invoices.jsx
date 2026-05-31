@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { LayoutDashboard, FileText, DollarSign, Search, Filter, Download, Eye, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { getBusinessPayments } from "../../services/businessProfileApi";
 import { useEffect } from "react";
+import { formatDate } from "../../utils/datetime";
 
 const money = (n) => `£${Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -23,8 +24,8 @@ const Invoices = () => {
           case: p.notes || "Case fee",
           amount: Number(p.amount || 0),
           status: p.paymentStatus === "completed" ? "Paid" : p.paymentStatus === "pending" ? "Pending" : "Overdue",
-          dueDate: p.dueDate ? new Date(p.dueDate).toLocaleDateString("en-GB") : "N/A",
-          paidDate: p.paymentDate ? new Date(p.paymentDate).toLocaleDateString("en-GB") : "N/A",
+          dueDate: p.dueDate ? formatDate(p.dueDate) : "N/A",
+          paidDate: p.paymentDate ? formatDate(p.paymentDate) : "N/A",
           paymentMethod: p.paymentMethod || "N/A",
         }))
       );

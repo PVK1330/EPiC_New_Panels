@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { Bell, Filter, Search, CheckSquare, Trash2 } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
 import NotificationList from '../../components/Notifications/NotificationList';
+import { formatDateTime } from '../../utils/datetime';
 
 const NotificationsPage = () => {
   const {
@@ -192,7 +193,7 @@ const NotificationsPage = () => {
                       <h4 className="text-sm font-semibold text-gray-900">{notification.title}</h4>
                       <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
                       <p className="text-xs text-gray-400 mt-2">
-                        {new Date(notification.sentAt).toLocaleString()}
+                        {formatDateTime(notification.sentAt)}
                       </p>
                     </div>
                   </div>

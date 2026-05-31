@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Button from "../../components/Button";
 import CaseWorkflowBadge from "../../components/case/CaseWorkflowBadge";
+import { formatDate } from "../../utils/datetime";
 import Input from "../../components/Input";
 import {
   getCases,
@@ -721,7 +722,7 @@ export default function AdminCases() {
           caseworkerId: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId.join(', ') : c.assignedcaseworkerId,
           visaType: c.visaType?.name || "Unknown",
           petitionType: c.petitionType?.name || "Unknown",
-          submitted: c.submitted ? new Date(c.submitted).toLocaleDateString() : new Date(c.created_at).toLocaleDateString(),
+          submitted: c.submitted ? formatDate(c.submitted) : formatDate(c.created_at),
           targetSubmissionDate: c.targetSubmissionDate,
           lcaNumber: c.lcaNumber,
           receiptNumber: c.receiptNumber,
@@ -893,8 +894,8 @@ export default function AdminCases() {
           status: c.status,
           priority: c.priority,
           submitted: c.submitted
-            ? new Date(c.submitted).toLocaleDateString()
-            : new Date(c.created_at).toLocaleDateString(),
+            ? formatDate(c.submitted)
+            : formatDate(c.created_at),
           caseworkerIds: Array.isArray(c.assignedcaseworkerId)
             ? c.assignedcaseworkerId
             : [],
@@ -1016,8 +1017,8 @@ export default function AdminCases() {
           status: c.status,
           priority: c.priority,
           submitted: c.submitted
-            ? new Date(c.submitted).toLocaleDateString()
-            : new Date(c.created_at).toLocaleDateString(),
+            ? formatDate(c.submitted)
+            : formatDate(c.created_at),
           caseworkerIds: Array.isArray(c.assignedcaseworkerId)
             ? c.assignedcaseworkerId
             : [],
@@ -1077,8 +1078,8 @@ export default function AdminCases() {
           status: c.status,
           priority: c.priority,
           submitted: c.submitted
-            ? new Date(c.submitted).toLocaleDateString()
-            : new Date(c.created_at).toLocaleDateString(),
+            ? formatDate(c.submitted)
+            : formatDate(c.created_at),
           caseworkerIds: Array.isArray(c.assignedcaseworkerId)
             ? c.assignedcaseworkerId
             : [],
@@ -1160,8 +1161,8 @@ export default function AdminCases() {
           status: c.status,
           priority: c.priority,
           submitted: c.submitted
-            ? new Date(c.submitted).toLocaleDateString()
-            : new Date(c.created_at).toLocaleDateString(),
+            ? formatDate(c.submitted)
+            : formatDate(c.created_at),
           caseworkerIds: Array.isArray(c.assignedcaseworkerId)
             ? c.assignedcaseworkerId
             : [],
@@ -1762,8 +1763,8 @@ export default function AdminCases() {
               status: c.status,
               priority: c.priority,
               submitted: c.submitted
-                ? new Date(c.submitted).toLocaleDateString()
-                : new Date(c.created_at).toLocaleDateString(),
+                ? formatDate(c.submitted)
+                : formatDate(c.created_at),
               caseworkerIds: Array.isArray(c.assignedcaseworkerId)
                 ? c.assignedcaseworkerId
                 : [],

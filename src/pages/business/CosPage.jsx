@@ -4,6 +4,7 @@ import { getCosSummary, requestCosAllocation, getCosRequests, updateCosRequest, 
 import toast from "react-hot-toast";
 import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
 import useDownloads from "../../hooks/useDownloads";
+import { formatDate } from "../../utils/datetime";
 import {
   LayoutDashboard,
   Hash,
@@ -326,11 +327,11 @@ const COSPage = () => {
 
                   const exp =
                     item.expiryDate instanceof Date
-                      ? item.expiryDate.toLocaleDateString("en-GB")
+                      ? formatDate(item.expiryDate)
                       : item.expiryDate || "N/A";
                   const lastUsedDisp =
                     item.lastUsed instanceof Date
-                      ? item.lastUsed.toLocaleDateString("en-GB")
+                      ? formatDate(item.lastUsed)
                       : item.lastUsed || "—";
 
                   return (
@@ -425,7 +426,7 @@ const COSPage = () => {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-xs font-bold text-gray-500">
-                      {new Date(r.createdAt).toLocaleDateString('en-GB')}
+                      {formatDate(r.createdAt)}
                     </td>
                     <td className="px-4 py-4 flex gap-2">
                       {['Pending', 'Under Review'].includes(r.status) && (

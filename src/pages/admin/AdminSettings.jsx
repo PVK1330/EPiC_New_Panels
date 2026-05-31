@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { updateUser } from "../../store/slices/authSlice";
+import { setOrgSettings } from "../../store/slices/orgSettingsSlice";
 import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -316,6 +317,11 @@ export default function AdminSettings() {
       setProfileFile(null);
       if (meRes?.data?.data?.profile) {
         dispatch(updateUser(meRes.data.data.profile));
+      }
+      // Reflect the org-wide timezone/date_format change immediately across the panel.
+      const savedPrefs = prefRes?.data?.data?.preferences;
+      if (savedPrefs) {
+        dispatch(setOrgSettings({ timezone: savedPrefs.timezone, date_format: savedPrefs.date_format }));
       }
       showToast({ message: "Profile and preferences updated successfully." });
       loadData(); // Refresh to ensure sync

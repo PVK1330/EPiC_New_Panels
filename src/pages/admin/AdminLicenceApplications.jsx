@@ -35,6 +35,7 @@ import {
 import { API_BASE_URL } from "../../utils/constants";
 import { getCaseworkers } from "../../services/caseWorker";
 import { useToast } from "../../context/ToastContext";
+import { formatDateLong, formatTime } from "../../utils/datetime";
 
 const AdminLicenceApplications = () => {
   const { showToast } = useToast();
@@ -295,10 +296,10 @@ const AdminLicenceApplications = () => {
                   </td>
                   <td className="px-8 py-6">
                     <p className="text-sm font-black text-secondary">
-                      {new Date(app.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                      {formatDateLong(app.createdAt, { month: 'short' })}
                     </p>
                     <p className="text-xs font-bold text-gray-400 mt-0.5">
-                      {new Date(app.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {formatTime(app.createdAt)}
                     </p>
                   </td>
                   <td className="px-8 py-6">

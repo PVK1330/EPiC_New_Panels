@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { listChangeRequests, approveChangeRequest, rejectChangeRequest } from '../../services/changeRequest.service';
 import socketService from '../../services/socket.service';
+import { formatDate } from '../../utils/datetime';
 
 const ChangeRequests = () => {
   const [requests, setRequests] = useState([]);
@@ -93,7 +94,7 @@ const ChangeRequests = () => {
                       {req.risk_level}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(req.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(req.created_at)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button onClick={() => setSelectedReq(req)} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400">Review</button>
                   </td>

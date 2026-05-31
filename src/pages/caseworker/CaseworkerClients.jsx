@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, X, FileText, Briefcase, Phone, Mail, Calendar, MapPin, User, Building, Check, AlertCircle, Clock } from "lucide-react";
 import api from "../../services/api";
 import { getCaseworkerCases } from "../../services/caseApi";
+import { formatDate } from "../../utils/datetime";
 
 const TABS = [
   // { id: "candidates", label: "Candidate Profiles", path: "/caseworker/people/candidates" },
@@ -460,7 +461,7 @@ const CaseworkerClients = () => {
                             <p className="text-xs text-gray-500">Application Date</p>
                             <p className="text-sm font-bold text-gray-900">
                               {viewModal.data.primaryCase?.created_at
-                                ? new Date(viewModal.data.primaryCase.created_at).toLocaleDateString("en-GB")
+                                ? formatDate(viewModal.data.primaryCase.created_at)
                                 : "N/A"}
                             </p>
                           </div>
@@ -471,7 +472,7 @@ const CaseworkerClients = () => {
                             <p className="text-xs text-gray-500">Expected Decision</p>
                             <p className="text-sm font-bold text-gray-900">
                               {viewModal.data.primaryCase?.targetSubmissionDate
-                                ? new Date(viewModal.data.primaryCase.targetSubmissionDate).toLocaleDateString("en-GB")
+                                ? formatDate(viewModal.data.primaryCase.targetSubmissionDate)
                                 : "N/A"}
                             </p>
                           </div>
@@ -715,7 +716,7 @@ const CaseworkerClients = () => {
                           <Calendar size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">License Expiry</p>
-                            <p className="text-sm font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.licenceExpiryDate ? new Date(selectedSponsor.sponsor.sponsorProfile.licenceExpiryDate).toLocaleDateString('en-GB') : 'N/A'}</p>
+                            <p className="text-sm font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.licenceExpiryDate ? formatDate(selectedSponsor.sponsor.sponsorProfile.licenceExpiryDate) : 'N/A'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -773,11 +774,11 @@ const CaseworkerClients = () => {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Issue Date</p>
-                          <p className="font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.licenceIssueDate ? new Date(selectedSponsor.sponsor.sponsorProfile.licenceIssueDate).toLocaleDateString('en-GB') : 'N/A'}</p>
+                          <p className="font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.licenceIssueDate ? formatDate(selectedSponsor.sponsor.sponsorProfile.licenceIssueDate) : 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Expiry Date</p>
-                          <p className="font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.licenceExpiryDate ? new Date(selectedSponsor.sponsor.sponsorProfile.licenceExpiryDate).toLocaleDateString('en-GB') : 'N/A'}</p>
+                          <p className="font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.licenceExpiryDate ? formatDate(selectedSponsor.sponsor.sponsorProfile.licenceExpiryDate) : 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">COS Allocation</p>
@@ -806,7 +807,7 @@ const CaseworkerClients = () => {
                       <div className="grid grid-cols-2 gap-4 text-xs">
                         <div>
                           <p className="text-gray-500">Start Date</p>
-                          <p className="font-bold text-gray-900">{activeCase.created_at ? new Date(activeCase.created_at).toLocaleDateString('en-GB') : 'N/A'}</p>
+                          <p className="font-bold text-gray-900">{activeCase.created_at ? formatDate(activeCase.created_at) : 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-gray-500">Status</p>

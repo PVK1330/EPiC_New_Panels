@@ -43,6 +43,7 @@ import {
   MOCK_REPORT_FINANCE,
 } from "../../data/adminMockData";
 import useDownloads from "../../hooks/useDownloads";
+import { formatDate, formatDateLong } from "../../utils/datetime";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -73,15 +74,6 @@ const tableHead =
   "px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function formatDate(date) {
-  if (!date) return "";
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 function sameDay(a, b) {
   return a && b && a.toDateString() === b.toDateString();
@@ -363,7 +355,8 @@ function DateRangePicker({ startDate, endDate, onChange }) {
         <FiCalendar size={14} className="text-gray-400 shrink-0" />
         {hasRange ? (
           <span className="font-semibold text-gray-700 flex-1 text-left">
-            {formatDate(startDate)} → {formatDate(endDate)}
+            {formatDateLong(startDate, { month: "short" })} →{" "}
+            {formatDateLong(endDate, { month: "short" })}
           </span>
         ) : (
           <span className="text-gray-400 flex-1 text-left">
@@ -515,10 +508,10 @@ function DateRangeBadge({ startDate, endDate }) {
   if (!startDate && !endDate) return null;
   const label =
     startDate && endDate
-      ? `${formatDate(startDate)} → ${formatDate(endDate)}`
+      ? `${formatDateLong(startDate, { month: "short" })} → ${formatDateLong(endDate, { month: "short" })}`
       : startDate
-        ? `From ${formatDate(startDate)}`
-        : `Until ${formatDate(endDate)}`;
+        ? `From ${formatDateLong(startDate, { month: "short" })}`
+        : `Until ${formatDateLong(endDate, { month: "short" })}`;
   let days = null;
   if (startDate && endDate) {
     const diff = endDate.getTime() - startDate.getTime();
@@ -566,7 +559,7 @@ function PerformanceDetailModal({ caseworker, onClose, showToast }) {
               <p className="text-xs text-gray-400">
                 {caseworker.id || "N/A"} · {caseworker.department || "General"}{" "}
                 · Joined{" "}
-                {caseworker.joinDate || new Date().toLocaleDateString("en-GB")}
+                {caseworker.joinDate || formatDate(new Date())}
               </p>
             </div>
           </div>

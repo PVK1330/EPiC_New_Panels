@@ -36,6 +36,7 @@ import useCandidate from "../../hooks/useCandidate";
 import { resolveCaseStage } from "../../constants/immigrationCaseProcess";
 import { getDecisionDocuments } from "../../services/workflowApi";
 import { downloadDocument, triggerDownload } from "../../services/documentApi";
+import { formatDateLong } from "../../utils/datetime";
 
 const RATING_LABELS = [
   "",
@@ -203,11 +204,7 @@ function parsePhoneInput(input, fallbackCode) {
 function formatConsentDate(iso) {
   if (!iso) return null;
   try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return formatDateLong(iso, { month: "short" });
   } catch {
     return null;
   }

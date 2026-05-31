@@ -43,6 +43,7 @@ import {
   markBiometricAttended,
 } from "../../services/workflowApi";
 import { useToast } from "../../context/ToastContext";
+import { formatDate, formatDateLong, formatDateTime } from "../../utils/datetime";
 
 const getStatusColor = (status) => {
   const map = {
@@ -168,7 +169,7 @@ const CandidateDashboard = () => {
     {
       label: "Workflow step",
       value: currentStep?.shortTitle || currentStep?.title || caseStatus,
-      sub: caseData.updatedAt ? `Updated ${new Date(caseData.updatedAt).toLocaleDateString()}` : "Form submission pending",
+      sub: caseData.updatedAt ? `Updated ${formatDate(caseData.updatedAt)}` : "Form submission pending",
       Icon: ClipboardCheck,
       valueClass: "text-primary",
       valueSize: "text-xl md:text-2xl",
@@ -183,7 +184,7 @@ const CandidateDashboard = () => {
     },
     {
       label: "Next Deadline",
-      value: caseData.targetSubmissionDate ? new Date(caseData.targetSubmissionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : "TBD",
+      value: caseData.targetSubmissionDate ? formatDateLong(caseData.targetSubmissionDate, { month: 'short' }) : "TBD",
       sub: "Action required soon",
       Icon: Clock3,
       valueClass: "text-secondary",
@@ -300,11 +301,7 @@ const CandidateDashboard = () => {
                 on{" "}
                 <span className="text-primary">
                   {biometricDay ? `${biometricDay}, ` : ""}
-                  {new Date(biometricDate).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
+                  {formatDateLong(biometricDate, { month: "long" })}
                 </span>
               </>
             )}
@@ -535,7 +532,7 @@ const CandidateDashboard = () => {
                     <h4 className="text-xs font-black text-secondary truncate">{item.title}</h4>
                     <p className="text-xs text-gray-600 line-clamp-1 mt-0.5">{item.message}</p>
                     <p className="text-[9px] font-bold text-gray-400 mt-1">
-                      {item.createdAt ? new Date(item.createdAt).toLocaleString("en-GB", { dateStyle: 'short', timeStyle: 'short' }) : "Recent"}
+                      {item.createdAt ? formatDateTime(item.createdAt) : "Recent"}
                     </p>
                   </div>
                 </div>

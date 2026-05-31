@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiX, FiUpload, FiDownload, FiCheckCircle, FiAlertCircle, FiFile, FiTrash2 } from "react-icons/fi";
 import useDownloads from "../hooks/useDownloads";
+import { formatDateLong } from "../utils/datetime";
 
 // ── CSV → row mapper ──────────────────────────────────────────────────────────
 const COLUMN_MAP = {
@@ -101,7 +102,7 @@ const rowToCandidateShape = (row, index, existingCount) => {
 
   const dob = row.dob || "";
   const dobDisplay = dob
-    ? (() => { try { return new Date(dob).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }); } catch { return dob; } })()
+    ? (() => { try { return formatDateLong(dob, { month: "short" }); } catch { return dob; } })()
     : "";
 
   return {

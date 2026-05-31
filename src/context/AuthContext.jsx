@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import useAuth from '../hooks/useAuth';
 import { setCredentials } from '../store/slices/authSlice';
+import { setOrgSettings } from '../store/slices/orgSettingsSlice';
 import { normalizeAuthUser } from '../utils/authResponse';
 import { apiClient } from '../services/axios.instance';
 
@@ -29,6 +30,9 @@ export function AuthProvider({ children }) {
             token: 'httpOnly',
             allowedModules: data.allowedModules ?? [],
           }));
+          if (data.user.organisation) {
+            dispatch(setOrgSettings(data.user.organisation));
+          }
         }
       })
       .catch(() => {

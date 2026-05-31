@@ -8,6 +8,7 @@ import {
   markPlatformNotificationRead,
   markAllPlatformNotificationsRead
 } from '../../services/superadminNotification.service';
+import { formatDateLong, formatDateTime } from '../../utils/datetime';
 
 const SuperadminNotifications = () => {
   const [activeTab, setActiveTab] = useState('All');
@@ -131,7 +132,7 @@ const SuperadminNotifications = () => {
                         {notif.title}
                       </h3>
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0">
-                        {notif.created_at ? new Date(notif.created_at).toLocaleDateString('en-GB', { dateStyle: 'medium' }) : "N/A"}
+                        {notif.created_at ? formatDateLong(notif.created_at, { month: 'short' }) : "N/A"}
                       </span>
                     </div>
                     <p className={`text-xs ${!notif.isRead ? 'text-gray-600 font-semibold' : 'text-gray-400 font-medium'} leading-relaxed max-w-4xl truncate`}>
@@ -182,7 +183,7 @@ const SuperadminNotifications = () => {
               <div>
                 <h4 className="text-base font-black text-secondary tracking-tight">{selectedNotification.title}</h4>
                 <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">
-                  {selectedNotification.created_at ? new Date(selectedNotification.created_at).toLocaleString('en-GB') : "N/A"}
+                  {selectedNotification.created_at ? formatDateTime(selectedNotification.created_at) : "N/A"}
                 </p>
               </div>
             </div>

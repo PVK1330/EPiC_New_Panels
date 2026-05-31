@@ -1,4 +1,5 @@
 import { getInitialApplicationFormData } from "./initialFormState";
+import { formatDateLong } from "../../utils/datetime";
 
 // Helper function to format date for HTML date input (YYYY-MM-DD)
 function formatDateForInput(date) {
@@ -60,11 +61,7 @@ export function pruneCustomResponsesToDefinitions(application, definitions) {
  */
 export function mapApplicationToCandidateRow(application, overrides = {}) {
   const dobDisplay = application.dob
-    ? new Date(application.dob).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+    ? formatDateLong(application.dob, { month: "short" })
     : "";
 
   // Parse phone number to extract country code and mobile

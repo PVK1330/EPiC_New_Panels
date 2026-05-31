@@ -23,6 +23,7 @@ import {
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/Input';
+import { formatDate, formatDateTime } from '../../utils/datetime';
 
 const StatCard = ({ title, value, icon: Icon, color, delay }) => (
   <motion.div
@@ -210,7 +211,7 @@ const SuperadminPayments = () => {
  </td>
  <td className="px-4 py-2.5">
  <p className="font-bold text-secondary text-sm block leading-tight mb-1">{tr.organisation?.name || '—'}</p>
- <p className="text-sm text-gray-500 font-semibold">{new Date(tr.createdAt).toLocaleDateString()}</p>
+ <p className="text-sm text-gray-500 font-semibold">{formatDate(tr.createdAt)}</p>
  </td>
  <td className="px-4 py-2.5 text-center">
  <motion.span 
@@ -312,7 +313,7 @@ const SuperadminPayments = () => {
                 </div>
                 <div className="flex items-center justify-between text-[10px] font-bold text-gray-400">
                   <span>Last Sync</span>
-                  <span className="text-secondary">{gatewayStatus.lastSync ? new Date(gatewayStatus.lastSync).toLocaleString() : 'Never'}</span>
+                  <span className="text-secondary">{gatewayStatus.lastSync ? formatDateTime(gatewayStatus.lastSync) : 'Never'}</span>
                 </div>
               </div>
             ) : (

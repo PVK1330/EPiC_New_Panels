@@ -16,6 +16,7 @@ import {
   resolveCaseStage,
   getStepById,
 } from "../../constants/immigrationCaseProcess";
+import { formatDateTime } from "../../utils/datetime";
 
 const TABS = [
   { id: "status", label: "Application status", icon: BarChart3 },
@@ -186,7 +187,7 @@ const ApplicationStatus = () => {
         ? "bg-emerald-500"
         : "bg-secondary",
     title: entry.description,
-    time: new Date(entry.actionDate).toLocaleString(),
+    time: formatDateTime(entry.actionDate),
     desc: entry.metadata?.notes || null,
   }));
 

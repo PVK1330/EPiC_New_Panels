@@ -31,6 +31,7 @@ import {
   getCaseworkerById,
 } from "../../services/caseWorker";
 import { getOrganisationSlugFromHost } from "../../utils/organisationHost";
+import { formatDateLong } from "../../utils/datetime";
 
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
 
@@ -138,11 +139,7 @@ function candidateDisplayName(candidate) {
 function formatTargetDate(value) {
   if (!value) return "—";
   try {
-    return new Date(value).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+    return formatDateLong(value, { month: "short" });
   } catch {
     return "—";
   }

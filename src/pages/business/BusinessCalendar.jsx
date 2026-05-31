@@ -5,6 +5,7 @@ import GoogleConnect from "../../components/GoogleConnect";
 import CreateMeetingModal from "../../components/CreateMeetingModal";
 import { getUpcomingMeetings } from "../../services/teamsApi";
 import { getMyAppointments } from "../../services/appointmentApi";
+import { formatDate, formatTime, formatWithOptions } from "../../utils/datetime";
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -160,7 +161,7 @@ const Calendar = () => {
   };
 
   const formatMonth = (date) =>
-    date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    formatWithOptions(date, { month: "long", year: "numeric" });
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -230,12 +231,7 @@ const Calendar = () => {
     setShowEventDetailModal(false);
   };
 
-  const formatEventTime = (date) =>
-    new Date(date).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+  const formatEventTime = (date) => formatTime(date);
 
   const getEventIcon = (type) => {
     switch (type) {
@@ -766,15 +762,12 @@ const Calendar = () => {
                     <div>
                       <p className="text-xs text-gray-500">Date</p>
                       <p className="text-sm font-bold text-gray-900">
-                        {new Date(selectedEvent.date).toLocaleDateString(
-                          "en-US",
-                          {
-                            weekday: "long",
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          }
-                        )}
+                        {formatWithOptions(selectedEvent.date, {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
                       </p>
                     </div>
                   </div>
@@ -923,7 +916,7 @@ const EventRow = ({ event, onClick, formatEventTime, isCompleted = false }) => {
         <div className="flex items-center gap-4 text-xs text-gray-500 mt-1 flex-wrap">
           <span className="flex items-center gap-1">
             <CalendarIcon size={12} />
-            {new Date(event.date).toLocaleDateString()}
+            {formatDate(event.date)}
           </span>
           <span className="flex items-center gap-1">
             <Clock size={12} />

@@ -21,6 +21,7 @@ import SearchableSelect from "../../components/SearchableSelect";
 import * as appointmentApi from "../../services/appointmentApi";
 import { getTeamsMeetings } from "../../services/teamsApi";
 import { useToast } from "../../context/ToastContext";
+import { formatDateLong, formatTime } from "../../utils/datetime";
 
 const PLATFORMS = [
   {
@@ -75,12 +76,7 @@ const formatStatusLabel = (status) => {
 
 const formatDisplayDate = (isoDate) => {
   if (!isoDate) return "";
-  const d = new Date(`${isoDate}T12:00:00`);
-  return d.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  return formatDateLong(`${isoDate}T12:00:00`, { month: "long" });
 };
 
 const formatTimeFromInput = (timeStr) => {
@@ -88,11 +84,7 @@ const formatTimeFromInput = (timeStr) => {
   const [h, m] = timeStr.split(":").map(Number);
   const d = new Date();
   d.setHours(h, m, 0, 0);
-  return d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return formatTime(d);
 };
 
 const AppointmentCard = ({

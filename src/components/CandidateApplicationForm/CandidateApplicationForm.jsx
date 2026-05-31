@@ -17,6 +17,7 @@ import { resolveCaseStage } from "../../constants/immigrationCaseProcess";
 import { useToast } from "../../context/ToastContext";
 import { getCaseworkers } from "../../services/caseWorker";
 import { getVisaTypesDropdown } from "../../services/settingsService";
+import { formatDateLong } from "../../utils/datetime";
 
 const inputClass =
   "mt-1 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow";
@@ -274,11 +275,7 @@ function formatDate(dateStr) {
   if (!dateStr) return "N/A";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "N/A";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateLong(dateStr, { month: "short" });
 }
 
 /** Per-step required-field validation. Returns { fieldName: "error message" }. */
