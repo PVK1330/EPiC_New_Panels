@@ -79,7 +79,7 @@ export async function downloadAdminCandidateApplicationPdf(candidateId) {
 
 
 export async function downloadCosSummaryExcel() {
-  const res = await api.get("/api/sponsor/licence/cos/export/summary", {
+  const res = await api.get("/api/business/cos/export/summary", {
     responseType: "blob",
     timeout: 120000,
   });
@@ -91,7 +91,7 @@ export async function downloadCosSummaryExcel() {
 }
 
 export async function downloadCosRequestsExcel() {
-  const res = await api.get("/api/sponsor/licence/cos/export/requests", {
+  const res = await api.get("/api/business/cos/export/requests", {
     responseType: "blob",
     timeout: 120000,
   });

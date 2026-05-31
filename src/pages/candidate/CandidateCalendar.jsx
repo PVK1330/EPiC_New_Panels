@@ -160,6 +160,7 @@ export default function CandidateCalendar() {
     time: "",
     duration: "30",
     type: "meeting",
+    meeting_provider: "none",
     location: "",
     attendees: "",
     description: "",
@@ -240,6 +241,7 @@ export default function CandidateCalendar() {
         attendees: attendees.length ? attendees : undefined,
         meeting_type: "online",
         event_type: newEvent.type,
+        meeting_provider: newEvent.meeting_provider,
         location: newEvent.location || "",
         reminder_minutes: parseInt(newEvent.duration, 10) <= 30 ? 15 : 30,
       });
@@ -256,6 +258,7 @@ export default function CandidateCalendar() {
         time: "",
         duration: "30",
         type: "meeting",
+        meeting_provider: "none",
         location: "",
         attendees: "",
         description: "",
@@ -723,6 +726,26 @@ export default function CandidateCalendar() {
                       <option value="deadline">Deadline</option>
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Meeting platform
+                  </label>
+                  <select
+                    value={newEvent.meeting_provider}
+                    onChange={(e) =>
+                      setNewEvent({ ...newEvent, meeting_provider: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                  >
+                    <option value="none">No online link</option>
+                    <option value="google">Google Meet</option>
+                    <option value="microsoft">Microsoft Teams</option>
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Generates a join link via your connected account.
+                  </p>
                 </div>
 
                 <div>

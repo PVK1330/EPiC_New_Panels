@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { FiBarChart2, FiDownload } from "react-icons/fi";
+import { FiBarChart2, FiDownload, FiChevronDown } from "react-icons/fi";
 import { RiBarChartLine } from "react-icons/ri";
 import { Loader2 } from "lucide-react";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
@@ -65,6 +65,8 @@ const AdminWorkload = () => {
   const { showToast } = useToast();
   const { exportWorkloadReport } = useDownloads();
   const [tab, setTab] = useState("team");
+  const [exportDropOpen, setExportDropOpen] = useState(false);
+  const exportDropRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [workloadData, setWorkloadData] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -292,14 +294,36 @@ const AdminWorkload = () => {
     }
   };
 
-  const handleExport = async () => {
-    const result = await exportWorkloadReport();
+  // Map UI tab id -> backend sheet param
+  const EXPORT_OPTIONS = [
+    { sheet: null, label: "Export All" },
+    { sheet: "team", label: "Team Workload" },
+    { sheet: "tasks", label: "Pending Tasks" },
+    { sheet: "deadlines", label: "Deadline Monitor" },
+  ];
+
+  const handleExport = async (sheet = null) => {
+    setExportDropOpen(false);
+    const params = sheet ? { sheet } : {};
+    const result = await exportWorkloadReport(params);
     if (result.ok) {
       showToast({ message: "Workload report exported successfully", variant: "success" });
     } else {
       showToast({ message: result.message || "Failed to export report", variant: "danger" });
     }
   };
+
+  // Close export dropdown on outside click
+  useEffect(() => {
+    if (!exportDropOpen) return;
+    const onClick = (e) => {
+      if (exportDropRef.current && !exportDropRef.current.contains(e.target)) {
+        setExportDropOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [exportDropOpen]);
 
   return (
     <div className="space-y-6 pb-10">
@@ -318,9 +342,31 @@ const AdminWorkload = () => {
             </p>
           </div>
         </div>
-        <button type="button" onClick={handleExport} disabled={loading} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm shrink-0 self-start disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? <Loader2 size={14} className="animate-spin" /> : <FiDownload size={14} />} Export Report
-        </button>
+        <div className="relative shrink-0 self-start" ref={exportDropRef}>
+          <button
+            type="button"
+            onClick={() => setExportDropOpen((o) => !o)}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? <Loader2 size={14} className="animate-spin" /> : <FiDownload size={14} />} Export Report
+            <FiChevronDown size={14} className={`transition-transform ${exportDropOpen ? "rotate-180" : ""}`} />
+          </button>
+          {exportDropOpen && (
+            <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 z-20">
+              {EXPORT_OPTIONS.map((opt, i) => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => handleExport(opt.sheet)}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors ${i === 0 ? "border-b border-gray-100 text-secondary font-bold" : ""}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <SegmentedTabBar tabs={TABS} activeId={tab} onChange={setTab} />
