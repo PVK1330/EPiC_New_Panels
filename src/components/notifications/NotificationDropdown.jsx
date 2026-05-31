@@ -35,21 +35,25 @@ const NotificationDropdown = () => {
     const url = getMessagingSocketUrl();
     const socket = io(url, {
       auth: { token },
+      // Auth lives in an HttpOnly cookie; withCredentials sends it on the handshake.
+      withCredentials: true,
       transports: ['websocket', 'polling'],
     });
 
+    // Server pushes `notification:new` for every notification type (messages,
+    // case updates, tasks, etc). Refresh the badge and first page on arrival.
+    const refresh = () => {
+      dispatch(fetchUnreadCount());
+      dispatch(fetchNotifications({ limit: 20, unread_only: false, page: 1 }));
+    };
+    socket.on('notification:new', refresh);
+    socket.on('notification:count', () => dispatch(fetchUnreadCount()));
+
+    // Fallback: a brand-new message also implies a notification for the receiver.
     socket.on('message:new', (payload) => {
       const m = payload?.message;
       if (!m) return;
-      const myId = Number(user.id);
-      const receiverId = Number(m.receiverId);
-      
-      // If we received a new message, fetch notifications instantly!
-      if (myId === receiverId) {
-        dispatch(fetchUnreadCount());
-        // Also refresh the first page of notifications if the dropdown is open
-        dispatch(fetchNotifications({ limit: 20, unread_only: false, page: 1 }));
-      }
+      if (Number(user.id) === Number(m.receiverId)) refresh();
     });
 
     return () => {

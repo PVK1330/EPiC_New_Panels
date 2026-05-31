@@ -313,6 +313,8 @@ const useMessaging = (opts = {}) => {
     const url = getMessagingSocketUrl();
     const socket = io(url, {
       auth: { token },
+      // Auth lives in an HttpOnly cookie; withCredentials sends it on the handshake.
+      withCredentials: true,
       transports: ["websocket", "polling"],
       reconnectionAttempts: 10,
       reconnectionDelayMax: 10000,
