@@ -122,8 +122,20 @@ const notificationSlice = createSlice({
       })
       .addCase(fetchNotifications.fulfilled, (state, action) => {
         state.loading = false;
-        state.notifications = action.payload.notifications;
-        state.pagination = action.payload.pagination;
+        const payload = action.payload || {};
+        state.notifications = payload.notifications || [];
+        // The user endpoint returns flat { total, page, totalPages }, while the
+        // admin endpoint returns a nested { pagination } object. Normalize both.
+        const p = payload.pagination || {};
+        const total = p.total ?? payload.total ?? 0;
+        const limit = p.limit ?? state.pagination.limit ?? 20;
+        const pages = p.pages ?? payload.totalPages ?? (limit ? Math.ceil(total / limit) : 0);
+        state.pagination = {
+          total,
+          page: p.page ?? payload.page ?? 1,
+          limit,
+          pages,
+        };
       })
       .addCase(fetchNotifications.rejected, (state, action) => {
         state.loading = false;

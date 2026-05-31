@@ -1,5 +1,8 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useSelector } from "react-redux";
+import { io } from "socket.io-client";
 import { motion } from "framer-motion";
+import { getMessagingSocketUrl } from "../../utils/socketOrigin";
 import {
   FiBell,
   FiInfo,
@@ -24,6 +27,8 @@ import {
   deleteNotification,
   createManualNotification,
   getAllNotifications,
+  getNotificationPreferences,
+  updateNotificationPreferences,
 } from "../../services/notificationApi";
 import { formatDateLong } from "../../utils/datetime";
 
@@ -88,11 +93,12 @@ const INITIAL_NOTIFICATIONS = [
   },
 ];
 
+// `key` maps directly to the backend NotificationPreference column.
 const preferencesList = [
   { key: "emailNotifications", label: "Email Notifications", desc: "Receive notifications via email", on: true },
   { key: "caseUpdates", label: "Case Updates", desc: "Get notified about case status changes", on: true },
-  { key: "paymentAlerts", label: "Payment Alerts", desc: "Receive payment due and overdue notifications", on: false },
-  { key: "systemMessages", label: "System Messages", desc: "Get system updates and maintenance notices", on: true },
+  { key: "paymentNotifications", label: "Payment Alerts", desc: "Receive payment due and overdue notifications", on: true },
+  { key: "inAppNotifications", label: "System Messages", desc: "Get system updates and maintenance notices", on: true },
 ];
 
 const notificationTypes = [
@@ -155,6 +161,7 @@ const cardVariants = {
 const FORM_ID = "create-notification-form";
 
 export default function AdminNotifications() {
+  const { user, token } = useSelector((state) => state.auth);
   const [modalOpen, setModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
@@ -169,6 +176,7 @@ export default function AdminNotifications() {
 
   const initialPrefs = useMemo(() => Object.fromEntries(preferencesList.map((p) => [p.key, p.on])), []);
   const [prefs, setPrefs] = useState(initialPrefs);
+  const [prefsSaving, setPrefsSaving] = useState(false);
 
   const readCount = useMemo(() => stats.total - stats.unread, [stats.total, stats.unread]);
 
@@ -185,6 +193,57 @@ export default function AdminNotifications() {
     fetchNotifications();
     fetchStats();
   }, [viewAll]);
+
+  useEffect(() => {
+    fetchPreferences();
+  }, []);
+
+  // Keep a ref to the latest refresh logic so the socket effect (which we only
+  // want to (re)connect on auth changes) always calls the current closures.
+  const refreshRef = useRef(() => {});
+  refreshRef.current = () => {
+    fetchNotifications();
+    fetchStats();
+  };
+
+  // Real-time updates: refresh the list + stats when a notification arrives.
+  useEffect(() => {
+    if (!user?.id || !token) return;
+
+    const socket = io(getMessagingSocketUrl(), {
+      auth: { token },
+      transports: ["websocket", "polling"],
+    });
+
+    const handleNew = () => refreshRef.current();
+    socket.on("notification:new", handleNew);
+
+    return () => {
+      socket.off("notification:new", handleNew);
+      setTimeout(() => {
+        if (socket.connected || socket.connecting) socket.disconnect();
+      }, 50);
+    };
+  }, [user?.id, token]);
+
+  const fetchPreferences = async () => {
+    try {
+      const res = await getNotificationPreferences();
+      if (res.data?.status === "success" && res.data.data?.preferences) {
+        const p = res.data.data.preferences;
+        setPrefs((prev) => ({
+          ...prev,
+          ...Object.fromEntries(
+            preferencesList
+              .filter(({ key }) => typeof p[key] === "boolean")
+              .map(({ key }) => [key, p[key]]),
+          ),
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to fetch preferences:", error);
+    }
+  };
 
   const fetchNotifications = async () => {
     setIsFetching(true);
@@ -204,7 +263,7 @@ export default function AdminNotifications() {
           iconColor: getIconColor(n.type),
           iconKey: getIconKey(n.type),
           userName: viewAll && n.user ? `${n.user.first_name} ${n.user.last_name}` : null,
-          userRole: viewAll && n.role ? n.role.name : null,
+          userRole: viewAll && n.user?.role ? n.user.role.name : null,
           priority: n.priority,
           metadata: n.metadata,
         }));
@@ -289,7 +348,21 @@ export default function AdminNotifications() {
     return map[type] || "info";
   };
 
-  const togglePref = (key) => setPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
+  const togglePref = async (key) => {
+    const nextValue = !prefs[key];
+    // Optimistic update
+    setPrefs((prev) => ({ ...prev, [key]: nextValue }));
+    setPrefsSaving(true);
+    try {
+      await updateNotificationPreferences({ [key]: nextValue });
+    } catch (error) {
+      console.error("Failed to update preference:", error);
+      // Roll back on failure
+      setPrefs((prev) => ({ ...prev, [key]: !nextValue }));
+    } finally {
+      setPrefsSaving(false);
+    }
+  };
 
   const markAllRead = useCallback(async () => {
     try {
@@ -566,7 +639,8 @@ export default function AdminNotifications() {
               <button
                 type="button"
                 onClick={() => togglePref(key)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-secondary/40 ${
+                disabled={prefsSaving}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-secondary/40 disabled:opacity-60 disabled:cursor-not-allowed ${
                   prefs[key] ? "bg-primary" : "bg-gray-200"
                 }`}
                 aria-pressed={prefs[key]}

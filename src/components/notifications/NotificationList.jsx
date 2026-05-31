@@ -46,8 +46,10 @@ const NotificationList = ({ showUnreadOnly = false }) => {
     dispatch(markAllAsRead());
   };
 
+  const safePagination = pagination || { total: 0, page: 1, limit: 20, pages: 0 };
+
   const handleLoadMore = () => {
-    if (page < pagination.pages) {
+    if (page < safePagination.pages) {
       setPage(prev => prev + 1);
     }
   };
@@ -165,7 +167,7 @@ const NotificationList = ({ showUnreadOnly = false }) => {
             ))}
             
             {/* Load More */}
-            {pagination.page < pagination.pages && (
+            {safePagination.page < safePagination.pages && (
               <div className="text-center pt-4">
                 <button
                   onClick={handleLoadMore}
@@ -181,10 +183,10 @@ const NotificationList = ({ showUnreadOnly = false }) => {
       </div>
 
       {/* Footer */}
-      {pagination.total > 0 && (
+      {safePagination.total > 0 && (
         <div className="border-t border-gray-200 px-4 py-3 bg-gray-50">
           <p className="text-xs text-gray-500">
-            Showing {safeNotifications.length} of {pagination.total} notifications
+            Showing {safeNotifications.length} of {safePagination.total} notifications
           </p>
         </div>
       )}
