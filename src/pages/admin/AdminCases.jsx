@@ -20,6 +20,8 @@ import Button from "../../components/Button";
 import CaseWorkflowBadge from "../../components/case/CaseWorkflowBadge";
 import { formatDate } from "../../utils/datetime";
 import Input from "../../components/Input";
+import DatePicker from "../../components/DatePicker";
+import NationalitySelect from "../../components/NationalitySelect";
 import {
   getCases,
   createCase,
@@ -306,12 +308,12 @@ function CaseFormModal({
                   placeholder="Auto-filled from selection"
                   disabled
                 />
-                <Input
+                <NationalitySelect
                   label="Nationality"
                   name="nationality"
                   value={formData.nationality}
                   onChange={onChange}
-                  placeholder="e.g. Indian"
+                  placeholder="Select nationality"
                 />
                 <Input
                   label="Job Title"
@@ -458,13 +460,13 @@ function CaseFormModal({
                   ))}
                 </select>
               </div>
-              <Input
+              <DatePicker
                 label="Target Submission Date"
                 name="targetSubmissionDate"
-                type="date"
                 value={formData.targetSubmissionDate}
                 onChange={onChange}
                 error={errors.targetSubmissionDate}
+                min={new Date().toISOString().split("T")[0]}
                 required
               />
               <Input
@@ -517,14 +519,18 @@ function CaseFormModal({
                 label="Salary Offered ($)"
                 name="salaryOffered"
                 type="number"
+                min="0"
                 value={formData.salaryOffered}
                 onChange={onChange}
+                error={errors.salaryOffered}
                 placeholder="Annual salary"
               />
               <Input
                 label="Total Amount ($)"
                 name="totalAmount"
                 type="number"
+                min="0"
+                step="0.01"
                 value={formData.totalAmount}
                 onChange={onChange}
                 error={errors.totalAmount}
@@ -535,8 +541,11 @@ function CaseFormModal({
                 label="Paid Amount ($)"
                 name="paidAmount"
                 type="number"
+                min="0"
+                step="0.01"
                 value={formData.paidAmount}
                 onChange={onChange}
+                error={errors.paidAmount}
                 placeholder="Amount paid so far"
               />
               <Input
@@ -547,6 +556,7 @@ function CaseFormModal({
                 step="0.01"
                 value={formData.proposedAmount}
                 onChange={onChange}
+                error={errors.proposedAmount}
                 placeholder="e.g. 1500.00"
               />
             </div>
@@ -833,13 +843,60 @@ export default function AdminCases() {
 
   const validate = () => {
     const e = {};
-    if (!formData.candidateId) e.candidateId = "Required";
-    if (!formData.businessId) e.businessId = "Required";
-    if (!formData.visaTypeId) e.visaTypeId = "Required";
+
+    // ── Required selections ──────────────────────────────────────────────
+    if (!formData.candidateId) e.candidateId = "Please select a candidate";
+    if (!formData.businessId) e.businessId = "Please select a sponsor";
+    if (!formData.visaTypeId) e.visaTypeId = "Please select a visa type";
+
+    // ── Caseworkers (optional on create, but never more than 2) ──────────
     const n = formData.assignedCaseworkerIds?.length || 0;
     if (n > 2) e.assignedCaseworkers = "Select at most 2 caseworkers";
-    if (!formData.targetSubmissionDate) e.targetSubmissionDate = "Required";
-    if (formData.totalAmount <= 0) e.totalAmount = "Must be > 0";
+
+    // ── Target submission date: required, valid, not in the past ─────────
+    if (!formData.targetSubmissionDate) {
+      e.targetSubmissionDate = "Please choose a target date";
+    } else {
+      const picked = new Date(`${formData.targetSubmissionDate}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (Number.isNaN(picked.getTime())) {
+        e.targetSubmissionDate = "Enter a valid date";
+      } else if (picked < today) {
+        e.targetSubmissionDate = "Target date cannot be in the past";
+      }
+    }
+
+    // ── Financials: non-negative, total > 0, paid ≤ total ────────────────
+    const total = Number(formData.totalAmount);
+    const paid = Number(formData.paidAmount);
+    const salary = Number(formData.salaryOffered);
+    if (Number.isNaN(total) || total <= 0) {
+      e.totalAmount = "Total amount must be greater than 0";
+    }
+    if (!Number.isNaN(paid) && paid < 0) {
+      e.paidAmount = "Paid amount cannot be negative";
+    } else if (
+      !Number.isNaN(paid) &&
+      !Number.isNaN(total) &&
+      total > 0 &&
+      paid > total
+    ) {
+      e.paidAmount = "Paid amount cannot exceed the total amount";
+    }
+    if (!Number.isNaN(salary) && salary < 0) {
+      e.salaryOffered = "Salary cannot be negative";
+    }
+
+    // ── CCL fee (proposedAmount): optional, but non-negative if present ──
+    if (
+      formData.proposedAmount !== "" &&
+      formData.proposedAmount != null &&
+      Number(formData.proposedAmount) < 0
+    ) {
+      e.proposedAmount = "CCL fee cannot be negative";
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };

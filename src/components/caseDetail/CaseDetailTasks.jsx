@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { FiEdit2 } from "react-icons/fi";
 import Modal from "../Modal";
 import Input from "../Input";
+import DatePicker from "../DatePicker";
 import Button from "../Button";
 
 const PRIORITIES = [
@@ -113,7 +114,7 @@ const CaseDetailTasks = ({ tasks }) => {
             <Input label="Task" name="task" value={form.task} onChange={change} placeholder="Task description" required error={errors.task} />
           </div>
           <Input label="Assigned To" name="assigned" value={form.assigned} onChange={change} placeholder="Alice Patel" required error={errors.assigned} />
-          <Input label="Due Date" name="due" type="date" value={form.due} onChange={change} required error={errors.due} />
+          <DatePicker label="Due Date" name="due" value={form.due} onChange={change} required error={errors.due} min={new Date().toISOString().split("T")[0]} />
           <Input label="Priority" name="priority" value={form.priority} onChange={change} options={PRIORITIES} />
           <Input label="Status" name="status" value={form.status} onChange={change} options={STATUSES} />
         </div>

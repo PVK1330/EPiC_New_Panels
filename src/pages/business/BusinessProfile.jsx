@@ -15,6 +15,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import Modal from "../../components/Modal";
+import DatePicker from "../../components/DatePicker";
 import BusinessRegistration from "./BusinessRegistration";
 import {
   getBusinessProfile,
@@ -1105,20 +1106,20 @@ const BusinessProfile = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-100 pt-6">
             <div>
               <label className="text-xs font-bold text-gray-700 mb-2 block">Licence Issue Date</label>
-              <input
-                type="date"
+              <DatePicker
+                name="licenceIssueDate"
                 value={hrDraft.licenceIssueDate || ""}
                 onChange={(e) => setHrDraft({ ...hrDraft, licenceIssueDate: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40"
+                placeholder="Select date"
               />
             </div>
             <div>
               <label className="text-xs font-bold text-gray-700 mb-2 block">Licence Expiry Date</label>
-              <input
-                type="date"
+              <DatePicker
+                name="licenceExpiryDate"
                 value={hrDraft.licenceExpiryDate || ""}
                 onChange={(e) => setHrDraft({ ...hrDraft, licenceExpiryDate: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40"
+                placeholder="Select date"
               />
             </div>
             <div>

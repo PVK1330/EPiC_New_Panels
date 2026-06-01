@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "../../components/Input";
+import PhoneInput from "../../components/PhoneInput";
 import Button from "../../components/Button";
+import { isValidPhone } from "../../utils/countries";
 import eliteLogo from "../../assets/elitepic_logo.png";
 import useAuth from "../../hooks/useAuth";
 
@@ -45,6 +47,8 @@ export default function RegisterPage() {
     if (form.password !== form.confirmPassword) errs.confirmPassword = "Passwords do not match";
     if (!form.country_code.trim()) errs.country_code = "Country code is required";
     if (!form.mobile.trim()) errs.mobile = "Mobile number is required";
+    else if (!isValidPhone(form.country_code, form.mobile))
+      errs.mobile = "Enter a valid phone number for the selected country";
     return errs;
   };
 
@@ -120,29 +124,18 @@ export default function RegisterPage() {
             required
           />
 
-          <div className="grid grid-cols-3 gap-3">
-            <Input
-              label="Country code"
-              name="country_code"
-              value={form.country_code}
-              onChange={handleChange}
-              placeholder="+44"
-              error={errors.country_code}
-              required
-            />
-            <div className="col-span-2">
-              <Input
-                label="Mobile number"
-                name="mobile"
-                type="tel"
-                value={form.mobile}
-                onChange={handleChange}
-                placeholder="7911123456"
-                error={errors.mobile}
-                required
-              />
-            </div>
-          </div>
+          <PhoneInput
+            split
+            label="Mobile number"
+            dialCode={form.country_code}
+            national={form.mobile}
+            dialName="country_code"
+            nationalName="mobile"
+            onChange={handleChange}
+            placeholder="7911123456"
+            error={errors.mobile}
+            required
+          />
 
           <Input
             label="Password"

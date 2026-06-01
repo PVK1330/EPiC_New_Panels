@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { User, FileText, Hash, Calendar, Save } from "lucide-react";
 import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
+import DatePicker from "../../components/DatePicker";
 
 const CosRegistrationForm = () => {
   const [visaTypeOptions, setVisaTypeOptions] = useState([]);
@@ -138,34 +139,26 @@ const CosRegistrationForm = () => {
             <label className="text-sm font-semibold text-slate-700">
               Issue Date
             </label>
-            <div className="flex items-center border border-slate-200 rounded-lg px-3 py-2">
-              <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-              <input
-                type="date"
-                name="issueDate"
-                value={formData.issueDate}
-                onChange={handleChange}
-                className="w-full outline-none"
-                required
-              />
-            </div>
+            <DatePicker
+              name="issueDate"
+              value={formData.issueDate}
+              onChange={handleChange}
+              placeholder="Select date"
+              required
+            />
           </div>
 
           <div>
             <label className="text-sm font-semibold text-slate-700">
               Expiry Date
             </label>
-            <div className="flex items-center border border-slate-200 rounded-lg px-3 py-2">
-              <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-              <input
-                type="date"
-                name="expiryDate"
-                value={formData.expiryDate}
-                onChange={handleChange}
-                className="w-full outline-none"
-                required
-              />
-            </div>
+            <DatePicker
+              name="expiryDate"
+              value={formData.expiryDate}
+              onChange={handleChange}
+              placeholder="Select date"
+              required
+            />
           </div>
         </div>
 
