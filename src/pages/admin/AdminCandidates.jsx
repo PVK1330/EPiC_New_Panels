@@ -12,6 +12,7 @@ import {
   FiFolder,
   FiChevronUp,
   FiPrinter,
+  FiBriefcase,
 } from "react-icons/fi";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -44,7 +45,9 @@ import {
   updateAdminCandidateApplication,
   exportCandidateApplicationsExcel,
   importCandidateApplicationsExcel,
+  assignCandidateBusiness,
 } from "../../services/candidateApi";
+import { getSponsors } from "../../services/sponsorApi";
 
 const PASSWORD_MIN = 6;
 
@@ -239,6 +242,12 @@ export default function AdminCandidates() {
   const [saving, setSaving] = useState(false);
   const [toggleId, setToggleId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+
+  // Assign-to-business modal state
+  const [businesses, setBusinesses] = useState([]);
+  const [businessesLoading, setBusinessesLoading] = useState(false);
+  const [assignBusinessId, setAssignBusinessId] = useState("");
+  const [assigning, setAssigning] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [exporting, setExporting] = useState(false);
@@ -402,6 +411,56 @@ export default function AdminCandidates() {
 
   const openDelete = (row) => {
     setModal({ type: "delete", data: row });
+  };
+
+  const loadBusinesses = async () => {
+    setBusinessesLoading(true);
+    try {
+      // Pull active sponsors/businesses for the assignment dropdown.
+      const res = await getSponsors(1, 200, "", "active");
+      setBusinesses(res.data?.data?.sponsors ?? []);
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+      setBusinesses([]);
+    } finally {
+      setBusinessesLoading(false);
+    }
+  };
+
+  const openAssign = (row) => {
+    const caseRecord = row.cases?.[0] || {};
+    setAssignBusinessId(caseRecord.sponsorId ? String(caseRecord.sponsorId) : "");
+    setModal({ type: "assign", data: row });
+    if (!businesses.length) loadBusinesses();
+  };
+
+  const handleAssign = async () => {
+    if (!modal.data) return;
+    setAssigning(true);
+    try {
+      const businessId = assignBusinessId ? Number(assignBusinessId) : null;
+      const res = await assignCandidateBusiness(modal.data.id, businessId);
+      showToast({
+        message:
+          res.data?.message ||
+          (businessId ? "Candidate assigned to business" : "Candidate unassigned"),
+        variant: "success",
+      });
+      closeModal();
+      const r = await fetchCandidates(
+        page,
+        limit,
+        debouncedSearch.trim(),
+        statusParam,
+        visaParam,
+        payParam,
+      );
+      if (!r.ok) showToast({ message: getApiError(r.error), variant: "danger" });
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setAssigning(false);
+    }
   };
 
 
@@ -1025,7 +1084,13 @@ export default function AdminCandidates() {
                     : paid >= total   ? 'Paid'
                     : paid > 0        ? 'Partial'
                     : 'Outstanding';
-                  const linkedBusiness = caseRecord.businessName || '—';
+                  const linkedBusiness =
+                    caseRecord.sponsor?.sponsorProfile?.companyName ||
+                    (caseRecord.sponsor
+                      ? `${caseRecord.sponsor.first_name || ""} ${caseRecord.sponsor.last_name || ""}`.trim()
+                      : "") ||
+                    caseRecord.businessName ||
+                    '—';
                   const nationality = app.nationality || caseRecord.nationality || c.nationality || '—';
                   
                   return (
@@ -1067,6 +1132,7 @@ export default function AdminCandidates() {
                         <div className="flex items-center gap-1 relative z-10">
                           <button onClick={() => openView(c)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-blue-50 rounded-lg transition-colors" title="View">  <FiEye    size={14} /></button>
                           <button onClick={() => openEdit(c)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">  <FiEdit2  size={14} /></button>
+                          <button onClick={() => openAssign(c)} className={`p-2 rounded-lg transition-colors ${caseRecord.sponsorId ? "text-indigo-600 hover:bg-blue-50" : "text-gray-400 hover:text-indigo-600 hover:bg-blue-50"}`} title={caseRecord.sponsorId ? "Reassign business" : "Assign to business"}><FiBriefcase size={14} /></button>
                           <button onClick={() => openDelete(c)} className="p-2 text-gray-400 hover:text-red-500   hover:bg-red-50    rounded-lg transition-colors" title="Delete"><FiTrash2 size={14} /></button>
                         </div>
                       </td>
@@ -1246,6 +1312,79 @@ export default function AdminCandidates() {
             </span>
             ? This will deactivate the account.
           </p>
+        </div>
+      </Modal>
+
+      <Modal
+        open={modal.type === "assign"}
+        onClose={closeModal}
+        title="Assign to Business"
+        maxWidthClass="max-w-md"
+        bodyClassName="px-5 py-5 sm:px-6"
+        footer={
+          <>
+            <Button variant="ghost" onClick={closeModal} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={assigning || businessesLoading}
+              onClick={handleAssign}
+              className="rounded-xl"
+            >
+              {assigning
+                ? "Saving…"
+                : assignBusinessId
+                  ? "Assign"
+                  : "Unassign"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
+              <FiBriefcase size={16} className="text-indigo-600" />
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Link{" "}
+              <span className="font-black text-secondary">
+                {modal.data ? fullName(modal.data) : ""}
+              </span>{" "}
+              to a business. The candidate will appear in that business's
+              portal (My Candidates / Workers).
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">
+              Business
+            </label>
+            <select
+              value={assignBusinessId}
+              onChange={(e) => setAssignBusinessId(e.target.value)}
+              disabled={businessesLoading}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-gray-700 disabled:opacity-60"
+            >
+              <option value="">
+                {businessesLoading ? "Loading businesses…" : "— No business (unassign) —"}
+              </option>
+              {businesses.map((b) => {
+                const company = b.sponsorProfile?.companyName;
+                const name = `${b.first_name || ""} ${b.last_name || ""}`.trim();
+                return (
+                  <option key={b.id} value={String(b.id)}>
+                    {company ? `${company} (${name})` : name || b.email}
+                  </option>
+                );
+              })}
+            </select>
+            {!businessesLoading && businesses.length === 0 && (
+              <p className="text-xs text-gray-400 mt-1.5">
+                No active businesses found. Create one under Businesses first.
+              </p>
+            )}
+          </div>
         </div>
       </Modal>
 

@@ -1467,14 +1467,9 @@ export default function AdminCases() {
                         Unassigned
                       </span>
                     ) : (
-                      <>
-                        <span className="font-mono text-xs font-semibold text-secondary">
-                          {getCaseworkerNames(c.caseworkerIds)}
-                        </span>
-                        <span className="block text-[11px] text-gray-500 mt-0.5 truncate">
-                          {c.caseworker || "—"}
-                        </span>
-                      </>
+                      <span className="font-mono text-xs font-semibold text-secondary">
+                        {getCaseworkerNames(c.caseworkerIds)}
+                      </span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
