@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux";
 import { ChevronDown } from "lucide-react";
 import Input from "../components/Input";
 import Button from "../components/Button";
+import DatePicker from "../components/DatePicker";
 import eliteLogo from "../assets/elitepic_logo.png";
 import { setCredentials } from "../store/slices/authSlice";
 import {
@@ -519,10 +520,9 @@ const Login = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
+                <DatePicker
                   label="Date of birth"
                   name="dob"
-                  type="date"
                   value={registerForm.dob}
                   onChange={handleRegisterChange}
                   error={registerErrors.dob}

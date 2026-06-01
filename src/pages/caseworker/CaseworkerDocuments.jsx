@@ -7,6 +7,7 @@ import { useToast } from "../../context/ToastContext";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 import useDownloads from "../../hooks/useDownloads";
 import { formatDateLong } from "../../utils/datetime";
+import DatePicker from "../../components/DatePicker";
 
 const DOC_TYPES = DOCUMENT_TYPE_OPTIONS;
 
@@ -500,11 +501,11 @@ export default function CaseworkerDocuments() {
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
                   Expiry date (optional)
                 </label>
-                <input
-                  type="date"
+                <DatePicker
+                  name="expiryDate"
                   value={expiryDate}
                   onChange={(e) => setExpiryDate(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  placeholder="Select date"
                 />
               </div>
               <div>
@@ -822,13 +823,13 @@ export default function CaseworkerDocuments() {
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
                   Expiry date (optional)
                 </label>
-                <input
-                  type="date"
+                <DatePicker
+                  name="expiryDate"
                   value={uploadForm.expiryDate}
                   onChange={(e) =>
                     setUploadForm((f) => ({ ...f, expiryDate: e.target.value }))
                   }
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  placeholder="Select date"
                 />
               </div>
               <div>

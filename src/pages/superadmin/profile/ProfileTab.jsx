@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { RiUser3Line, RiMailLine, RiPhoneLine, RiCamera2Line } from 'react-icons/ri';
 import Button from '../../../components/Button';
 import Input from '../../../components/Input';
+import PhoneInput from '../../../components/PhoneInput';
 
 const ProfileTab = ({ profile, saving, uploadingAvatar, onSave, onAvatarUpload }) => {
   const fileRef = useRef(null);
@@ -15,6 +16,13 @@ const ProfileTab = ({ profile, saving, uploadingAvatar, onSave, onAvatarUpload }
 
   const handleChange = (field) => (e) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    setSaveSuccess(false);
+  };
+
+  // Event-shaped handler for PhoneInput (fires { target: { name, value } }).
+  const handleFieldEvent = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
     setSaveSuccess(false);
   };
 
@@ -105,17 +113,16 @@ const ProfileTab = ({ profile, saving, uploadingAvatar, onSave, onAvatarUpload }
           />
           <p className="text-[9px] text-gray-400 font-bold uppercase mt-2 ml-1">Contact your system provider to change the primary administrator email.</p>
         </div>
-        <Input
-          label="Country Code"
-          value={form.country_code}
-          onChange={handleChange('country_code')}
-          placeholder="+44"
-        />
-        <Input
+        <PhoneInput
+          split
           label="Phone Number"
-          value={form.mobile}
-          onChange={handleChange('mobile')}
-          icon={<RiPhoneLine />}
+          dialCode={form.country_code}
+          national={form.mobile}
+          dialName="country_code"
+          nationalName="mobile"
+          onChange={handleFieldEvent}
+          placeholder="7700 900000"
+          className="md:col-span-2"
         />
       </div>
 

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
+import DatePicker from "../../components/DatePicker";
 import CaseTimeline from "../../components/CaseTimeline";
 import useCaseDetail from "../../hooks/useCaseDetail";
 import {
@@ -886,13 +887,51 @@ const Cases = () => {
 
   const validateNewCase = () => {
     const e = {};
-    if (!newCaseForm.candidateId) e.candidateId = "Required";
-    if (!newCaseForm.businessId) e.businessId = "Required";
-    if (!newCaseForm.visaTypeId) e.visaTypeId = "Required";
+
+    // ── Required selections ──────────────────────────────────────────────
+    if (!newCaseForm.candidateId) e.candidateId = "Please select a candidate";
+    if (!newCaseForm.businessId) e.businessId = "Please select a sponsor";
+    if (!newCaseForm.visaTypeId) e.visaTypeId = "Please select a visa type";
+
+    // ── Caseworkers: 1 or 2 required ─────────────────────────────────────
     const n = newCaseForm.assignedCaseworkerIds?.length || 0;
     if (n < 1 || n > 2) e.assignedCaseworkers = "Select 1 or 2 caseworkers";
-    if (!newCaseForm.targetSubmissionDate) e.targetSubmissionDate = "Required";
-    if (newCaseForm.totalAmount <= 0) e.totalAmount = "Must be > 0";
+
+    // ── Target submission date: required, valid, not in the past ─────────
+    if (!newCaseForm.targetSubmissionDate) {
+      e.targetSubmissionDate = "Please choose a target date";
+    } else {
+      const picked = new Date(`${newCaseForm.targetSubmissionDate}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (Number.isNaN(picked.getTime())) {
+        e.targetSubmissionDate = "Enter a valid date";
+      } else if (picked < today) {
+        e.targetSubmissionDate = "Target date cannot be in the past";
+      }
+    }
+
+    // ── Financials: non-negative, total > 0, paid ≤ total ────────────────
+    const total = Number(newCaseForm.totalAmount);
+    const paid = Number(newCaseForm.paidAmount);
+    const salary = Number(newCaseForm.salaryOffered);
+    if (Number.isNaN(total) || total <= 0) {
+      e.totalAmount = "Total amount must be greater than 0";
+    }
+    if (!Number.isNaN(paid) && paid < 0) {
+      e.paidAmount = "Paid amount cannot be negative";
+    } else if (
+      !Number.isNaN(paid) &&
+      !Number.isNaN(total) &&
+      total > 0 &&
+      paid > total
+    ) {
+      e.paidAmount = "Paid amount cannot exceed the total amount";
+    }
+    if (!Number.isNaN(salary) && salary < 0) {
+      e.salaryOffered = "Salary cannot be negative";
+    }
+
     setNewCaseErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -1820,20 +1859,16 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Target Submission Date
+                  Target Submission Date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   name="targetSubmissionDate"
                   value={newCaseForm.targetSubmissionDate}
                   onChange={handleInputChange}
-                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.targetSubmissionDate ? "border-red-300" : "border-gray-200"}`}
+                  error={newCaseErrors.targetSubmissionDate}
+                  min={new Date().toISOString().split("T")[0]}
+                  placeholder="Select target date"
                 />
-                {newCaseErrors.targetSubmissionDate && (
-                  <p className="text-xs font-bold text-red-600 mt-1">
-                    {newCaseErrors.targetSubmissionDate}
-                  </p>
-                )}
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -1897,11 +1932,18 @@ const Cases = () => {
                 <input
                   type="number"
                   name="salaryOffered"
+                  min="0"
+                  step="0.01"
                   value={newCaseForm.salaryOffered}
                   onChange={handleInputChange}
                   placeholder="Annual salary"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.salaryOffered ? "border-red-300" : "border-gray-200"}`}
                 />
+                {newCaseErrors.salaryOffered && (
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {newCaseErrors.salaryOffered}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -1910,6 +1952,8 @@ const Cases = () => {
                 <input
                   type="number"
                   name="totalAmount"
+                  min="0"
+                  step="0.01"
                   value={newCaseForm.totalAmount}
                   onChange={handleInputChange}
                   placeholder="Total fee"
@@ -1928,11 +1972,18 @@ const Cases = () => {
                 <input
                   type="number"
                   name="paidAmount"
+                  min="0"
+                  step="0.01"
                   value={newCaseForm.paidAmount}
                   onChange={handleInputChange}
                   placeholder="Amount paid so far"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.paidAmount ? "border-red-300" : "border-gray-200"}`}
                 />
+                {newCaseErrors.paidAmount && (
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {newCaseErrors.paidAmount}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -2496,20 +2547,16 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Target Submission Date
+                  Target Submission Date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   name="targetSubmissionDate"
                   value={newCaseForm.targetSubmissionDate}
                   onChange={handleInputChange}
-                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.targetSubmissionDate ? "border-red-300" : "border-gray-200"}`}
+                  error={newCaseErrors.targetSubmissionDate}
+                  min={new Date().toISOString().split("T")[0]}
+                  placeholder="Select target date"
                 />
-                {newCaseErrors.targetSubmissionDate && (
-                  <p className="text-xs font-bold text-red-600 mt-1">
-                    {newCaseErrors.targetSubmissionDate}
-                  </p>
-                )}
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -2573,11 +2620,18 @@ const Cases = () => {
                 <input
                   type="number"
                   name="salaryOffered"
+                  min="0"
+                  step="0.01"
                   value={newCaseForm.salaryOffered}
                   onChange={handleInputChange}
                   placeholder="Annual salary"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.salaryOffered ? "border-red-300" : "border-gray-200"}`}
                 />
+                {newCaseErrors.salaryOffered && (
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {newCaseErrors.salaryOffered}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -2586,6 +2640,8 @@ const Cases = () => {
                 <input
                   type="number"
                   name="totalAmount"
+                  min="0"
+                  step="0.01"
                   value={newCaseForm.totalAmount}
                   onChange={handleInputChange}
                   placeholder="Total fee"
@@ -2604,11 +2660,18 @@ const Cases = () => {
                 <input
                   type="number"
                   name="paidAmount"
+                  min="0"
+                  step="0.01"
                   value={newCaseForm.paidAmount}
                   onChange={handleInputChange}
                   placeholder="Amount paid so far"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.paidAmount ? "border-red-300" : "border-gray-200"}`}
                 />
+                {newCaseErrors.paidAmount && (
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {newCaseErrors.paidAmount}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -3720,13 +3783,14 @@ function DocumentsTab({ caseId, candidateId }) {
             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
               Expiry date (optional)
             </label>
-            <input
-              type="date"
+            <DatePicker
+              name="expiryDate"
               value={uploadForm.expiryDate}
               onChange={(e) =>
                 setUploadForm((f) => ({ ...f, expiryDate: e.target.value }))
               }
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              min={new Date().toISOString().split("T")[0]}
+              placeholder="Select expiry date"
             />
           </div>
           <div>
@@ -3873,8 +3937,16 @@ function TasksTab({ caseId }) {
 
   const submitCreateTask = useCallback(async () => {
     const err = {};
-    if (!createForm.name.trim()) err.name = "Required";
-    if (!createForm.due) err.due = "Required";
+    if (!createForm.name.trim()) err.name = "Please enter a task name";
+    if (!createForm.due) {
+      err.due = "Please choose a due date";
+    } else {
+      const picked = new Date(`${createForm.due}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (Number.isNaN(picked.getTime())) err.due = "Enter a valid date";
+      else if (picked < today) err.due = "Due date cannot be in the past";
+    }
     setCreateErrors(err);
     if (Object.keys(err).length) return;
 
@@ -3984,21 +4056,16 @@ function TasksTab({ caseId }) {
               <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
                 Due date
               </label>
-              <input
-                type="date"
+              <DatePicker
+                name="due"
                 value={createForm.due}
                 onChange={(e) =>
                   setCreateForm((f) => ({ ...f, due: e.target.value }))
                 }
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                  createErrors.due ? "border-red-300" : "border-gray-200"
-                }`}
+                error={createErrors.due}
+                min={new Date().toISOString().split("T")[0]}
+                placeholder="Select due date"
               />
-              {createErrors.due && (
-                <p className="text-xs font-bold text-red-600 mt-1">
-                  {createErrors.due}
-                </p>
-              )}
             </div>
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">

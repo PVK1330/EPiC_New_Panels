@@ -1,18 +1,44 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { getAuditLogs, exportAuditLogs } from '../../services/audit.service';
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ScrollText,
+  Download,
+  Search,
+  Filter,
+  X,
+  ArrowDown,
+  Loader2,
+} from "lucide-react";
+import Button from "../../components/Button";
+import DatePicker from "../../components/DatePicker";
+import { getAuditLogs, exportAuditLogs } from "../../services/audit.service";
+import { formatDateTime } from "../../utils/datetime";
+
+const ENTITY_OPTIONS = [
+  { value: "", label: "All Entities" },
+  { value: "CandidateApplication", label: "Candidate Profile" },
+  { value: "SponsorProfile", label: "Sponsor Profile" },
+  { value: "User", label: "User Account" },
+  { value: "Case", label: "Case" },
+];
+
+const TABLE_COLS = ["Timestamp", "User", "Entity", "Field", "Change", "IP"];
+
+const fmtTs = (ts) => formatDateTime(ts, { fallback: ts || "—" });
 
 const AdminAuditLogs = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [meta, setMeta] = useState({ page: 1, total: 0, pages: 1 });
-  
+
   const [filters, setFilters] = useState({
     page: 1,
     limit: 50,
-    startDate: '',
-    endDate: '',
-    entityType: '',
-    action: ''
+    startDate: "",
+    endDate: "",
+    entityType: "",
+    action: "",
   });
 
   const [selectedLog, setSelectedLog] = useState(null);
@@ -24,7 +50,7 @@ const AdminAuditLogs = () => {
       setLogs(res.data);
       setMeta(res.meta);
     } catch (err) {
-      console.error('Error fetching audit logs', err);
+      console.error("Error fetching audit logs", err);
     } finally {
       setLoading(false);
     }
@@ -36,172 +62,411 @@ const AdminAuditLogs = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value, page: 1 }));
+    setFilters((prev) => ({ ...prev, [name]: value, page: 1 }));
   };
 
   const handleQuickDate = (days) => {
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - days);
-    setFilters(prev => ({ 
-      ...prev, 
-      startDate: start.toISOString().split('T')[0], 
-      endDate: end.toISOString().split('T')[0],
-      page: 1
+    setFilters((prev) => ({
+      ...prev,
+      startDate: start.toISOString().split("T")[0],
+      endDate: end.toISOString().split("T")[0],
+      page: 1,
     }));
   };
 
   const handleExport = async () => {
+    setExporting(true);
     try {
       await exportAuditLogs({ ...filters, page: undefined, limit: undefined });
     } catch (err) {
-      console.error('Export failed', err);
-      alert('Failed to export data');
+      console.error("Export failed", err);
+      alert("Failed to export data");
+    } finally {
+      setExporting(false);
     }
   };
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto dark:text-white">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Audit Logs</h1>
-        <button onClick={handleExport} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow font-medium">
-          Export Excel
-        </button>
+    <motion.div
+      className="space-y-6 pb-10"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-black text-secondary tracking-tight flex items-center gap-3">
+            <ScrollText className="text-primary" size={30} />
+            Audit Logs
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Track every change made across candidates, sponsors, users, and cases
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={exporting}
+            className="rounded-xl"
+          >
+            {exporting ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Download size={14} />
+            )}
+            Export Excel
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-6 flex flex-wrap gap-4 items-end border border-gray-200 dark:border-gray-700">
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Entity Type</label>
-          <select name="entityType" value={filters.entityType} onChange={handleFilterChange} className="border p-2 rounded dark:bg-gray-700 dark:border-gray-600 min-w-[150px]">
-            <option value="">All Entities</option>
-            <option value="CandidateApplication">Candidate Profile</option>
-            <option value="SponsorProfile">Sponsor Profile</option>
-            <option value="User">User Account</option>
-            <option value="Case">Case</option>
-          </select>
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter size={16} className="text-gray-400" />
+          <span className="text-sm font-black text-secondary">Filters</span>
         </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Action</label>
-          <input type="text" name="action" value={filters.action} onChange={handleFilterChange} placeholder="e.g. APPROVED" className="border p-2 rounded dark:bg-gray-700 dark:border-gray-600 min-w-[150px]" />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
-          <input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} className="border p-2 rounded dark:bg-gray-700 dark:border-gray-600" />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">End Date</label>
-          <input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} className="border p-2 rounded dark:bg-gray-700 dark:border-gray-600" />
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => handleQuickDate(0)} className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 rounded">Today</button>
-          <button onClick={() => handleQuickDate(7)} className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 rounded">Last 7</button>
-          <button onClick={() => handleQuickDate(30)} className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 rounded">Last 30</button>
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-gray-500">Entity Type</label>
+            <select
+              name="entityType"
+              value={filters.entityType}
+              onChange={handleFilterChange}
+              className="min-w-[170px] rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/30"
+            >
+              {ENTITY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-gray-500">Action</label>
+            <div className="relative">
+              <Search
+                size={15}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="text"
+                name="action"
+                value={filters.action}
+                onChange={handleFilterChange}
+                placeholder="e.g. APPROVED"
+                className="min-w-[170px] rounded-lg border border-gray-300 bg-white pl-8 pr-3 py-2.5 text-sm font-bold text-gray-800 placeholder:font-normal placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-secondary/30"
+              />
+            </div>
+          </div>
+
+          <DatePicker
+            label="Start Date"
+            name="startDate"
+            value={filters.startDate}
+            onChange={handleFilterChange}
+            placeholder="Any date"
+            className="min-w-[160px]"
+          />
+          <DatePicker
+            label="End Date"
+            name="endDate"
+            value={filters.endDate}
+            onChange={handleFilterChange}
+            min={filters.startDate || undefined}
+            placeholder="Any date"
+            className="min-w-[160px]"
+          />
+
+          <div className="flex items-center gap-2">
+            {[
+              { label: "Today", days: 0 },
+              { label: "Last 7", days: 7 },
+              { label: "Last 30", days: 30 },
+            ].map((q) => (
+              <button
+                key={q.label}
+                type="button"
+                onClick={() => handleQuickDate(q.days)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600 hover:border-secondary/40 hover:text-secondary transition-colors"
+              >
+                {q.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Data Table */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-x-auto border border-gray-200 dark:border-gray-700">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-900/50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entity</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Field</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Change</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">IP</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {loading && logs.length === 0 ? (
-              <tr><td colSpan="6" className="p-8 text-center text-gray-500">Loading records...</td></tr>
-            ) : logs.length === 0 ? (
-              <tr><td colSpan="6" className="p-8 text-center text-gray-500">No audit logs found matching criteria.</td></tr>
-            ) : (
-              logs.map((log) => (
-                <tr key={log.id} onClick={() => setSelectedLog(log)} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{log.timestamp}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <div className="font-medium text-slate-900 dark:text-white">{log.userName}</div>
-                    <div className="text-xs text-gray-500">{log.role}</div>
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto min-h-[200px] relative">
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+              <Loader2 className="w-10 h-10 animate-spin text-secondary" />
+            </div>
+          )}
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50 text-left">
+                {TABLE_COLS.map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {!loading && logs.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={TABLE_COLS.length}
+                    className="px-5 py-12 text-center text-sm text-gray-400"
+                  >
+                    No audit logs found matching criteria.
                   </td>
-                  <td className="px-4 py-3 text-sm font-medium">
-                    {log.entity_type} <span className="text-xs text-gray-400">#{log.entity_id}</span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 font-mono text-xs">{log.field_name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">
-                    {log.old_value && <span className="line-through text-red-400 mr-2">{typeof log.old_value === 'object' ? 'Object' : String(log.old_value)}</span>}
-                    {log.new_value && <span className="text-green-500">{typeof log.new_value === 'object' ? 'Object' : String(log.new_value)}</span>}
-                    {!log.old_value && !log.new_value && <span>{log.action}</span>}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500 font-mono">{log.ip}</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-        
+              ) : (
+                logs.map((log) => (
+                  <tr
+                    key={log.id}
+                    onClick={() => setSelectedLog(log)}
+                    className="hover:bg-gray-50/70 cursor-pointer transition-colors"
+                  >
+                    <td className="px-4 py-3.5 whitespace-nowrap text-xs font-mono text-gray-500">
+                      {fmtTs(log.timestamp)}
+                    </td>
+                    <td className="px-4 py-3.5 text-sm">
+                      <div className="font-semibold text-gray-800">
+                        {log.userName}
+                      </div>
+                      <div className="text-xs text-gray-500">{log.role}</div>
+                    </td>
+                    <td className="px-4 py-3.5 text-sm font-semibold text-gray-700 whitespace-nowrap">
+                      {log.entity_type}{" "}
+                      <span className="text-xs font-mono text-gray-400">
+                        #{log.entity_id}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-xs font-mono text-gray-600">
+                      {log.field_name}
+                    </td>
+                    <td className="px-4 py-3.5 text-sm text-gray-500 max-w-xs truncate">
+                      {log.old_value && (
+                        <span className="line-through text-red-400 mr-2">
+                          {typeof log.old_value === "object"
+                            ? "Object"
+                            : String(log.old_value)}
+                        </span>
+                      )}
+                      {log.new_value && (
+                        <span className="text-green-600 font-semibold">
+                          {typeof log.new_value === "object"
+                            ? "Object"
+                            : String(log.new_value)}
+                        </span>
+                      )}
+                      {!log.old_value && !log.new_value && (
+                        <span className="inline-flex rounded-full bg-secondary/10 text-secondary px-2.5 py-0.5 text-[11px] font-black">
+                          {log.action}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5 whitespace-nowrap text-xs font-mono text-gray-500">
+                      {log.ip}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
         {/* Pagination */}
-        <div className="bg-gray-50 dark:bg-gray-900/50 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
-          <div className="text-sm text-gray-500">
-            Showing Page <span className="font-medium">{meta.page}</span> of <span className="font-medium">{meta.pages || 1}</span> ({meta.total} total)
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setFilters(p => ({ ...p, page: Math.max(1, p.page - 1)}))} disabled={meta.page <= 1} className="px-3 py-1 border rounded text-sm disabled:opacity-50 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Previous</button>
-            <button onClick={() => setFilters(p => ({ ...p, page: Math.min(meta.pages, p.page + 1)}))} disabled={meta.page >= meta.pages} className="px-3 py-1 border rounded text-sm disabled:opacity-50 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Next</button>
+        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-xs text-gray-400">
+            Showing page{" "}
+            <span className="font-bold text-secondary">{meta.page}</span> of{" "}
+            <span className="font-bold text-secondary">{meta.pages || 1}</span>{" "}
+            <span className="text-gray-400">({meta.total} total)</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              disabled={meta.page <= 1 || loading}
+              onClick={() =>
+                setFilters((p) => ({ ...p, page: Math.max(1, p.page - 1) }))
+              }
+              className="rounded-xl text-xs"
+            >
+              Previous
+            </Button>
+            <span className="text-xs text-gray-500 font-semibold">
+              Page {meta.page} / {Math.max(1, meta.pages || 1)}
+            </span>
+            <Button
+              variant="ghost"
+              disabled={meta.page >= (meta.pages || 1) || loading}
+              onClick={() =>
+                setFilters((p) => ({
+                  ...p,
+                  page: Math.min(meta.pages || 1, p.page + 1),
+                }))
+              }
+              className="rounded-xl text-xs"
+            >
+              Next
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Drawer */}
-      {selectedLog && (
-        <div className="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setSelectedLog(null)}></div>
-          <div className="fixed inset-y-0 right-0 max-w-lg w-full flex bg-white dark:bg-gray-800 shadow-2xl overflow-y-auto">
-            <div className="p-6 w-full flex flex-col">
-              <div className="flex justify-between items-center mb-6 border-b dark:border-gray-700 pb-4">
-                <h2 className="text-xl font-bold">Audit Record Details</h2>
-                <button onClick={() => setSelectedLog(null)} className="text-gray-400 hover:text-gray-500"><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+      {/* Detail slide-over */}
+      <AnimatePresence>
+        {selectedLog && (
+          <motion.div
+            className="fixed inset-0 z-50 overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setSelectedLog(null)}
+            />
+            <motion.div
+              className="fixed inset-y-0 right-0 w-full max-w-lg bg-white shadow-2xl overflow-y-auto"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "tween", duration: 0.25 }}
+            >
+              <div className="p-6 flex flex-col">
+                <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                  <div>
+                    <h2 className="text-lg font-black text-secondary">
+                      Audit Record Details
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Full before/after snapshot for this change
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedLog(null)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                        Timestamp
+                      </span>
+                      <div className="font-mono text-sm text-gray-800 mt-1">
+                        {fmtTs(selectedLog.timestamp)}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                        IP Address
+                      </span>
+                      <div className="font-mono text-sm text-gray-800 mt-1">
+                        {selectedLog.ip}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                        User
+                      </span>
+                      <div className="text-sm font-semibold text-gray-800 mt-1">
+                        {selectedLog.userName}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                        Role
+                      </span>
+                      <div className="text-sm text-gray-700 mt-1">
+                        {selectedLog.role}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                          Entity Type
+                        </span>
+                        <div className="font-bold mt-1 text-secondary">
+                          {selectedLog.entity_type}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                          Entity ID
+                        </span>
+                        <div className="font-bold mt-1 text-gray-800">
+                          #{selectedLog.entity_id}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                        Field Name
+                      </span>
+                      <div className="font-mono text-sm text-gray-800 mt-1">
+                        {selectedLog.field_name}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                      <span className="text-[10px] font-black text-red-500 uppercase tracking-wider">
+                        Old Value
+                      </span>
+                      <pre className="mt-2 text-sm text-gray-700 whitespace-pre-wrap break-all">
+                        {typeof selectedLog.old_value === "object"
+                          ? JSON.stringify(selectedLog.old_value, null, 2)
+                          : String(selectedLog.old_value || "None")}
+                      </pre>
+                    </div>
+
+                    <div className="flex justify-center text-gray-300">
+                      <ArrowDown size={20} />
+                    </div>
+
+                    <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+                      <span className="text-[10px] font-black text-green-600 uppercase tracking-wider">
+                        New Value
+                      </span>
+                      <pre className="mt-2 text-sm text-gray-700 whitespace-pre-wrap break-all">
+                        {typeof selectedLog.new_value === "object"
+                          ? JSON.stringify(selectedLog.new_value, null, 2)
+                          : String(selectedLog.new_value || "None")}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
               </div>
-
-              <div className="space-y-6 flex-1">
-                <div className="grid grid-cols-2 gap-4">
-                  <div><span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Timestamp</span> <div className="font-mono text-sm mt-1">{selectedLog.timestamp}</div></div>
-                  <div><span className="text-xs font-bold text-gray-500 uppercase tracking-wider">IP Address</span> <div className="font-mono text-sm mt-1">{selectedLog.ip}</div></div>
-                  <div><span className="text-xs font-bold text-gray-500 uppercase tracking-wider">User</span> <div className="text-sm font-medium mt-1">{selectedLog.userName}</div></div>
-                  <div><span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Role</span> <div className="text-sm mt-1">{selectedLog.role}</div></div>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border dark:border-gray-700">
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div><span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Entity Type</span> <div className="font-medium mt-1 text-indigo-600 dark:text-indigo-400">{selectedLog.entity_type}</div></div>
-                    <div><span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Entity ID</span> <div className="font-medium mt-1">#{selectedLog.entity_id}</div></div>
-                  </div>
-                  <div><span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Field Name</span> <div className="font-mono text-sm mt-1">{selectedLog.field_name}</div></div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-100">
-                    <span className="text-xs font-bold text-red-500 uppercase tracking-wider">Old Value</span>
-                    <pre className="mt-2 text-sm whitespace-pre-wrap break-all">{typeof selectedLog.old_value === 'object' ? JSON.stringify(selectedLog.old_value, null, 2) : String(selectedLog.old_value || 'None')}</pre>
-                  </div>
-                  
-                  <div className="flex justify-center text-gray-400">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
-                  </div>
-
-                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100">
-                    <span className="text-xs font-bold text-green-500 uppercase tracking-wider">New Value</span>
-                    <pre className="mt-2 text-sm whitespace-pre-wrap break-all">{typeof selectedLog.new_value === 'object' ? JSON.stringify(selectedLog.new_value, null, 2) : String(selectedLog.new_value || 'None')}</pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };
 

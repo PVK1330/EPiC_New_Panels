@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getReportingObligations, updateReportingObligation } from "../../services/licenceApi";
 import { API_BASE_URL } from "../../utils/constants";
+import DatePicker, { DateTimePicker } from "../../components/DatePicker";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -444,12 +445,12 @@ const ReportingObligations = () => {
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">Event Date *</label>
-                <input
+                <DatePicker
                   required
-                  type="date"
+                  name="eventDate"
                   value={formData.eventDate}
                   onChange={(e) => setFormData({...formData, eventDate: e.target.value})}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                  placeholder="Select date"
                 />
               </div>
 
@@ -480,11 +481,11 @@ const ReportingObligations = () => {
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">Date Reported to SMS</label>
-                <input
-                  type="datetime-local"
+                <DateTimePicker
+                  name="dateReportedToSms"
                   value={formData.dateReportedToSms}
                   onChange={(e) => setFormData({...formData, dateReportedToSms: e.target.value})}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                  placeholder="Select date & time"
                 />
               </div>
 

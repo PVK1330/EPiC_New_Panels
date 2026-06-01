@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { FiUser, FiMail, FiLock, FiGlobe, FiBell, FiShield, FiSave, FiRefreshCw, FiCreditCard, FiLayers } from "react-icons/fi";
 import Button from "../../Button";
 import Input from "../../Input";
+import PhoneInput from "../../PhoneInput";
 import { TIMEZONE_OPTIONS, DATE_FORMAT_OPTIONS } from "../../../utils/datetime";
 
 const panelMotion = {
@@ -114,22 +115,16 @@ export default function AccountSettings({
               onChange={onProfileChange}
               placeholder="email@example.com"
             />
-            <div className="grid grid-cols-[80px_1fr] gap-3">
-              <Input 
-                label="Code" 
-                name="country_code" 
-                value={profile.country_code} 
-                onChange={onProfileChange}
-                placeholder="+1"
-              />
-              <Input 
-                label="Mobile Number" 
-                name="mobile" 
-                value={profile.mobile} 
-                onChange={onProfileChange}
-                placeholder="1234567890"
-              />
-            </div>
+            <PhoneInput
+              split
+              label="Mobile Number"
+              dialCode={profile.country_code}
+              national={profile.mobile}
+              dialName="country_code"
+              nationalName="mobile"
+              onChange={onProfileChange}
+              placeholder="1234567890"
+            />
           </div>
           
           <div className="mt-6 pt-6 border-t border-gray-50 flex justify-end">

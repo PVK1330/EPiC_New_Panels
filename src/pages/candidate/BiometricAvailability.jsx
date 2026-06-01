@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Loader2, MapPin, Calendar, Clock } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
+import DatePicker from "../../components/DatePicker";
+import TimePicker from "../../components/TimePicker";
 import {
   getCandidateWorkflowProcess,
   submitBiometricAvailability,
@@ -176,26 +178,25 @@ export default function BiometricAvailability() {
             <span className="flex items-center gap-2 text-xs font-black uppercase text-gray-500 mb-1">
               <Calendar size={14} /> Preferred date
             </span>
-            <input
-              type="date"
+            <DatePicker
+              name="preferredDate"
               required
               min={new Date().toISOString().split('T')[0]}
               value={form.preferredDate}
               onChange={(e) => setForm((f) => ({ ...f, preferredDate: e.target.value }))}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold"
+              placeholder="Select date"
             />
           </label>
           <label className="block">
             <span className="flex items-center gap-2 text-xs font-black uppercase text-gray-500 mb-1">
               <Clock size={14} /> Preferred time
             </span>
-            <input
-              type="time"
-              step={300}
+            <TimePicker
+              name="preferredTime"
               required
               value={timeValue}
               onChange={(e) => setForm((f) => ({ ...f, preferredTime: e.target.value }))}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold [&::-webkit-calendar-picker-indicator]:opacity-100"
+              placeholder="Select time"
             />
             <span className="text-[11px] font-bold text-gray-400 block mt-1">
               Use the time picker — saved in your timezone ({candidateTimezone || "UTC"}). Add wider

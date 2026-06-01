@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createTeamsMeeting } from '../services/teamsApi';
 import Button from './Button';
 import Input from './Input';
+import { DateTimePicker } from './DatePicker';
 import Modal from './Modal';
 import { Calendar, Clock, Users, Video } from 'lucide-react';
 
@@ -102,13 +103,12 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess }) => {
                 <Calendar className="w-4 h-4" />
                 Start Time
               </label>
-              <input
-                type="datetime-local"
+              <DateTimePicker
                 name="start_time"
                 value={form.start_time}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                placeholder="Select date & time"
               />
             </div>
 
@@ -117,13 +117,12 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess }) => {
                 <Clock className="w-4 h-4" />
                 End Time
               </label>
-              <input
-                type="datetime-local"
+              <DateTimePicker
                 name="end_time"
                 value={form.end_time}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                placeholder="Select date & time"
               />
             </div>
           </div>

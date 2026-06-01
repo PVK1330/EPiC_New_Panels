@@ -12,6 +12,7 @@ import {
   Plus,
   Trash2
 } from 'lucide-react';
+import DatePicker from "../../components/DatePicker";
 
 const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
   const [step, setStep] = useState(1);
@@ -570,20 +571,20 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               <div>
                 <label className="text-xs font-bold text-gray-700">Licence Issue Date</label>
-                <input
-                  type="date"
+                <DatePicker
+                  name="licenceIssueDate"
                   value={form.licenceIssueDate || ""}
                   onChange={(e) => handleChange('licenceIssueDate', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  placeholder="Select date"
                 />
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-700">Licence Expiry Date</label>
-                <input
-                  type="date"
+                <DatePicker
+                  name="licenceExpiryDate"
                   value={form.licenceExpiryDate || ""}
                   onChange={(e) => handleChange('licenceExpiryDate', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  placeholder="Select date"
                 />
               </div>
               <div>

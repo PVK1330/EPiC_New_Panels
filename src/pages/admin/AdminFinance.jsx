@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DollarSign, Clock, CheckCircle, TrendingUp, CreditCard, Landmark, Globe, X, RefreshCw } from "lucide-react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
+import DatePicker from "../../components/DatePicker";
 import { getFinancialReport, getFinancialTransactions } from "../../services/reportingApi";
 import { createAdminInvoice } from "../../services/adminFinanceApi";
 import useDownloads from "../../hooks/useDownloads";
@@ -200,7 +201,14 @@ export default function AdminFinance() {
       newErrors.clientEmail = "Please enter a valid email address";
     }
     if (!formData.caseId.trim())      newErrors.caseId      = "Case ID is required";
-    if (!formData.dueDate)            newErrors.dueDate     = "Due date is required";
+    if (!formData.dueDate) {
+      newErrors.dueDate = "Due date is required";
+    } else if (
+      formData.invoiceDate &&
+      new Date(formData.dueDate) < new Date(formData.invoiceDate)
+    ) {
+      newErrors.dueDate = "Due date cannot be before the invoice date";
+    }
     const hasEmptyItems = formData.items.some(
       (item) => !item.description.trim() || item.quantity <= 0 || item.rate <= 0
     );
@@ -515,21 +523,20 @@ export default function AdminFinance() {
                 <div>
                   <h4 className="text-sm font-black text-secondary mb-4">Invoice Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Input
+                    <DatePicker
                       label="Invoice Date"
                       name="invoiceDate"
-                      type="date"
                       value={formData.invoiceDate}
                       onChange={handleInputChange}
                       required
                     />
-                    <Input
+                    <DatePicker
                       label="Due Date"
                       name="dueDate"
-                      type="date"
                       value={formData.dueDate}
                       onChange={handleInputChange}
                       error={errors.dueDate}
+                      min={formData.invoiceDate || new Date().toISOString().split("T")[0]}
                       required
                     />
                     <div className="flex flex-col gap-1">
