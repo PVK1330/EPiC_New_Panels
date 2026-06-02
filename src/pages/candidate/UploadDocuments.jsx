@@ -27,6 +27,7 @@ import useCandidate from "../../hooks/useCandidate";
 import { useToast } from "../../context/ToastContext";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 import { confirmCclSigned } from "../../services/workflowApi";
+import { formatDateLong } from "../../utils/datetime";
 
 const DOC_TYPE_PLACEHOLDER = "— Select document type —";
 const DOC_TYPES = [DOC_TYPE_PLACEHOLDER, ...DOCUMENT_TYPE_OPTIONS];
@@ -314,11 +315,7 @@ const UploadDocuments = () => {
   // ── Helpers ────────────────────────────────────────────────────────────────
   const fmtDate = (d) =>
     d
-      ? new Date(d).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        })
+      ? formatDateLong(d, { month: "short" })
       : "—";
 
   const fmtSize = (bytes) => {

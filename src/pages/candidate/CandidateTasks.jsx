@@ -8,14 +8,11 @@ import {
   markBiometricAttended,
 } from "../../services/workflowApi";
 import Button from "../../components/Button";
+import { formatDateLong } from "../../utils/datetime";
 
 function formatDue(dateStr) {
   if (!dateStr) return "No due date";
-  return new Date(dateStr).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateLong(dateStr, { month: "short" });
 }
 
 function isBiometricAvailabilityTask(task) {

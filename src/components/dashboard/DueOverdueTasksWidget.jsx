@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { AlertTriangle, Clock } from "lucide-react";
+import { formatDate } from "../../utils/datetime";
 
 function TaskList({ title, items, tone, emptyLabel, defaultLink }) {
   const isOverdue = tone === "overdue";
@@ -39,9 +40,7 @@ function TaskList({ title, items, tone, emptyLabel, defaultLink }) {
                   <span className="block text-[10px] opacity-80 mt-0.5">
                     {item.caseId ? `${item.caseId} · ` : ""}
                     due{" "}
-                    {item.dueDate
-                      ? new Date(item.dueDate).toLocaleDateString()
-                      : "—"}
+                    {item.dueDate ? formatDate(item.dueDate) : "—"}
                   </span>
                 </>
               )}

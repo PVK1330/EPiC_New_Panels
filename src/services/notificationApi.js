@@ -10,6 +10,12 @@ export const getUnreadNotificationCount = () =>
 export const getNotificationStats = () =>
   api.get(`/api/notifications/stats`);
 
+export const getNotificationPreferences = () =>
+  api.get(`/api/notifications/preferences`);
+
+export const updateNotificationPreferences = (data) =>
+  api.patch(`/api/notifications/preferences`, data);
+
 export const markNotificationAsRead = (id) =>
   api.patch(`/api/notifications/${id}/mark-read`);
 

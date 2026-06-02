@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
+import { formatDate } from "../../utils/datetime";
 
 const CaseworkerLicenceApplications = () => {
   const { showToast } = useToast();
@@ -172,7 +173,7 @@ const CaseworkerLicenceApplications = () => {
                   </td>
                   <td className="px-8 py-6">
                     <p className="text-sm font-black text-secondary">
-                      {new Date(app.updatedAt).toLocaleDateString('en-GB')}
+                      {formatDate(app.updatedAt)}
                     </p>
                   </td>
                   <td className="px-8 py-6">

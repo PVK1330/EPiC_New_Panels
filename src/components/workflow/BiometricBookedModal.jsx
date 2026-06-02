@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import Button from "../Button";
 import Input from "../Input";
+import DatePicker from "../DatePicker";
+import { formatDateLong } from "../../utils/datetime";
 
 const DAYS = [
   "Monday",
@@ -65,11 +67,7 @@ export default function BiometricBookedModal({
   }, [appointmentDate]);
 
   const formattedDate = appointmentDate
-    ? new Date(`${appointmentDate}T12:00:00`).toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
+    ? formatDateLong(`${appointmentDate}T12:00:00`, { month: "long" })
     : "";
 
   const handleNext = () => {
@@ -177,11 +175,13 @@ export default function BiometricBookedModal({
                   />
 
                   <div className="grid grid-cols-2 gap-4">
-                    <Input
+                    <DatePicker
                       label="Date"
-                      type="date"
+                      name="appointmentDate"
                       value={appointmentDate}
                       onChange={(e) => setAppointmentDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                      placeholder="Select date"
                       required
                     />
                     <div>

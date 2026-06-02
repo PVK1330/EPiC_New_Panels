@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { setCredentials, logout } from "../store/slices/authSlice";
+import { setOrgSettings } from "../store/slices/orgSettingsSlice";
 import { loginUser, registerUser, logoutUser } from "../services/auth.service";
 import { getAuthUserAndToken, getDashboardRouteForUser, resolveLoginRole } from "../utils/authResponse";
 
@@ -32,6 +33,9 @@ const useAuth = () => {
         organisation_id: userData.organisation_id ?? null,
       };
       dispatch(setCredentials({ user, allowedModules }));
+      if (userData.organisation) {
+        dispatch(setOrgSettings(userData.organisation));
+      }
       navigate(getDashboardRouteForUser(user));
       return { success: true };
     } finally {
@@ -44,6 +48,9 @@ const useAuth = () => {
     try {
       await registerUser(data);
       sessionStorage.setItem("pending_otp_email", data.email);
+      if (data.organisation_id) {
+        sessionStorage.setItem("pending_otp_org_id", data.organisation_id);
+      }
       navigate("/verify-otp");
       return { success: true };
     } finally {

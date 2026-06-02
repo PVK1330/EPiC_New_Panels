@@ -25,11 +25,11 @@ import { PIPELINE_STAGES, buildStagesFromPipelineData } from "../../constants/im
 import CaseWorkflowBadge from "../../components/case/CaseWorkflowBadge";
 import BiometricBookedModal from "../../components/workflow/BiometricBookedModal";
 import { useToast } from "../../context/ToastContext";
+import { formatDateLong } from "../../utils/datetime";
 
 
 function formatShort(iso) {
-  const d = new Date(iso + "T12:00:00");
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return formatDateLong(iso + "T12:00:00", { month: 'short' });
 }
 
 function badgeToneClass(tone) {

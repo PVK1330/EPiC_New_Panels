@@ -19,6 +19,7 @@ import {
   FiFilter,
   FiLoader,
   FiRefreshCw,
+  FiChevronDown,
 } from "react-icons/fi";
 import { RiBarChartLine } from "react-icons/ri";
 import SegmentedTabBar from "../../components/admin/SegmentedTabBar";
@@ -43,6 +44,7 @@ import {
   MOCK_REPORT_FINANCE,
 } from "../../data/adminMockData";
 import useDownloads from "../../hooks/useDownloads";
+import { formatDate, formatDateLong } from "../../utils/datetime";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -73,15 +75,6 @@ const tableHead =
   "px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function formatDate(date) {
-  if (!date) return "";
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 function sameDay(a, b) {
   return a && b && a.toDateString() === b.toDateString();
@@ -363,7 +356,8 @@ function DateRangePicker({ startDate, endDate, onChange }) {
         <FiCalendar size={14} className="text-gray-400 shrink-0" />
         {hasRange ? (
           <span className="font-semibold text-gray-700 flex-1 text-left">
-            {formatDate(startDate)} → {formatDate(endDate)}
+            {formatDateLong(startDate, { month: "short" })} →{" "}
+            {formatDateLong(endDate, { month: "short" })}
           </span>
         ) : (
           <span className="text-gray-400 flex-1 text-left">
@@ -515,10 +509,10 @@ function DateRangeBadge({ startDate, endDate }) {
   if (!startDate && !endDate) return null;
   const label =
     startDate && endDate
-      ? `${formatDate(startDate)} → ${formatDate(endDate)}`
+      ? `${formatDateLong(startDate, { month: "short" })} → ${formatDateLong(endDate, { month: "short" })}`
       : startDate
-        ? `From ${formatDate(startDate)}`
-        : `Until ${formatDate(endDate)}`;
+        ? `From ${formatDateLong(startDate, { month: "short" })}`
+        : `Until ${formatDateLong(endDate, { month: "short" })}`;
   let days = null;
   if (startDate && endDate) {
     const diff = endDate.getTime() - startDate.getTime();
@@ -566,7 +560,7 @@ function PerformanceDetailModal({ caseworker, onClose, showToast }) {
               <p className="text-xs text-gray-400">
                 {caseworker.id || "N/A"} · {caseworker.department || "General"}{" "}
                 · Joined{" "}
-                {caseworker.joinDate || new Date().toLocaleDateString("en-GB")}
+                {caseworker.joinDate || formatDate(new Date())}
               </p>
             </div>
           </div>
@@ -975,7 +969,12 @@ function PerformanceTab({
 
       const res = await exportReportingExcel(params);
       const filename = `performance_metrics_${caseworkerId}_${new Date().toISOString().split("T")[0]}.xlsx`;
-      const url = window.URL.createObjectURL(res.data);
+      const blob = new Blob([res.data], {
+        type:
+          res.headers?.["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -1295,6 +1294,8 @@ export default function AdminReports() {
   const [activeTab, setActiveTab] = useState("cases");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [reportExporting, setReportExporting] = useState(false);
+  const [exportDropOpen, setExportDropOpen] = useState(false);
+  const exportDropRef = useRef(null);
   const [performanceData, setPerformanceData] = useState(null);
   const [deptOptions, setDeptOptions] = useState([]);
   const [dateRange, setDateRange] = useState({ start: null, end: null });
@@ -1479,12 +1480,32 @@ export default function AdminReports() {
     refreshActiveView();
   }, [refreshActiveView]);
 
-  const handleExportWorkbook = async () => {
+  // Close export dropdown on outside click
+  useEffect(() => {
+    function handler(e) {
+      if (exportDropRef.current && !exportDropRef.current.contains(e.target)) {
+        setExportDropOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleExportWorkbook = async (sheet) => {
+    setExportDropOpen(false);
     setReportExporting(true);
     try {
-      const res = await exportReportingExcel({});
-      const filename = `reports_${new Date().toISOString().split("T")[0]}.xlsx`;
-      const url = window.URL.createObjectURL(res.data);
+      const params = { ...buildParams() };
+      if (sheet) params.sheet = sheet;
+      const res = await exportReportingExcel(params);
+      const label = sheet ? `report_${sheet}` : "reports_all";
+      const filename = `${label}_${new Date().toISOString().split("T")[0]}.xlsx`;
+      const blob = new Blob([res.data], {
+        type:
+          res.headers?.["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -1493,15 +1514,12 @@ export default function AdminReports() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       showToast({
-        message: "Report workbook downloaded successfully.",
+        message: "Report downloaded successfully.",
         variant: "success",
       });
     } catch (e) {
       console.error("Report export failed:", e);
-      showToast({
-        message: "Failed to export report workbook.",
-        variant: "danger",
-      });
+      showToast({ message: "Failed to export report.", variant: "danger" });
     } finally {
       setReportExporting(false);
     }
@@ -1584,20 +1602,54 @@ export default function AdminReports() {
               className={apiLoading ? "animate-spin" : ""}
             />
           </button>
-          <Button
-            type="button"
-            variant="primary"
-            className="rounded-xl shadow-sm inline-flex items-center gap-2"
-            onClick={handleExportWorkbook}
-            disabled={apiLoading || reportExporting}
-          >
-            {reportExporting ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <FiDownload size={14} />
+          <div className="relative" ref={exportDropRef}>
+            <Button
+              type="button"
+              variant="primary"
+              className="rounded-xl shadow-sm inline-flex items-center gap-2 pr-2"
+              onClick={() => setExportDropOpen((o) => !o)}
+              disabled={apiLoading || reportExporting}
+            >
+              {reportExporting ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <FiDownload size={14} />
+              )}
+              Export Excel
+              <FiChevronDown
+                size={13}
+                className={`ml-0.5 transition-transform ${exportDropOpen ? "rotate-180" : ""}`}
+              />
+            </Button>
+            {exportDropOpen && (
+              <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 py-1.5 overflow-hidden">
+                {[
+                  { label: "Export All Tabs", sheet: undefined },
+                  { label: "Case Reports", sheet: "cases" },
+                  { label: "Workload Reports", sheet: "workload" },
+                  { label: "Financial Reports", sheet: "financial" },
+                  { label: "Performance Reports", sheet: "performance" },
+                ].map((opt, i) => (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => handleExportWorkbook(opt.sheet)}
+                    className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors hover:bg-gray-50 ${
+                      i === 0
+                        ? "font-black text-secondary border-b border-gray-100 mb-0.5"
+                        : "font-semibold text-gray-700"
+                    }`}
+                  >
+                    <FiDownload
+                      size={13}
+                      className={i === 0 ? "text-secondary" : "text-gray-400"}
+                    />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             )}
-            Export Excel
-          </Button>
+          </div>
         </div>
       </div>
 

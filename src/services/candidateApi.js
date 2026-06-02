@@ -20,6 +20,11 @@ export const resetCandidatePassword = (id, data) =>
 
 export const deleteCandidate = (id) => api.delete(`/api/admin/candidates/${id}`);
 
+// Assign (or unassign) a candidate to a business/sponsor.
+// Pass businessId = null to unassign.
+export const assignCandidateBusiness = (id, businessId) =>
+  api.patch(`/api/admin/candidates/${id}/assign-business`, { businessId });
+
 export const bulkImportCandidates = (file) => {
   const formData = new FormData();
   formData.append('file', file);

@@ -23,7 +23,7 @@ import {
   UserCog,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { logout } from "../../store/slices/authSlice";
+import { performLogout } from "../../utils/performLogout";
 import eliteLogo from "../../assets/elitepic_logo.png";
 import useModuleAccess from "../../hooks/useModuleAccess";
 import { resolveAssetUrl } from "../../utils/assetUrl";
@@ -39,8 +39,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
   const { canAccess } = useModuleAccess();
 
   const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login");
+    performLogout(dispatch, navigate);
   };
 
   const navSections = [

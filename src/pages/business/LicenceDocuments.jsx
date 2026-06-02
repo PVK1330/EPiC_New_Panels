@@ -18,6 +18,7 @@ import {
 import { uploadLicenceDocument, getLicenceDocuments, getMyLicenceApplications } from "../../services/licenceApi";
 import { useToast } from "../../context/ToastContext";
 import useDownloads from "../../hooks/useDownloads";
+import { formatDateLong } from "../../utils/datetime";
 
 const LicenceDocuments = () => {
   const { showToast } = useToast();
@@ -285,11 +286,7 @@ const LicenceDocuments = () => {
                             const d = new Date(doc.uploadDate);
                             return Number.isNaN(d.getTime())
                               ? "—"
-                              : d.toLocaleDateString("en-GB", {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                });
+                              : formatDateLong(doc.uploadDate, { month: "short" });
                           })()}
                         </p>
                       </td>

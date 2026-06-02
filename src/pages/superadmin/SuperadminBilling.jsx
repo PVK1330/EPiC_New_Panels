@@ -13,9 +13,11 @@ import {
 } from 'react-icons/ri';
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
+import PageHero, { HeroButton } from '../../components/superadmin/PageHero';
 import useBilling from '../../hooks/useBilling';
 import useDownloads from '../../hooks/useDownloads';
 import toast from 'react-hot-toast';
+import { formatDate } from '../../utils/datetime';
 
 const SuperadminBilling = () => {
  const [searchTerm, setSearchTerm] = useState('');
@@ -80,17 +82,15 @@ const SuperadminBilling = () => {
 
  return (
   <div className="space-y-4 pb-4">
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-100">
-      <div>
-        <h1 className="text-xl font-black text-secondary tracking-tight">Billing & Revenue</h1>
-        <p className="text-xs text-gray-400 mt-0.5 font-medium">Monitor platform monetization, subscription health, and revenue analytics.</p>
-      </div>
-  <div className="flex items-center gap-2">
-   <Button variant="primary" onClick={() => handleGlobalAction('Export')} className="text-xs font-bold">
-     <RiFileDownloadLine size={16} className="inline mr-1"/> Export Financials
-   </Button>
-  </div>
- </div>
+    <PageHero
+      icon={RiBillLine}
+      title="Billing & Revenue"
+      subtitle="Monitor platform monetization, subscription health, and revenue analytics."
+    >
+   <HeroButton onClick={() => handleGlobalAction('Export')}>
+     <RiFileDownloadLine size={16} /> Export Financials
+   </HeroButton>
+    </PageHero>
 
  <motion.div 
   initial={{ opacity: 0 }}
@@ -199,7 +199,7 @@ const SuperadminBilling = () => {
  </span>
  </td>
  <td className="px-5 py-3 text-center font-semibold text-secondary text-xs">£{item.amount}</td>
- <td className="px-5 py-3 text-center text-gray-400 font-bold text-sm">{item.due_at ? new Date(item.due_at).toLocaleDateString() : '—'}</td>
+ <td className="px-5 py-3 text-center text-gray-400 font-bold text-sm">{item.due_at ? formatDate(item.due_at) : '—'}</td>
  <td className="px-4 py-3">
  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-bold tracking-wider border ${
  item.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
@@ -285,7 +285,7 @@ const SuperadminBilling = () => {
  <div className="flex justify-between items-end border-t border-gray-200 pt-3">
  <div>
  <p className="text-sm text-gray-500 font-bold">Tier: {selectedInvoice.subscription?.plan?.name || '—'}</p>
- <p className="text-sm text-gray-500 font-bold">{selectedInvoice.due_at ? new Date(selectedInvoice.due_at).toLocaleDateString() : '—'}</p>
+ <p className="text-sm text-gray-500 font-bold">{selectedInvoice.due_at ? formatDate(selectedInvoice.due_at) : '—'}</p>
  </div>
  <div className="text-right">
  <p className="text-sm font-bold text-gray-400 mb-0.5">Amount</p>

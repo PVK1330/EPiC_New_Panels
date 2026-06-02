@@ -12,6 +12,9 @@ import {
   ArrowRight,
 } from "lucide-react";
 import api from "../../services/api";
+import DatePicker from "../../components/DatePicker";
+import TimePicker from "../../components/TimePicker";
+import { formatDateLong } from "../../utils/datetime";
 
 const InputField = ({
   label,
@@ -152,11 +155,7 @@ const RescheduleForm = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return formatDateLong(dateString, { month: "short" });
   };
 
   return (
@@ -342,24 +341,23 @@ const RescheduleForm = () => {
                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
                         New Appointment Date <span className="text-primary">*</span>
                       </label>
-                      <input
-                        type="date"
+                      <DatePicker
                         value={formData.newDate}
                         onChange={handleInputChange}
                         name="newDate"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                        min={new Date().toISOString().split("T")[0]}
+                        placeholder="Select date"
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
                         New Appointment Time <span className="text-primary">*</span>
                       </label>
-                      <input
-                        type="time"
+                      <TimePicker
                         value={formData.newTime}
                         onChange={handleInputChange}
                         name="newTime"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                        placeholder="Select time"
                       />
                     </div>
                   </div>

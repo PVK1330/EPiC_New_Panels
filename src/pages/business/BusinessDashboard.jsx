@@ -24,7 +24,7 @@ import {
   formatLastMessagePreview,
   sortConversationsByRecent,
 } from "../../utils/messagingConversations";
-import { MOCK_NOTIFICATIONS } from "../../data/adminDashboardMock";
+import { formatDate, formatDateTime } from "../../utils/datetime";
 
 const getStatusIcon = (status) => {
   if (status === "Completed") return <CheckCircle size={16} className="text-green-600" />;
@@ -62,9 +62,7 @@ export default function BusinessDashboard() {
         setCases(cRes?.data?.data?.cases || []);
         setWorkers(wRes?.data?.data || []);
         const notifList = nRes?.data?.data?.notifications || nRes?.data?.data || [];
-        setNotifications(
-          Array.isArray(notifList) && notifList.length > 0 ? notifList : MOCK_NOTIFICATIONS,
-        );
+        setNotifications(Array.isArray(notifList) ? notifList : []);
         const msgList = sortConversationsByRecent(
           extractConversationsFromResponse(mRes),
         ).slice(0, 5);
@@ -127,7 +125,7 @@ export default function BusinessDashboard() {
         id: "licence-expiry",
         title: "Sponsor Licence Expiry",
         description: `${days} day(s) remaining`,
-        dueDate: new Date(dashboard.licenceExpiry.date).toLocaleDateString("en-GB"),
+        dueDate: formatDate(dashboard.licenceExpiry.date),
         priority: days < 30 ? "High" : "Medium",
         status: dashboard.licenceExpiry.renewalDue ? "Pending" : "In Progress",
       });
@@ -153,7 +151,7 @@ export default function BusinessDashboard() {
         visaType: w.visaType || "Unknown",
         cosNumber: w.caseId || "N/A",
         jobTitle: w.jobTitle || "Not assigned",
-        visaExpiry: w.created_at ? new Date(w.created_at).toLocaleDateString("en-GB") : "N/A",
+        visaExpiry: w.created_at ? formatDate(w.created_at) : "N/A",
         status: w.status || "Pending",
       })),
     [workers]
@@ -398,7 +396,7 @@ export default function BusinessDashboard() {
                     <h4 className="text-xs font-black text-secondary truncate">{item.title}</h4>
                     <p className="text-xs text-gray-600 line-clamp-1 mt-0.5">{item.message}</p>
                     <p className="text-[9px] font-bold text-gray-400 mt-1">
-                      {item.createdAt ? new Date(item.createdAt).toLocaleString("en-GB", { dateStyle: 'short', timeStyle: 'short' }) : "Recent"}
+                      {item.createdAt ? formatDateTime(item.createdAt) : "Recent"}
                     </p>
                   </div>
                   <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${getPriorityColor(item.priority === "high" ? "High" : item.priority === "medium" ? "Medium" : "Low")}`}>

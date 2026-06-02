@@ -39,8 +39,12 @@ const useOtp = (type = "register") => {
           ? sessionStorage.getItem("pending_otp_email")
           : sessionStorage.getItem("pending_reset_email");
       if (type === "register") {
-        const res = await verifyOtp({ email, otp });
+        const organisationId = sessionStorage.getItem("pending_otp_org_id");
+        const payload = { email, otp };
+        if (organisationId) payload.organisation_id = organisationId;
+        const res = await verifyOtp(payload);
         sessionStorage.removeItem("pending_otp_email");
+        sessionStorage.removeItem("pending_otp_org_id");
         const { user: userData, allowedModules } = getAuthUserAndToken(res);
         if (userData) {
           const role = resolveLoginRole(userData);
@@ -81,7 +85,10 @@ const useOtp = (type = "register") => {
           : sessionStorage.getItem("pending_reset_email");
       
       if (type === "register") {
-        await resendOtp(email);
+        const organisationId = sessionStorage.getItem("pending_otp_org_id");
+        const payload = { email };
+        if (organisationId) payload.organisation_id = organisationId;
+        await resendOtp(payload.email, organisationId);
       } else {
         await forgotPassword(email);
       }

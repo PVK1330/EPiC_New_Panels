@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { motion } from "framer-motion";
 import { FiImage, FiSave, FiRefreshCw } from "react-icons/fi";
 import Button from "../../Button";
-import { resolveAssetUrl } from "../../../utils/assetUrl";
+import { resolveOrganisationLogoUrl } from "../../../utils/assetUrl";
 
 const panelMotion = {
   initial: { opacity: 0, y: 10 },
@@ -22,7 +22,7 @@ export default function OrganisationSettings({
   const fileRef = useRef(null);
   const previewUrl = logoFile
     ? URL.createObjectURL(logoFile)
-    : resolveAssetUrl(organisation?.logoUrl);
+    : resolveOrganisationLogoUrl(organisation);
 
   return (
     <motion.div {...panelMotion} className="space-y-6">

@@ -14,6 +14,7 @@ import { RiFileList3Line } from "react-icons/ri";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
+import DatePicker from "../../components/DatePicker";
 
 const TYPE_FILTER_OPTIONS = [
   { value: "all", label: "All types" },
@@ -606,10 +607,9 @@ const AdminDocuments = () => {
             )}
           </div>
 
-          <Input
+          <DatePicker
             label="Expiry date (if applicable)"
             name="expiry"
-            type="date"
             value={uploadForm.expiry}
             onChange={handleUploadField}
           />

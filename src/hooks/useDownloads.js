@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import api from "../services/api";
+import { formatDateTime } from "../utils/datetime";
 import {
   downloadFilledApplicationPdf as fetchFilledPdf,
   downloadCaseSummaryPdf as fetchCasePdf,
@@ -100,7 +101,7 @@ function rowsToCsvContent(rows) {
         .map((k) => {
           let cell = row[k] === null || row[k] === undefined ? "" : row[k];
           cell =
-            cell instanceof Date ? cell.toLocaleString() : String(cell).replace(/"/g, '""');
+            cell instanceof Date ? formatDateTime(cell) : String(cell).replace(/"/g, '""');
           if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
           return cell;
         })

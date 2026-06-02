@@ -23,6 +23,8 @@ import {
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/Input';
+import PageHero, { HeroButton, HeroGhostButton } from '../../components/superadmin/PageHero';
+import { formatDate, formatDateTime } from '../../utils/datetime';
 
 const StatCard = ({ title, value, icon: Icon, color, delay }) => (
   <motion.div
@@ -112,21 +114,18 @@ const SuperadminPayments = () => {
 
   return (
     <div className="space-y-4 pb-4">
-      {/* Modern Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-100">
-        <div>
-          <h1 className="text-xl font-black text-secondary tracking-tight">Financial Hub</h1>
-          <p className="text-xs text-gray-400 mt-0.5 font-medium uppercase tracking-widest">Real-time transaction monitoring</p>
-        </div>
-    <div className="flex items-center gap-2">
-      <Button variant="outline" className="text-xs font-bold">
-        <RiFileDownloadLine size={16} className="inline mr-1"/> Export
-      </Button>
-      <Button variant="primary" onClick={() => setIsGatewayModalOpen(true)} className="text-xs font-bold shadow-lg shadow-primary/20">
-        <RiExchangeLine size={16} className="inline mr-1"/> Configure
-      </Button>
-    </div>
-  </div>
+      <PageHero
+        icon={RiMoneyPoundCircleLine}
+        title="Financial Hub"
+        subtitle="Real-time transaction monitoring"
+      >
+        <HeroGhostButton>
+          <RiFileDownloadLine size={16} /> Export
+        </HeroGhostButton>
+        <HeroButton onClick={() => setIsGatewayModalOpen(true)}>
+          <RiExchangeLine size={16} /> Configure
+        </HeroButton>
+      </PageHero>
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -210,7 +209,7 @@ const SuperadminPayments = () => {
  </td>
  <td className="px-4 py-2.5">
  <p className="font-bold text-secondary text-sm block leading-tight mb-1">{tr.organisation?.name || '—'}</p>
- <p className="text-sm text-gray-500 font-semibold">{new Date(tr.createdAt).toLocaleDateString()}</p>
+ <p className="text-sm text-gray-500 font-semibold">{formatDate(tr.createdAt)}</p>
  </td>
  <td className="px-4 py-2.5 text-center">
  <motion.span 
@@ -312,7 +311,7 @@ const SuperadminPayments = () => {
                 </div>
                 <div className="flex items-center justify-between text-[10px] font-bold text-gray-400">
                   <span>Last Sync</span>
-                  <span className="text-secondary">{gatewayStatus.lastSync ? new Date(gatewayStatus.lastSync).toLocaleString() : 'Never'}</span>
+                  <span className="text-secondary">{gatewayStatus.lastSync ? formatDateTime(gatewayStatus.lastSync) : 'Never'}</span>
                 </div>
               </div>
             ) : (

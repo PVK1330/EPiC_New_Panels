@@ -17,6 +17,10 @@ import { resolveCaseStage } from "../../constants/immigrationCaseProcess";
 import { useToast } from "../../context/ToastContext";
 import { getCaseworkers } from "../../services/caseWorker";
 import { getVisaTypesDropdown } from "../../services/settingsService";
+import { formatDateLong } from "../../utils/datetime";
+import DatePicker from "../DatePicker";
+import NationalitySelect from "../NationalitySelect";
+import CountrySelect from "../CountrySelect";
 
 const inputClass =
   "mt-1 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow";
@@ -42,26 +46,67 @@ function AppInput({
   placeholder = "",
   hint = "",
   error = "",
+  as = "",
+  max,
 }) {
+  // Route to the global pickers/selects while keeping this form's label style.
+  const control =
+    type === "date" ? (
+      <div className="mt-1">
+        <DatePicker
+          name={name}
+          value={formData[name] ?? ""}
+          onChange={onChange}
+          error={error}
+          max={max}
+          placeholder={placeholder || "Select date"}
+        />
+      </div>
+    ) : as === "nationality" ? (
+      <div className="mt-1">
+        <NationalitySelect
+          name={name}
+          value={formData[name] ?? ""}
+          onChange={onChange}
+          error={error}
+          placeholder={placeholder || "Select nationality"}
+        />
+      </div>
+    ) : as === "country" ? (
+      <div className="mt-1">
+        <CountrySelect
+          name={name}
+          value={formData[name] ?? ""}
+          onChange={onChange}
+          error={error}
+          placeholder={placeholder || "Select country"}
+        />
+      </div>
+    ) : (
+      <>
+        <input
+          id={name}
+          type={type}
+          name={name}
+          value={formData[name] ?? ""}
+          onChange={onChange}
+          placeholder={placeholder}
+          className={`${inputClass} ${error ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
+        />
+        {error ? (
+          <p className="mt-1 text-[11px] font-bold text-red-500">{error}</p>
+        ) : hint ? (
+          <p className="mt-1 text-[11px] font-bold text-gray-400">{hint}</p>
+        ) : null}
+      </>
+    );
+
   return (
     <div className={className}>
       <label htmlFor={name} className={fieldLabelClass}>
         {label}
       </label>
-      <input
-        id={name}
-        type={type}
-        name={name}
-        value={formData[name] ?? ""}
-        onChange={onChange}
-        placeholder={placeholder}
-        className={`${inputClass} ${error ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
-      />
-      {error ? (
-        <p className="mt-1 text-[11px] font-bold text-red-500">{error}</p>
-      ) : hint ? (
-        <p className="mt-1 text-[11px] font-bold text-gray-400">{hint}</p>
-      ) : null}
+      {control}
     </div>
   );
 }
@@ -274,11 +319,7 @@ function formatDate(dateStr) {
   if (!dateStr) return "N/A";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "N/A";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateLong(dateStr, { month: "short" });
 }
 
 /** Per-step required-field validation. Returns { fieldName: "error message" }. */
@@ -295,15 +336,36 @@ function validateStep(stepIndex, data) {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
       errs.email = "Enter a valid email address";
     }
-    if (!data.contactNumber?.toString().trim())
+    if (!data.contactNumber?.toString().trim()) {
       errs.contactNumber = "Contact number is required";
+    } else {
+      // Digits only, 7–15 (E.164 max). Allows leading + and spaces in input.
+      const digits = data.contactNumber.toString().replace(/[^\d]/g, "");
+      if (digits.length < 7 || digits.length > 15)
+        errs.contactNumber = "Enter a valid contact number (7–15 digits)";
+    }
     if (!data.gender) errs.gender = "Please select a gender";
   }
 
   if (stepIndex === 1) {
     if (!data.nationality?.toString().trim())
       errs.nationality = "Nationality is required";
-    if (!data.dob) errs.dob = "Date of birth is required";
+    if (!data.dob) {
+      errs.dob = "Date of birth is required";
+    } else {
+      // DOB must be a valid, past date (an applicant can't be born today/future).
+      const dob = new Date(`${data.dob}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (Number.isNaN(dob.getTime())) {
+        errs.dob = "Enter a valid date of birth";
+      } else if (dob >= today) {
+        errs.dob = "Date of birth must be in the past";
+      } else {
+        const age = (today - dob) / (365.25 * 24 * 60 * 60 * 1000);
+        if (age > 120) errs.dob = "Enter a valid date of birth";
+      }
+    }
 
     // If passport number is provided, require details
     if (data.passportNumber?.toString().trim()) {
@@ -311,6 +373,18 @@ function validateStep(stepIndex, data) {
         errs.issuingAuthority = "Issuing authority is required";
       if (!data.issueDate) errs.issueDate = "Issue date is required";
       if (!data.expiryDate) errs.expiryDate = "Expiry date is required";
+      // Passport issue date can't be in the future; expiry must be after issue.
+      if (data.issueDate) {
+        const issue = new Date(`${data.issueDate}T00:00:00`);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (!Number.isNaN(issue.getTime()) && issue > today)
+          errs.issueDate = "Issue date cannot be in the future";
+      }
+      if (data.issueDate && data.expiryDate) {
+        if (new Date(data.expiryDate) <= new Date(data.issueDate))
+          errs.expiryDate = "Expiry date must be after the issue date";
+      }
     }
   }
 
@@ -1182,6 +1256,7 @@ export default function CandidateApplicationForm({
                   <AppInput
                     label="Country of nationality *"
                     name="nationality"
+                    as="country"
                     formData={formData}
                     onChange={handleChange}
                     error={formErrors.nationality}
@@ -1191,6 +1266,7 @@ export default function CandidateApplicationForm({
                   <AppInput
                     label="Country of birth"
                     name="birthCountry"
+                    as="country"
                     formData={formData}
                     onChange={handleChange}
                   />
@@ -1208,6 +1284,7 @@ export default function CandidateApplicationForm({
                     label="Date of birth *"
                     name="dob"
                     type="date"
+                    max={new Date().toISOString().split("T")[0]}
                     formData={formData}
                     onChange={handleChange}
                     error={formErrors.dob}
@@ -1399,6 +1476,7 @@ export default function CandidateApplicationForm({
                     label="Date of birth"
                     name="parentDob"
                     type="date"
+                    max={new Date().toISOString().split("T")[0]}
                     formData={formData}
                     onChange={handleChange}
                   />
@@ -1407,6 +1485,7 @@ export default function CandidateApplicationForm({
                   <AppInput
                     label="Country of nationality"
                     name="parentNationality"
+                    as="country"
                     formData={formData}
                     onChange={handleChange}
                   />
@@ -1483,6 +1562,7 @@ export default function CandidateApplicationForm({
                         label="Date of birth"
                         name="parent2Dob"
                         type="date"
+                        max={new Date().toISOString().split("T")[0]}
                         formData={formData}
                         onChange={handleChange}
                       />
@@ -1491,6 +1571,7 @@ export default function CandidateApplicationForm({
                       <AppInput
                         label="Country of nationality"
                         name="parent2Nationality"
+                        as="country"
                         formData={formData}
                         onChange={handleChange}
                       />

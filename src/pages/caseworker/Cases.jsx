@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
+import DatePicker from "../../components/DatePicker";
 import CaseTimeline from "../../components/CaseTimeline";
 import useCaseDetail from "../../hooks/useCaseDetail";
 import {
@@ -76,6 +77,12 @@ import {
   resolveCaseStage,
   getStepById,
 } from "../../constants/immigrationCaseProcess";
+import {
+  formatDate,
+  formatDateLong,
+  formatTime,
+  formatDateTime as fmtDateTime,
+} from "../../utils/datetime";
 
 const PAGE_SIZE = 7;
 
@@ -191,23 +198,11 @@ const emptyReassignForm = () => ({
 });
 
 function formatTarget(iso) {
-  const d = new Date(iso + "T12:00:00");
-  return d.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateLong(iso + "T12:00:00", { month: "short" });
 }
 
 function formatDateTime(date) {
-  return date.toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return fmtDateTime(date);
 }
 
 function badgeStatus(status) {
@@ -440,11 +435,14 @@ const Cases = () => {
       };
       const response = await exportCases(params);
 
-      // Create a blob URL and download the file
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const blob = new Blob([response.data], {
+        type: response.headers?.["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "caseworker_cases_export.csv");
+      link.setAttribute("download", `caseworker_cases_${new Date().toISOString().split("T")[0]}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -889,13 +887,51 @@ const Cases = () => {
 
   const validateNewCase = () => {
     const e = {};
-    if (!newCaseForm.candidateId) e.candidateId = "Required";
-    if (!newCaseForm.businessId) e.businessId = "Required";
-    if (!newCaseForm.visaTypeId) e.visaTypeId = "Required";
+
+    // ── Required selections ──────────────────────────────────────────────
+    if (!newCaseForm.candidateId) e.candidateId = "Please select a candidate";
+    if (!newCaseForm.businessId) e.businessId = "Please select a sponsor";
+    if (!newCaseForm.visaTypeId) e.visaTypeId = "Please select a visa type";
+
+    // ── Caseworkers: 1 or 2 required ─────────────────────────────────────
     const n = newCaseForm.assignedCaseworkerIds?.length || 0;
     if (n < 1 || n > 2) e.assignedCaseworkers = "Select 1 or 2 caseworkers";
-    if (!newCaseForm.targetSubmissionDate) e.targetSubmissionDate = "Required";
-    if (newCaseForm.totalAmount <= 0) e.totalAmount = "Must be > 0";
+
+    // ── Target submission date: required, valid, not in the past ─────────
+    if (!newCaseForm.targetSubmissionDate) {
+      e.targetSubmissionDate = "Please choose a target date";
+    } else {
+      const picked = new Date(`${newCaseForm.targetSubmissionDate}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (Number.isNaN(picked.getTime())) {
+        e.targetSubmissionDate = "Enter a valid date";
+      } else if (picked < today) {
+        e.targetSubmissionDate = "Target date cannot be in the past";
+      }
+    }
+
+    // ── Financials: non-negative, total > 0, paid ≤ total ────────────────
+    const total = Number(newCaseForm.totalAmount);
+    const paid = Number(newCaseForm.paidAmount);
+    const salary = Number(newCaseForm.salaryOffered);
+    if (Number.isNaN(total) || total <= 0) {
+      e.totalAmount = "Total amount must be greater than 0";
+    }
+    if (!Number.isNaN(paid) && paid < 0) {
+      e.paidAmount = "Paid amount cannot be negative";
+    } else if (
+      !Number.isNaN(paid) &&
+      !Number.isNaN(total) &&
+      total > 0 &&
+      paid > total
+    ) {
+      e.paidAmount = "Paid amount cannot exceed the total amount";
+    }
+    if (!Number.isNaN(salary) && salary < 0) {
+      e.salaryOffered = "Salary cannot be negative";
+    }
+
     setNewCaseErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -1823,20 +1859,16 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Target Submission Date
+                  Target Submission Date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   name="targetSubmissionDate"
                   value={newCaseForm.targetSubmissionDate}
                   onChange={handleInputChange}
-                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.targetSubmissionDate ? "border-red-300" : "border-gray-200"}`}
+                  error={newCaseErrors.targetSubmissionDate}
+                  min={new Date().toISOString().split("T")[0]}
+                  placeholder="Select target date"
                 />
-                {newCaseErrors.targetSubmissionDate && (
-                  <p className="text-xs font-bold text-red-600 mt-1">
-                    {newCaseErrors.targetSubmissionDate}
-                  </p>
-                )}
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -1900,11 +1932,18 @@ const Cases = () => {
                 <input
                   type="number"
                   name="salaryOffered"
+                  min="0"
+                  step="0.01"
                   value={newCaseForm.salaryOffered}
                   onChange={handleInputChange}
                   placeholder="Annual salary"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.salaryOffered ? "border-red-300" : "border-gray-200"}`}
                 />
+                {newCaseErrors.salaryOffered && (
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {newCaseErrors.salaryOffered}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -1913,6 +1952,8 @@ const Cases = () => {
                 <input
                   type="number"
                   name="totalAmount"
+                  min="0"
+                  step="0.01"
                   value={newCaseForm.totalAmount}
                   onChange={handleInputChange}
                   placeholder="Total fee"
@@ -1931,11 +1972,18 @@ const Cases = () => {
                 <input
                   type="number"
                   name="paidAmount"
+                  min="0"
+                  step="0.01"
                   value={newCaseForm.paidAmount}
                   onChange={handleInputChange}
                   placeholder="Amount paid so far"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.paidAmount ? "border-red-300" : "border-gray-200"}`}
                 />
+                {newCaseErrors.paidAmount && (
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {newCaseErrors.paidAmount}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -1974,425 +2022,6 @@ const Cases = () => {
           </div>
         </div>
       </Modal>
-
-      {/* ─────────────────────── EDIT CASE MODAL ─────────────────────── */}
-      {/* <Modal
-        open={!!editCaseId}
-        onClose={closeCaseEdit}
-        title={editCaseId ? `Edit case ${editCaseId}` : ""}
-        titleId="case-edit-modal-title"
-        maxWidthClass="max-w-4xl"
-        bodyClassName="p-4 sm:p-6"
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="text-sm font-black text-secondary mb-4">
-              Candidate Information
-            </h4>
-            <div className="space-y-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Candidate <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <select
-                    value={editCaseForm.candidateId}
-                    onChange={(e) => {
-                      const selectedCandidate = candidates.find(
-                        (c) => c.id === parseInt(e.target.value),
-                      );
-                      setEditCaseForm((prev) => ({
-                        ...prev,
-                        candidateId: e.target.value,
-                        candidate: selectedCandidate
-                          ? `${selectedCandidate.first_name} ${selectedCandidate.last_name}`
-                          : "",
-                      }));
-                    }}
-                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary border-gray-300"
-                  >
-                    <option value="">Select candidate</option>
-                    {candidates.map((c, idx) => (
-                      <option key={`${c.id}-${idx}`} value={c.id}>
-                        {c.first_name} {c.last_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Candidate Name
-                </label>
-                <input
-                  type="text"
-                  value={editCaseForm.candidate}
-                  disabled
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-bold outline-none cursor-not-allowed text-gray-600"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Nationality
-                </label>
-                <input
-                  type="text"
-                  value={editCaseForm.nationality}
-                  onChange={(e) =>
-                    setEditCaseForm((f) => ({
-                      ...f,
-                      nationality: e.target.value,
-                    }))
-                  }
-                  placeholder="e.g. Indian"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Job Title
-                </label>
-                <input
-                  type="text"
-                  value={editCaseForm.jobTitle}
-                  onChange={(e) =>
-                    setEditCaseForm((f) => ({ ...f, jobTitle: e.target.value }))
-                  }
-                  placeholder="e.g. Software Engineer"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Department
-                </label>
-                <select
-                  value={editCaseForm.department}
-                  onChange={(e) =>
-                    setEditCaseForm((f) => ({
-                      ...f,
-                      department: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-                >
-                  <option value="">Select department</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-black text-secondary mb-4">
-              Business Information
-            </h4>
-            <div className="space-y-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Sponsor <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <select
-                    value={editCaseForm.sponsorId}
-                    onChange={(e) => {
-                      const selectedSponsor = sponsors.find(
-                        (s) => s.id === parseInt(e.target.value),
-                      );
-                      setEditCaseForm((prev) => ({
-                        ...prev,
-                        sponsorId: e.target.value,
-                        businessName:
-                          selectedSponsor?.sponsorProfile?.companyName ||
-                          selectedSponsor?.sponsorProfile?.tradingName ||
-                          `${selectedSponsor.first_name} ${selectedSponsor.last_name}`,
-                      }));
-                    }}
-                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary border-gray-300"
-                  >
-                    <option value="">Select sponsor</option>
-                    {sponsors.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.first_name} {s.last_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Business Name
-                </label>
-                <input
-                  type="text"
-                  value={editCaseForm.businessName}
-                  disabled
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-bold outline-none cursor-not-allowed text-gray-600"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-black text-secondary mb-4">
-            Case Details
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">
-                Visa Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={editCaseForm.visaTypeId}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, visaTypeId: e.target.value }))
-                }
-                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary border-gray-300"
-              >
-                <option value="">Select visa type</option>
-                {visaTypes.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">
-                Petition Type
-              </label>
-              <select
-                value={editCaseForm.petitionTypeId}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({
-                    ...f,
-                    petitionTypeId: e.target.value,
-                  }))
-                }
-                className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
-              >
-                <option value="">Select type</option>
-                {petitionTypes.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">
-                Priority Level <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={editCaseForm.priority}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, priority: e.target.value }))
-                }
-                className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
-              >
-                {priorityLevels.map(({ value, label }) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Target Submission Date
-              </label>
-              <input
-                type="date"
-                value={editCaseForm.targetSubmissionDate}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({
-                    ...f,
-                    targetSubmissionDate: e.target.value,
-                  }))
-                }
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${editCaseErrors.targetSubmissionDate ? "border-red-300" : "border-gray-200"}`}
-              />
-              {editCaseErrors.targetSubmissionDate && (
-                <p className="text-xs font-bold text-red-600 mt-1">
-                  {editCaseErrors.targetSubmissionDate}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                LCA Number
-              </label>
-              <input
-                type="text"
-                value={editCaseForm.lcaNumber}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, lcaNumber: e.target.value }))
-                }
-                placeholder="e.g. I-200-24001"
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Receipt Number
-              </label>
-              <input
-                type="text"
-                value={editCaseForm.receiptNumber}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({
-                    ...f,
-                    receiptNumber: e.target.value,
-                  }))
-                }
-                placeholder="e.g. EAC240..."
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-black text-secondary mb-4">
-            Caseworker Assignment
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <CaseworkerMultiSelect
-              options={
-                caseworkers.length > 0
-                  ? caseworkers.map((c) => ({
-                      id: c.id,
-                      name: `${c.first_name} ${c.last_name}`,
-                    }))
-                  : []
-              }
-              value={editCaseForm.assignedCaseworkerIds || []}
-              onChange={(ids) =>
-                setEditCaseForm((f) => ({ ...f, assignedCaseworkerIds: ids }))
-              }
-              error={editCaseErrors.assignedCaseworkers}
-            />
-          </div>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-black text-secondary mb-4">
-            Financial Information
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Salary Offered ($)
-              </label>
-              <input
-                type="number"
-                value={editCaseForm.salaryOffered}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({
-                    ...f,
-                    salaryOffered: e.target.value,
-                  }))
-                }
-                placeholder="Annual salary"
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Total Amount ($)
-              </label>
-              <input
-                type="number"
-                value={editCaseForm.totalAmount}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({
-                    ...f,
-                    totalAmount: e.target.value,
-                  }))
-                }
-                placeholder="Total fee"
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Paid Amount ($)
-              </label>
-              <input
-                type="number"
-                value={editCaseForm.paidAmount}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, paidAmount: e.target.value }))
-                }
-                placeholder="Amount paid so far"
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-black text-secondary mb-4">
-            Additional Information
-          </h4>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Status
-              </label>
-              <select
-                value={editCaseForm.status}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, status: e.target.value }))
-                }
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              >
-                {CASE_STATUS_EDIT.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Internal Notes
-              </label>
-              <textarea
-                value={editCaseForm.notes}
-                onChange={(e) =>
-                  setEditCaseForm((f) => ({ ...f, notes: e.target.value }))
-                }
-                rows={3}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary resize-y"
-                placeholder="Anything the team should know…"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={closeCaseEdit}
-            className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={submitCaseEdit}
-            className="rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
-          >
-            Save changes
-          </button>
-        </div>
-      </Modal> */}
 
       {/* ─────────────────────── REASSIGN MODAL ─────────────────────── */}
       <Modal
@@ -2918,20 +2547,16 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Target Submission Date
+                  Target Submission Date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   name="targetSubmissionDate"
                   value={newCaseForm.targetSubmissionDate}
                   onChange={handleInputChange}
-                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.targetSubmissionDate ? "border-red-300" : "border-gray-200"}`}
+                  error={newCaseErrors.targetSubmissionDate}
+                  min={new Date().toISOString().split("T")[0]}
+                  placeholder="Select target date"
                 />
-                {newCaseErrors.targetSubmissionDate && (
-                  <p className="text-xs font-bold text-red-600 mt-1">
-                    {newCaseErrors.targetSubmissionDate}
-                  </p>
-                )}
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -2995,11 +2620,18 @@ const Cases = () => {
                 <input
                   type="number"
                   name="salaryOffered"
+                  min="0"
+                  step="0.01"
                   value={newCaseForm.salaryOffered}
                   onChange={handleInputChange}
                   placeholder="Annual salary"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.salaryOffered ? "border-red-300" : "border-gray-200"}`}
                 />
+                {newCaseErrors.salaryOffered && (
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {newCaseErrors.salaryOffered}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -3008,6 +2640,8 @@ const Cases = () => {
                 <input
                   type="number"
                   name="totalAmount"
+                  min="0"
+                  step="0.01"
                   value={newCaseForm.totalAmount}
                   onChange={handleInputChange}
                   placeholder="Total fee"
@@ -3026,11 +2660,18 @@ const Cases = () => {
                 <input
                   type="number"
                   name="paidAmount"
+                  min="0"
+                  step="0.01"
                   value={newCaseForm.paidAmount}
                   onChange={handleInputChange}
                   placeholder="Amount paid so far"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${newCaseErrors.paidAmount ? "border-red-300" : "border-gray-200"}`}
                 />
+                {newCaseErrors.paidAmount && (
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    {newCaseErrors.paidAmount}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -3766,13 +3407,13 @@ function DocumentsTab({ caseId, candidateId }) {
                           {item.expiryDate && (
                             <span className="text-[10px] text-gray-500">
                               Expires:{" "}
-                              {new Date(item.expiryDate).toLocaleDateString()}
+                              {formatDate(item.expiryDate)}
                             </span>
                           )}
                           {item.uploadedAt && (
                             <span className="text-[10px] text-gray-500">
                               Uploaded:{" "}
-                              {new Date(item.uploadedAt).toLocaleDateString()}
+                              {formatDate(item.uploadedAt)}
                             </span>
                           )}
                         </div>
@@ -3915,7 +3556,7 @@ function DocumentsTab({ caseId, candidateId }) {
                   {doc.userFileName || doc.documentName}
                 </p>
                 <p className="text-[11px] font-bold text-gray-500">
-                  Uploaded {new Date(doc.uploadedAt).toLocaleDateString()} ·{" "}
+                  Uploaded {formatDate(doc.uploadedAt)} ·{" "}
                   {doc.documentType}
                 </p>
                 {doc.reviewNotes && doc.status === "rejected" && (
@@ -4142,13 +3783,14 @@ function DocumentsTab({ caseId, candidateId }) {
             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
               Expiry date (optional)
             </label>
-            <input
-              type="date"
+            <DatePicker
+              name="expiryDate"
               value={uploadForm.expiryDate}
               onChange={(e) =>
                 setUploadForm((f) => ({ ...f, expiryDate: e.target.value }))
               }
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              min={new Date().toISOString().split("T")[0]}
+              placeholder="Select expiry date"
             />
           </div>
           <div>
@@ -4295,8 +3937,16 @@ function TasksTab({ caseId }) {
 
   const submitCreateTask = useCallback(async () => {
     const err = {};
-    if (!createForm.name.trim()) err.name = "Required";
-    if (!createForm.due) err.due = "Required";
+    if (!createForm.name.trim()) err.name = "Please enter a task name";
+    if (!createForm.due) {
+      err.due = "Please choose a due date";
+    } else {
+      const picked = new Date(`${createForm.due}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (Number.isNaN(picked.getTime())) err.due = "Enter a valid date";
+      else if (picked < today) err.due = "Due date cannot be in the past";
+    }
     setCreateErrors(err);
     if (Object.keys(err).length) return;
 
@@ -4359,7 +4009,7 @@ function TasksTab({ caseId }) {
               <p className="text-[11px] text-gray-500">
                 {task.status === "completed"
                   ? "Completed"
-                  : `Due ${new Date(task.due_date).toLocaleDateString()}`}
+                  : `Due ${formatDate(task.due_date)}`}
               </p>
             </div>
             <span
@@ -4406,21 +4056,16 @@ function TasksTab({ caseId }) {
               <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
                 Due date
               </label>
-              <input
-                type="date"
+              <DatePicker
+                name="due"
                 value={createForm.due}
                 onChange={(e) =>
                   setCreateForm((f) => ({ ...f, due: e.target.value }))
                 }
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                  createErrors.due ? "border-red-300" : "border-gray-200"
-                }`}
+                error={createErrors.due}
+                min={new Date().toISOString().split("T")[0]}
+                placeholder="Select due date"
               />
-              {createErrors.due && (
-                <p className="text-xs font-bold text-red-600 mt-1">
-                  {createErrors.due}
-                </p>
-              )}
             </div>
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -4780,11 +4425,7 @@ function PaymentsTab({ caseDetail, onUpdate }) {
             {paid > 0 ? (
               <tr>
                 <td className="py-2.5 pr-2 whitespace-nowrap">
-                  {new Date().toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
+                  {formatDateLong(new Date(), { month: "short" })}
                 </td>
                 <td className="py-2.5 pr-2 text-gray-600">
                   Initial retainer coverage
@@ -4853,10 +4494,7 @@ function CommsTab({ candidate, caseId }) {
         side: "you",
         sender: "You",
         text: draft.trim(),
-        time: new Date().toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        time: formatTime(new Date()),
       },
     ]);
     setDraft("");
@@ -4993,7 +4631,7 @@ function NotesTab({ caseId, userName }) {
               {note.author?.first_name && note.author?.last_name
                 ? `${note.author.first_name} ${note.author.last_name}`
                 : userName}{" "}
-              · {new Date(note.created_at).toLocaleDateString()}
+              · {formatDate(note.created_at)}
             </p>
             <p className="text-sm font-bold text-gray-800">{note.content}</p>
           </div>

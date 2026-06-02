@@ -1,6 +1,6 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { logout } from "../store/slices/authSlice";
+import { performLogout } from "../utils/performLogout";
 import { LogOut, X } from "lucide-react";
 import eliteLogo from "../assets/elitepic_logo.png";
 import { useMemo } from "react";
@@ -55,8 +55,7 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
   useMemo(() => navSections, []);
 
   const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login");
+    performLogout(dispatch, navigate);
   };
 
   return (

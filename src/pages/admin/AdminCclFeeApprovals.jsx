@@ -4,14 +4,11 @@ import { PoundSterling, Loader2, CheckCircle, XCircle } from "lucide-react";
 import Button from "../../components/Button";
 import { useToast } from "../../context/ToastContext";
 import { getPendingCclFeeApprovals, reviewCclFees } from "../../services/workflowApi";
+import { formatDateLong } from "../../utils/datetime";
 
 function formatDate(value) {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateLong(value, { month: "short" });
 }
 
 export default function AdminCclFeeApprovals() {

@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import api from "../../services/api";
 import { exportCaseworkerPerformance } from "../../services/caseApi";
 import { useToast } from "../../context/ToastContext";
+import { formatWithOptions } from "../../utils/datetime";
 
 const StatCard = ({ label, value, color = "secondary", suffix }) => {
   const colorMap = {
@@ -66,7 +67,7 @@ const CaseworkerPerformance = () => {
 
   const monthLabel = useMemo(() => {
     const d = new Date();
-    const m = d.toLocaleString("en-GB", { month: "long" });
+    const m = formatWithOptions(d, { month: "long" });
     return `${m} ${d.getFullYear()}`;
   }, []);
 
@@ -74,11 +75,14 @@ const CaseworkerPerformance = () => {
     try {
       const response = await exportCaseworkerPerformance();
 
-      // Create a blob URL and download the file
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const blob = new Blob([response.data], {
+        type: response.headers?.["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "caseworker_performance_report.csv");
+      link.setAttribute("download", `caseworker_performance_${new Date().toISOString().split("T")[0]}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -282,13 +286,12 @@ const CaseworkerPerformance = () => {
                 </tr>
               ) : (
                 activityLog.map((log, idx) => {
-                  const date = new Date(log.actionDate);
-                  const timeStr = date.toLocaleString('en-US', { 
-                    month: 'short', 
+                  const timeStr = formatWithOptions(log.actionDate, {
+                    month: 'short',
                     day: 'numeric',
                     hour: 'numeric',
                     minute: '2-digit',
-                    hour12: true 
+                    hour12: true
                   });
                   
                   const actionVariant = {

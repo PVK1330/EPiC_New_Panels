@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getTeamsMeetings, cancelTeamsMeeting, syncTeamsMeetings } from '../services/teamsApi';
 import { Video, Calendar, Clock, Users, ExternalLink, Trash2, RefreshCw, Loader2 } from 'lucide-react';
 import Button from './Button';
+import { formatWithOptions } from '../utils/datetime';
 
 const MeetingsList = ({ userId }) => {
   const [meetings, setMeetings] = useState([]);
@@ -59,8 +60,7 @@ const MeetingsList = ({ userId }) => {
   };
 
   const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
+    return formatWithOptions(dateString, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

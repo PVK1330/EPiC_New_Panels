@@ -11,6 +11,8 @@ import {
   Lock,
   Shield,
   Key,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import Modal from "../../components/Modal";
@@ -26,28 +28,43 @@ const InputField = ({
   type = "text",
   icon: Icon,
   placeholder,
-}) => (
-  <div className="flex flex-col gap-1.5">
-    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
-      {label}
-    </label>
-    <div className="relative">
-      <input
-        type={type}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
-      />
-      {Icon && (
-        <Icon
-          size={15}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300"
+}) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === "password";
+  const actualType = isPassword ? (showPassword ? "text" : "password") : type;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          type={actualType}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
         />
-      )}
+        {isPassword ? (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+          >
+            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        ) : Icon ? (
+          <Icon
+            size={15}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300"
+          />
+        ) : null}
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
 
 const MyAccount = () => {
   const { user } = useSelector((state) => state.auth);

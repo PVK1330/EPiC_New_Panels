@@ -15,7 +15,11 @@ import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
+import PhoneInput from "../../components/PhoneInput";
+import DatePicker from "../../components/DatePicker";
+import CountrySelect from "../../components/CountrySelect";
 import Button from "../../components/Button";
+import { isValidPhone } from "../../utils/countries";
 import useSponsor from "../../hooks/useSponsor";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -31,6 +35,7 @@ import {
 const PASSWORD_MIN = 6;
 
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
+import { formatDateLong } from "../../utils/datetime";
 
 const LICENCE_CHIPS = {
   Active: "bg-green-100 text-green-700",
@@ -139,7 +144,7 @@ function fullName(row) {
 
 const fmtDate = (iso) => {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
+  return formatDateLong(iso, { month: "short" });
 };
 
 export default function AdminBusinesses() {
@@ -298,7 +303,17 @@ export default function AdminBusinesses() {
     if (!createForm.country_code.trim())
       errs.country_code = "Country code is required";
     if (!createForm.mobile.trim()) errs.mobile = "Mobile is required";
+    else if (!isValidPhone(createForm.country_code, createForm.mobile))
+      errs.mobile = "Enter a valid phone number for the selected country";
     if (!createForm.companyName.trim()) errs.companyName = "Company name is required";
+    if (createForm.licenceExpiry) {
+      const exp = new Date(`${createForm.licenceExpiry}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (Number.isNaN(exp.getTime())) errs.licenceExpiry = "Enter a valid date";
+      else if (exp < today)
+        errs.licenceExpiry = "Licence expiry cannot be in the past";
+    }
     if (!createForm.password) errs.password = "Password is required";
     else if (createForm.password.length < PASSWORD_MIN)
       errs.password = `Password must be at least ${PASSWORD_MIN} characters`;
@@ -319,6 +334,8 @@ export default function AdminBusinesses() {
     if (!editForm.country_code.trim())
       errs.country_code = "Country code is required";
     if (!editForm.mobile.trim()) errs.mobile = "Mobile is required";
+    else if (!isValidPhone(editForm.country_code, editForm.mobile))
+      errs.mobile = "Enter a valid phone number for the selected country";
     if (!editForm.companyName.trim()) errs.companyName = "Company name is required";
     return errs;
   };
@@ -750,7 +767,7 @@ export default function AdminBusinesses() {
                   const userName = `${user.first_name} ${user.last_name}`;
                   const initials = profile.companyName ? profile.companyName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) : initialsFrom(user);
                   const licenceStatus = profile.licenceStatus || "—";
-                  const licenceExpiry = profile.licenceExpiryDate ? new Date(profile.licenceExpiryDate).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" }) : "—";
+                  const licenceExpiry = profile.licenceExpiryDate ? formatDateLong(profile.licenceExpiryDate, { month: "short" }) : "—";
                   const activeCases = profile.activeCases ?? 0;
                   const sponsoredWorkers = profile.sponsoredWorkers ?? 0;
                   const riskLevel = profile.riskLevel || "—";
@@ -989,13 +1006,13 @@ export default function AdminBusinesses() {
                 { value: "Revoked", label: "Revoked" },
               ]}
             />
-            <Input
+            <DatePicker
               label="Licence Expiry Date"
               name="licenceExpiry"
-              type="date"
               value={createForm.licenceExpiry}
               onChange={handleCreateChange}
               error={errors.licenceExpiry}
+              min={new Date().toISOString().split("T")[0]}
             />
 
             <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
@@ -1023,12 +1040,11 @@ export default function AdminBusinesses() {
               onChange={handleCreateChange}
               placeholder="E14 5AB"
             />
-            <Input
+            <CountrySelect
               label="Country"
               name="country"
               value={createForm.country}
               onChange={handleCreateChange}
-              placeholder="United Kingdom"
               className="sm:col-span-2"
             />
 
@@ -1060,21 +1076,17 @@ export default function AdminBusinesses() {
               required
               error={errors.email}
             />
-            <Input
-              label="Country code"
-              name="country_code"
-              value={createForm.country_code}
-              onChange={handleCreateChange}
-              required
-              error={errors.country_code}
-            />
-            <Input
+            <PhoneInput
+              split
               label="Mobile"
-              name="mobile"
-              value={createForm.mobile}
+              dialCode={createForm.country_code}
+              national={createForm.mobile}
+              dialName="country_code"
+              nationalName="mobile"
               onChange={handleCreateChange}
               required
               error={errors.mobile}
+              className="sm:col-span-2"
             />
             <Input
               label="Password"
@@ -1228,10 +1240,9 @@ export default function AdminBusinesses() {
                 { value: "Revoked", label: "Revoked" },
               ]}
             />
-            <Input
+            <DatePicker
               label="Licence Expiry Date"
               name="licenceExpiry"
-              type="date"
               value={editForm.licenceExpiry || ""}
               onChange={handleEditChange}
             />
@@ -1258,7 +1269,7 @@ export default function AdminBusinesses() {
               value={editForm.postcode || ""}
               onChange={handleEditChange}
             />
-            <Input
+            <CountrySelect
               label="Country"
               name="country"
               value={editForm.country || ""}
@@ -1283,10 +1294,9 @@ export default function AdminBusinesses() {
               value={editForm.contactEmail || ""}
               onChange={handleEditChange}
             />
-            <Input
+            <PhoneInput
               label="Contact Phone"
               name="contactPhone"
-              type="tel"
               value={editForm.contactPhone || ""}
               onChange={handleEditChange}
             />
@@ -1382,21 +1392,17 @@ export default function AdminBusinesses() {
               required
               error={errors.email}
             />
-            <Input
-              label="Country code"
-              name="country_code"
-              value={editForm.country_code}
-              onChange={handleEditChange}
-              required
-              error={errors.country_code}
-            />
-            <Input
+            <PhoneInput
+              split
               label="Mobile"
-              name="mobile"
-              value={editForm.mobile}
+              dialCode={editForm.country_code}
+              national={editForm.mobile}
+              dialName="country_code"
+              nationalName="mobile"
               onChange={handleEditChange}
               required
               error={errors.mobile}
+              className="sm:col-span-2"
             />
             <Input
               label="Role"

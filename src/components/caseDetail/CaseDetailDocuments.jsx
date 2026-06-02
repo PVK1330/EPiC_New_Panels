@@ -4,6 +4,8 @@ import Modal from "../Modal";
 import Button from "../Button";
 import { getCaseChecklist } from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
+import { formatDate } from "../../utils/datetime";
+import DatePicker from "../DatePicker";
 
 const REVIEWABLE_STATUSES = new Set(["uploaded", "under_review"]);
 
@@ -377,12 +379,12 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
                         </span>
                         {item.expiryDate && (
                           <span className="text-[10px] text-gray-500">
-                            Expires: {new Date(item.expiryDate).toLocaleDateString()}
+                            Expires: {formatDate(item.expiryDate)}
                           </span>
                         )}
                         {item.uploadedAt && (
                           <span className="text-[10px] text-gray-500">
-                            Uploaded: {new Date(item.uploadedAt).toLocaleDateString()}
+                            Uploaded: {formatDate(item.uploadedAt)}
                           </span>
                         )}
                         {item.status === "rejected" && item.rejectionReason && (
@@ -608,13 +610,13 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
               Expiry date (optional)
             </label>
-            <input
-              type="date"
+            <DatePicker
+              name="expiryDate"
               value={uploadForm.expiryDate}
               onChange={(e) =>
                 setUploadForm((f) => ({ ...f, expiryDate: e.target.value }))
               }
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
+              placeholder="Select date"
             />
           </div>
           <div>

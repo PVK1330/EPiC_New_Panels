@@ -11,7 +11,9 @@ import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
+import PhoneInput from "../../components/PhoneInput";
 import Button from "../../components/Button";
+import { isValidPhone } from "../../utils/countries";
 import useAdmin from "../../hooks/useAdmin";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -228,6 +230,8 @@ export default function AdminUsers() {
       errs.email = "Enter a valid email";
     if (!createForm.country_code.trim()) errs.country_code = "Country code is required";
     if (!createForm.mobile.trim()) errs.mobile = "Mobile is required";
+    else if (!isValidPhone(createForm.country_code, createForm.mobile))
+      errs.mobile = "Enter a valid phone number for the selected country";
     if (createForm.password || createForm.confirm_password) {
       if (!createForm.password) errs.password = "Enter a password or leave both blank to email a generated one";
       if (!createForm.confirm_password)
@@ -247,6 +251,8 @@ export default function AdminUsers() {
       errs.email = "Enter a valid email";
     if (!editForm.country_code.trim()) errs.country_code = "Country code is required";
     if (!editForm.mobile.trim()) errs.mobile = "Mobile is required";
+    else if (!isValidPhone(editForm.country_code, editForm.mobile))
+      errs.mobile = "Enter a valid phone number for the selected country";
     return errs;
   };
 
@@ -699,24 +705,18 @@ export default function AdminUsers() {
               options={ROLE_OPTIONS}
               required
             />
-            <Input
-              label="Country Code"
-              name="country_code"
-              value={createForm.country_code}
-              onChange={handleCreateChange}
-              placeholder="+44"
-              required
-              error={errors.country_code}
-            />
-            <Input
+            <PhoneInput
+              split
               label="Mobile"
-              name="mobile"
-              type="tel"
-              value={createForm.mobile}
+              dialCode={createForm.country_code}
+              national={createForm.mobile}
+              dialName="country_code"
+              nationalName="mobile"
               onChange={handleCreateChange}
               placeholder="7700 900000"
               required
               error={errors.mobile}
+              className="sm:col-span-2"
             />
            
            
@@ -778,24 +778,18 @@ export default function AdminUsers() {
               required
               error={errors.email}
             />
-            <Input
-              label="Country Code"
-              name="country_code"
-              value={editForm.country_code}
-              onChange={handleEditChange}
-              placeholder="+44"
-              required
-              error={errors.country_code}
-            />
-            <Input
+            <PhoneInput
+              split
               label="Mobile"
-              name="mobile"
-              type="tel"
-              value={editForm.mobile}
+              dialCode={editForm.country_code}
+              national={editForm.mobile}
+              dialName="country_code"
+              nationalName="mobile"
               onChange={handleEditChange}
               placeholder="7700 900000"
               required
               error={errors.mobile}
+              className="sm:col-span-2"
             />
             <Input
               label="Role"

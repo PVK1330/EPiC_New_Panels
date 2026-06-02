@@ -12,6 +12,7 @@ import NotificationList from "../../components/notifications/NotificationList";
 import { getDueOverdueTasks } from "../../services/dashboardApi";
 import DueOverdueTasksWidget from "../../components/dashboard/DueOverdueTasksWidget";
 import { fetchUnreadCount } from "../../store/slices/notificationSlice";
+import { formatDateLong, formatDateTime, formatWithOptions } from "../../utils/datetime";
 
 
 
@@ -56,7 +57,7 @@ const CaseworkerDashboard = () => {
 
   const greetingLine = useMemo(() => {
     const d = new Date();
-    const line = d.toLocaleDateString("en-GB", {
+    const line = formatWithOptions(d, {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -91,7 +92,7 @@ const CaseworkerDashboard = () => {
           text:
             formatLastMessagePreview(conv.lastMessage?.content) || "No message",
           time: conv.lastMessage?.createdAt
-            ? new Date(conv.lastMessage.createdAt).toLocaleString()
+            ? formatDateTime(conv.lastMessage.createdAt)
             : "",
           unread: conv.unreadCount > 0,
         }));
@@ -193,11 +194,7 @@ const CaseworkerDashboard = () => {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "N/A";
-    return new Date(dateStr).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return formatDateLong(dateStr, { month: "short" });
   };
 
   const formatTaskDue = (dueDate) => {

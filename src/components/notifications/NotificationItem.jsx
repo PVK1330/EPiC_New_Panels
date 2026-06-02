@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, MessageSquare, FileText, AlertTriangle, CheckCircle, Clock, User, Trash2, X, ArrowRight } from 'lucide-react';
 import { markAsRead, removeNotification } from '../../store/slices/notificationSlice';
 import { getNotificationRoute, getCaseworkerOpenCaseState } from '../../utils/notificationHelpers';
+import { formatDate, formatDateTime } from '../../utils/datetime';
 
 const formatTimeAgo = (timestamp) => {
   const date = new Date(timestamp);
@@ -19,7 +20,7 @@ const formatTimeAgo = (timestamp) => {
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
   
-  return date.toLocaleDateString();
+  return formatDate(date);
 };
 
 const NotificationItem = ({ notification }) => {
@@ -239,7 +240,7 @@ const NotificationItem = ({ notification }) => {
               
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Clock className="w-3 h-3" />
-                Received: {new Date(notification.createdAt || notification.sentAt).toLocaleString()}
+                Received: {formatDateTime(notification.createdAt || notification.sentAt)}
               </div>
             </div>
             

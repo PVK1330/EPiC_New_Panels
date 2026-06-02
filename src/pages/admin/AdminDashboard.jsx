@@ -43,13 +43,9 @@ import {
   MOCK_RECENT_ACTIVITIES,
   MOCK_RECENT_MESSAGES,
 } from "../../data/adminDashboardMock";
+import { formatDate, formatDateLong, formatDateTime } from "../../utils/datetime";
 
-const today = new Date().toLocaleDateString("en-GB", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
+const today = formatDateLong(new Date(), { month: "long" });
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -487,7 +483,7 @@ export default function AdminDashboard() {
                       </div>
                       <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap bg-gray-50 px-2 py-1 rounded-lg">
                         {activity.createdAt
-                          ? new Date(activity.createdAt).toLocaleDateString()
+                          ? formatDate(activity.createdAt)
                           : "—"}
                       </span>
                     </div>
@@ -544,9 +540,7 @@ export default function AdminDashboard() {
                           </p>
                           <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap ml-2">
                             {conv.lastMessage?.createdAt
-                              ? new Date(
-                                  conv.lastMessage.createdAt,
-                                ).toLocaleDateString()
+                              ? formatDate(conv.lastMessage.createdAt)
                               : ""}
                           </span>
                         </div>
@@ -627,7 +621,7 @@ export default function AdminDashboard() {
                           </p>
                           <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap ml-2">
                             {notif.createdAt
-                              ? new Date(notif.createdAt).toLocaleDateString()
+                              ? formatDate(notif.createdAt)
                               : ""}
                           </span>
                         </div>
@@ -732,7 +726,7 @@ export default function AdminDashboard() {
                   />
                 </svg>
                 Received:{" "}
-                {new Date(selectedNotification.createdAt).toLocaleString()}
+                {formatDateTime(selectedNotification.createdAt)}
               </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">

@@ -25,11 +25,13 @@ import {
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/Input';
+import PageHero, { HeroButton, HeroGhostButton } from '../../components/superadmin/PageHero';
 import {
   PLATFORM_MODULES_FALLBACK,
   PLATFORM_MODULE_COUNT,
   formatPlatformRoleName,
 } from '../../constants/platformModules';
+import { formatDateTime } from '../../utils/datetime';
 
 const MODULE_COUNT = PLATFORM_MODULE_COUNT;
 
@@ -236,21 +238,18 @@ const SuperadminTeam = () => {
 
  return (
     <div className="space-y-4 pb-4">
- {/* Modern Header */}
- <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-100">
- <div>
-        <h1 className="text-xl font-black text-secondary tracking-tight">Administrative Team</h1>
-        <p className="text-xs text-gray-400 mt-0.5 font-medium uppercase tracking-widest">Manage internal accounts and access levels</p>
- </div>
- <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleCreateRole} className="text-xs font-black uppercase tracking-widest px-4 py-2">
-            <RiShieldUserLine size={16} className="inline mr-1"/> Create Role
-          </Button>
-          <Button variant="primary" onClick={() => setIsInviteModalOpen(true)} className="text-xs font-black uppercase tracking-widest px-4 py-2 shadow-lg shadow-primary/20">
-            <RiAddLine size={16} className="inline mr-1"/> Invite
-          </Button>
- </div>
- </div>
+      <PageHero
+        icon={RiGroupLine}
+        title="Administrative Team"
+        subtitle="Manage internal accounts and access levels"
+      >
+        <HeroGhostButton onClick={handleCreateRole}>
+          <RiShieldUserLine size={16} /> Create Role
+        </HeroGhostButton>
+        <HeroButton onClick={() => setIsInviteModalOpen(true)}>
+          <RiAddLine size={16} /> Invite
+        </HeroButton>
+      </PageHero>
 
  {loadError && (
    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -455,7 +454,7 @@ const SuperadminTeam = () => {
  member.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'
  }`} />
  <span className="text-sm font-bold text-gray-400">
-   {member.lastActive ? new Date(member.lastActive).toLocaleString() : '—'}
+   {member.lastActive ? formatDateTime(member.lastActive) : '—'}
  </span>
  </div>
  </td>

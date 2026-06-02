@@ -33,7 +33,7 @@ import {
 } from "../../store/slices/platformBrandingSlice";
 import useModuleAccess from "../../hooks/useModuleAccess";
 import { resolveAssetUrl } from "../../utils/assetUrl";
-import { logout } from "../../store/slices/authSlice";
+import { performLogout } from "../../utils/performLogout";
 
 const sidebarVariants = {
   open: {
@@ -143,8 +143,7 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
   const { canAccess } = useModuleAccess();
 
   const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login");
+    performLogout(dispatch, navigate);
   };
 
   const SidebarContent = () => {

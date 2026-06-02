@@ -20,6 +20,8 @@ import { getSponsoredWorkerDetails, updateSponsoredWorker, updateWorkerStatus } 
 import { toast } from "react-hot-toast";
 import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
 import useDownloads from "../../hooks/useDownloads";
+import { formatDate } from "../../utils/datetime";
+import DatePicker from "../../components/DatePicker";
 
 const SponsoredWorkerDetails = () => {
   const [activeTab, setActiveTab] = useState("details");
@@ -328,14 +330,15 @@ const SponsoredWorkerDetails = () => {
                 <div>
                   <label className={labelStyle}>Date of Birth</label>
                   {isEditing ? (
-                    <input 
-                      type="date"
-                      className={editInputStyle} 
-                      value={editForm.dob ? editForm.dob.split('T')[0] : ''} 
+                    <DatePicker
+                      name="dob"
+                      value={editForm.dob ? editForm.dob.split('T')[0] : ''}
                       onChange={(e) => setEditForm({...editForm, dob: e.target.value})}
+                      placeholder="Select date"
+                      max={new Date().toISOString().split("T")[0]}
                     />
                   ) : (
-                    <div className={inputStyle}>{application?.dob ? new Date(application.dob).toLocaleDateString() : "N/A"}</div>
+                    <div className={inputStyle}>{application?.dob ? formatDate(application.dob) : "N/A"}</div>
                   )}
                 </div>
 
@@ -475,14 +478,14 @@ const SponsoredWorkerDetails = () => {
                 <div>
                   <label className={labelStyle}>Visa Expiry Date</label>
                   {isEditing ? (
-                    <input 
-                      type="date"
-                      className={editInputStyle} 
-                      value={editForm.visaExpiryDate ? editForm.visaExpiryDate.split('T')[0] : ''} 
+                    <DatePicker
+                      name="visaExpiryDate"
+                      value={editForm.visaExpiryDate ? editForm.visaExpiryDate.split('T')[0] : ''}
                       onChange={(e) => setEditForm({...editForm, visaExpiryDate: e.target.value})}
+                      placeholder="Select date"
                     />
                   ) : (
-                    <div className={inputStyle}>{application?.visaEndDate ? new Date(application.visaEndDate).toLocaleDateString() : "N/A"}</div>
+                    <div className={inputStyle}>{application?.visaEndDate ? formatDate(application.visaEndDate) : "N/A"}</div>
                   )}
                 </div>
 
@@ -602,7 +605,7 @@ const SponsoredWorkerDetails = () => {
                   }`}>
                     {Object.values(workerData.documents).every(s => s === 'complete') ? 'Compliant' : 'Review Required'}
                   </span>
-                  <p className="text-[10px] font-bold text-gray-400">Last Checked: {new Date().toLocaleDateString()}</p>
+                  <p className="text-[10px] font-bold text-gray-400">Last Checked: {formatDate(new Date())}</p>
                 </div>
               </div>
 

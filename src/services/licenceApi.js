@@ -117,7 +117,7 @@ export const deleteComplianceDocument = (id) =>
 
 // Business: Employee records (sponsored workers with compliance info)
 export const getEmployeeRecords = () =>
-  api.get("/api/business/workers");
+  api.get("/api/business/workers/employee-records");
 
 // Business: Reporting obligations
 export const getReportingObligations = () =>

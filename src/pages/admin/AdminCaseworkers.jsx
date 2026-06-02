@@ -17,7 +17,9 @@ import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
+import PhoneInput from "../../components/PhoneInput";
 import Button from "../../components/Button";
+import { isValidPhone } from "../../utils/countries";
 import useCaseworker from "../../hooks/useCaseworker";
 import useDownloads from "../../hooks/useDownloads";
 import { useToast } from "../../context/ToastContext";
@@ -31,6 +33,7 @@ import {
   getCaseworkerById,
 } from "../../services/caseWorker";
 import { getOrganisationSlugFromHost } from "../../utils/organisationHost";
+import { formatDateLong } from "../../utils/datetime";
 
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
 
@@ -138,11 +141,7 @@ function candidateDisplayName(candidate) {
 function formatTargetDate(value) {
   if (!value) return "—";
   try {
-    return new Date(value).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+    return formatDateLong(value, { month: "short" });
   } catch {
     return "—";
   }
@@ -352,6 +351,8 @@ export default function AdminCaseworkers() {
     if (!createForm.country_code.trim())
       errs.country_code = "Country code is required";
     if (!createForm.mobile.trim()) errs.mobile = "Mobile is required";
+    else if (!isValidPhone(createForm.country_code, createForm.mobile))
+      errs.mobile = "Enter a valid phone number for the selected country";
     if (!createForm.password) errs.password = "Password is required";
     else if (createForm.password.length < 8)
       errs.password = "Password must be at least 8 characters";
@@ -372,6 +373,8 @@ export default function AdminCaseworkers() {
     if (!editForm.country_code.trim())
       errs.country_code = "Country code is required";
     if (!editForm.mobile.trim()) errs.mobile = "Mobile is required";
+    else if (!isValidPhone(editForm.country_code, editForm.mobile))
+      errs.mobile = "Enter a valid phone number for the selected country";
     return errs;
   };
 
@@ -880,21 +883,17 @@ export default function AdminCaseworkers() {
               required
               error={errors.email}
             />
-            <Input
-              label="Country Code"
-              name="country_code"
-              value={createForm.country_code}
-              onChange={handleCreateChange}
-              required
-              error={errors.country_code}
-            />
-            <Input
+            <PhoneInput
+              split
               label="Mobile"
-              name="mobile"
-              value={createForm.mobile}
+              dialCode={createForm.country_code}
+              national={createForm.mobile}
+              dialName="country_code"
+              nationalName="mobile"
               onChange={handleCreateChange}
               required
               error={errors.mobile}
+              className="sm:col-span-2"
             />
             <Input
               label="Role"
@@ -959,21 +958,17 @@ export default function AdminCaseworkers() {
               required
               error={errors.email}
             />
-            <Input
-              label="Country Code"
-              name="country_code"
-              value={editForm.country_code}
-              onChange={handleEditChange}
-              required
-              error={errors.country_code}
-            />
-            <Input
+            <PhoneInput
+              split
               label="Mobile"
-              name="mobile"
-              value={editForm.mobile}
+              dialCode={editForm.country_code}
+              national={editForm.mobile}
+              dialName="country_code"
+              nationalName="mobile"
               onChange={handleEditChange}
               required
               error={errors.mobile}
+              className="sm:col-span-2"
             />
             <Input
               label="Role"

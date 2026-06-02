@@ -15,6 +15,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Modal from "../../components/Modal";
+import Input from "../../components/Input";
+import PhoneInput from "../../components/PhoneInput";
+import { isValidPhone } from "../../utils/countries";
 import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
 import { useToast } from "../../context/ToastContext";
@@ -35,6 +38,7 @@ import useCandidate from "../../hooks/useCandidate";
 import { resolveCaseStage } from "../../constants/immigrationCaseProcess";
 import { getDecisionDocuments } from "../../services/workflowApi";
 import { downloadDocument, triggerDownload } from "../../services/documentApi";
+import { formatDateLong } from "../../utils/datetime";
 
 const RATING_LABELS = [
   "",
@@ -173,40 +177,10 @@ function splitFullName(full) {
   return { first_name, last_name };
 }
 
-function formatPhoneDisplay(countryCode, mobile) {
-  const c = (countryCode || "").trim();
-  const m = (mobile || "").trim();
-  if (!c && !m) return "";
-  if (c && m) return `${c} ${m}`;
-  return c || m;
-}
-
-function parsePhoneInput(input, fallbackCode) {
-  const t = (input || "").trim();
-  if (!t) {
-    return { country_code: (fallbackCode || "").trim(), mobile: "" };
-  }
-  const parts = t.split(/\s+/);
-  if (parts[0]?.startsWith("+")) {
-    const country_code = parts[0];
-    const rest = parts.slice(1).join("");
-    const mobile = rest.replace(/\D/g, "");
-    return { country_code, mobile };
-  }
-  return {
-    country_code: (fallbackCode || "").trim() || "+44",
-    mobile: t.replace(/\D/g, ""),
-  };
-}
-
 function formatConsentDate(iso) {
   if (!iso) return null;
   try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return formatDateLong(iso, { month: "short" });
   } catch {
     return null;
   }
@@ -354,8 +328,8 @@ const CandidateAccount = () => {
     fullNameFromParts(reduxUser?.first_name, reduxUser?.last_name),
   );
   const [email, setEmail] = useState(reduxUser?.email ?? "");
-  const [phone, setPhone] = useState("");
-  const [savedCountryCode, setSavedCountryCode] = useState("");
+  const [countryCode, setCountryCode] = useState("+44");
+  const [mobile, setMobile] = useState("");
 
   const [caseInfo, setCaseInfo] = useState(null);
   const [termsAcceptedAt, setTermsAcceptedAt] = useState(null);
@@ -423,8 +397,8 @@ const CandidateAccount = () => {
       const u = d.user;
       setFullName(fullNameFromParts(u.first_name, u.last_name));
       setEmail(u.email || "");
-      setPhone(formatPhoneDisplay(u.country_code, u.mobile));
-      setSavedCountryCode((u.country_code || "").trim());
+      setCountryCode((u.country_code || "").trim() || "+44");
+      setMobile((u.mobile || "").trim());
       setGender(u.gender || "");
       setProfilePicPreview(u.profile_pic || null);
       setTwoFactorEnabled(!!u.two_factor_enabled);
@@ -533,12 +507,12 @@ const CandidateAccount = () => {
 
   const handleSaveProfile = async () => {
     const { first_name, last_name } = splitFullName(fullName);
-    const { country_code, mobile } = parsePhoneInput(phone, savedCountryCode);
-    if (!mobile || String(mobile).length < 6) {
+    const country_code = (countryCode || "").trim();
+    const mobileDigits = (mobile || "").replace(/[^\d]/g, "");
+    if (!isValidPhone(country_code, mobileDigits)) {
       showToast({
         variant: "danger",
-        message:
-          "Enter a valid phone number (include country code, e.g. +44 …).",
+        message: "Enter a valid phone number for the selected country.",
       });
       return;
     }
@@ -548,7 +522,7 @@ const CandidateAccount = () => {
       formData.append("first_name", first_name);
       formData.append("last_name", last_name);
       formData.append("country_code", country_code);
-      formData.append("mobile", mobile);
+      formData.append("mobile", mobileDigits);
       formData.append("gender", gender);
       if (profilePicFile) {
         formData.append("profile_pic", profilePicFile, profilePicFile.name);
@@ -559,8 +533,8 @@ const CandidateAccount = () => {
       if (user) {
         applyUserToStore(user);
         setFullName(fullNameFromParts(user.first_name, user.last_name));
-        setPhone(formatPhoneDisplay(user.country_code, user.mobile));
-        setSavedCountryCode((user.country_code || "").trim());
+        setCountryCode((user.country_code || "").trim() || "+44");
+        setMobile((user.mobile || "").trim());
         setGender(user.gender || "");
         setProfilePicPreview(user.profile_pic || null);
         setProfilePicFile(null);
@@ -1351,19 +1325,21 @@ const CandidateAccount = () => {
                       className="w-full rounded-xl border border-gray-200 bg-gray-100 px-3.5 py-2.5 text-sm font-bold text-gray-600 cursor-not-allowed outline-none"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
-                      Phone
-                    </label>
-                    <input
-                      type="text"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      disabled={profileSaving}
-                      placeholder="+44 7700900123"
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-                    />
-                  </div>
+                  <PhoneInput
+                    split
+                    label="Phone"
+                    dialCode={countryCode}
+                    national={mobile}
+                    dialName="country_code"
+                    nationalName="mobile"
+                    disabled={profileSaving}
+                    placeholder="7700 900123"
+                    onChange={(e) => {
+                      if (e.target.name === "country_code")
+                        setCountryCode(e.target.value);
+                      else setMobile(e.target.value);
+                    }}
+                  />
                   <div>
                     <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
                       Gender
@@ -1400,23 +1376,20 @@ const CandidateAccount = () => {
               </h2>
               <div className="space-y-4">
                 {[
-                  ["Current password", currentPassword, setCurrentPassword],
-                  ["New password", newPassword, setNewPassword],
-                  ["Confirm new password", confirmPassword, setConfirmPassword],
-                ].map(([label, val, setVal]) => (
-                  <div key={label}>
-                    <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
-                      {label}
-                    </label>
-                    <input
-                      type="password"
-                      value={val}
-                      onChange={(e) => setVal(e.target.value)}
-                      placeholder="••••••••"
-                      disabled={passwordSaving}
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2.5 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-                    />
-                  </div>
+                  ["Current password", currentPassword, setCurrentPassword, "current_password"],
+                  ["New password", newPassword, setNewPassword, "new_password"],
+                  ["Confirm new password", confirmPassword, setConfirmPassword, "confirm_password"],
+                ].map(([label, val, setVal, name]) => (
+                  <Input
+                    key={name}
+                    label={label}
+                    name={name}
+                    type="password"
+                    value={val}
+                    onChange={(e) => setVal(e.target.value)}
+                    placeholder="••••••••"
+                    readOnly={passwordSaving}
+                  />
                 ))}
                 <button
                   type="button"

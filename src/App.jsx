@@ -3,6 +3,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
 import AppRouter from "./routes/AppRouter";
 import ScrollToTop from "./components/ScrollToTop";
+import SessionTimeout from "./components/common/SessionTimeout";
 import { Toaster } from "react-hot-toast";
 
 function App() {
@@ -11,7 +12,10 @@ function App() {
       <AuthProvider>
         <ToastProvider>
           <ScrollToTop />
-          <AppRouter />
+          <SessionTimeout>
+            <AppRouter />
+          </SessionTimeout>
+
           <Toaster
             position="top-right"
             toastOptions={{

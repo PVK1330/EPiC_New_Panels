@@ -2,9 +2,11 @@ import { useMemo, useState, useCallback, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Plus, Check, Search } from "lucide-react";
 import Modal from "../../components/Modal";
+import DatePicker from "../../components/DatePicker";
 import { INITIAL_CASES } from "../../data/casesData";
 import api from "../../services/api";
 import { classifyTaskDue } from "../../utils/taskDueStatus";
+import { formatDateLong } from "../../utils/datetime";
 
 const todayIso = () => new Date().toISOString().split("T")[0];
 const TODAY_ISO = todayIso();
@@ -97,12 +99,7 @@ const INITIAL_TASKS = [
 ];
 
 function formatDue(iso) {
-  const d = new Date(iso + "T12:00:00");
-  return d.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateLong(iso + "T12:00:00", { month: "short" });
 }
 
 function badgeStatus(tone) {
@@ -618,17 +615,14 @@ export default function Tasks() {
               <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
                 Due date
               </label>
-              <input
-                type="date"
+              <DatePicker
+                name="due"
                 value={createForm.due}
                 onChange={(e) => setCreateForm((f) => ({ ...f, due: e.target.value }))}
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                  createErrors.due ? "border-red-300" : "border-gray-200"
-                }`}
+                error={createErrors.due}
+                min={TODAY_ISO}
+                placeholder="Select due date"
               />
-              {createErrors.due && (
-                <p className="text-xs font-bold text-red-600 mt-1">{createErrors.due}</p>
-              )}
             </div>
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -753,17 +747,13 @@ export default function Tasks() {
               <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
                 Due date
               </label>
-              <input
-                type="date"
+              <DatePicker
+                name="due"
                 value={editForm.due}
                 onChange={(e) => setEditForm((f) => ({ ...f, due: e.target.value }))}
-                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary ${
-                  editErrors.due ? "border-red-300" : "border-gray-200"
-                }`}
+                error={editErrors.due}
+                placeholder="Select due date"
               />
-              {editErrors.due && (
-                <p className="text-xs font-bold text-red-600 mt-1">{editErrors.due}</p>
-              )}
             </div>
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">

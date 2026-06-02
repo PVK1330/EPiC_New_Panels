@@ -1,11 +1,15 @@
 import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Search, Settings, Grid3x3, List, Calendar as CalendarIcon, Clock, MapPin, Users, Video, Phone, X, Edit, Trash2, Eye, UserCheck, CheckCircle2, CheckSquare } from "lucide-react";
 import MicrosoftConnect from "../../components/MicrosoftConnect";
+import GoogleConnect from "../../components/GoogleConnect";
 import CreateMeetingModal from "../../components/CreateMeetingModal";
+import DatePicker from "../../components/DatePicker";
+import TimePicker from "../../components/TimePicker";
 import { getUpcomingMeetings } from "../../services/teamsApi";
 import { getMyAppointments } from "../../services/appointmentApi";
 import { getWorkflowCalendarEvents } from "../../services/calendarApi";
 import { mapWorkflowEventsToCalendar } from "../../utils/calendarWorkflowEvents";
+import { formatDate, formatTime, formatWithOptions } from "../../utils/datetime";
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -174,7 +178,7 @@ const Calendar = () => {
   };
 
   const formatMonth = (date) =>
-    date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    formatWithOptions(date, { month: "long", year: "numeric" });
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -244,12 +248,7 @@ const Calendar = () => {
     setShowEventDetailModal(false);
   };
 
-  const formatEventTime = (date) =>
-    new Date(date).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+  const formatEventTime = (date) => formatTime(date);
 
   const getEventIcon = (type) => {
     switch (type) {
@@ -319,8 +318,11 @@ const Calendar = () => {
         </div>
       </div>
 
-      {/* Microsoft Teams Connection */}
-      <MicrosoftConnect />
+      {/* Integrations */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <MicrosoftConnect />
+        <GoogleConnect />
+      </div>
 
       {/* Controls Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200">
@@ -591,26 +593,26 @@ const Calendar = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Date
                     </label>
-                    <input
-                      type="date"
+                    <DatePicker
+                      name="date"
                       value={newEvent.date}
                       onChange={(e) =>
                         setNewEvent({ ...newEvent, date: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                      placeholder="Select date"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Time
                     </label>
-                    <input
-                      type="time"
+                    <TimePicker
+                      name="time"
                       value={newEvent.time}
                       onChange={(e) =>
                         setNewEvent({ ...newEvent, time: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                      placeholder="Select time"
                     />
                   </div>
                 </div>
@@ -783,15 +785,12 @@ const Calendar = () => {
                     <div>
                       <p className="text-xs text-gray-500">Date</p>
                       <p className="text-sm font-bold text-gray-900">
-                        {new Date(selectedEvent.date).toLocaleDateString(
-                          "en-US",
-                          {
-                            weekday: "long",
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          }
-                        )}
+                        {formatWithOptions(selectedEvent.date, {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
                       </p>
                     </div>
                   </div>
@@ -942,7 +941,7 @@ const EventRow = ({ event, onClick, formatEventTime, isCompleted = false }) => {
         <div className="flex items-center gap-4 text-xs text-gray-500 mt-1 flex-wrap">
           <span className="flex items-center gap-1">
             <CalendarIcon size={12} />
-            {new Date(event.date).toLocaleDateString()}
+            {formatDate(event.date)}
           </span>
           <span className="flex items-center gap-1">
             <Clock size={12} />

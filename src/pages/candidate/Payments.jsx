@@ -19,6 +19,7 @@ import {
   verifyCheckoutSession,
 } from "../../services/candidatePaymentApi";
 import useDownloads from "../../hooks/useDownloads";
+import { formatDateLong } from "../../utils/datetime";
 
 const CASE_ID_FALLBACK = "—";
 
@@ -131,11 +132,7 @@ const Payments = () => {
       return {
         id: String(i + 1),
         date: row.dueDate
-          ? new Date(row.dueDate).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })
+          ? formatDateLong(row.dueDate, { month: "short" })
           : "—",
         description: row.label || `Instalment ${i + 1}`,
         amount: `£${amount.toLocaleString()}`,

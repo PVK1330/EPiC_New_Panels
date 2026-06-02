@@ -6,6 +6,7 @@ import AdminLayout from '../layouts/AdminLayout';
 import SuperadminLayout from '../layouts/SuperadminLayout';
 import NotFoundPage from '../pages/NotFoundPage';
 import { getDashboardRouteForUser } from '../utils/authResponse';
+import { useAuthContext } from '../context/AuthContext';
 
 // ── Candidate pages ──────────────────────────────────────────────────────────
 const CandidateDashboard = lazy(() => import('../pages/candidate/CandidateDashboard'));
@@ -72,6 +73,11 @@ const AdminLicenceApplications = lazy(() => import('../pages/admin/AdminLicenceA
 const AdminEnquiryInbox = lazy(() => import('../pages/admin/AdminEnquiryInbox'));
 const AdminCclFeeApprovals = lazy(() => import('../pages/admin/AdminCclFeeApprovals'));
 const AdminAnnouncements = lazy(() => import('../pages/admin/AdminAnnouncements'));
+const AdminActivityCenter = lazy(() => import('../pages/admin/ActivityCenter'));
+const AdminTimelineExplorer = lazy(() => import('../pages/admin/TimelineExplorer'));
+const AdminChangeRequests = lazy(() => import('../pages/admin/ChangeRequests'));
+const AdminUserActivity = lazy(() => import('../pages/admin/UserActivity'));
+const AdminLoginActivity = lazy(() => import('../pages/admin/LoginActivity'));
 
 // ── Business pages ───────────────────────────────────────────────────────────
 const BusinessDashboard = lazy(() => import('../pages/business/BusinessDashboard'));
@@ -132,18 +138,19 @@ const Fallback = () => (
 );
 
 const AppRouter = () => {
-  const { user, token } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
+  const { sessionChecked } = useAuthContext();
 
   return (
     <Suspense fallback={<Fallback />}>
       <Routes>
         <Route
           path="/login"
-          element={token && user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <LoginPage />}
+          element={user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <LoginPage />}
         />
         <Route
           path="/register"
-          element={token && user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <RegisterPage />}
+          element={user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <RegisterPage />}
         />
         <Route path="/verify-otp" element={<VerifyOtpPage />} />
         <Route path="/2fa" element={<TwoFactorPage />} />
@@ -164,9 +171,11 @@ const AppRouter = () => {
         <Route
           path="/"
           element={
-            token && user
-              ? <Navigate to={getDashboardRouteForUser(user)} replace />
-              : <Navigate to="/login" replace />
+            !sessionChecked
+              ? <Fallback />
+              : user
+                ? <Navigate to={getDashboardRouteForUser(user)} replace />
+                : <Navigate to="/login" replace />
           }
         />
 
@@ -205,6 +214,11 @@ const AppRouter = () => {
           <Route path="documents" element={<AdminDocuments />} />
           <Route path="messages" element={<AdminMessages />} />
           <Route path="licence-requests" element={<AdminLicenceApplications />} />
+          <Route path="activity-center" element={<AdminActivityCenter />} />
+          <Route path="timeline-explorer" element={<AdminTimelineExplorer />} />
+          <Route path="change-requests" element={<AdminChangeRequests />} />
+          <Route path="user-activity" element={<AdminUserActivity />} />
+          <Route path="login-activity" element={<AdminLoginActivity />} />
         </Route>
 
         <Route
