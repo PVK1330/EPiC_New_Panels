@@ -13,6 +13,7 @@ import {
 } from 'react-icons/ri';
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
+import PageHero, { HeroButton } from '../../components/superadmin/PageHero';
 import useBilling from '../../hooks/useBilling';
 import useDownloads from '../../hooks/useDownloads';
 import toast from 'react-hot-toast';
@@ -81,17 +82,15 @@ const SuperadminBilling = () => {
 
  return (
   <div className="space-y-4 pb-4">
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-100">
-      <div>
-        <h1 className="text-xl font-black text-secondary tracking-tight">Billing & Revenue</h1>
-        <p className="text-xs text-gray-400 mt-0.5 font-medium">Monitor platform monetization, subscription health, and revenue analytics.</p>
-      </div>
-  <div className="flex items-center gap-2">
-   <Button variant="primary" onClick={() => handleGlobalAction('Export')} className="text-xs font-bold">
-     <RiFileDownloadLine size={16} className="inline mr-1"/> Export Financials
-   </Button>
-  </div>
- </div>
+    <PageHero
+      icon={RiBillLine}
+      title="Billing & Revenue"
+      subtitle="Monitor platform monetization, subscription health, and revenue analytics."
+    >
+   <HeroButton onClick={() => handleGlobalAction('Export')}>
+     <RiFileDownloadLine size={16} /> Export Financials
+   </HeroButton>
+    </PageHero>
 
  <motion.div 
   initial={{ opacity: 0 }}

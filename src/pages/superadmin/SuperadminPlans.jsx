@@ -11,6 +11,7 @@ import {
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import Modal from '../../components/common/Modal';
+import PageHero, { HeroButton } from '../../components/superadmin/PageHero';
 import * as planService from '../../services/superadminPlan.service';
 import { toast } from 'react-hot-toast';
 import useModules from '../../hooks/useModules';
@@ -182,17 +183,15 @@ const SuperadminPlans = () => {
 
   return (
     <div className="space-y-6 pb-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
-        <div>
-          <h1 className="text-2xl font-black text-secondary tracking-tight">Subscription Plans</h1>
-          <p className="text-sm text-gray-400 mt-1 font-medium">Create and manage subscription tiers, pricing, and available modules.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="primary" onClick={() => handleOpenModal()} className="px-6 py-2.5 text-sm font-bold shadow-lg shadow-primary/20">
-            <RiSettings4Line size={18} className="inline mr-2" /> Create Plan
-          </Button>
-        </div>
-      </div>
+      <PageHero
+        icon={RiSettings4Line}
+        title="Subscription Plans"
+        subtitle="Create and manage subscription tiers, pricing, and available modules."
+      >
+        <HeroButton onClick={() => handleOpenModal()}>
+          <RiSettings4Line size={18} /> Create Plan
+        </HeroButton>
+      </PageHero>
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white/50 rounded-3xl border border-gray-100 animate-pulse">

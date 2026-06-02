@@ -9,7 +9,7 @@ import {
  RiShieldLine,
  RiMoneyPoundCircleLine,
 } from 'react-icons/ri';
-import Button from '../../components/Button';
+import PageHero, { HeroButton } from '../../components/superadmin/PageHero';
 import { fetchPlatformAuditLogs } from '../../services/superadminAudit.service';
 import useDownloads from '../../hooks/useDownloads';
 import { formatDateTime } from '../../utils/datetime';
@@ -84,16 +84,15 @@ const SuperadminAuditLog = () => {
 
   return (
     <div className="space-y-4 pb-4">
-      {/* Modern Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-100">
-        <h1 className="text-xl font-black text-secondary tracking-tight">Audit Logs</h1>
-        <p className="text-xs text-gray-400 mt-0.5 font-medium uppercase tracking-widest">Complete record of system activities</p>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleDownloadCsv} className="text-xs font-bold">
-            <RiFileDownloadLine size={16} className="inline mr-1"/> Download Excel
-          </Button>
-        </div>
-      </div>
+      <PageHero
+        icon={RiHistoryLine}
+        title="Audit Logs"
+        subtitle="Complete record of system activities"
+      >
+        <HeroButton onClick={handleDownloadCsv}>
+          <RiFileDownloadLine size={16} /> Download Excel
+        </HeroButton>
+      </PageHero>
 
       {/* Main Card */}
       <motion.div 

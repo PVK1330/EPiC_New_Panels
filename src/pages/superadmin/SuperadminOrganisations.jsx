@@ -10,6 +10,10 @@ import {
   RiLoginBoxLine,
   RiAddLine,
   RiEyeLine,
+  RiBuilding2Line,
+  RiCheckboxCircleLine,
+  RiTimeLine,
+  RiCloseCircleLine,
 } from 'react-icons/ri';
 import CreateOrganizationModal from '../../components/superadmin/CreateOrganizationModal';
 import Button from '../../components/Button';
@@ -43,6 +47,41 @@ const mapApiOrgToRow = (o) => ({
   primaryEmail: o.primaryEmail,
   _raw: o,
 });
+
+const StatCard = ({ title, value, icon: Icon, color, delay = 0 }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{ delay, duration: 0.3 }}
+    className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 group hover:border-primary/20 transition-all"
+  >
+    <div className={`p-2.5 rounded-lg border ${color}`}>
+      <Icon size={20} />
+    </div>
+    <div>
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">{title}</p>
+      <span className="text-2xl font-black text-secondary leading-none">{value}</span>
+    </div>
+  </motion.div>
+);
+
+const SkeletonRow = () => (
+  <tr className="animate-pulse">
+    <td className="px-5 py-3">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 bg-gray-100 rounded-lg" />
+        <div className="space-y-1.5">
+          <div className="h-3 w-32 bg-gray-100 rounded" />
+          <div className="h-2 w-24 bg-gray-50 rounded" />
+        </div>
+      </div>
+    </td>
+    <td className="px-5 py-3"><div className="h-5 w-16 bg-gray-100 rounded-md" /></td>
+    <td className="px-5 py-3"><div className="h-3 w-6 bg-gray-100 rounded mx-auto" /></td>
+    <td className="px-5 py-3"><div className="h-5 w-16 bg-gray-100 rounded-full" /></td>
+    <td className="px-5 py-3"><div className="h-7 w-28 bg-gray-100 rounded-lg ml-auto" /></td>
+  </tr>
+);
 
 const SuperadminOrganisations = () => {
   const [activeTab, setActiveTab] = useState('All');
@@ -96,6 +135,15 @@ const SuperadminOrganisations = () => {
 
   const totalPages = Math.ceil(filteredOrgs.length / itemsPerPage);
   const paginatedOrgs = filteredOrgs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const countByStatus = (status) => orgs.filter((o) => (o.status || '').toLowerCase() === status).length;
+  const stats = {
+    total: orgs.length,
+    active: countByStatus('active'),
+    trial: countByStatus('trial'),
+    suspended: countByStatus('suspended'),
+  };
+  const tabCount = (tab) => (tab === 'All' ? orgs.length : countByStatus(tab.toLowerCase()));
 
   const handleCreateOrg = async (data) => {
     if (!data.adminFirstName?.trim() || !data.adminLastName?.trim()) {
@@ -373,32 +421,43 @@ const SuperadminOrganisations = () => {
         </div>
       </Modal>
 
-      {/* Modern Header with Gradient Background */}
-      <motion.div 
+      {/* Branded gradient hero */}
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gray-100 rounded-2xl p-8  shadow-lg border border-white/10 overflow-hidden relative"
+        className="relative overflow-hidden rounded-2xl border border-gray-100 bg-gradient-to-br from-secondary to-secondary-dark p-8 shadow-lg"
       >
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+        <div className="absolute inset-0 opacity-25 pointer-events-none">
+          <div className="absolute -top-12 -right-10 w-72 h-72 bg-primary rounded-full blur-3xl" />
+          <div className="absolute -bottom-16 -left-10 w-72 h-72 bg-white rounded-full blur-3xl" />
         </div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-             <h1 className="text-3xl font-black text-secondary mb-2">Organisations</h1>
-             <p className="text-sm text-gray-500 font-medium">Manage all client organisations and their statuses.</p>
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex w-14 h-14 rounded-2xl bg-white/10 border border-white/20 items-center justify-center backdrop-blur-sm">
+              <RiBuilding2Line className="text-white" size={26} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black text-white mb-1">Organisations</h1>
+              <p className="text-sm text-white/70 font-medium">Manage all client organisations, plans and access.</p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-             <Button 
-                onClick={() => setIsCreateModalOpen(true)}
-                className="px-6 py-2.5 text-sm font-bold shadow-lg shadow-primary/20"
-             >
-                <RiAddLine size={18} className="inline mr-2" /> Create Organisation
-             </Button>
-          </div>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-white text-secondary text-sm font-bold shadow-lg hover:bg-gray-50 active:scale-[0.98] transition-all"
+          >
+            <RiAddLine size={18} /> Create Organisation
+          </button>
         </div>
       </motion.div>
-      
+
+      {/* Summary stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard title="Total" value={stats.total} icon={RiBuilding2Line} color="bg-secondary/5 text-secondary border-secondary/10" delay={0.05} />
+        <StatCard title="Active" value={stats.active} icon={RiCheckboxCircleLine} color="bg-green-50 text-green-600 border-green-100" delay={0.1} />
+        <StatCard title="Trial" value={stats.trial} icon={RiTimeLine} color="bg-blue-50 text-blue-600 border-blue-100" delay={0.15} />
+        <StatCard title="Suspended" value={stats.suspended} icon={RiCloseCircleLine} color="bg-red-50 text-red-600 border-red-100" delay={0.2} />
+      </div>
+
       {/* Filters & Search */}
       <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex bg-gray-50 p-1 rounded-lg w-fit border border-gray-100">
@@ -406,13 +465,20 @@ const SuperadminOrganisations = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-1.5 rounded text-[9px] font-bold uppercase tracking-widest transition-all ${
+              className={`px-4 py-1.5 rounded text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-1.5 ${
                 activeTab === tab
                   ? 'bg-white text-primary shadow-sm border border-gray-100'
                   : 'text-gray-400 hover:text-secondary'
               }`}
             >
               {tab}
+              <span
+                className={`inline-flex items-center justify-center min-w-[1.1rem] px-1 rounded-full text-[9px] leading-none py-0.5 ${
+                  activeTab === tab ? 'bg-primary/10 text-primary' : 'bg-gray-200/70 text-gray-400'
+                }`}
+              >
+                {tabCount(tab)}
+              </span>
             </button>
           ))}
         </div>
@@ -448,11 +514,7 @@ const SuperadminOrganisations = () => {
             </thead>
             <tbody className="divide-y divide-gray-50/50">
               {loading ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    Loading organisations…
-                  </td>
-                </tr>
+                Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
               ) : paginatedOrgs.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-12 text-center">
@@ -472,9 +534,14 @@ const SuperadminOrganisations = () => {
                       <div className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-gray-400 font-black text-xs group-hover/row:bg-primary group-hover/row:text-white transition-all">
                         {org.name.charAt(0)}
                       </div>
-                      <div>
-                        <p className="font-bold text-secondary text-sm">{org.name}</p>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{org.country}</p>
+                      <div className="min-w-0">
+                        <p className="font-bold text-secondary text-sm flex items-center gap-2">
+                          <span className="truncate">{org.name}</span>
+                          {org.country && org.country !== '—' && (
+                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tight shrink-0">{org.country}</span>
+                          )}
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-mono truncate">{getOrganisationSubdomainLabel(org.slug)}</p>
                       </div>
                     </div>
                   </td>
