@@ -24,6 +24,7 @@ import {
 import { addSponsoredWorker } from "../../services/sponsoredWorkerApi";
 import { useToast } from "../../context/ToastContext";
 import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
+import DatePicker from "../../components/DatePicker";
 
 const SponsoredWorkerForm = () => {
   const navigate = useNavigate();
@@ -167,13 +168,13 @@ const SponsoredWorkerForm = () => {
 
               <div>
                 <label className={labelStyle}>Date of Birth *</label>
-                <input
-                  type="date"
+                <DatePicker
                   name="dob"
                   value={formData.dob}
                   onChange={handleInputChange}
-                  className={inputStyle}
+                  placeholder="Select date"
                   required
+                  max={new Date().toISOString().split("T")[0]}
                 />
               </div>
 
@@ -246,24 +247,22 @@ const SponsoredWorkerForm = () => {
 
               <div>
                 <label className={labelStyle}>Issue Date *</label>
-                <input
-                  type="date"
+                <DatePicker
                   name="passportIssueDate"
                   value={formData.passportIssueDate}
                   onChange={handleInputChange}
-                  className={inputStyle}
+                  placeholder="Select date"
                   required
                 />
               </div>
 
               <div>
                 <label className={labelStyle}>Expiry Date *</label>
-                <input
-                  type="date"
+                <DatePicker
                   name="passportExpiryDate"
                   value={formData.passportExpiryDate}
                   onChange={handleInputChange}
-                  className={inputStyle}
+                  placeholder="Select date"
                   required
                 />
               </div>
@@ -384,12 +383,11 @@ const SponsoredWorkerForm = () => {
 
               <div>
                 <label className={labelStyle}>Start Date *</label>
-                <input
-                  type="date"
+                <DatePicker
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleInputChange}
-                  className={inputStyle}
+                  placeholder="Select date"
                   required
                 />
               </div>
@@ -450,12 +448,11 @@ const SponsoredWorkerForm = () => {
 
               <div>
                 <label className={labelStyle}>Visa Expiry Date *</label>
-                <input
-                  type="date"
+                <DatePicker
                   name="visaExpiryDate"
                   value={formData.visaExpiryDate}
                   onChange={handleInputChange}
-                  className={inputStyle}
+                  placeholder="Select date"
                   required
                 />
               </div>

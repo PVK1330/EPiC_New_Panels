@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import Modal from "../../components/Modal";
 import SearchableSelect from "../../components/SearchableSelect";
+import DatePicker from "../../components/DatePicker";
+import TimePicker from "../../components/TimePicker";
 import * as appointmentApi from "../../services/appointmentApi";
 import { getTeamsMeetings } from "../../services/teamsApi";
 import { useToast } from "../../context/ToastContext";
@@ -643,14 +645,14 @@ const Appointments = () => {
               >
                 Date
               </label>
-              <input
-                id="apt-date"
-                type="date"
+              <DatePicker
+                name="date"
                 value={form.date}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, date: e.target.value }))
                 }
-                className="w-full min-w-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-900 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow sm:px-4 sm:py-3"
+                min={new Date().toISOString().split("T")[0]}
+                placeholder="Select date"
                 required
               />
             </div>
@@ -661,14 +663,13 @@ const Appointments = () => {
               >
                 Time
               </label>
-              <input
-                id="apt-time"
-                type="time"
+              <TimePicker
+                name="time"
                 value={form.time}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, time: e.target.value }))
                 }
-                className="w-full min-w-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-900 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow sm:px-4 sm:py-3"
+                placeholder="Select time"
                 required
               />
             </div>

@@ -3,6 +3,8 @@ import { ChevronLeft, ChevronRight, Plus, Search, Settings, Grid3x3, List, Calen
 import MicrosoftConnect from "../../components/MicrosoftConnect";
 import GoogleConnect from "../../components/GoogleConnect";
 import CreateMeetingModal from "../../components/CreateMeetingModal";
+import DatePicker from "../../components/DatePicker";
+import TimePicker from "../../components/TimePicker";
 import { getUpcomingMeetings } from "../../services/teamsApi";
 import { getMyAppointments } from "../../services/appointmentApi";
 import { formatDate, formatTime, formatWithOptions } from "../../utils/datetime";
@@ -574,26 +576,26 @@ const Calendar = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Date
                     </label>
-                    <input
-                      type="date"
+                    <DatePicker
+                      name="date"
                       value={newEvent.date}
                       onChange={(e) =>
                         setNewEvent({ ...newEvent, date: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                      placeholder="Select date"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Time
                     </label>
-                    <input
-                      type="time"
+                    <TimePicker
+                      name="time"
                       value={newEvent.time}
                       onChange={(e) =>
                         setNewEvent({ ...newEvent, time: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                      placeholder="Select time"
                     />
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import Button from "../Button";
+import DatePicker from "../DatePicker";
 
 const emptyRow = () => ({ label: "", amount: "", dueDate: "" });
 
@@ -129,16 +130,18 @@ export default function CclFeeProposalModal({
                     }}
                     className="col-span-3 rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-bold"
                   />
-                  <input
-                    type="date"
-                    value={row.dueDate}
-                    onChange={(e) => {
-                      const next = [...rows];
-                      next[idx] = { ...next[idx], dueDate: e.target.value };
-                      setRows(next);
-                    }}
-                    className="col-span-4 rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-bold"
-                  />
+                  <div className="col-span-4">
+                    <DatePicker
+                      name="dueDate"
+                      value={row.dueDate}
+                      onChange={(e) => {
+                        const next = [...rows];
+                        next[idx] = { ...next[idx], dueDate: e.target.value };
+                        setRows(next);
+                      }}
+                      placeholder="Select date"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => setRows((prev) => prev.filter((_, i) => i !== idx))}

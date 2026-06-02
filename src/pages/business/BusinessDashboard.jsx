@@ -24,7 +24,6 @@ import {
   formatLastMessagePreview,
   sortConversationsByRecent,
 } from "../../utils/messagingConversations";
-import { MOCK_NOTIFICATIONS } from "../../data/adminDashboardMock";
 import { formatDate, formatDateTime } from "../../utils/datetime";
 
 const getStatusIcon = (status) => {
@@ -63,9 +62,7 @@ export default function BusinessDashboard() {
         setCases(cRes?.data?.data?.cases || []);
         setWorkers(wRes?.data?.data || []);
         const notifList = nRes?.data?.data?.notifications || nRes?.data?.data || [];
-        setNotifications(
-          Array.isArray(notifList) && notifList.length > 0 ? notifList : MOCK_NOTIFICATIONS,
-        );
+        setNotifications(Array.isArray(notifList) ? notifList : []);
         const msgList = sortConversationsByRecent(
           extractConversationsFromResponse(mRes),
         ).slice(0, 5);

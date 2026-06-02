@@ -14,6 +14,9 @@ const Input = ({
   options,
   rows,
   readOnly = false,
+  min,
+  max,
+  step,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -70,6 +73,9 @@ const Input = ({
             placeholder={placeholder}
             required={required}
             readOnly={readOnly}
+            min={min}
+            max={max}
+            step={step}
             className={fieldCls}
           />
           {isPasswordType && (

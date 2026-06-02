@@ -18,6 +18,7 @@ import { RiNotification3Line } from "react-icons/ri";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import Modal from "../../components/Modal";
+import { DateTimePicker } from "../../components/DatePicker";
 import {
   getNotifications,
   getUnreadNotificationCount,
@@ -861,13 +862,14 @@ export default function AdminNotifications() {
               </label>
               {formData.isScheduled && (
                 <div className="ml-6">
-                  <Input
+                  <DateTimePicker
                     label="Scheduled date & time"
                     name="scheduledDate"
-                    type="datetime-local"
                     value={formData.scheduledDate}
                     onChange={handleInputChange}
                     error={errors.scheduledDate}
+                    placeholder="Select date & time"
+                    min={new Date().toISOString().split("T")[0]}
                     required
                   />
                 </div>

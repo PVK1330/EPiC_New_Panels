@@ -24,6 +24,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { submitLicenceApplication } from "../../services/licenceApi";
 import { useToast } from "../../context/ToastContext";
+import DatePicker from "../../components/DatePicker";
 
 const ApplyLicence = () => {
   const navigate = useNavigate();
@@ -399,16 +400,13 @@ const ApplyLicence = () => {
 
                         <div>
                           <label className={labelClasses}>Proposed Start Date</label>
-                          <div className="relative">
-                            <Calendar size={18} className="absolute left-5 top-4 text-gray-300" />
-                            <input
-                              type="date"
-                              name="proposedStartDate"
-                              value={formData.proposedStartDate}
-                              onChange={handleInputChange}
-                              className={`${inputClasses} pl-12`}
-                            />
-                          </div>
+                          <DatePicker
+                            name="proposedStartDate"
+                            value={formData.proposedStartDate}
+                            onChange={handleInputChange}
+                            placeholder="Select date"
+                            min={new Date().toISOString().split("T")[0]}
+                          />
                         </div>
 
                         <div className="md:col-span-2">
