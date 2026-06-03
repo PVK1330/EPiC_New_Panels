@@ -75,18 +75,26 @@ export default function PhoneInput({
     return defaultCountry;
   });
 
-  // In split mode the national number is controlled by the parent; we keep a
-  // formatted display copy. In combined mode we own it locally.
+  // We always keep a LOCAL formatted display copy of the national number (with
+  // the "as-you-type" spacing). The value EMITTED to the parent is always
+  // digits-only, so the backend receives e.g. "7709638776" — never "77096 38776".
   const [nationalLocal, setNationalLocal] = useState(() => {
-    if (split) return nationalProp || "";
-    if (value) {
-      const parsed = parsePhoneNumberFromString(value);
+    const initial = split ? nationalProp : value;
+    if (initial) {
+      // Format whatever the parent gave us (digits or E.164) for display.
+      const parsed = split
+        ? null
+        : parsePhoneNumberFromString(initial);
       if (parsed) return parsed.formatNational();
+      const seedCountry = split
+        ? getCountryByDialCode(dialCode)?.code || defaultCountry
+        : defaultCountry;
+      return new AsYouType(seedCountry).input(String(initial));
     }
     return "";
   });
 
-  const national = split ? nationalProp : nationalLocal;
+  const national = nationalLocal;
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -109,19 +117,21 @@ export default function PhoneInput({
     }
   };
 
-  // Emit changes upward, shaped to match each mode's contract.
+  // Emit changes upward, shaped to match each mode's contract. The value sent
+  // to the parent is ALWAYS digits-only (national) or E.164 (combined) — never
+  // the spaced display string.
   const emit = (nextCountry, nextNational) => {
     const c = getCountryByCode(nextCountry);
-    const ok = computeValidity(nextCountry, nextNational);
+    const digits = String(nextNational || "").replace(/[^\d]/g, "");
+    const ok = computeValidity(nextCountry, digits);
     if (split) {
       onChange?.({
         target: { name: dialName, value: c?.dialCode || "", type: "tel" },
       });
       onChange?.({
-        target: { name: nationalName, value: nextNational, type: "tel" },
+        target: { name: nationalName, value: digits, type: "tel" },
       });
     } else {
-      const digits = String(nextNational || "").replace(/[^\d]/g, "");
       let e164 = "";
       if (digits) {
         const parsed = parsePhoneNumberFromString(digits, nextCountry);
@@ -133,15 +143,20 @@ export default function PhoneInput({
   };
 
   const handleNationalChange = (e) => {
+    // Format for display only; emit() strips to digits for the parent/backend.
     const formatted = new AsYouType(country).input(e.target.value);
-    if (!split) setNationalLocal(formatted);
+    setNationalLocal(formatted);
     emit(country, formatted);
   };
 
   const pickCountry = (c) => {
     setCountry(c.code);
     setOpen(false);
-    emit(c.code, national);
+    // Re-format the existing digits for the newly selected country.
+    const digits = String(national || "").replace(/[^\d]/g, "");
+    const reformatted = digits ? new AsYouType(c.code).input(digits) : "";
+    setNationalLocal(reformatted);
+    emit(c.code, reformatted);
   };
 
   const filtered = useMemo(() => {

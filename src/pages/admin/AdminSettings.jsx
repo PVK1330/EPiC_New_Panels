@@ -32,6 +32,7 @@ import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
+import { getApiError } from "../../utils/apiError";
 
 // Settings Sub-components
 import AccountSettings from "../../components/admin/settings/AccountSettings";
@@ -105,14 +106,6 @@ const CONFIG_TABS = [
   { id: "payment", label: "Payment Config", icon: <FiCreditCard />, color: "text-cyan-500", bg: "bg-cyan-50" },
   { id: "sla", label: "SLA Rules", icon: <FiClock />, color: "text-orange-500", bg: "bg-orange-50" },
 ];
-
-function getApiError(error) {
-  const d = error?.response?.data;
-  const m = d?.message;
-  if (typeof m === "string") return m;
-  if (Array.isArray(m) && m.length) return m[0];
-  return error?.message || "Something went wrong";
-}
 
 export default function AdminSettings() {
   const dispatch = useDispatch();

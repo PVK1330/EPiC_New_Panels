@@ -48,6 +48,7 @@ import {
   assignCandidateBusiness,
 } from "../../services/candidateApi";
 import { getSponsors } from "../../services/sponsorApi";
+import { getApiError } from "../../utils/apiError";
 
 const PASSWORD_MIN = 6;
 
@@ -149,14 +150,6 @@ const EMPTY_CREATE = {
   confirm_password: "",
 };
 
-
-function getApiError(error) {
-  const d = error?.response?.data;
-  const m = d?.message;
-  if (typeof m === "string") return m;
-  if (Array.isArray(m) && m.length) return m[0];
-  return error?.message || "Something went wrong";
-}
 
 function displayRoleName(row) {
   const n = row?.Role?.name;
@@ -726,6 +719,8 @@ export default function AdminCandidates() {
           limit,
           debouncedSearch.trim(),
           statusParam,
+          visaParam,
+          payParam,
         );
         if (!r.ok) {
           showToast({ message: getApiError(r.error), variant: "danger" });
@@ -757,6 +752,8 @@ export default function AdminCandidates() {
           limit,
           debouncedSearch.trim(),
           statusParam,
+          visaParam,
+          payParam,
         );
         if (!r.ok) {
           showToast({ message: getApiError(r.error), variant: "danger" });

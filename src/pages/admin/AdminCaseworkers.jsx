@@ -20,6 +20,7 @@ import Input from "../../components/Input";
 import PhoneInput from "../../components/PhoneInput";
 import Button from "../../components/Button";
 import { isValidPhone } from "../../utils/countries";
+import { getApiError } from "../../utils/apiError";
 import useCaseworker from "../../hooks/useCaseworker";
 import useDownloads from "../../hooks/useDownloads";
 import { useToast } from "../../context/ToastContext";
@@ -75,14 +76,6 @@ const EMPTY_CREATE = {
   password: "",
   confirm_password: "",
 };
-
-function getApiError(error) {
-  const d = error?.response?.data;
-  const m = d?.message;
-  if (typeof m === "string") return m;
-  if (Array.isArray(m) && m.length) return m[0];
-  return error?.message || "Something went wrong";
-}
 
 function displayRoleName(row) {
   const n = row?.Role?.name;
@@ -480,6 +473,7 @@ export default function AdminCaseworkers() {
           limit,
           debouncedSearch.trim(),
           statusParam,
+          deptParam,
         );
         if (!r.ok) {
           showToast({ message: getApiError(r.error), variant: "danger" });

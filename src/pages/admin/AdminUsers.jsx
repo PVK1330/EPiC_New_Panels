@@ -14,6 +14,7 @@ import Input from "../../components/Input";
 import PhoneInput from "../../components/PhoneInput";
 import Button from "../../components/Button";
 import { isValidPhone } from "../../utils/countries";
+import { getApiError } from "../../utils/apiError";
 import useAdmin from "../../hooks/useAdmin";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -75,14 +76,6 @@ const EMPTY_CREATE = {
   status: "active",
 };
 
-
-function getApiError(error) {
-  const d = error?.response?.data;
-  const m = d?.message;
-  if (typeof m === "string") return m;
-  if (Array.isArray(m) && m.length) return m[0];
-  return error?.message || "Something went wrong";
-}
 
 function displayRoleName(admin) {
   const n = admin?.role?.name;
