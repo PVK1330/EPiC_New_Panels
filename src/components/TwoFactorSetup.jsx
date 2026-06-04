@@ -3,14 +3,7 @@ import Input from "./Input";
 import Button from "./Button";
 import eliteLogo from "../assets/elitepic_logo.png";
 import { setup2fa, verify2faSetup } from "../services/auth2faService";
-
-function getApiError(error) {
-  const d = error?.response?.data;
-  const m = d?.message;
-  if (typeof m === "string") return m;
-  if (Array.isArray(m) && m.length) return m[0];
-  return error?.message || "Something went wrong";
-}
+import { getApiError } from "../utils/apiError";
 
 const TwoFactorSetup = ({ onSetupComplete, onCancel }) => {
   const [qrCode, setQrCode] = useState(null);

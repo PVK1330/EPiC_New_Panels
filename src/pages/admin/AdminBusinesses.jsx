@@ -20,6 +20,7 @@ import DatePicker from "../../components/DatePicker";
 import CountrySelect from "../../components/CountrySelect";
 import Button from "../../components/Button";
 import { isValidPhone } from "../../utils/countries";
+import { getApiError } from "../../utils/apiError";
 import useSponsor from "../../hooks/useSponsor";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -110,14 +111,6 @@ const EMPTY_RESET = {
   new_password: "",
   confirm_password: "",
 };
-
-function getApiError(error) {
-  const d = error?.response?.data;
-  const m = d?.message;
-  if (typeof m === "string") return m;
-  if (Array.isArray(m) && m.length) return m[0];
-  return error?.message || "Something went wrong";
-}
 
 function displayRoleName(row) {
   const n = row?.Role?.name;

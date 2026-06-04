@@ -19,6 +19,7 @@ import {
 import Button from "../../components/Button";
 import CaseWorkflowBadge from "../../components/case/CaseWorkflowBadge";
 import { formatDate } from "../../utils/datetime";
+import { getApiError } from "../../utils/apiError";
 import Input from "../../components/Input";
 import DatePicker from "../../components/DatePicker";
 import NationalitySelect from "../../components/NationalitySelect";
@@ -603,7 +604,7 @@ function CaseFormModal({
 }
 
 function getApiErrorMessage(error, fallback) {
-  return error?.response?.data?.message || error?.message || fallback;
+  return getApiError(error, fallback);
 }
 
 export default function AdminCases() {
