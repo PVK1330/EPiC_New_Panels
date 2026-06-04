@@ -162,7 +162,7 @@ export default function TimePicker({
               position: "fixed",
               top: coords.top,
               left: coords.left,
-              minWidth: Math.max(coords.width, 220),
+              width: 280,
               zIndex: 9999,
             }}
             className="rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-secondary/10 p-3 animate-in fade-in zoom-in-95 duration-150"
