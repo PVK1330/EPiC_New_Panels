@@ -81,9 +81,9 @@ export default function CaseWorkflowPostCcl({
             {availability.preferredLocation} — {availability.preferredDate}{" "}
             {availability.preferredTime}
           </p>
-          {availability.preferredTimezone && (
+          {availability.timezone && (
             <p className="text-[10px] font-black uppercase tracking-wide text-primary/80">
-              Candidate timezone: {availability.preferredTimezone}
+              Candidate timezone: {availability.timezone}
             </p>
           )}
           {availability.notes && (

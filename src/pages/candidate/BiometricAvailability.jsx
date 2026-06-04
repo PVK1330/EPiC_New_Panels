@@ -24,6 +24,7 @@ export default function BiometricAvailability() {
     preferredDate: "",
     preferredTime: "",
     notes: "",
+    timezone: "UTC",
   });
 
   useEffect(() => {
@@ -42,7 +43,10 @@ export default function BiometricAvailability() {
             preferredDate: a.preferredDate || "",
             preferredTime: a.preferredTime || "",
             notes: a.notes || "",
+            timezone: a.timezone || data?.timezone || "UTC",
           });
+        } else {
+          setForm((f) => ({ ...f, timezone: data?.timezone || "UTC" }));
         }
       } catch {
         showToast({ variant: "danger", message: "Could not load your case." });
@@ -198,10 +202,24 @@ export default function BiometricAvailability() {
               onChange={(e) => setForm((f) => ({ ...f, preferredTime: e.target.value }))}
               placeholder="Select time"
             />
-            <span className="text-[11px] font-bold text-gray-400 block mt-1">
-              Use the time picker — saved in your timezone ({candidateTimezone || "UTC"}). Add wider
-              ranges (e.g. mornings only) in notes if needed.
+          <label className="block mt-4">
+            <span className="text-xs font-black uppercase text-gray-500 mb-1 block">
+              Timezone
             </span>
+            <select
+              value={form.timezone}
+              onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold bg-white"
+            >
+              {Intl.supportedValuesOf('timeZone').map(tz => (
+                <option key={tz} value={tz}>{tz}</option>
+              ))}
+            </select>
+          </label>
+          <span className="text-[11px] font-bold text-gray-400 block mt-1">
+            Use the time picker — times will be saved in the selected timezone ({form.timezone || "UTC"}). Add wider
+            ranges (e.g. mornings only) in notes if needed.
+          </span>
           </label>
           <label className="block">
             <span className="text-xs font-black uppercase text-gray-500 mb-1 block">
