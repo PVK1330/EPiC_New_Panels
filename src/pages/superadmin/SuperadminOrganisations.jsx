@@ -273,10 +273,14 @@ const SuperadminOrganisations = () => {
       // return to the platform.
       const superUser = getUser();
       if (superUser) saveImpersonatorSession(null, superUser);
-      window.location.href = buildTenantHandoffUrl(slug, {
+      const handoffUrl = buildTenantHandoffUrl(slug, {
         ticket,
         nextPath: getDashboardRouteForUser(user),
       });
+      // Open the impersonated session in a NEW TAB so the superadmin stays
+      // signed in on the platform tab. Fall back to same-tab if the popup is blocked.
+      const win = window.open(handoffUrl, "_blank", "noopener");
+      if (!win) window.location.href = handoffUrl;
     } catch (e) {
       toast.error(e?.response?.data?.message || e.message || 'Login as failed');
     } finally {

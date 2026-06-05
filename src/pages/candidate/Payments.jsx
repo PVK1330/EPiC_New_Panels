@@ -11,12 +11,15 @@ import {
   Lock,
   ArrowRight,
   ShieldCheck,
+  Landmark,
 } from "lucide-react";
 import Modal from "../../components/Modal";
 import { getCandidateCcl, getCandidatePaymentSchedule } from "../../services/workflowApi";
 import {
   createCaseCheckoutSession,
   verifyCheckoutSession,
+  getBankTransferDetails,
+  notifyBankTransfer,
 } from "../../services/candidatePaymentApi";
 import useDownloads from "../../hooks/useDownloads";
 import { formatDateLong } from "../../utils/datetime";
@@ -184,6 +187,40 @@ const Payments = () => {
     setRedirectState("idle");
   };
 
+  // ── Bank transfer ───────────────────────────────────────────────────────────
+  const [bankInfo, setBankInfo] = useState(null);
+  const [bankOpen, setBankOpen] = useState(false);
+  const [bankBusy, setBankBusy] = useState(false);
+  const [bankMsg, setBankMsg] = useState("");
+
+  const handleBankTransfer = async () => {
+    setPayError("");
+    setBankMsg("");
+    setBankBusy(true);
+    try {
+      const info = await getBankTransferDetails();
+      setBankInfo(info);
+      setBankOpen(true);
+    } catch (e) {
+      setPayError(e?.response?.data?.message || e.message || "Bank transfer is not available");
+    } finally {
+      setBankBusy(false);
+    }
+  };
+
+  const handleNotifyBank = async () => {
+    setBankBusy(true);
+    setBankMsg("");
+    try {
+      await notifyBankTransfer({ amount: balance });
+      setBankMsg("Thank you — we'll confirm your bank transfer once it has been received.");
+    } catch (e) {
+      setBankMsg(e?.response?.data?.message || e.message || "Could not record your transfer. Please try again.");
+    } finally {
+      setBankBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-500 max-w-5xl mx-auto">
       {/* ── Friendly Page Header ────────────────────────────────────────────── */}
@@ -283,21 +320,81 @@ const Payments = () => {
 
           {/* Action Box */}
           {balance > 0 && !balanceSettled ? (
-            <div className="bg-white border border-gray-100 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-base font-black text-secondary">Outstanding balance</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Pay your approved instalment plan securely via Stripe.
-                </p>
+            <div className="bg-white border border-gray-100 rounded-2xl p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-black text-secondary">Outstanding balance</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Pay securely by card, or choose bank transfer.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handleBankTransfer}
+                    disabled={bankBusy}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-black text-secondary hover:bg-gray-50"
+                  >
+                    <Landmark size={16} /> Bank transfer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePayClick}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-black text-white shadow-md"
+                  >
+                    Pay £{balance.toLocaleString()} by card
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={handlePayClick}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-black text-white shadow-md"
-              >
-                Pay £{balance.toLocaleString()}
-                <ArrowRight size={16} />
-              </button>
+
+              {bankOpen && (
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Landmark size={18} className="text-secondary" />
+                    <h4 className="text-sm font-black text-secondary">Pay by bank transfer</h4>
+                  </div>
+                  {bankInfo?.enabled === false ? (
+                    <p className="text-sm text-gray-600">
+                      Bank transfer isn't enabled for this firm. Please pay by card, or contact your caseworker.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Please transfer <strong>£{Number(bankInfo?.amountDue ?? balance).toLocaleString()}</strong> using
+                        the details below, quoting your reference. Once we receive it, your balance will be updated.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-white border border-gray-200 rounded-xl p-4">
+                          <span className="block text-[11px] font-bold text-gray-400 uppercase mb-1">Bank details</span>
+                          <pre className="text-sm font-semibold text-secondary whitespace-pre-wrap font-sans">
+                            {bankInfo?.bankDetails?.trim() ||
+                              "Bank details have not been configured yet — please contact your caseworker."}
+                          </pre>
+                        </div>
+                        <div className="bg-white border border-gray-200 rounded-xl p-4">
+                          <span className="block text-[11px] font-bold text-gray-400 uppercase mb-1">Payment reference</span>
+                          <span className="block text-lg font-black text-secondary">{bankInfo?.reference}</span>
+                          <span className="block text-xs text-gray-500 mt-2">
+                            Always include this reference so we can match your payment.
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={handleNotifyBank}
+                          disabled={bankBusy}
+                          className="inline-flex items-center gap-2 rounded-xl bg-secondary px-5 py-2.5 text-sm font-black text-white"
+                        >
+                          {bankBusy ? "Submitting…" : "I've made the transfer"}
+                        </button>
+                        {bankMsg && <span className="text-sm font-bold text-emerald-700">{bankMsg}</span>}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           ) : balanceSettled ? (
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4">

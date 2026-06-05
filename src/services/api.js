@@ -11,30 +11,33 @@ const api = axios.create({
 });
 
 // ── CSRF (double-submit cookie) ───────────────────────────────────────────────
-const CSRF_COOKIE = "x-csrf-token";
+// The token is read from the /api/csrf-token RESPONSE BODY and held in memory —
+// NOT from document.cookie. This is essential for the multi-tenant setup: the
+// frontend runs on tenant subdomains (e.g. acme.localhost) while the API sets its
+// cookie on a different host (localhost), so the page cannot read that cookie.
+// The browser still sends the cookie automatically to the API host; we echo the
+// same token value in the header, so the server's double-submit check matches.
+const CSRF_HEADER = "x-csrf-token";
 const SAFE_METHODS = new Set(["get", "head", "options"]);
 
-function readCookie(name) {
-  const match = document.cookie.match(
-    new RegExp("(?:^|;\\s*)" + name + "=([^;]*)"),
-  );
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-// Ensures a CSRF cookie exists, fetching one from the backend if needed.
-// The in-flight promise is shared so concurrent requests bootstrap only once.
+let csrfToken = null;
 let csrfBootstrap = null;
-async function ensureCsrfToken() {
-  let token = readCookie(CSRF_COOKIE);
-  if (token) return token;
+
+// Returns a valid CSRF token, fetching a fresh one when missing or when force=true
+// (e.g. after a 403 because the server restarted with a new secret).
+async function ensureCsrfToken(force = false) {
+  if (csrfToken && !force) return csrfToken;
   if (!csrfBootstrap) {
     csrfBootstrap = axios
       .get(`${API_BASE_URL}/api/csrf-token`, { withCredentials: true })
-      .catch(() => {})
+      .then((res) => {
+        csrfToken = res?.data?.csrfToken ?? res?.data?.data?.csrfToken ?? null;
+        return csrfToken;
+      })
+      .catch(() => null)
       .finally(() => { csrfBootstrap = null; });
   }
-  await csrfBootstrap;
-  return readCookie(CSRF_COOKIE);
+  return csrfBootstrap;
 }
 
 // Attach organisation slug header, and the CSRF token on mutating requests.
@@ -48,7 +51,7 @@ api.interceptors.request.use(async (config) => {
   const method = (config.method || "get").toLowerCase();
   if (!SAFE_METHODS.has(method)) {
     const token = await ensureCsrfToken();
-    if (token) config.headers[CSRF_COOKIE] = token;
+    if (token) config.headers[CSRF_HEADER] = token;
   }
   return config;
 });
@@ -80,7 +83,23 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const isAuthEndpoint = originalRequest?.url?.includes('/api/auth/');
-    
+
+    // Self-heal a stale/invalid CSRF token: fetch a fresh one and retry once.
+    if (
+      error.response?.status === 403 &&
+      /csrf/i.test(error.response?.data?.message || "") &&
+      originalRequest &&
+      !originalRequest._csrfRetry
+    ) {
+      originalRequest._csrfRetry = true;
+      const token = await ensureCsrfToken(true);
+      if (token) {
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers[CSRF_HEADER] = token;
+        return api(originalRequest);
+      }
+    }
+
     // If we get a 401 and it's NOT the auth endpoint, try to refresh
     if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest._retry) {
       if (isRefreshing) {
@@ -97,13 +116,13 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const csrfToken = await ensureCsrfToken();
+        const refreshCsrf = await ensureCsrfToken();
         await axios.post(
           `${API_BASE_URL}/api/auth/refresh`,
           {},
           {
             withCredentials: true,
-            headers: csrfToken ? { [CSRF_COOKIE]: csrfToken } : {},
+            headers: refreshCsrf ? { [CSRF_HEADER]: refreshCsrf } : {},
           },
         );
         isRefreshing = false;
