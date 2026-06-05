@@ -495,6 +495,10 @@ const Cases = () => {
           legacyStatus: c.status,
           caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
+          created_at: c.created_at,
+          decisionDate: c.decisionDate,
+          submissionDate: c.submissionDate,
+          biometricsDate: c.biometricsDate,
           priority: c.priority?.toLowerCase() || "medium",
           payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
           totalAmount: c.totalAmount || 0,
@@ -825,6 +829,10 @@ const Cases = () => {
           legacyStatus: c.status,
           caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
+          created_at: c.created_at,
+          decisionDate: c.decisionDate,
+          submissionDate: c.submissionDate,
+          biometricsDate: c.biometricsDate,
           priority: c.priority?.toLowerCase() || "medium",
           payment:
             c.paidAmount >= c.totalAmount
@@ -995,6 +1003,10 @@ const Cases = () => {
           legacyStatus: c.status,
           caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
+          created_at: c.created_at,
+          decisionDate: c.decisionDate,
+          submissionDate: c.submissionDate,
+          biometricsDate: c.biometricsDate,
           priority: c.priority?.toLowerCase() || "medium",
           payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
           id: c.id,
@@ -2768,7 +2780,7 @@ function OverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }) {
         </Field>
         <Field label="Candidate name">{c.candidate}</Field>
         <Field label="Sponsor name">{c.business}</Field>
-        <Field label="Visa type">{c.visa} (General)</Field>
+        <Field label="Visa type">{c.visa}</Field>
         <Field label="Case status">
           <span
             className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${st.className}`}
@@ -2776,11 +2788,21 @@ function OverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }) {
             {st.label}
           </span>
         </Field>
-        <Field label="Assigned to">{userName} (You)</Field>
-        <Field label="Start date">1 Mar 2026</Field>
+        <Field label="Assigned to">{c.caseworker || `${userName} (You)`}</Field>
+        <Field label="Start date">
+          {c.created_at ? (
+            formatTarget(String(c.created_at).slice(0, 10))
+          ) : (
+            <span className="text-gray-500">—</span>
+          )}
+        </Field>
         <Field label="Target submission">{formatTarget(c.target)}</Field>
         <Field label="Decision date">
-          <span className="text-gray-500">Pending</span>
+          {c.decisionDate ? (
+            formatTarget(String(c.decisionDate).slice(0, 10))
+          ) : (
+            <span className="text-gray-500">Pending</span>
+          )}
         </Field>
         <Field label="Priority">
           <span
