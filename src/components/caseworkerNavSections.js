@@ -14,6 +14,7 @@ import {
   CalendarClock,
   ShieldCheck,
   Bell,
+  FileText,
 } from "lucide-react";
 
 export const caseworkerNavSections = (taskCount = 0) => [
@@ -27,6 +28,7 @@ export const caseworkerNavSections = (taskCount = 0) => [
     title: "Cases",
     items: [
       { to: "/caseworker/cases",    label: "All Cases", icon: Briefcase,  moduleKey: "caseworker.cases" },
+      { to: "/caseworker/ccl-templates", label: "CCL Templates", icon: FileText, moduleKey: "caseworker.cases" },
       { to: "/caseworker/tasks",    label: "Tasks",     icon: ListChecks, moduleKey: "caseworker.tasks", badge: taskCount || null },
       { to: "/caseworker/calendar", label: "Calendar",  icon: Calendar,   moduleKey: "caseworker.calendar" },
     ],

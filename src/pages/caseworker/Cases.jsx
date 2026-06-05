@@ -68,6 +68,7 @@ import CaseWorkflowGuidance from "../../components/case/CaseWorkflowGuidance";
 import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
 import BiometricBookedModal from "../../components/workflow/BiometricBookedModal";
 import CclFeeProposalModal from "../../components/case/CclFeeProposalModal";
+import CaseDetailCcl from "../../components/caseDetail/CaseDetailCcl";
 import PrintClientApplicationButton from "../../components/CandidateApplicationForm/PrintClientApplicationButton";
 import CaseworkerApplicationTab from "../../components/caseDetail/CaseworkerApplicationTab";
 import { updatePipelineStage, assignCase } from "../../services/caseApi";
@@ -2225,6 +2226,7 @@ const Cases = () => {
                 { id: "documents", label: "Documents" },
                 { id: "tasks", label: "Tasks" },
                 { id: "payments", label: "Payments" },
+                { id: "ccl", label: "Client Care Letter" },
                 { id: "notes", label: "Notes" },
                 { id: "timeline", label: "Timeline" },
               ].map((t) => (
@@ -2266,6 +2268,7 @@ const Cases = () => {
                 />
               )}
               {detailTab === "tasks" && <TasksTab caseId={detailCase?.id} />}
+              {detailTab === "ccl" && <CaseDetailCcl caseId={detailCase?.id} />}
               {detailTab === "payments" && (
                 <PaymentsTab
                   caseDetail={detailCase}

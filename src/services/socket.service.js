@@ -3,23 +3,13 @@ import { getMessagingSocketUrl } from "../utils/socketOrigin";
 
 let socketInstance = null;
 
-const getSocketAuth = () => {
-  const token = localStorage.getItem("epic_token");
-
-  // Newer auth flows may not store a JWT in localStorage and rely on cookies.
-  // Only send token when it is a real JWT-like value.
-  if (token && token !== "httpOnly") {
-    return { token };
-  }
-
-  return undefined;
-};
-
+// Auth is cookie-based: the browser sends the HttpOnly `token` cookie on the
+// Socket.IO handshake because withCredentials is enabled. No JWT is read from
+// localStorage. The backend (socketServer.js) reads the token from that cookie.
 const createSocket = () =>
   io(getMessagingSocketUrl(), {
     withCredentials: true,
     transports: ["websocket", "polling"],
-    auth: getSocketAuth(),
   });
 
 const getSocket = () => {

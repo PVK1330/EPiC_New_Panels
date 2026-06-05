@@ -45,6 +45,7 @@ const CaseworkerMessages = lazy(() => import('../pages/caseworker/CaseworkerMess
 const CaseworkerFinance = lazy(() => import('../pages/caseworker/CaseworkerFinance'));
 const CaseworkerLicenceApplications = lazy(() => import('../pages/caseworker/CaseworkerLicenceApplications'));
 const CaseworkerNotifications = lazy(() => import('../pages/caseworker/CaseworkerNotifications'));
+const CaseworkerCclTemplates = lazy(() => import('../pages/caseworker/CaseworkerCclTemplates'));
 
 // ── Admin pages ──────────────────────────────────────────────────────────────
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
@@ -274,6 +275,7 @@ const AppRouter = () => {
           <Route index element={<Navigate to="/caseworker/dashboard" replace />} />
           <Route path="dashboard" element={<CaseworkerDashboard />} />
           <Route path="cases" element={<Cases />} />
+          <Route path="ccl-templates" element={<CaseworkerCclTemplates />} />
           <Route path="my-account" element={<MyAccount />} />
           <Route path="reschedule-form" element={<RescheduleForm />} />
           <Route path="pipeline" element={<Pipeline />} />

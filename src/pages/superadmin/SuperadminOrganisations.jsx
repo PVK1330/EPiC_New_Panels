@@ -29,7 +29,7 @@ import {
   impersonateOrganisation,
 } from '../../services/superadminOrganisation.service';
 import { getOrganisationSubdomainLabel } from '../../utils/organisationHost';
-import { getAuthUserAndToken, getDashboardRouteForUser } from '../../utils/authResponse';
+import { getDashboardRouteForUser } from '../../utils/authResponse';
 import { getUser, saveImpersonatorSession } from '../../utils/storage';
 import { buildTenantHandoffUrl } from '../../utils/organisationHost';
 
@@ -263,15 +263,18 @@ const SuperadminOrganisations = () => {
     try {
       const res = await impersonateOrganisation(org.id);
       const inner = res.data?.data ?? res.data;
-      const { user, token } = getAuthUserAndToken(res.data);
-      if (!token || !user) throw new Error(res.data?.message || 'Impersonation failed');
+      const ticket = inner?.ticket;
+      const user = inner?.user;
+      if (!ticket || !user) throw new Error(res.data?.message || 'Impersonation failed');
       const slug = inner?.organisation?.slug || org.slug;
-      // Token is now httpOnly cookie — session restored via /api/auth/me when returning to platform
+      // No JWT crosses the browser: only an opaque single-use ticket goes in the
+      // URL. The JWT is minted server-side at /api/auth/handoff and set as an
+      // httpOnly cookie; the superadmin session is restored via /api/auth/me on
+      // return to the platform.
       const superUser = getUser();
       if (superUser) saveImpersonatorSession(null, superUser);
       window.location.href = buildTenantHandoffUrl(slug, {
-        token,
-        user,
+        ticket,
         nextPath: getDashboardRouteForUser(user),
       });
     } catch (e) {

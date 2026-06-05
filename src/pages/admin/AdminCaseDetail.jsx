@@ -10,6 +10,7 @@ import CaseDetailOverview from "../../components/caseDetail/CaseDetailOverview";
 import CaseDetailDocuments from "../../components/caseDetail/CaseDetailDocuments";
 import CaseDetailTasks from "../../components/caseDetail/CaseDetailTasks";
 import CaseDetailPayments from "../../components/caseDetail/CaseDetailPayments";
+import CaseDetailCcl from "../../components/caseDetail/CaseDetailCcl";
 import ManualPaymentForm from "../../components/caseDetail/ManualPaymentForm";
 import AdminPaymentStatusControl from "../../components/caseDetail/AdminPaymentStatusControl";
 import CaseDetailTimeline from "../../components/caseDetail/CaseDetailTimeline";
@@ -724,6 +725,7 @@ const AdminCaseDetail = () => {
         <CaseDetailPayments payments={data.payments} onReload={() => fetchCaseDetail(cleanId)} />
       </div>
     ),
+    [TAB_IDS.ccl]: <CaseDetailCcl caseId={cleanId} />,
     [TAB_IDS.timeline]: <CaseDetailTimeline items={data.timeline} />,
     [TAB_IDS.notes]: (
       <CaseDetailNotes

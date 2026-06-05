@@ -6,42 +6,34 @@ import { normalizeAuthUser, getDashboardRouteForUser } from "../../utils/authRes
 import { apiClient } from "../../services/axios.instance";
 
 /**
- * Receives impersonation / cross-domain session from query (?session=base64).
- * Sends the token to POST /api/auth/handoff which verifies and sets the httpOnly cookie,
- * then returns user data for Redux state.
+ * Receives a single-use impersonation ticket from the query (?ticket=...).
+ * Sends it to POST /api/auth/handoff, which redeems the ticket, mints the JWT
+ * server-side and sets the httpOnly cookie, then returns the user for Redux.
+ * No JWT is ever read from the URL or browser storage here.
  */
 export default function AuthHandoffPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [error, setError] = useState(null);
+  const ticket = searchParams.get("ticket");
+  const next = searchParams.get("next");
+  // Lazy initializer avoids a synchronous setState inside the effect.
+  const [error, setError] = useState(
+    ticket ? null : "Missing handoff ticket. Try Login as again from superadmin.",
+  );
 
   useEffect(() => {
-    const raw = searchParams.get("session");
-    if (!raw) {
-      setError("Missing session. Try Login as again from superadmin.");
-      return;
-    }
-    let token, user, next;
-    try {
-      const decoded = JSON.parse(atob(decodeURIComponent(raw)));
-      token = decoded?.token;
-      user = decoded?.user;
-      next = decoded?.next;
-    } catch {
-      setError("Invalid session payload.");
-      return;
-    }
-    if (!token || !user) {
-      setError("Invalid session payload.");
-      return;
-    }
+    if (!ticket) return;
 
-    // Call handoff endpoint to set httpOnly cookie
-    apiClient.post("/api/auth/handoff", { token })
+    // Redeem the ticket; the backend sets the httpOnly cookie and returns the user.
+    apiClient.post("/api/auth/handoff", { ticket })
       .then((res) => {
         const data = res.data?.data ?? res.data;
-        const normalized = normalizeAuthUser(data?.user ?? user);
+        const normalized = normalizeAuthUser(data?.user);
+        if (!normalized) {
+          setError("Could not complete sign-in handoff.");
+          return;
+        }
         dispatch(setCredentials({
           user: normalized,
           allowedModules: data?.allowedModules ?? [],
@@ -52,7 +44,7 @@ export default function AuthHandoffPage() {
       .catch((err) => {
         setError(err?.response?.data?.message || "Could not complete sign-in handoff.");
       });
-  }, [searchParams, dispatch, navigate]);
+  }, [ticket, next, dispatch, navigate]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">

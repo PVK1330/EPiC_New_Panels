@@ -46,6 +46,7 @@ import CategorySettings from "../../components/admin/settings/CategorySettings";
 import EmailTemplateEditor from "../../components/admin/settings/EmailTemplateEditor";
 import EmailTemplatePreview from "../../components/admin/settings/EmailTemplatePreview";
 import DocumentChecklistSettings from "../../components/admin/settings/DocumentChecklistSettings";
+import CclTemplateSettings from "../../components/admin/settings/CclTemplateSettings";
 import OrganisationSettings from "../../components/admin/settings/OrganisationSettings";
 import RolesAndPermissionsPanel from "../../components/permissions/RolesAndPermissionsPanel";
 import UsersAndRolesPanel from "../../components/permissions/UsersAndRolesPanel";
@@ -102,6 +103,7 @@ const CONFIG_TABS = [
   { id: "roles", label: "Role Permissions", icon: <FiShield />, color: "text-amber-500", bg: "bg-amber-50" },
   { id: "integrations", label: "Integrations", icon: <RiTeamLine />, color: "text-purple-500", bg: "bg-purple-50" },
   { id: "email", label: "Email Templates", icon: <FiMail />, color: "text-rose-500", bg: "bg-rose-50" },
+  { id: "ccl", label: "CCL Templates", icon: <FiFileText />, color: "text-fuchsia-500", bg: "bg-fuchsia-50" },
   { id: "smtp", label: "SMTP / Mail", icon: <FiMail />, color: "text-pink-500", bg: "bg-pink-50" },
   { id: "payment", label: "Payment Config", icon: <FiCreditCard />, color: "text-cyan-500", bg: "bg-cyan-50" },
   { id: "sla", label: "SLA Rules", icon: <FiClock />, color: "text-orange-500", bg: "bg-orange-50" },
@@ -680,6 +682,10 @@ export default function AdminSettings() {
 
             {configTab === "checklist" && (
               <DocumentChecklistSettings />
+            )}
+
+            {configTab === "ccl" && (
+              <CclTemplateSettings />
             )}
 
             {configTab === "categories" && (

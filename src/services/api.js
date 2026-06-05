@@ -10,14 +10,50 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Attach organisation slug header (token is no longer attached via Authorization, it uses HttpOnly cookies)
-api.interceptors.request.use((config) => {
+// ── CSRF (double-submit cookie) ───────────────────────────────────────────────
+const CSRF_COOKIE = "x-csrf-token";
+const SAFE_METHODS = new Set(["get", "head", "options"]);
+
+function readCookie(name) {
+  const match = document.cookie.match(
+    new RegExp("(?:^|;\\s*)" + name + "=([^;]*)"),
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+// Ensures a CSRF cookie exists, fetching one from the backend if needed.
+// The in-flight promise is shared so concurrent requests bootstrap only once.
+let csrfBootstrap = null;
+async function ensureCsrfToken() {
+  let token = readCookie(CSRF_COOKIE);
+  if (token) return token;
+  if (!csrfBootstrap) {
+    csrfBootstrap = axios
+      .get(`${API_BASE_URL}/api/csrf-token`, { withCredentials: true })
+      .catch(() => {})
+      .finally(() => { csrfBootstrap = null; });
+  }
+  await csrfBootstrap;
+  return readCookie(CSRF_COOKIE);
+}
+
+// Attach organisation slug header, and the CSRF token on mutating requests.
+// (The JWT itself is sent automatically via the HttpOnly cookie.)
+api.interceptors.request.use(async (config) => {
   const orgSlug = getOrganisationSlugFromHost();
   if (orgSlug) {
     config.headers["X-Organisation-Slug"] = orgSlug;
   }
+
+  const method = (config.method || "get").toLowerCase();
+  if (!SAFE_METHODS.has(method)) {
+    const token = await ensureCsrfToken();
+    if (token) config.headers[CSRF_COOKIE] = token;
+  }
   return config;
 });
+
+export { ensureCsrfToken };
 
 // Flag to prevent infinite retry loops
 let isRefreshing = false;
@@ -61,7 +97,15 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await axios.post(`${API_BASE_URL}/api/auth/refresh`, {}, { withCredentials: true });
+        const csrfToken = await ensureCsrfToken();
+        await axios.post(
+          `${API_BASE_URL}/api/auth/refresh`,
+          {},
+          {
+            withCredentials: true,
+            headers: csrfToken ? { [CSRF_COOKIE]: csrfToken } : {},
+          },
+        );
         isRefreshing = false;
         processQueue(null);
         return api(originalRequest);
