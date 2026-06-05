@@ -3,6 +3,7 @@ import { FiSave, FiEye, FiSend, FiRefreshCw, FiInfo, FiUpload } from "react-icon
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import Button from "../Button";
+import ConfirmDialog from "../ConfirmDialog";
 import { useToast } from "../../context/ToastContext";
 import {
   getCaseCcl,
@@ -35,6 +36,8 @@ export default function CaseDetailCcl({ caseId }) {
   const [previewing, setPreviewing] = useState(false);
   const [issuing, setIssuing] = useState(false);
   const [importing, setImporting] = useState(false);
+  // null | 'issue' | 'regenerate' — which confirmation dialog is open
+  const [confirmAction, setConfirmAction] = useState(null);
   const fileInputRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -84,7 +87,7 @@ export default function CaseDetailCcl({ caseId }) {
   };
 
   const handleIssue = async () => {
-    if (!window.confirm("Issue the Client Care Letter from the current content? This generates the PDF the candidate will receive.")) return;
+    setConfirmAction(null);
     setIssuing(true);
     try {
       // Persist the latest edits first so the issued PDF matches what's on screen.
@@ -121,7 +124,7 @@ export default function CaseDetailCcl({ caseId }) {
   };
 
   const handleRegenerate = async () => {
-    if (!window.confirm("Discard your edits and regenerate from the org template?")) return;
+    setConfirmAction(null);
     setSaving(true);
     try {
       await saveCaseCclDraft(caseId, ""); // clear the draft
@@ -193,7 +196,7 @@ export default function CaseDetailCcl({ caseId }) {
         </Button>
         <Button
           variant="outline"
-          onClick={handleRegenerate}
+          onClick={() => setConfirmAction("regenerate")}
           disabled={saving}
           className="rounded-xl px-5 py-2.5 flex items-center gap-2"
         >
@@ -215,13 +218,34 @@ export default function CaseDetailCcl({ caseId }) {
           <FiUpload /> {importing ? "Importing…" : "Upload .docx"}
         </Button>
         <Button
-          onClick={handleIssue}
+          onClick={() => setConfirmAction("issue")}
           disabled={issuing}
           className="rounded-xl px-6 py-2.5 bg-emerald-600 border-none text-white flex items-center gap-2 ml-auto"
         >
           <FiSend /> {issuing ? "Issuing…" : issued ? "Re-issue letter" : "Issue letter"}
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={confirmAction === "issue"}
+        title={issued ? "Re-issue Client Care Letter?" : "Issue Client Care Letter?"}
+        message="This generates the PDF the candidate will receive from the current content. Any earlier issued version is replaced."
+        confirmLabel={issued ? "Re-issue letter" : "Issue letter"}
+        busy={issuing}
+        onConfirm={handleIssue}
+        onClose={() => setConfirmAction(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmAction === "regenerate"}
+        title="Regenerate from template?"
+        message="This discards your current edits and rebuilds the letter from the organisation template. This cannot be undone."
+        confirmLabel="Discard & regenerate"
+        variant="danger"
+        busy={saving}
+        onConfirm={handleRegenerate}
+        onClose={() => setConfirmAction(null)}
+      />
     </div>
   );
 }

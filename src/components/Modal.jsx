@@ -17,7 +17,7 @@ const Modal = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] overflow-y-auto overscroll-contain"
+      className="app-modal-root fixed inset-0 z-[100] overflow-y-auto overscroll-contain"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
