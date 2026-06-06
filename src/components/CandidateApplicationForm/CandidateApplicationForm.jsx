@@ -15,8 +15,11 @@ import useCandidate from "../../hooks/useCandidate";
 import { submitDraftReview } from "../../services/workflowApi";
 import { resolveCaseStage } from "../../constants/immigrationCaseProcess";
 import { useToast } from "../../context/ToastContext";
-import { getCaseworkers } from "../../services/caseWorker";
 import { getVisaTypesDropdown } from "../../services/settingsService";
+import {
+  getCandidateApplicationFieldSettings,
+  getCandidateApplicationCustomFields,
+} from "../../services/candidateApi";
 import { formatDateLong } from "../../utils/datetime";
 import DatePicker from "../DatePicker";
 import NationalitySelect from "../NationalitySelect";
@@ -420,6 +423,15 @@ function validateStep(stepIndex, data) {
     if (data.brpNumber?.toString().trim() && !data.visaEndDate) {
       errs.visaEndDate = "Visa expiry date is required";
     }
+    // National Insurance number: UK format = 2 letters, 6 digits, 1 letter
+    // (e.g. QQ123456C). Validated only when provided.
+    if (data.niNumber?.toString().trim()) {
+      const ni = data.niNumber.toString().replace(/\s+/g, "").toUpperCase();
+      if (!/^[A-Z]{2}\d{6}[A-D]$/.test(ni)) {
+        errs.niNumber =
+          "Enter a valid National Insurance number (e.g. QQ123456C)";
+      }
+    }
   }
 
   return errs;
@@ -467,8 +479,6 @@ export default function CandidateApplicationForm({
   const [formErrors, setFormErrors] = useState({});
   const [draftLoading, setDraftLoading] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
-  const [caseworkers, setCaseworkers] = useState([]);
-  const [caseworkersLoading, setCaseworkersLoading] = useState(false);
   // Locked application state
   const [isLocked, setIsLocked] = useState(false);
   const [submittedAt, setSubmittedAt] = useState(null);
@@ -641,23 +651,6 @@ export default function CandidateApplicationForm({
   if (isControlled && controlledFormData?.parent2Name && !showSecondParent) {
     setShowSecondParent(true);
   }
-
-  useEffect(() => {
-    if (variant === "admin") {
-      const fetchCaseworkers = async () => {
-        setCaseworkersLoading(true);
-        try {
-          const res = await getCaseworkers(1, 100);
-          setCaseworkers(res.data?.data?.caseworkers || []);
-        } catch (error) {
-          console.error("Failed to fetch caseworkers:", error);
-        } finally {
-          setCaseworkersLoading(false);
-        }
-      };
-      fetchCaseworkers();
-    }
-  }, [variant]);
 
   useEffect(() => {
     const fetchDynamicVisaTypes = async () => {
@@ -1212,40 +1205,6 @@ export default function CandidateApplicationForm({
                   />
                 )}
 
-                {variant === "admin" && (
-                  <div className="md:col-span-2 space-y-4 border-t border-gray-100 pt-6 mt-2">
-                    <SectionTitle>Case Assignment (Admin only)</SectionTitle>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="md:col-span-2">
-                        <label
-                          htmlFor="caseworkerId"
-                          className={fieldLabelClass}
-                        >
-                          Assign Caseworker
-                        </label>
-                        <select
-                          id="caseworkerId"
-                          name="caseworkerId"
-                          value={formData.caseworkerId || ""}
-                          onChange={handleChange}
-                          className={inputClass}
-                          disabled={caseworkersLoading}
-                        >
-                          <option value="">-- Select Caseworker --</option>
-                          {caseworkers.map((cw) => (
-                            <option key={cw.id} value={cw.id}>
-                              {cw.first_name} {cw.last_name} ({cw.email})
-                            </option>
-                          ))}
-                        </select>
-                        <p className="mt-1 text-[10px] text-gray-400 font-bold">
-                          This caseworker will be notified and assigned to
-                          handle this candidate&apos;s case.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -1817,9 +1776,10 @@ export default function CandidateApplicationForm({
                   <AppInput
                     label="Your National Insurance number"
                     name="niNumber"
-                    placeholder="National Insurance number"
+                    placeholder="e.g. QQ123456C"
                     formData={formData}
                     onChange={handleChange}
+                    error={formErrors.niNumber}
                   />
                 )}
                 {show("sponsored") && (
