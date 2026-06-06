@@ -456,24 +456,22 @@ const Payments = () => {
                         <button
                           type="button"
                           onClick={async () => {
-                            try {
-                              await downloadInvoiceReceiptPdf({
-                                caseId: caseId,
-                                amount: row.amount.replace("£", "").replace(/,/g, ""),
-                                date: row.date,
-                                description: row.description,
-                                isReceipt: true,
-                                candidateName: user
-                                  ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
-                                  : "Client",
-                                platformName: platformName,
-                              });
-                            } catch (e) {
-                              setPayError(
-                                e?.message ||
-                                  e?.response?.data?.message ||
-                                  "Failed to download receipt",
-                              );
+                            setPayError("");
+                            // downloadInvoiceReceiptPdf resolves to { ok, message }
+                            // and never throws, so check the result explicitly.
+                            const result = await downloadInvoiceReceiptPdf({
+                              caseId: caseId,
+                              amount: row.amount.replace("£", "").replace(/,/g, ""),
+                              date: row.date === "—" ? formatDateLong(new Date(), { month: "short" }) : row.date,
+                              description: row.description,
+                              isReceipt: true,
+                              candidateName: user
+                                ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+                                : "Client",
+                              platformName: platformName,
+                            });
+                            if (!result?.ok) {
+                              setPayError(result?.message || "Failed to download receipt");
                             }
                           }}
                           className="inline-flex items-center gap-1 text-xs font-bold text-secondary hover:underline"
