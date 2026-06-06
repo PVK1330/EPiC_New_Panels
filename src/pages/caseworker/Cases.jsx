@@ -3914,6 +3914,7 @@ function DocumentsTab({ caseId, candidateId }) {
 
 function TasksTab({ caseId }) {
   const { tasks, tasksLoading: loading, fetchTasks, addTask } = useCaseDetail();
+  const [togglingId, setTogglingId] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: "",
@@ -3939,6 +3940,25 @@ function TasksTab({ caseId }) {
         return "bg-gray-50 text-gray-700";
     }
   };
+
+  // Toggle a task complete/incomplete from the case modal. Uses the same
+  // PUT /api/tasks/:id endpoint as the Tasks page, so statuses stay in sync.
+  const toggleComplete = useCallback(
+    async (task) => {
+      if (!task?.id) return;
+      setTogglingId(task.id);
+      const next = task.status === "completed" ? "pending" : "completed";
+      try {
+        await updateTask(task.id, { status: next });
+      } catch (e) {
+        console.error("Failed to update task status:", e);
+      } finally {
+        await fetchTasks(caseId); // re-sync with server (also reverts on failure)
+        setTogglingId(null);
+      }
+    },
+    [caseId, fetchTasks],
+  );
 
   const openCreateModal = useCallback(() => {
     setCreateErrors({});
@@ -4018,17 +4038,26 @@ function TasksTab({ caseId }) {
             key={task.id}
             className="flex items-center gap-3 rounded-xl p-3 hover:bg-gray-50 border border-transparent hover:border-gray-100"
           >
-            <div
-              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 ${
+            <button
+              type="button"
+              onClick={() => toggleComplete(task)}
+              disabled={togglingId === task.id}
+              aria-label={
+                task.status === "completed" ? "Mark as not done" : "Mark as completed"
+              }
+              title={
+                task.status === "completed" ? "Mark as not done" : "Mark as completed"
+              }
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors ${
                 task.status === "completed"
                   ? "border-emerald-500 bg-emerald-500 text-white"
-                  : "border-gray-300"
-              }`}
+                  : "border-gray-300 hover:border-emerald-400"
+              } ${togglingId === task.id ? "opacity-50" : "cursor-pointer"}`}
             >
               {task.status === "completed" ? (
                 <Check size={10} strokeWidth={3} />
               ) : null}
-            </div>
+            </button>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-gray-900">{task.title}</p>
               <p className="text-[11px] text-gray-500">
