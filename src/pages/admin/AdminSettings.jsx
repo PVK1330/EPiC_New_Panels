@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { updateUser } from "../../store/slices/authSlice";
@@ -43,7 +43,8 @@ import SmtpSettings from "../../components/admin/settings/SmtpSettings";
 import SLASettings from "../../components/admin/settings/SLASettings";
 import DepartmentSettings from "../../components/admin/settings/DepartmentSettings";
 import CategorySettings from "../../components/admin/settings/CategorySettings";
-import EmailTemplateEditor from "../../components/admin/settings/EmailTemplateEditor";
+// Lazy: pulls in react-quill (heavy rich-text editor) — only load when the email editor modal opens.
+const EmailTemplateEditor = lazy(() => import("../../components/admin/settings/EmailTemplateEditor"));
 import EmailTemplatePreview from "../../components/admin/settings/EmailTemplatePreview";
 import DocumentChecklistSettings from "../../components/admin/settings/DocumentChecklistSettings";
 import CclTemplateSettings from "../../components/admin/settings/CclTemplateSettings";
@@ -858,14 +859,22 @@ export default function AdminSettings() {
         bodyClassName="p-0"
         footer={null}
       >
-        <EmailTemplateEditor 
-          initialData={emailModalMode === "add" ? null : { template_key: editingEmailKey, subject: emailFormSubject, body: emailFormBody }}
-          mode={emailModalMode}
-          onSave={submitEmailForm}
-          onCancel={() => setEmailModalOpen(false)}
-          error={emailFormError}
-          saving={saving}
-        />
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          }
+        >
+          <EmailTemplateEditor
+            initialData={emailModalMode === "add" ? null : { template_key: editingEmailKey, subject: emailFormSubject, body: emailFormBody }}
+            mode={emailModalMode}
+            onSave={submitEmailForm}
+            onCancel={() => setEmailModalOpen(false)}
+            error={emailFormError}
+            saving={saving}
+          />
+        </Suspense>
       </Modal>
 
       {/* Email Preview Modal */}

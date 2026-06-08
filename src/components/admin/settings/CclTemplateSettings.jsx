@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { FiPlus, FiEdit2, FiTrash2, FiFileText } from "react-icons/fi";
 import Button from "../../Button";
 import { useToast } from "../../../context/ToastContext";
@@ -10,7 +10,8 @@ import {
   previewCclTemplate,
   getVisaTypesDropdown,
 } from "../../../services/cclApi";
-import CclTemplateEditor from "./CclTemplateEditor";
+// Lazy: pulls in react-quill (heavy rich-text editor) — only load when editing a template.
+const CclTemplateEditor = lazy(() => import("./CclTemplateEditor"));
 
 const apiError = (err, fallback) =>
   err?.response?.data?.message || err?.message || fallback;
@@ -95,17 +96,25 @@ export default function CclTemplateSettings() {
 
   if (editing) {
     return (
-      <CclTemplateEditor
-        mode={editing === "add" ? "add" : "edit"}
-        initialData={editing === "add" ? null : editing}
-        visaTypes={visaTypes}
-        onSave={handleSave}
-        onCancel={() => { setEditing(null); setFormError(""); }}
-        onPreview={handlePreview}
-        error={formError}
-        saving={saving}
-        previewing={previewing}
-      />
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        }
+      >
+        <CclTemplateEditor
+          mode={editing === "add" ? "add" : "edit"}
+          initialData={editing === "add" ? null : editing}
+          visaTypes={visaTypes}
+          onSave={handleSave}
+          onCancel={() => { setEditing(null); setFormError(""); }}
+          onPreview={handlePreview}
+          error={formError}
+          saving={saving}
+          previewing={previewing}
+        />
+      </Suspense>
     );
   }
 

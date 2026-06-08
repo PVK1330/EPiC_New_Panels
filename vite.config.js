@@ -11,14 +11,25 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            // Heavy, narrowly-used libs → own chunks so they load only with the
+            // pages that need them (and stay cached across page chunks).
+            if (id.includes('react-quill') || id.includes('quill')) {
+              return 'quill';
+            }
+            if (id.includes('@dnd-kit')) {
+              return 'dnd';
+            }
+            if (id.includes('sweetalert2')) {
+              return 'sweetalert';
+            }
+            if (id.includes('framer-motion')) {
+              return 'framer';
+            }
             if (id.includes('react-redux') || id.includes('@reduxjs/toolkit')) {
               return 'redux';
             }
             if (id.includes('lucide-react') || id.includes('react-hot-toast')) {
               return 'ui';
-            }
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-              return 'vendor';
             }
             return 'vendor';
           }
