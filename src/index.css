@@ -104,4 +104,14 @@ button{
     top: 0;
     width: 100%;
   }
+  /* The print root lives inside a Modal whose card + body use
+     `max-h-…` + `overflow-hidden/overflow-y-auto`. Those clipping ancestors cut
+     the printed output off at the fold (only the header + first heading
+     survive). Lift the height/overflow limits on the modal containers AND the
+     print root so the full application flows across pages. */
+  .app-modal-root,
+  .app-modal-root * {
+    max-height: none !important;
+    overflow: visible !important;
+  }
 }

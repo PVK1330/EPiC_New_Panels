@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiArrowLeft, FiFlag, FiDownload, FiChevronDown, FiFileText, FiTable } from "react-icons/fi";
@@ -10,6 +10,8 @@ import CaseDetailOverview from "../../components/caseDetail/CaseDetailOverview";
 import CaseDetailDocuments from "../../components/caseDetail/CaseDetailDocuments";
 import CaseDetailTasks from "../../components/caseDetail/CaseDetailTasks";
 import CaseDetailPayments from "../../components/caseDetail/CaseDetailPayments";
+// Lazy: pulls in react-quill (heavy rich-text editor) — only load when the CCL tab opens.
+const CaseDetailCcl = lazy(() => import("../../components/caseDetail/CaseDetailCcl"));
 import ManualPaymentForm from "../../components/caseDetail/ManualPaymentForm";
 import AdminPaymentStatusControl from "../../components/caseDetail/AdminPaymentStatusControl";
 import CaseDetailTimeline from "../../components/caseDetail/CaseDetailTimeline";
@@ -724,6 +726,7 @@ const AdminCaseDetail = () => {
         <CaseDetailPayments payments={data.payments} onReload={() => fetchCaseDetail(cleanId)} />
       </div>
     ),
+    [TAB_IDS.ccl]: <CaseDetailCcl caseId={cleanId} />,
     [TAB_IDS.timeline]: <CaseDetailTimeline items={data.timeline} />,
     [TAB_IDS.notes]: (
       <CaseDetailNotes
@@ -864,7 +867,15 @@ const AdminCaseDetail = () => {
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.2 }}
             >
-              {panels[tab]}
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center py-12">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                }
+              >
+                {panels[tab]}
+              </Suspense>
             </motion.div>
           </AnimatePresence>
 

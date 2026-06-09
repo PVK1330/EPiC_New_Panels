@@ -109,15 +109,14 @@ export function buildTenantOrigin(slug) {
 
 /**
  * Cross-subdomain login handoff (superadmin "Login as" → tenant admin).
+ *
+ * Only an opaque single-use ticket travels in the URL — never a JWT. The tenant
+ * subdomain redeems the ticket at POST /api/auth/handoff, where the JWT is
+ * minted server-side and set as an HttpOnly cookie.
  */
-export function buildTenantHandoffUrl(slug, { token, user, nextPath = "/admin/dashboard" }) {
+export function buildTenantHandoffUrl(slug, { ticket, nextPath = "/admin/dashboard" }) {
   const origin = buildTenantOrigin(slug);
-  const payload = btoa(
-    JSON.stringify({
-      token,
-      user,
-      next: nextPath,
-    }),
-  );
-  return `${origin}/auth/handoff?session=${encodeURIComponent(payload)}`;
+  const params = new URLSearchParams({ ticket });
+  if (nextPath) params.set("next", nextPath);
+  return `${origin}/auth/handoff?${params.toString()}`;
 }

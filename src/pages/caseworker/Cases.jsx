@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, Fragment } from "react";
+import { useMemo, useState, useCallback, useEffect, Fragment, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import {
@@ -68,6 +68,8 @@ import CaseWorkflowGuidance from "../../components/case/CaseWorkflowGuidance";
 import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
 import BiometricBookedModal from "../../components/workflow/BiometricBookedModal";
 import CclFeeProposalModal from "../../components/case/CclFeeProposalModal";
+// Lazy: pulls in react-quill (heavy rich-text editor) — only load when the CCL tab opens.
+const CaseDetailCcl = lazy(() => import("../../components/caseDetail/CaseDetailCcl"));
 import PrintClientApplicationButton from "../../components/CandidateApplicationForm/PrintClientApplicationButton";
 import CaseworkerApplicationTab from "../../components/caseDetail/CaseworkerApplicationTab";
 import { updatePipelineStage, assignCase } from "../../services/caseApi";
@@ -494,6 +496,10 @@ const Cases = () => {
           legacyStatus: c.status,
           caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
+          created_at: c.created_at,
+          decisionDate: c.decisionDate,
+          submissionDate: c.submissionDate,
+          biometricsDate: c.biometricsDate,
           priority: c.priority?.toLowerCase() || "medium",
           payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
           totalAmount: c.totalAmount || 0,
@@ -824,6 +830,10 @@ const Cases = () => {
           legacyStatus: c.status,
           caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
+          created_at: c.created_at,
+          decisionDate: c.decisionDate,
+          submissionDate: c.submissionDate,
+          biometricsDate: c.biometricsDate,
           priority: c.priority?.toLowerCase() || "medium",
           payment:
             c.paidAmount >= c.totalAmount
@@ -994,6 +1004,10 @@ const Cases = () => {
           legacyStatus: c.status,
           caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
+          created_at: c.created_at,
+          decisionDate: c.decisionDate,
+          submissionDate: c.submissionDate,
+          biometricsDate: c.biometricsDate,
           priority: c.priority?.toLowerCase() || "medium",
           payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
           id: c.id,
@@ -2225,6 +2239,7 @@ const Cases = () => {
                 { id: "documents", label: "Documents" },
                 { id: "tasks", label: "Tasks" },
                 { id: "payments", label: "Payments" },
+                { id: "ccl", label: "Client Care Letter" },
                 { id: "notes", label: "Notes" },
                 { id: "timeline", label: "Timeline" },
               ].map((t) => (
@@ -2266,6 +2281,17 @@ const Cases = () => {
                 />
               )}
               {detailTab === "tasks" && <TasksTab caseId={detailCase?.id} />}
+              {detailTab === "ccl" && (
+                <Suspense
+                  fallback={
+                    <div className="flex items-center justify-center py-12">
+                      <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  }
+                >
+                  <CaseDetailCcl caseId={detailCase?.id} />
+                </Suspense>
+              )}
               {detailTab === "payments" && (
                 <PaymentsTab
                   caseDetail={detailCase}
@@ -2765,7 +2791,7 @@ function OverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }) {
         </Field>
         <Field label="Candidate name">{c.candidate}</Field>
         <Field label="Sponsor name">{c.business}</Field>
-        <Field label="Visa type">{c.visa} (General)</Field>
+        <Field label="Visa type">{c.visa}</Field>
         <Field label="Case status">
           <span
             className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${st.className}`}
@@ -2773,11 +2799,21 @@ function OverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }) {
             {st.label}
           </span>
         </Field>
-        <Field label="Assigned to">{userName} (You)</Field>
-        <Field label="Start date">1 Mar 2026</Field>
+        <Field label="Assigned to">{c.caseworker || `${userName} (You)`}</Field>
+        <Field label="Start date">
+          {c.created_at ? (
+            formatTarget(String(c.created_at).slice(0, 10))
+          ) : (
+            <span className="text-gray-500">—</span>
+          )}
+        </Field>
         <Field label="Target submission">{formatTarget(c.target)}</Field>
         <Field label="Decision date">
-          <span className="text-gray-500">Pending</span>
+          {c.decisionDate ? (
+            formatTarget(String(c.decisionDate).slice(0, 10))
+          ) : (
+            <span className="text-gray-500">Pending</span>
+          )}
         </Field>
         <Field label="Priority">
           <span
@@ -3889,6 +3925,7 @@ function DocumentsTab({ caseId, candidateId }) {
 
 function TasksTab({ caseId }) {
   const { tasks, tasksLoading: loading, fetchTasks, addTask } = useCaseDetail();
+  const [togglingId, setTogglingId] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: "",
@@ -3914,6 +3951,25 @@ function TasksTab({ caseId }) {
         return "bg-gray-50 text-gray-700";
     }
   };
+
+  // Toggle a task complete/incomplete from the case modal. Uses the same
+  // PUT /api/tasks/:id endpoint as the Tasks page, so statuses stay in sync.
+  const toggleComplete = useCallback(
+    async (task) => {
+      if (!task?.id) return;
+      setTogglingId(task.id);
+      const next = task.status === "completed" ? "pending" : "completed";
+      try {
+        await updateTask(task.id, { status: next });
+      } catch (e) {
+        console.error("Failed to update task status:", e);
+      } finally {
+        await fetchTasks(caseId); // re-sync with server (also reverts on failure)
+        setTogglingId(null);
+      }
+    },
+    [caseId, fetchTasks],
+  );
 
   const openCreateModal = useCallback(() => {
     setCreateErrors({});
@@ -3993,17 +4049,26 @@ function TasksTab({ caseId }) {
             key={task.id}
             className="flex items-center gap-3 rounded-xl p-3 hover:bg-gray-50 border border-transparent hover:border-gray-100"
           >
-            <div
-              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 ${
+            <button
+              type="button"
+              onClick={() => toggleComplete(task)}
+              disabled={togglingId === task.id}
+              aria-label={
+                task.status === "completed" ? "Mark as not done" : "Mark as completed"
+              }
+              title={
+                task.status === "completed" ? "Mark as not done" : "Mark as completed"
+              }
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors ${
                 task.status === "completed"
                   ? "border-emerald-500 bg-emerald-500 text-white"
-                  : "border-gray-300"
-              }`}
+                  : "border-gray-300 hover:border-emerald-400"
+              } ${togglingId === task.id ? "opacity-50" : "cursor-pointer"}`}
             >
               {task.status === "completed" ? (
                 <Check size={10} strokeWidth={3} />
               ) : null}
-            </div>
+            </button>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-gray-900">{task.title}</p>
               <p className="text-[11px] text-gray-500">

@@ -10,14 +10,53 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Attach organisation slug header (token is no longer attached via Authorization, it uses HttpOnly cookies)
-api.interceptors.request.use((config) => {
+// ── CSRF (double-submit cookie) ───────────────────────────────────────────────
+// The token is read from the /api/csrf-token RESPONSE BODY and held in memory —
+// NOT from document.cookie. This is essential for the multi-tenant setup: the
+// frontend runs on tenant subdomains (e.g. acme.localhost) while the API sets its
+// cookie on a different host (localhost), so the page cannot read that cookie.
+// The browser still sends the cookie automatically to the API host; we echo the
+// same token value in the header, so the server's double-submit check matches.
+const CSRF_HEADER = "x-csrf-token";
+const SAFE_METHODS = new Set(["get", "head", "options"]);
+
+let csrfToken = null;
+let csrfBootstrap = null;
+
+// Returns a valid CSRF token, fetching a fresh one when missing or when force=true
+// (e.g. after a 403 because the server restarted with a new secret).
+async function ensureCsrfToken(force = false) {
+  if (csrfToken && !force) return csrfToken;
+  if (!csrfBootstrap) {
+    csrfBootstrap = axios
+      .get(`${API_BASE_URL}/api/csrf-token`, { withCredentials: true })
+      .then((res) => {
+        csrfToken = res?.data?.csrfToken ?? res?.data?.data?.csrfToken ?? null;
+        return csrfToken;
+      })
+      .catch(() => null)
+      .finally(() => { csrfBootstrap = null; });
+  }
+  return csrfBootstrap;
+}
+
+// Attach organisation slug header, and the CSRF token on mutating requests.
+// (The JWT itself is sent automatically via the HttpOnly cookie.)
+api.interceptors.request.use(async (config) => {
   const orgSlug = getOrganisationSlugFromHost();
   if (orgSlug) {
     config.headers["X-Organisation-Slug"] = orgSlug;
   }
+
+  const method = (config.method || "get").toLowerCase();
+  if (!SAFE_METHODS.has(method)) {
+    const token = await ensureCsrfToken();
+    if (token) config.headers[CSRF_HEADER] = token;
+  }
   return config;
 });
+
+export { ensureCsrfToken };
 
 // Flag to prevent infinite retry loops
 let isRefreshing = false;
@@ -44,7 +83,23 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const isAuthEndpoint = originalRequest?.url?.includes('/api/auth/');
-    
+
+    // Self-heal a stale/invalid CSRF token: fetch a fresh one and retry once.
+    if (
+      error.response?.status === 403 &&
+      /csrf/i.test(error.response?.data?.message || "") &&
+      originalRequest &&
+      !originalRequest._csrfRetry
+    ) {
+      originalRequest._csrfRetry = true;
+      const token = await ensureCsrfToken(true);
+      if (token) {
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers[CSRF_HEADER] = token;
+        return api(originalRequest);
+      }
+    }
+
     // If we get a 401 and it's NOT the auth endpoint, try to refresh
     if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest._retry) {
       if (isRefreshing) {
@@ -61,7 +116,15 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await axios.post(`${API_BASE_URL}/api/auth/refresh`, {}, { withCredentials: true });
+        const refreshCsrf = await ensureCsrfToken();
+        await axios.post(
+          `${API_BASE_URL}/api/auth/refresh`,
+          {},
+          {
+            withCredentials: true,
+            headers: refreshCsrf ? { [CSRF_HEADER]: refreshCsrf } : {},
+          },
+        );
         isRefreshing = false;
         processQueue(null);
         return api(originalRequest);

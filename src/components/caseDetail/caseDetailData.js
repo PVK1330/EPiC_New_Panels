@@ -4,6 +4,7 @@ export const TAB_IDS = {
   documents: "documents",
   tasks: "tasks",
   payments: "payments",
+  ccl: "ccl",
   timeline: "timeline",
   notes: "notes",
 };
@@ -14,6 +15,7 @@ export const CASE_DETAIL_TABS = [
   { id: TAB_IDS.documents, label: "Documents" },
   { id: TAB_IDS.tasks, label: "Tasks" },
   { id: TAB_IDS.payments, label: "Payments" },
+  { id: TAB_IDS.ccl, label: "Client Care Letter" },
   { id: TAB_IDS.timeline, label: "Timeline" },
   { id: TAB_IDS.notes, label: "Notes (Internal)" },
 ];

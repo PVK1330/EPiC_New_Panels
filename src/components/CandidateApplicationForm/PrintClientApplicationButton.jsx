@@ -47,8 +47,18 @@ export default function PrintClientApplicationButton({
   const handlePdf = async () => {
     setExporting(true);
     try {
-      await downloadAdminCandidateApplicationPdf(candidateId);
-      showToast({ message: "PDF downloaded." });
+      // wrapBlobPair resolves with { ok, message } instead of throwing, so the
+      // success toast must be gated on res.ok — otherwise a 400 (e.g. invalid
+      // candidateId) still showed "PDF downloaded." while nothing downloaded.
+      const res = await downloadAdminCandidateApplicationPdf(candidateId);
+      if (res?.ok) {
+        showToast({ message: "PDF downloaded." });
+      } else {
+        showToast({
+          message: res?.message || "PDF export failed",
+          variant: "danger",
+        });
+      }
     } catch (e) {
       showToast({ message: e.message || "PDF export failed", variant: "danger" });
     } finally {

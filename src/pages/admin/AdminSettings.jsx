@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { updateUser } from "../../store/slices/authSlice";
@@ -43,9 +43,11 @@ import SmtpSettings from "../../components/admin/settings/SmtpSettings";
 import SLASettings from "../../components/admin/settings/SLASettings";
 import DepartmentSettings from "../../components/admin/settings/DepartmentSettings";
 import CategorySettings from "../../components/admin/settings/CategorySettings";
-import EmailTemplateEditor from "../../components/admin/settings/EmailTemplateEditor";
+// Lazy: pulls in react-quill (heavy rich-text editor) — only load when the email editor modal opens.
+const EmailTemplateEditor = lazy(() => import("../../components/admin/settings/EmailTemplateEditor"));
 import EmailTemplatePreview from "../../components/admin/settings/EmailTemplatePreview";
 import DocumentChecklistSettings from "../../components/admin/settings/DocumentChecklistSettings";
+import CclTemplateSettings from "../../components/admin/settings/CclTemplateSettings";
 import OrganisationSettings from "../../components/admin/settings/OrganisationSettings";
 import RolesAndPermissionsPanel from "../../components/permissions/RolesAndPermissionsPanel";
 import UsersAndRolesPanel from "../../components/permissions/UsersAndRolesPanel";
@@ -102,6 +104,7 @@ const CONFIG_TABS = [
   { id: "roles", label: "Role Permissions", icon: <FiShield />, color: "text-amber-500", bg: "bg-amber-50" },
   { id: "integrations", label: "Integrations", icon: <RiTeamLine />, color: "text-purple-500", bg: "bg-purple-50" },
   { id: "email", label: "Email Templates", icon: <FiMail />, color: "text-rose-500", bg: "bg-rose-50" },
+  { id: "ccl", label: "CCL Templates", icon: <FiFileText />, color: "text-fuchsia-500", bg: "bg-fuchsia-50" },
   { id: "smtp", label: "SMTP / Mail", icon: <FiMail />, color: "text-pink-500", bg: "bg-pink-50" },
   { id: "payment", label: "Payment Config", icon: <FiCreditCard />, color: "text-cyan-500", bg: "bg-cyan-50" },
   { id: "sla", label: "SLA Rules", icon: <FiClock />, color: "text-orange-500", bg: "bg-orange-50" },
@@ -682,6 +685,10 @@ export default function AdminSettings() {
               <DocumentChecklistSettings />
             )}
 
+            {configTab === "ccl" && (
+              <CclTemplateSettings />
+            )}
+
             {configTab === "categories" && (
               <CategorySettings 
                 categories={categories}
@@ -852,14 +859,22 @@ export default function AdminSettings() {
         bodyClassName="p-0"
         footer={null}
       >
-        <EmailTemplateEditor 
-          initialData={emailModalMode === "add" ? null : { template_key: editingEmailKey, subject: emailFormSubject, body: emailFormBody }}
-          mode={emailModalMode}
-          onSave={submitEmailForm}
-          onCancel={() => setEmailModalOpen(false)}
-          error={emailFormError}
-          saving={saving}
-        />
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          }
+        >
+          <EmailTemplateEditor
+            initialData={emailModalMode === "add" ? null : { template_key: editingEmailKey, subject: emailFormSubject, body: emailFormBody }}
+            mode={emailModalMode}
+            onSave={submitEmailForm}
+            onCancel={() => setEmailModalOpen(false)}
+            error={emailFormError}
+            saving={saving}
+          />
+        </Suspense>
       </Modal>
 
       {/* Email Preview Modal */}

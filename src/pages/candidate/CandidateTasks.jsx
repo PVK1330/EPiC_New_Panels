@@ -126,7 +126,7 @@ export default function CandidateTasks() {
                       <div className="min-w-0">
                         <p className="text-sm font-black text-secondary">{task.title}</p>
                         <p className="text-xs font-bold text-gray-500 mt-0.5">
-                          {task.caseRef ? `Case ${task.caseRef}` : "Your application"} Â· Due{" "}
+                          {task.caseRef ? `Case ${task.caseRef}` : "Your application"} {"·"} Due{" "}
                           {formatDue(task.due_date)}
                         </p>
                         {task.isDataCapture && (
