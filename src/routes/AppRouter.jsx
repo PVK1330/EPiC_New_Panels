@@ -79,6 +79,7 @@ const AdminTimelineExplorer = lazy(() => import('../pages/admin/TimelineExplorer
 const AdminChangeRequests = lazy(() => import('../pages/admin/ChangeRequests'));
 const AdminUserActivity = lazy(() => import('../pages/admin/UserActivity'));
 const AdminLoginActivity = lazy(() => import('../pages/admin/LoginActivity'));
+const AdminSubscription = lazy(() => import('../pages/admin/AdminSubscription'));
 
 // ── Business pages ───────────────────────────────────────────────────────────
 const BusinessDashboard = lazy(() => import('../pages/business/BusinessDashboard'));
@@ -177,6 +178,17 @@ const AppRouter = () => {
               : user
                 ? <Navigate to={getDashboardRouteForUser(user)} replace />
                 : <Navigate to="/login" replace />
+          }
+        />
+
+        {/* Standalone subscription/renewal page — reachable while the org is
+            suspended (outside AdminLayout, which would make gated API calls). */}
+        <Route
+          path="/admin/subscription"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminSubscription />
+            </ProtectedRoute>
           }
         />
 

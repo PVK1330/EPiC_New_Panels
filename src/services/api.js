@@ -100,6 +100,19 @@ api.interceptors.response.use(
       }
     }
 
+    // Org subscription expired: an admin hit a gated endpoint. Funnel them to the
+    // renewal page so they can pay & reactivate. (/api/billing/* is exempt, so
+    // this never fires there — no redirect loop.)
+    if (
+      error.response?.status === 403 &&
+      error.response?.data?.code === "SUBSCRIPTION_EXPIRED" &&
+      typeof window !== "undefined" &&
+      !window.location.pathname.startsWith("/admin/subscription")
+    ) {
+      window.location.href = "/admin/subscription";
+      return Promise.reject(error);
+    }
+
     // If we get a 401 and it's NOT the auth endpoint, try to refresh
     if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest._retry) {
       if (isRefreshing) {

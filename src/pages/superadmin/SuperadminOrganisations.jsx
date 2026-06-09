@@ -26,6 +26,7 @@ import {
   createOrganisationWithAdmin,
   updateOrganisation,
   deleteOrganisation,
+  activateOrganisation,
   impersonateOrganisation,
 } from '../../services/superadminOrganisation.service';
 import { getOrganisationSubdomainLabel } from '../../utils/organisationHost';
@@ -224,6 +225,20 @@ const SuperadminOrganisations = () => {
       setIsEditModalOpen(false);
     } catch (e) {
       toast.error(e?.response?.data?.message || e.message || 'Update failed');
+    }
+  };
+
+  const handleActivateOrg = async (org) => {
+    if (!org?.id) return;
+    setActionLoading(true);
+    try {
+      await activateOrganisation(org.id);
+      toast.success(`${org.name} activated. The organisation can sign in again.`);
+      await loadOrgs();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e.message || 'Activation failed');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -571,6 +586,15 @@ const SuperadminOrganisations = () => {
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="flex items-center justify-end gap-0.5">
+                      {org.status === 'Suspended' && (
+                        <TableActionButton
+                          label="Activate"
+                          onClick={() => handleActivateOrg(org)}
+                          disabled={actionLoading}
+                        >
+                          <RiCheckboxCircleLine size={17} className="text-green-600" />
+                        </TableActionButton>
+                      )}
                       <TableActionButton label="View" onClick={() => openView(org)}>
                         <RiEyeLine size={17} />
                       </TableActionButton>
