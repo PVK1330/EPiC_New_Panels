@@ -23,7 +23,8 @@ import {
   ChevronDown,
   Trash2,
   Pencil,
-  Save
+  Save,
+  Loader2
 } from "lucide-react";
 import { 
   getAllLicenceApplications, 
@@ -33,6 +34,7 @@ import {
   deleteLicenceApplicationByAdmin
 } from "../../services/licenceApi";
 import { API_BASE_URL } from "../../utils/constants";
+import api from "../../services/api";
 import { getCaseworkers } from "../../services/caseWorker";
 import { useToast } from "../../context/ToastContext";
 import { formatDateLong, formatTime } from "../../utils/datetime";
@@ -119,6 +121,10 @@ const AdminLicenceApplications = () => {
 
   const handleAssign = async (appId, selectedIds) => {
     if (!appId) return;
+    if (!selectedIds || selectedIds.length === 0) {
+      showToast({ message: "Select at least one caseworker", variant: "danger" });
+      return;
+    }
     try {
       setActionLoading(true);
       await assignLicenceCaseworker(appId, { caseworkerIds: selectedIds });
