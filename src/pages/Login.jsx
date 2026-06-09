@@ -227,12 +227,23 @@ const Login = () => {
 
         const forceReset = res?.data?.force_password_reset || res?.data?.data?.force_password_reset || res?.force_password_reset;
 
+        const subscriptionExpired =
+          res?.data?.subscription_expired ||
+          res?.data?.data?.subscription_expired ||
+          res?.subscription_expired ||
+          user.organisation?.status === "suspended";
+
         if (forceReset) {
           setPendingResetData({ user, allowedModules });
           setView(VIEWS.forceReset);
         } else {
           dispatch(setCredentials({ user, token, allowedModules }));
-          navigate(getDashboardRouteForUser(user));
+          // Expired org admins go straight to the renewal page to pay & reactivate.
+          if (subscriptionExpired && Number(user.role_id) === 3) {
+            navigate("/admin/subscription");
+          } else {
+            navigate(getDashboardRouteForUser(user));
+          }
         }
       }
     } catch (err) {
