@@ -16,6 +16,7 @@ import {
   MessageSquare,
   MapPin,
   CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -37,6 +38,8 @@ import {
   getStepById,
   DEFAULT_CASE_STAGE,
   getCandidateNextAction,
+  IMMIGRATION_CASE_STEPS,
+  getWorkflowProgress,
 } from "../../constants/immigrationCaseProcess";
 import {
   getCandidateWorkflowProcess,
@@ -67,6 +70,7 @@ const CandidateDashboard = () => {
   const [messages, setMessages] = useState([]);
   const [workflowProcess, setWorkflowProcess] = useState(null);
   const [markingBiometric, setMarkingBiometric] = useState(false);
+  const [showAllSteps, setShowAllSteps] = useState(false);
 
   const refreshWorkflow = () => {
     getCandidateWorkflowProcess()
@@ -212,24 +216,80 @@ const CandidateDashboard = () => {
         </section>
       )}
 
-      <section className="rounded-2xl border border-primary/15 bg-gradient-to-r from-secondary/[0.08] via-white to-primary/[0.06] p-4 md:p-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
-          <div className="shrink-0">
-            <p className="text-[11px] font-black uppercase tracking-widest text-gray-500">
+      <section className="rounded-2xl border border-gray-100 bg-white p-5 md:p-6 shadow-sm">
+        {/* Header row: process label + current step on the left, status on the right */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-widest text-gray-400">
               Standard process
             </p>
-            <p className="text-xl md:text-2xl font-black text-secondary mt-1">
+            <p className="text-xl md:text-2xl font-black text-secondary mt-1 leading-tight truncate">
               {currentStep?.title || "Client Enquiry"}
             </p>
           </div>
-
-          <div className="flex-1 min-w-0 w-full">
-            <CaseWorkflowProgress caseRecord={{ caseStage }} />
-          </div>
-
-          <span className={`shrink-0 self-start xl:self-center rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wider ${getStatusColor(caseStatus)}`}>
+          <span
+            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wider ${getStatusColor(caseStatus)}`}
+          >
             {caseStatus}
           </span>
+        </div>
+
+        {/* Inline progress (bar + step label + description) — no nested card */}
+        <div className="mt-5">
+          <CaseWorkflowProgress caseRecord={{ caseStage }} compact />
+        </div>
+
+        {/* Toggle the full 16-step list inline instead of navigating away */}
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => setShowAllSteps((v) => !v)}
+            aria-expanded={showAllSteps}
+            className="inline-flex items-center gap-1.5 text-xs font-black text-primary hover:underline"
+          >
+            {showAllSteps ? "Hide all steps" : "View all steps"}
+            <ChevronDown
+              size={14}
+              className={`transition-transform duration-200 ${showAllSteps ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {showAllSteps && (() => {
+            const { order } = getWorkflowProgress({ caseStage });
+            return (
+              <ol className="mt-3 space-y-1 border-t border-gray-100 pt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                {IMMIGRATION_CASE_STEPS.map((step) => {
+                  const active = step.order === order;
+                  const done = step.order < order;
+                  return (
+                    <li
+                      key={step.id}
+                      className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm ${
+                        active
+                          ? "bg-primary/10 font-black text-primary"
+                          : done
+                            ? "text-gray-400"
+                            : "text-gray-600"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold tabular-nums ${
+                          active
+                            ? "bg-primary text-white"
+                            : done
+                              ? "bg-emerald-100 text-emerald-600"
+                              : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {done ? "✓" : step.order}
+                      </span>
+                      <span className="truncate">{step.title}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+            );
+          })()}
         </div>
       </section>
 

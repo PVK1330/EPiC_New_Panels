@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, Fragment } from "react";
+import { useMemo, useState, useCallback, useEffect, Fragment, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import {
@@ -68,7 +68,8 @@ import CaseWorkflowGuidance from "../../components/case/CaseWorkflowGuidance";
 import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
 import BiometricBookedModal from "../../components/workflow/BiometricBookedModal";
 import CclFeeProposalModal from "../../components/case/CclFeeProposalModal";
-import CaseDetailCcl from "../../components/caseDetail/CaseDetailCcl";
+// Lazy: pulls in react-quill (heavy rich-text editor) — only load when the CCL tab opens.
+const CaseDetailCcl = lazy(() => import("../../components/caseDetail/CaseDetailCcl"));
 import PrintClientApplicationButton from "../../components/CandidateApplicationForm/PrintClientApplicationButton";
 import CaseworkerApplicationTab from "../../components/caseDetail/CaseworkerApplicationTab";
 import { updatePipelineStage, assignCase } from "../../services/caseApi";
@@ -2280,7 +2281,17 @@ const Cases = () => {
                 />
               )}
               {detailTab === "tasks" && <TasksTab caseId={detailCase?.id} />}
-              {detailTab === "ccl" && <CaseDetailCcl caseId={detailCase?.id} />}
+              {detailTab === "ccl" && (
+                <Suspense
+                  fallback={
+                    <div className="flex items-center justify-center py-12">
+                      <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  }
+                >
+                  <CaseDetailCcl caseId={detailCase?.id} />
+                </Suspense>
+              )}
               {detailTab === "payments" && (
                 <PaymentsTab
                   caseDetail={detailCase}
