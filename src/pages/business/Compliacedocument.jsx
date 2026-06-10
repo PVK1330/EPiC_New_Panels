@@ -37,11 +37,47 @@ const DocumentList = () => {
     fetchDocuments();
   }, [filter]);
 
+  const STATUS_LABELS = {
+    valid: "Approved",
+    under_review: "Under Review",
+    expired: "Expiring",
+    missing: "Missing",
+  };
+
+  const formatBytes = (bytes) => {
+    if (!bytes && bytes !== 0) return "—";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const mapDocument = (doc) => {
+    const fileName = doc.documentPath
+      ? doc.documentPath.split("/").pop().replace(/^\d+-/, "")
+      : "";
+    const reviewer = doc.reviewer
+      ? [doc.reviewer.first_name, doc.reviewer.last_name].filter(Boolean).join(" ").trim()
+      : "";
+    return {
+      ...doc,
+      name: doc.documentName || fileName || doc.documentType || "Untitled document",
+      type: doc.documentType || "—",
+      uploadDate: doc.uploadDate ? new Date(doc.uploadDate).toLocaleDateString() : "—",
+      fileSize: formatBytes(doc.fileSize),
+      expiry: doc.expiryDate || "—",
+      status: STATUS_LABELS[doc.status] || doc.status || "—",
+      reviewedBy: reviewer || "—",
+      source: "compliance",
+      path: doc.documentPath,
+    };
+  };
+
   const fetchDocuments = () => {
     setLoading(true);
     getComplianceDocuments({ status: filter })
       .then((res) => {
-        setDocumentRows(res.data?.data || []);
+        const rows = (res.data?.data || []).map(mapDocument);
+        setDocumentRows(rows);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
