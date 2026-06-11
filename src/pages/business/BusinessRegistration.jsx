@@ -53,7 +53,6 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
     licenceIssueDate: '',
     licenceExpiryDate: '',
     cosAllocation: '',
-    licenceStatus: '',
 
     ownershipType: '',
     shareholders: [],
@@ -70,10 +69,6 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
     billingPhone: '',
     outstandingBalance: '',
     paymentTerms: '',
-
-    ownershipType: '',
-    shareholders: [],
-    directors: [],
   });
 
   useEffect(() => {
@@ -568,7 +563,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
                 <label className="text-xs font-bold text-gray-700">Licence Issue Date</label>
                 <DatePicker
@@ -595,19 +590,6 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                   className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                   placeholder="Enter number of CoS"
                 />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-700">Licence Status</label>
-                <select
-                  value={form.licenceStatus || ""}
-                  onChange={(e) => handleChange('licenceStatus', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
-                >
-                  <option value="">Select status</option>
-                  <option>Active</option>
-                  <option>Suspended</option>
-                  <option>Expired</option>
-                </select>
               </div>
             </div>
           </div>
@@ -638,7 +620,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
               <div className="space-y-4">
                 {(form.shareholders || []).map((s, idx) => (
                   <div key={idx} className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                    <div className="flex-1 grid grid-cols-2 gap-4">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <input
                         placeholder="Name"
                         value={s.name || ""}
@@ -673,7 +655,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
               <div className="space-y-4">
                 {(form.directors || []).map((d, idx) => (
                   <div key={idx} className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                    <div className="flex-1 grid grid-cols-2 gap-4">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <input
                         placeholder="Name"
                         value={d.name || ""}
@@ -790,17 +772,19 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
   };
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
-      <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-        <div className="mb-8 gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-4xl font-black text-secondary flex items-center gap-3">
-              <Building2 size={32} className="text-primary" />
-              Business Registration
-            </h1>
-            <p className="mt-2 text-sm font-bold text-primary">Complete the registration in a few simple steps.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 mt-8">
+    <div className={embedded ? "p-4 sm:p-6" : "mx-auto max-w-6xl p-6"}>
+      <div className={embedded ? "" : "rounded-3xl border border-gray-200 bg-white p-8 shadow-sm"}>
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          {!embedded && (
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-secondary flex items-center gap-3">
+                <Building2 size={28} className="text-primary shrink-0" />
+                Business Registration
+              </h1>
+              <p className="mt-2 text-sm font-bold text-primary">Complete the registration in a few simple steps.</p>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
             {steps.map((item) => (
               <div
                 key={item.id}
@@ -830,7 +814,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
               type="button"
               onClick={prevStep}
               disabled={step === 1}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-400 text-gray px-6 py-3 text-xs font-black shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white text-gray-700 px-6 py-3 text-xs font-black shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ArrowLeft size={16} />
               Previous

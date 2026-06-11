@@ -223,7 +223,6 @@ const BusinessProfile = () => {
       licenceIssueDate: registrationData?.licenceIssueDate || "",
       licenceExpiryDate: registrationData?.licenceExpiryDate || "",
       cosAllocation: registrationData?.cosAllocation || "",
-      licenceStatus: registrationData?.licenceStatus || "",
     });
     setHrModalOpen(true);
   };
@@ -334,8 +333,8 @@ const BusinessProfile = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <LayoutDashboard className="text-primary" size={36} />
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
+          <LayoutDashboard className="text-primary shrink-0" size={28} />
           Business Profile
         </h1>
         <p className="text-primary font-bold text-sm mt-1">Manage your company information.</p>
@@ -380,6 +379,38 @@ const BusinessProfile = () => {
         </div>
       </motion.div>
 
+      {/* Complete-your-registration prompt — shown until the sponsor completes it */}
+      {!hasRegistration && (
+        <motion.div
+          className="rounded-3xl border border-primary/20 bg-primary/5 p-6"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 rounded-2xl bg-primary/10 p-3">
+                <FileText className="text-primary" size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-secondary">Complete your business registration</h3>
+                <p className="mt-1 text-sm font-medium text-gray-600">
+                  Your account has been created by your case team. Please complete your full business
+                  registration so we can process your sponsorship — it only takes a few minutes.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRegistrationOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-black text-white transition hover:bg-primary-dark w-full sm:w-auto shrink-0"
+            >
+              Complete Registration
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Company Information Section */}
       <motion.div
         className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
@@ -387,14 +418,14 @@ const BusinessProfile = () => {
         initial="hidden"
         animate="visible"
       >
-        <div className="flex justify-between">
-          <h2 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
-            <FileText size={24} className="text-primary" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-6">
+          <h2 className="text-xl font-black text-secondary flex items-center gap-2">
+            <FileText size={24} className="text-primary shrink-0" />
             Company Information
           </h2>
 
           <button
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark w-full sm:w-auto shrink-0"
             type="button"
             onClick={() => setRegistrationOpen(true)}
           >
@@ -657,11 +688,23 @@ const BusinessProfile = () => {
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl border border-gray-200 bg-gray-50/40 p-6 text-center">
-            <p className="text-sm font-black text-secondary">No business registration saved yet.</p>
-            <p className="mt-1 text-xs font-bold text-gray-500">
-              Click "Add Business Registration" to fill the form and it will show here.
+          <div className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-8 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
+              <FileText className="text-primary" size={22} />
+            </div>
+            <p className="text-base font-black text-secondary">Let&apos;s complete your business registration</p>
+            <p className="mx-auto mt-1 max-w-md text-sm font-medium text-gray-600">
+              Tell us about your company, address, key personnel, ownership, HR and billing.
+              Everything is saved securely and you can edit any section later.
             </p>
+            <button
+              type="button"
+              onClick={() => setRegistrationOpen(true)}
+              className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-black text-white transition hover:bg-primary-dark"
+            >
+              Start Registration
+              <ArrowRight size={16} />
+            </button>
           </div>
         )}
       </motion.div>
@@ -870,8 +913,8 @@ const BusinessProfile = () => {
             </div>
             <div className="space-y-4">
               {(keyPersonDraft.level1Users || []).map((user, idx) => (
-                <div key={idx} className="flex items-center gap-4 bg-gray-50/30 p-4 rounded-2xl border border-gray-100">
-                  <div className="flex-1 grid grid-cols-3 gap-4">
+                <div key={idx} className="flex items-start gap-4 bg-gray-50/30 p-4 rounded-2xl border border-gray-100">
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <input
                       placeholder="Name"
                       value={user.name || ""}
@@ -970,7 +1013,7 @@ const BusinessProfile = () => {
             <div className="space-y-3">
               {(ownershipDraft.shareholders || []).map((s, idx) => (
                 <div key={idx} className="flex items-center gap-3 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                  <div className="flex-1 grid grid-cols-2 gap-3">
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <input
                       placeholder="Name"
                       value={s.name}
@@ -1013,7 +1056,7 @@ const BusinessProfile = () => {
             <div className="space-y-3">
               {(ownershipDraft.directors || []).map((d, idx) => (
                 <div key={idx} className="flex items-center gap-3 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                  <div className="flex-1 grid grid-cols-2 gap-3">
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <input
                       placeholder="Name"
                       value={d.name}
@@ -1083,6 +1126,7 @@ const BusinessProfile = () => {
               <input
                 value={hrDraft.hrName || ""}
                 onChange={(e) => setHrDraft({ ...hrDraft, hrName: e.target.value })}
+                placeholder="Enter HR manager name"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               />
             </div>
@@ -1091,6 +1135,7 @@ const BusinessProfile = () => {
               <input
                 value={hrDraft.hrPhone || ""}
                 onChange={(e) => setHrDraft({ ...hrDraft, hrPhone: e.target.value })}
+                placeholder="Enter HR manager phone"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               />
             </div>
@@ -1099,6 +1144,7 @@ const BusinessProfile = () => {
               <input
                 value={hrDraft.hrEmail || ""}
                 onChange={(e) => setHrDraft({ ...hrDraft, hrEmail: e.target.value })}
+                placeholder="Enter HR manager email"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               />
             </div>
@@ -1127,22 +1173,9 @@ const BusinessProfile = () => {
               <input
                 value={hrDraft.cosAllocation || ""}
                 onChange={(e) => setHrDraft({ ...hrDraft, cosAllocation: e.target.value })}
+                placeholder="e.g. 50"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Licence Status</label>
-              <select
-                value={hrDraft.licenceStatus || ""}
-                onChange={(e) => setHrDraft({ ...hrDraft, licenceStatus: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40"
-              >
-                <option value="">Select status</option>
-                <option>Active</option>
-                <option>Suspended</option>
-                <option>Expired</option>
-                <option>Pending</option>
-              </select>
             </div>
           </div>
         </div>
@@ -1178,6 +1211,7 @@ const BusinessProfile = () => {
               <input
                 value={billingDraft.billingName || ""}
                 onChange={(e) => setBillingDraft({ ...billingDraft, billingName: e.target.value })}
+                placeholder="Enter billing contact name"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40"
               />
             </div>
@@ -1186,6 +1220,7 @@ const BusinessProfile = () => {
               <input
                 value={billingDraft.billingPhone || ""}
                 onChange={(e) => setBillingDraft({ ...billingDraft, billingPhone: e.target.value })}
+                placeholder="Enter billing phone"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40"
               />
             </div>
@@ -1194,6 +1229,7 @@ const BusinessProfile = () => {
               <input
                 value={billingDraft.billingEmail || ""}
                 onChange={(e) => setBillingDraft({ ...billingDraft, billingEmail: e.target.value })}
+                placeholder="Enter billing email"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40"
               />
             </div>
@@ -1202,6 +1238,7 @@ const BusinessProfile = () => {
               <input
                 value={billingDraft.outstandingBalance || ""}
                 onChange={(e) => setBillingDraft({ ...billingDraft, outstandingBalance: e.target.value })}
+                placeholder="e.g. 0.00"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40"
               />
             </div>

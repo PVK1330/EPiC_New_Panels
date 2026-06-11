@@ -1,593 +1,381 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard,
   FileText,
   Upload,
   CheckCircle2,
-  AlertCircle,
-  ChevronRight,
-  ChevronLeft,
+  X,
   Building2,
   User,
-  Phone,
-  Mail,
-  MapPin,
-  DollarSign,
-  Calendar,
-  X,
   ShieldCheck,
-  Briefcase,
-  TrendingUp,
-  ArrowRight
+  DollarSign,
+  Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { submitLicenceApplication } from "../../services/licenceApi";
 import { useToast } from "../../context/ToastContext";
 import DatePicker from "../../components/DatePicker";
 
+// Routes aligned with the UK Home Office sponsor licence application.
+const LICENCE_ROUTES = [
+  "Skilled Worker",
+  "Scale-up",
+  "Global Business Mobility (GBM)",
+  "Student",
+  "Minister of Religion",
+  "International Sportsperson",
+  "Temporary Worker — Creative Worker",
+  "Temporary Worker — Charity Worker",
+  "Temporary Worker — Religious Worker",
+  "Temporary Worker — Government Authorised Exchange",
+  "Temporary Worker — International Agreement",
+  "Temporary Worker — Seasonal Worker",
+];
+
+const SECTORS = [
+  "Information Technology",
+  "Healthcare & Social Care",
+  "Engineering & Manufacturing",
+  "Construction",
+  "Education",
+  "Financial & Professional Services",
+  "Hospitality & Catering",
+  "Retail & Wholesale",
+  "Logistics & Transport",
+  "Creative & Media",
+  "Agriculture",
+  "Other",
+];
+
+const FUNDING_SOURCES = [
+  "Operational profit",
+  "Investment / venture capital",
+  "Bank financing",
+  "Government grant",
+  "Other",
+];
+
+const REQUIRED = [
+  "companyName",
+  "registrationNumber",
+  "industry",
+  "licenceType",
+  "cosAllocation",
+  "reason",
+  "contactName",
+  "contactEmail",
+  "contactPhone",
+];
+
+// Defined at module scope so it is a stable component type (otherwise the form
+// inputs would remount and lose focus on every keystroke).
+const Section = ({ icon: Icon, title, subtitle, children, tone = "primary" }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 12 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="rounded-3xl border border-gray-100 bg-white p-6 sm:p-8 shadow-sm"
+  >
+    <div className="flex items-center gap-3 mb-6">
+      <div className={`p-2.5 rounded-xl ${tone === "emerald" ? "bg-emerald-50 text-emerald-600" : "bg-primary/5 text-primary"}`}>
+        <Icon size={22} />
+      </div>
+      <div>
+        <h2 className="text-lg font-black text-secondary">{title}</h2>
+        {subtitle && <p className="text-xs font-medium text-gray-400 mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+    {children}
+  </motion.div>
+);
+
 const ApplyLicence = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [declared, setDeclared] = useState(false);
+  const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
-    // Company Information
     companyName: "",
     tradingName: "",
     registrationNumber: "",
     industry: "",
-    registeredAddress: "",
-    tradingAddress: "",
-    companyType: "",
-    numberOfEmployees: "",
-    annualTurnover: "",
-    
-    // Contact Information
-    contactName: "",
-    contactEmail: "",
-    contactPhone: "",
-    
-    // Licence Details
     licenceType: "",
     cosAllocation: "",
     proposedStartDate: "",
     reason: "",
-    
-    // Financial Information
+    contactName: "",
+    contactEmail: "",
+    contactPhone: "",
     fundingSource: "",
     estimatedAnnualCost: "",
   });
-
   const [uploadedFiles, setUploadedFiles] = useState([]);
-
-  const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
-      transition: { type: "spring", stiffness: 100, damping: 15 } 
-    },
-  };
-
-  const steps = [
-    { id: 1, title: "Company", icon: Building2 },
-    { id: 2, title: "Contact", icon: User },
-    { id: 3, title: "Licence", icon: FileText },
-    { id: 5, title: "Documents", icon: Upload },
-  ];
-
-  const handleNext = () => {
-    const currentIndex = steps.findIndex((s) => s.id === currentStep);
-    if (currentIndex !== -1 && currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1].id);
-      window.scrollTo(0, 0);
-    }
-  };
-
-  const handlePrevious = () => {
-    const currentIndex = steps.findIndex((s) => s.id === currentStep);
-    if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1].id);
-      window.scrollTo(0, 0);
-    }
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((p) => ({ ...p, [name]: value }));
+    if (errors[name]) setErrors((p) => ({ ...p, [name]: undefined }));
   };
 
-  const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files);
-    setUploadedFiles([...uploadedFiles, ...files]);
-  };
+  const handleFileUpload = (e) => setUploadedFiles((p) => [...p, ...Array.from(e.target.files)]);
+  const handleRemoveFile = (i) => setUploadedFiles((p) => p.filter((_, idx) => idx !== i));
 
-  const handleRemoveFile = (index) => {
-    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+  const validate = () => {
+    const e = {};
+    REQUIRED.forEach((k) => {
+      if (!String(formData[k] || "").trim()) e[k] = "Required";
+    });
+    if (formData.contactEmail && !/\S+@\S+\.\S+/.test(formData.contactEmail)) {
+      e.contactEmail = "Enter a valid email";
+    }
+    return e;
   };
 
   const handleSubmit = async () => {
+    const e = validate();
+    if (Object.keys(e).length) {
+      setErrors(e);
+      showToast({ message: "Please complete all required fields.", variant: "warning" });
+      return;
+    }
+    if (!declared) {
+      showToast({ message: "Please confirm the declaration before submitting.", variant: "warning" });
+      return;
+    }
     try {
       setLoading(true);
-      const payload = {
-        ...formData,
-        documents: uploadedFiles,
-        type: 'New' // Explicitly setting type as it's a new application
-      };
-      
-      const res = await submitLicenceApplication(payload);
+      const res = await submitLicenceApplication({ ...formData, documents: uploadedFiles, type: "New" });
       if (res.data.status === "success") {
         showToast({ message: "Licence application submitted successfully!", variant: "success" });
         navigate("/business/licence");
       }
     } catch (err) {
-      showToast({ 
-        message: err.response?.data?.message || "Failed to submit application", 
-        variant: "danger" 
-      });
+      showToast({ message: err.response?.data?.message || "Failed to submit application", variant: "danger" });
     } finally {
       setLoading(false);
     }
   };
 
-  const inputClasses = "w-full border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary bg-gray-50/30 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all placeholder:text-gray-300 placeholder:font-bold";
-  const labelClasses = "block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 ml-1";
+  const input =
+    "w-full border rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all placeholder:text-gray-300 placeholder:font-medium";
+  const cls = (name) => `${input} ${errors[name] ? "border-red-400" : "border-gray-200"}`;
+  const label = "block text-xs font-bold text-gray-700 mb-2";
+  const errText = (name) => errors[name] && errors[name] !== "Required" ? <p className="text-[11px] text-red-500 mt-1 font-bold">{errors[name]}</p> : null;
 
   return (
-    <div className="space-y-10 pb-12 overflow-x-hidden relative">
-      {/* Decorative Background Elements */}
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/2 -right-24 w-64 h-64 bg-secondary/5 rounded-full blur-3xl pointer-events-none" />
-
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative z-10"
-      >
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary/10 rounded-2xl shadow-sm border border-primary/10">
-            <ShieldCheck className="text-primary" size={32} />
-          </div>
-          <div>
-            <h1 className="text-4xl font-black text-secondary tracking-tight">
-              Sponsor Licence Application
-            </h1>
-            <p className="text-gray-500 font-bold text-sm mt-1">
-              Begin your journey to global talent acquisition.
-            </p>
-          </div>
-        </div>
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
+          <ShieldCheck className="text-primary shrink-0" size={28} />
+          Apply for a Sponsor Licence
+        </h1>
+        <p className="text-primary font-bold text-sm mt-1">
+          A simple application aligned with UK Home Office sponsor licence requirements.
+        </p>
       </motion.div>
 
-      <div className="grid lg:grid-cols-4 gap-8 relative z-10">
-        
-        {/* Sidebar Progress */}
-        <div className="lg:col-span-1 space-y-4">
-          <motion.div 
-            className="bg-white/80 backdrop-blur-md rounded-3xl border border-gray-100 p-6 shadow-sm sticky top-8"
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Application Progress</h3>
-            <div className="space-y-6">
-              {steps.map((step, index) => (
-                <button 
-                  key={step.id} 
-                  onClick={() => !loading && setCurrentStep(step.id)}
-                  className="flex items-start gap-4 group w-full text-left transition-all hover:translate-x-1"
-                >
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 border-2 ${
-                        currentStep === step.id
-                          ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-110"
-                          : currentStep > step.id
-                          ? "bg-emerald-500 text-white border-emerald-500"
-                          : "bg-white text-gray-300 border-gray-100"
-                      }`}
-                    >
-                      {currentStep > step.id ? <CheckCircle2 size={16} /> : <step.icon size={16} />}
-                    </div>
-                    {index < steps.length - 1 && (
-                      <div className={`w-0.5 h-10 mt-1 transition-colors duration-500 ${
-                        currentStep > step.id ? "bg-emerald-500" : "bg-gray-100"
-                      }`} />
-                    )}
-                  </div>
-                  <div className="pt-1">
-                    <p className={`text-xs font-black transition-colors ${
-                      currentStep === step.id ? "text-secondary" : "text-gray-300"
-                    }`}>
-                      {step.title}
-                    </p>
-                    <p className="text-[10px] font-bold text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Go to Step {index + 1}
-                    </p>
-                  </div>
-                </button>
+      {/* Licence & CoS */}
+      <Section
+        icon={FileText}
+        title="Licence & Certificates of Sponsorship"
+        subtitle="The route you want to sponsor under and your expected need."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label className={label}>Licence route *</label>
+            <select name="licenceType" value={formData.licenceType} onChange={handleInputChange} className={cls("licenceType")}>
+              <option value="">Select a route…</option>
+              {LICENCE_ROUTES.map((r) => (
+                <option key={r} value={r}>{r}</option>
               ))}
-            </div>
-          </motion.div>
+            </select>
+          </div>
+          <div>
+            <label className={label}>Estimated CoS needed (first year) *</label>
+            <input
+              type="number"
+              min="0"
+              name="cosAllocation"
+              value={formData.cosAllocation}
+              onChange={handleInputChange}
+              className={cls("cosAllocation")}
+              placeholder="e.g. 5"
+            />
+          </div>
+          <div>
+            <label className={label}>Proposed start date</label>
+            <DatePicker
+              name="proposedStartDate"
+              value={formData.proposedStartDate}
+              onChange={handleInputChange}
+              placeholder="Select date"
+              min={new Date().toISOString().split("T")[0]}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className={label}>Why do you need this licence? *</label>
+            <textarea
+              name="reason"
+              value={formData.reason}
+              onChange={handleInputChange}
+              rows={4}
+              className={`${cls("reason")} resize-none`}
+              placeholder="Briefly describe the roles you need to fill and why you need to sponsor overseas workers…"
+            />
+          </div>
         </div>
+      </Section>
 
-        {/* Main Form Area */}
-        <div className="lg:col-span-3 space-y-8">
-          <motion.div
-            className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm min-h-[500px] flex flex-col"
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            key={currentStep} // Re-animate on step change
-          >
-            <div className="flex-1">
-              <AnimatePresence mode="wait">
+      {/* Organisation */}
+      <Section icon={Building2} title="Organisation details">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label className={label}>Organisation name *</label>
+            <input name="companyName" value={formData.companyName} onChange={handleInputChange} className={cls("companyName")} placeholder="TechNova Ltd" />
+          </div>
+          <div>
+            <label className={label}>Trading name</label>
+            <input name="tradingName" value={formData.tradingName} onChange={handleInputChange} className={cls("tradingName")} placeholder="If different from above" />
+          </div>
+          <div>
+            <label className={label}>Companies House number *</label>
+            <input name="registrationNumber" value={formData.registrationNumber} onChange={handleInputChange} className={cls("registrationNumber")} placeholder="08472931" />
+          </div>
+          <div>
+            <label className={label}>Sector *</label>
+            <select name="industry" value={formData.industry} onChange={handleInputChange} className={cls("industry")}>
+              <option value="">Select a sector…</option>
+              {SECTORS.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </Section>
+
+      {/* Contact */}
+      <Section icon={User} title="Authorising officer / main contact" subtitle="The senior person responsible for the sponsor licence.">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="md:col-span-2">
+            <label className={label}>Full name *</label>
+            <input name="contactName" value={formData.contactName} onChange={handleInputChange} className={cls("contactName")} placeholder="Jane Smith" />
+          </div>
+          <div>
+            <label className={label}>Email *</label>
+            <input type="email" name="contactEmail" value={formData.contactEmail} onChange={handleInputChange} className={cls("contactEmail")} placeholder="name@company.com" />
+            {errText("contactEmail")}
+          </div>
+          <div>
+            <label className={label}>Phone *</label>
+            <input name="contactPhone" value={formData.contactPhone} onChange={handleInputChange} className={cls("contactPhone")} placeholder="+44 20 7946 0000" />
+          </div>
+        </div>
+      </Section>
+
+      {/* Financial (optional) */}
+      <Section icon={DollarSign} title="Financial information" subtitle="Optional — helps us understand your sponsorship capacity." tone="emerald">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label className={label}>Primary funding source</label>
+            <select name="fundingSource" value={formData.fundingSource} onChange={handleInputChange} className={cls("fundingSource")}>
+              <option value="">Select a source…</option>
+              {FUNDING_SOURCES.map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={label}>Estimated annual sponsorship budget (£)</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-300">£</span>
+              <input
+                type="number"
+                min="0"
+                name="estimatedAnnualCost"
+                value={formData.estimatedAnnualCost}
+                onChange={handleInputChange}
+                className={`${cls("estimatedAnnualCost")} pl-8`}
+                placeholder="50000"
+              />
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* Documents */}
+      <Section icon={Upload} title="Supporting documents" subtitle="Certificate of incorporation, bank statements, PAYE evidence, etc.">
+        <label
+          htmlFor="apply-licence-files"
+          className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/40 p-8 text-center cursor-pointer hover:border-primary/40 transition-colors"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-white border border-gray-100 flex items-center justify-center shadow-sm">
+            <Upload size={22} className="text-primary" />
+          </div>
+          <p className="text-sm font-black text-secondary">Click to upload, or drag &amp; drop</p>
+          <p className="text-xs font-medium text-gray-400">PDF, JPG or PNG — multiple files allowed</p>
+          <input id="apply-licence-files" type="file" multiple onChange={handleFileUpload} className="hidden" />
+        </label>
+
+        <AnimatePresence>
+          {uploadedFiles.length > 0 && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2 mt-4">
+              {uploadedFiles.map((file, index) => (
                 <motion.div
-                  initial={{ opacity: 0, x: 10 }}
+                  key={index}
+                  initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  transition={{ duration: 0.3 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white p-3"
                 >
-                  {/* Step 1: Company Information */}
-                  {currentStep === 1 && (
-                    <div className="space-y-8">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/5 rounded-xl">
-                          <Building2 size={24} className="text-primary" />
-                        </div>
-                        <h2 className="text-2xl font-black text-secondary">Company Identity</h2>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="md:col-span-2">
-                          <label className={labelClasses}>Company Legal Name *</label>
-                          <input
-                            type="text"
-                            name="companyName"
-                            value={formData.companyName}
-                            onChange={handleInputChange}
-                            className={inputClasses}
-                            placeholder="Elite Immigration Services Ltd"
-                          />
-                        </div>
-
-                        <div>
-                          <label className={labelClasses}>Registration Number *</label>
-                          <input
-                            type="text"
-                            name="registrationNumber"
-                            value={formData.registrationNumber}
-                            onChange={handleInputChange}
-                            className={inputClasses}
-                            placeholder="CRN-12345678"
-                          />
-                        </div>
-
-                        <div>
-                          <label className={labelClasses}>Industry Sector *</label>
-                          <select
-                            name="industry"
-                            value={formData.industry}
-                            onChange={handleInputChange}
-                            className={inputClasses}
-                          >
-                            <option value="">Select industry</option>
-                            <option value="technology">Technology</option>
-                            <option value="healthcare">Healthcare</option>
-                            <option value="finance">Finance</option>
-                            <option value="education">Education</option>
-                            <option value="other">Other</option>
-                          </select>
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <label className={labelClasses}>Registered Office Address *</label>
-                          <div className="relative">
-                            <MapPin size={18} className="absolute left-5 top-4 text-gray-300" />
-                            <input
-                              type="text"
-                              name="registeredAddress"
-                              value={formData.registeredAddress}
-                              onChange={handleInputChange}
-                              className={`${inputClasses} pl-12`}
-                              placeholder="123 Corporate Way, London, UK"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 bg-gray-50 rounded-lg shrink-0">
+                      <FileText size={16} className="text-gray-400" />
                     </div>
-                  )}
-
-                  {/* Step 2: Contact Details */}
-                  {currentStep === 2 && (
-                    <div className="space-y-8">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-secondary/5 rounded-xl">
-                          <User size={24} className="text-secondary" />
-                        </div>
-                        <h2 className="text-2xl font-black text-secondary">Authorised Personnel</h2>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="md:col-span-2">
-                          <label className={labelClasses}>Full Name of Authorising Officer *</label>
-                          <input
-                            type="text"
-                            name="contactName"
-                            value={formData.contactName}
-                            onChange={handleInputChange}
-                            className={inputClasses}
-                            placeholder="John Sebastian Doe"
-                          />
-                        </div>
-
-                        <div>
-                          <label className={labelClasses}>Direct Business Email *</label>
-                          <div className="relative">
-                            <Mail size={18} className="absolute left-5 top-4 text-gray-300" />
-                            <input
-                              type="email"
-                              name="contactEmail"
-                              value={formData.contactEmail}
-                              onChange={handleInputChange}
-                              className={`${inputClasses} pl-12`}
-                              placeholder="john.doe@company.com"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className={labelClasses}>Contact Phone Number *</label>
-                          <div className="relative">
-                            <Phone size={18} className="absolute left-5 top-4 text-gray-300" />
-                            <input
-                              type="tel"
-                              name="contactPhone"
-                              value={formData.contactPhone}
-                              onChange={handleInputChange}
-                              className={`${inputClasses} pl-12`}
-                              placeholder="+44 7700 900000"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-secondary truncate">{file.name}</p>
+                      <p className="text-[10px] font-bold text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
-                  )}
-
-                  {/* Step 3: Licence Details */}
-                  {currentStep === 3 && (
-                    <div className="space-y-8">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/5 rounded-xl">
-                          <FileText size={24} className="text-primary" />
-                        </div>
-                        <h2 className="text-2xl font-black text-secondary">Licence Strategy</h2>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className={labelClasses}>Requested Licence Type *</label>
-                          <select
-                            name="licenceType"
-                            value={formData.licenceType}
-                            onChange={handleInputChange}
-                            className={inputClasses}
-                          >
-                            <option value="">Select type</option>
-                            <option value="Skilled Worker">Skilled Worker</option>
-                            <option value="Temporary Worker">Temporary Worker</option>
-                            <option value="Global Business Mobility">Global Business Mobility</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className={labelClasses}>Estimated CoS Allocation *</label>
-                          <select
-                            name="cosAllocation"
-                            value={formData.cosAllocation}
-                            onChange={handleInputChange}
-                            className={inputClasses}
-                          >
-                            <option value="">Select allocation</option>
-                            <option value="Small (1-5)">Small (1-5)</option>
-                            <option value="Medium (6-20)">Medium (6-20)</option>
-                            <option value="Large (21+)">Large (21+)</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className={labelClasses}>Proposed Start Date</label>
-                          <DatePicker
-                            name="proposedStartDate"
-                            value={formData.proposedStartDate}
-                            onChange={handleInputChange}
-                            placeholder="Select date"
-                            min={new Date().toISOString().split("T")[0]}
-                          />
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <label className={labelClasses}>Business Justification *</label>
-                          <textarea
-                            name="reason"
-                            value={formData.reason}
-                            onChange={handleInputChange}
-                            rows={5}
-                            className={`${inputClasses} resize-none`}
-                            placeholder="Briefly describe the business need for sponsoring international workers..."
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 4: Financial Information */}
-                  {currentStep === 4 && (
-                    <div className="space-y-8">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
-                          <DollarSign size={24} />
-                        </div>
-                        <h2 className="text-2xl font-black text-secondary">Financial Stability</h2>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className={labelClasses}>Primary Funding Source *</label>
-                          <select
-                            name="fundingSource"
-                            value={formData.fundingSource}
-                            onChange={handleInputChange}
-                            className={inputClasses}
-                          >
-                            <option value="">Select source</option>
-                            <option value="Operational Profit">Operational Profit</option>
-                            <option value="Venture Capital">Venture Capital</option>
-                            <option value="Government Grant">Government Grant</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className={labelClasses}>Est. Annual Sponsorship Budget (£) *</label>
-                          <div className="relative">
-                            <DollarSign size={18} className="absolute left-5 top-4 text-gray-300" />
-                            <input
-                              type="number"
-                              name="estimatedAnnualCost"
-                              value={formData.estimatedAnnualCost}
-                              onChange={handleInputChange}
-                              className={`${inputClasses} pl-12`}
-                              placeholder="50,000"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 5: Upload Documents */}
-                  {currentStep === 5 && (
-                    <div className="space-y-8">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/5 rounded-xl">
-                          <Upload size={24} className="text-primary" />
-                        </div>
-                        <h2 className="text-2xl font-black text-secondary">Supporting Evidence</h2>
-                      </div>
-
-                      <div className="p-10 bg-gray-50/50 rounded-[2.5rem] border-2 border-dashed border-gray-200 group hover:border-primary/30 transition-colors">
-                        <div className="text-center">
-                          <div className="w-16 h-16 bg-white rounded-3xl shadow-sm border border-gray-100 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                            <Upload size={32} className="text-primary" />
-                          </div>
-                          <p className="text-lg font-black text-secondary mb-2">
-                            Drop your evidence files here
-                          </p>
-                          <p className="text-xs font-bold text-gray-400 mb-8 max-w-[250px] mx-auto">
-                            Upload Certificate of Incorporation, Business Plan, and Bank Statements.
-                          </p>
-                          <input
-                            type="file"
-                            multiple
-                            onChange={handleFileUpload}
-                            className="hidden"
-                            id="file-upload"
-                          />
-                          <label
-                            htmlFor="file-upload"
-                            className="inline-flex items-center gap-3 rounded-2xl bg-secondary px-8 py-4 text-sm font-black text-white transition hover:bg-secondary-dark cursor-pointer shadow-lg active:scale-95"
-                          >
-                            <Upload size={18} />
-                            Select Files
-                          </label>
-                        </div>
-                      </div>
-
-                      <AnimatePresence>
-                        {uploadedFiles.length > 0 && (
-                          <motion.div 
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            className="space-y-3"
-                          >
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Attachments ({uploadedFiles.length})</p>
-                            {uploadedFiles.map((file, index) => (
-                              <motion.div
-                                key={index}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 10 }}
-                                className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-primary/10 transition-colors"
-                              >
-                                <div className="flex items-center gap-4">
-                                  <div className="p-2 bg-gray-50 rounded-xl">
-                                    <FileText size={18} className="text-gray-400" />
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-black text-secondary truncate max-w-[200px]">{file.name}</p>
-                                    <p className="text-[10px] font-bold text-gray-400">
-                                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                                    </p>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={() => handleRemoveFile(index)}
-                                  className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                                >
-                                  <X size={18} />
-                                </button>
-                              </motion.div>
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )}
+                  </div>
+                  <button onClick={() => handleRemoveFile(index)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all shrink-0">
+                    <X size={16} />
+                  </button>
                 </motion.div>
-              </AnimatePresence>
-            </div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Section>
 
-            {/* Navigation Buttons */}
-            <div className="flex justify-between pt-10 border-t border-gray-50 mt-12">
-              <button
-                onClick={handlePrevious}
-                disabled={currentStep === 1 || loading}
-                className="inline-flex items-center gap-2 rounded-2xl border border-gray-100 px-8 py-4 text-sm font-black text-gray-500 hover:bg-gray-50 transition disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={18} />
-                Back
-              </button>
+      {/* Declaration */}
+      <Section icon={ShieldCheck} title="Declaration">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" checked={declared} onChange={(e) => setDeclared(e.target.checked)} className="mt-1 shrink-0" />
+          <span className="text-sm font-medium text-gray-600">
+            I confirm that the information provided is true and complete to the best of my knowledge, and I
+            understand the duties and responsibilities of a licensed sponsor under the UK Home Office sponsor guidance.
+          </span>
+        </label>
+      </Section>
 
-              {currentStep !== steps[steps.length - 1].id ? (
-                <button
-                  onClick={handleNext}
-                  className="inline-flex items-center gap-3 rounded-2xl bg-secondary px-8 py-4 text-sm font-black text-white transition hover:bg-secondary-dark shadow-md active:scale-95"
-                >
-                  Continue
-                  <ChevronRight size={18} />
-                </button>
-              ) : (
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="inline-flex items-center gap-3 rounded-2xl bg-primary px-10 py-4 text-sm font-black text-white transition hover:bg-primary-dark shadow-xl shadow-primary/20 disabled:opacity-70 active:scale-95"
-                >
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      Submit Application
-                      <CheckCircle2 size={18} />
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          </motion.div>
-        </div>
+      {/* Submit */}
+      <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => navigate("/business/licence")}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-6 py-3 text-sm font-black text-gray-600 hover:bg-gray-50 transition w-full sm:w-auto"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-3.5 text-sm font-black text-white transition hover:bg-primary-dark shadow-lg shadow-primary/20 disabled:opacity-70 w-full sm:w-auto"
+        >
+          {loading ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+          Submit Application
+        </button>
       </div>
     </div>
   );

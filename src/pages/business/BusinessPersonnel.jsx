@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, Plus, Users, Briefcase, Trash2, Save, X, Eye, Pencil, Loader2 } from 'lucide-react';
+import { User, Plus, Users, Briefcase, Trash2, Eye, Pencil, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Modal from "../../components/Modal";
 import { getBusinessProfile, updateKeyPersonnel } from "../../services/businessProfileApi";
@@ -107,8 +107,11 @@ const BusinessPersonnel = () => {
   const closePersonModal = () => setPersonModal({ open: false, mode: "view", target: null });
 
   const savePersonDraft = async () => {
-    if (!personDraft.name?.trim() || !personDraft.email?.trim() || !personDraft.phone?.trim()) return;
-    
+    if (!personDraft.name?.trim() || !personDraft.email?.trim() || !personDraft.phone?.trim()) {
+      showToast({ message: "Please fill in all required fields (name, phone, email)", variant: "warning" });
+      return;
+    }
+
     let updatedAuthorising = { ...authorisingOfficer };
     let updatedKeyContact = { ...keyContact };
     let updatedHrManager = { ...hrManager };
@@ -147,12 +150,6 @@ const BusinessPersonnel = () => {
     });
   };
 
-  const clearPerson = (target) => {
-    if (target === "authorisingOfficer") setAuthorisingOfficer({ name: "", phone: "", email: "", jobTitle: "" });
-    if (target === "keyContact") setKeyContact({ name: "", phone: "", email: "", department: "" });
-    if (target === "hrManager") setHrManager({ name: "", phone: "", email: "", jobTitle: "" });
-  };
-
   const openAdd = () => {
     setUserDraft({ name: "", phone: "", email: "", jobTitle: "", department: "" });
     setUserModal({ open: true, mode: "add", index: null });
@@ -164,7 +161,6 @@ const BusinessPersonnel = () => {
   };
 
   const openEdit = (index) => {
-    console.log("Opening edit for index:", index, level1Users[index]);
     setUserDraft({ ...level1Users[index] });
     setUserModal({ open: true, mode: "edit", index });
   };
@@ -174,7 +170,6 @@ const BusinessPersonnel = () => {
   };
 
   const removeLevel1User = async (index) => {
-    console.log("Removing user at index:", index);
     const updated = level1Users.filter((_, i) => i !== index);
     setLevel1Users(updated);
     
@@ -187,7 +182,6 @@ const BusinessPersonnel = () => {
   };
 
   const saveUserDraft = async () => {
-    console.log("Saving user draft:", userDraft, "Mode:", userModal.mode);
     if (!userDraft.name?.trim() || !userDraft.email?.trim() || !userDraft.phone?.trim()) {
       showToast({ message: "Please fill in all required fields", variant: "warning" });
       return;
@@ -241,14 +235,6 @@ const BusinessPersonnel = () => {
     }
   };
 
-  const handleSave = () => {
-    persistChanges({ authorisingOfficer, keyContact, hrManager, level1Users });
-  };
-
-  const handleCancel = () => {
-    console.log('Cancelling changes');
-  };
-
   const filteredLevel1Users = useMemo(() => level1Users, [level1Users]);
 
   const containerVariants = {
@@ -278,13 +264,28 @@ const BusinessPersonnel = () => {
       animate="visible"
     >
       {/* Header */}
-      <motion.div variants={cardVariants}>
-        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <Users className="text-primary" size={36} />
-          Key Personnel
-        </h1>
-        <p className="text-primary font-bold text-sm mt-1">
-          Manage your company's key personnel and contact information for UKVI sponsor licence compliance
+      <motion.div variants={cardVariants} className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
+            <Users className="text-primary shrink-0" size={28} />
+            Key Personnel
+          </h1>
+          <p className="text-primary font-bold text-sm mt-1">
+            Manage your company's key personnel for UKVI sponsor licence compliance.
+          </p>
+        </div>
+        {saving && (
+          <span className="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-3 py-1.5 text-xs font-black text-primary">
+            <Loader2 size={14} className="animate-spin" /> Saving…
+          </span>
+        )}
+      </motion.div>
+
+      {/* Guidance */}
+      <motion.div variants={cardVariants} className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
+        <p className="text-sm font-medium text-gray-600">
+          These are the people responsible for managing your sponsor licence. Keep their details up to date —
+          <span className="font-bold text-secondary"> your changes are saved automatically</span> each time you edit a section.
         </p>
       </motion.div>
 
@@ -324,15 +325,6 @@ const BusinessPersonnel = () => {
                   aria-label="Edit"
                 >
                   <Pencil size={18} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => clearPerson("authorisingOfficer")}
-                  className="p-2 rounded-lg hover:bg-red-50 text-red-600 hover:text-red-700 transition-colors"
-                  title="Delete"
-                  aria-label="Delete"
-                >
-                  <Trash2 size={18} />
                 </button>
               </div>
             </div>
@@ -384,15 +376,6 @@ const BusinessPersonnel = () => {
                   aria-label="Edit"
                 >
                   <Pencil size={18} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => clearPerson("keyContact")}
-                  className="p-2 rounded-lg hover:bg-red-50 text-red-600 hover:text-red-700 transition-colors"
-                  title="Delete"
-                  aria-label="Delete"
-                >
-                  <Trash2 size={18} />
                 </button>
               </div>
             </div>
@@ -447,15 +430,6 @@ const BusinessPersonnel = () => {
                   aria-label="Edit"
                 >
                   <Pencil size={18} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => clearPerson("hrManager")}
-                  className="p-2 rounded-lg hover:bg-red-50 text-red-600 hover:text-red-700 transition-colors"
-                  title="Delete"
-                  aria-label="Delete"
-                >
-                  <Trash2 size={18} />
                 </button>
               </div>
             </div>
@@ -564,24 +538,6 @@ const BusinessPersonnel = () => {
           </motion.div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-4 pt-6 border-t border-gray-200 mt-6">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-6 py-3 bg-primary hover:bg-primary-dark text-white font-black rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/15 flex items-center gap-2 disabled:opacity-70"
-          >
-            {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-            {saving ? "Saving..." : "Save Changes"}
-          </button>
-          <button
-            onClick={handleCancel}
-            className="px-6 py-3 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-200 flex items-center gap-2"
-          >
-            <X size={18} />
-            Cancel
-          </button>
-        </div>
       </motion.div>
 
       <Modal
