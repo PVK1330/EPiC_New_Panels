@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ChevronLeft, Loader2, FileText, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { getAdminLicenceV2, getCaseworkerLicenceV2 } from "../../services/licenceV2Api";
+import LicenceStages from "./LicenceStages";
 
 const ROUTE_LABELS = {
   SkilledWorker: "Skilled Worker", Student: "Student", ScaleUp: "Scale-up",
@@ -81,6 +82,8 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
           <span className="text-sm font-black text-secondary">{money(app.fee?.total, app.fee?.currency)}</span>
         </div>
       </div>
+
+      <LicenceStages applicationId={app.id} app={app} viewerRole={role} />
 
       <Section title="Licence Routes">
         <div className="flex flex-wrap gap-2">

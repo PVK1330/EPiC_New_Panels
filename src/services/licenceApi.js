@@ -52,6 +52,15 @@ export const requestLicenceInfo = (id, data) => api.patch(`/api/admin/licence/re
 export const assignLicenceCaseworker = (id, data) => api.post(`/api/admin/licence/assign-caseworker/${id}`, data);
 export const deleteLicenceApplicationByAdmin = (id) => api.delete(`/api/admin/licence/delete/${id}`);
 
+// Admin: stream a licence application's uploaded document (preview or download).
+// Files are no longer served statically — they must come through this authenticated
+// endpoint as a blob. Pass { download: true } to force a download disposition.
+export const downloadAdminLicenceDocument = (id, index, { download = false } = {}) =>
+  api.get(`/api/admin/licence/${id}/documents/${index}/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
+
 // Business: Licence Summary (real CoS used count from DB)
 export const getLicenceSummary = () =>
   api.get("/api/business/licence/summary");

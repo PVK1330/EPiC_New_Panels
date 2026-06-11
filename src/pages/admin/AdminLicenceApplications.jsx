@@ -27,14 +27,15 @@ import {
   Save,
   Loader2
 } from "lucide-react";
-import { 
-  getAllLicenceApplications, 
+import {
+  getAllLicenceApplications,
   updateLicenceApplicationStatus,
   requestLicenceInfo,
   assignLicenceCaseworker,
-  deleteLicenceApplicationByAdmin
+  deleteLicenceApplicationByAdmin,
+  downloadAdminLicenceDocument
 } from "../../services/licenceApi";
-import { API_BASE_URL } from "../../utils/constants";
+import { triggerDownload } from "../../services/documentApi";
 import api from "../../services/api";
 import { getCaseworkers } from "../../services/caseWorker";
 import { useToast } from "../../context/ToastContext";
@@ -58,6 +59,9 @@ const AdminLicenceApplications = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [editData, setEditData] = useState({});
   const [selectedCaseworkerIds, setSelectedCaseworkerIds] = useState([]);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [docBusy, setDocBusy] = useState(null); // `${index}:${mode}` while a doc loads
 
   const fetchApplications = async () => {
     try {
@@ -166,14 +170,55 @@ const AdminLicenceApplications = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this application? This is a soft delete.")) return;
+  // Documents are streamed through an authenticated endpoint (no static serving).
+  // mode "preview" opens inline in a new tab; "download" forces a file download.
+  const handleDocument = async (index, mode) => {
+    if (!selectedApp || docBusy) return;
     try {
-      await deleteLicenceApplicationByAdmin(id);
+      setDocBusy(`${index}:${mode}`);
+      const res = await downloadAdminLicenceDocument(selectedApp.id, index, { download: mode === "download" });
+      const blob = res.data;
+
+      const cd = res.headers?.["content-disposition"] || "";
+      const match = cd.match(/filename="?([^"]+)"?/i);
+      const filename = match ? match[1] : `document-${index + 1}`;
+
+      if (mode === "download") {
+        triggerDownload(blob, filename);
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) {
+          // Popup blocked — fall back to a download so the action isn't lost.
+          triggerDownload(blob, filename);
+        }
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      }
+    } catch (err) {
+      let message = err?.response?.data?.message;
+      // Error bodies come back as a Blob when responseType is "blob".
+      if (!message && err?.response?.data instanceof Blob) {
+        try { message = JSON.parse(await err.response.data.text())?.message; } catch { /* ignore */ }
+      }
+      showToast({ message: message || "Unable to open this document", variant: "danger" });
+    } finally {
+      setDocBusy(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget || deleteLoading) return;
+    try {
+      setDeleteLoading(true);
+      await deleteLicenceApplicationByAdmin(deleteTarget.id);
       showToast({ message: "Application deleted successfully", variant: "success" });
+      setDeleteTarget(null);
       fetchApplications();
     } catch (err) {
-      showToast({ message: "Delete failed", variant: "danger" });
+      const message = err?.response?.data?.message || "Delete failed. Please try again.";
+      showToast({ message, variant: "danger" });
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -215,6 +260,27 @@ const AdminLicenceApplications = () => {
       String(app.contactName || "").toLowerCase().includes(term);
     return matchesFilter && matchesType && matchesSearch;
   });
+
+  // Resolve assigned caseworker IDs to their loaded records (for showing names).
+  const getAssignedCaseworkers = (app) => {
+    const ids = Array.isArray(app?.assignedcaseworkerId) ? app.assignedcaseworkerId : [];
+    return ids.map((id) => {
+      const cw = caseworkers.find((c) => String(c.id) === String(id));
+      return {
+        id,
+        name: cw ? `${cw.first_name || ""} ${cw.last_name || ""}`.trim() || cw.email : `Caseworker #${id}`,
+      };
+    });
+  };
+
+  const getInitials = (name) =>
+    String(name || "")
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0])
+      .join("")
+      .toUpperCase() || "CW";
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -357,16 +423,25 @@ const AdminLicenceApplications = () => {
                     </span>
                   </td>
                   <td className="px-8 py-6">
-                    {app.assignedcaseworkerId && app.assignedcaseworkerId.length > 0 ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center text-[10px] font-black text-primary">
-                          CW
+                    {(() => {
+                      const assigned = getAssignedCaseworkers(app);
+                      if (assigned.length === 0) {
+                        return <span className="text-[10px] font-bold text-gray-300 italic">Unassigned</span>;
+                      }
+                      return (
+                        <div className="flex items-center gap-2" title={assigned.map((c) => c.name).join(", ")}>
+                          <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center text-[10px] font-black text-primary shrink-0">
+                            {getInitials(assigned[0].name)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-black text-secondary truncate max-w-[140px]">{assigned[0].name}</p>
+                            {assigned.length > 1 && (
+                              <p className="text-[10px] font-bold text-gray-400">+{assigned.length - 1} more</p>
+                            )}
+                          </div>
                         </div>
-                        <span className="text-[10px] font-bold text-gray-600">Assigned</span>
-                      </div>
-                    ) : (
-                      <span className="text-[10px] font-bold text-gray-300 italic">Unassigned</span>
-                    )}
+                      );
+                    })()}
                   </td>
                   <td className="px-8 py-6 text-right">
                       <div className="flex items-center justify-end gap-1.5 flex-wrap max-w-[400px]">
@@ -389,37 +464,6 @@ const AdminLicenceApplications = () => {
                         )}
 
                         <button
-                          onClick={() => openAction(app, "Assign")}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all text-[9px] font-black uppercase"
-                        >
-                          <UserPlus size={14} /> Assign
-                        </button>
-
-                        <button
-                          onClick={() => openAction(app, "Approved")}
-                          disabled={app.status === 'Approved'}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all text-[9px] font-black uppercase disabled:opacity-40 disabled:hover:bg-emerald-50 disabled:hover:text-emerald-600 disabled:cursor-not-allowed"
-                        >
-                          <Check size={14} /> Approve
-                        </button>
-
-                        <button
-                          onClick={() => openAction(app, "Rejected")}
-                          disabled={app.status === 'Rejected'}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all text-[9px] font-black uppercase disabled:opacity-40 disabled:hover:bg-red-50 disabled:hover:text-red-600 disabled:cursor-not-allowed"
-                        >
-                          <X size={14} /> Reject
-                        </button>
-
-                        <button
-                          onClick={() => openAction(app, "RequestInfo")}
-                          className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-all"
-                          title="Request Info"
-                        >
-                          <MessageSquare size={16} />
-                        </button>
-
-                        <button 
                           onClick={() => { 
                             setSelectedApp(app); 
                             setEditData({
@@ -440,8 +484,8 @@ const AdminLicenceApplications = () => {
                           <Pencil size={16} />
                         </button>
 
-                        <button 
-                          onClick={() => handleDelete(app.id)}
+                        <button
+                          onClick={() => setDeleteTarget(app)}
                           className="p-2 bg-red-50 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all"
                           title="Delete"
                         >
@@ -470,34 +514,34 @@ const AdminLicenceApplications = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-secondary/40 backdrop-blur-md p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-[3rem] shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar"
             >
-              <div className="p-10">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-primary/5 rounded-2xl">
-                      <FileText className="text-primary" size={28} />
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-primary/5 rounded-xl">
+                      <FileText className="text-primary" size={24} />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-black text-secondary">Request Details</h2>
+                      <h2 className="text-xl font-black text-secondary">Request Details</h2>
                       <p className="text-xs font-bold text-gray-400">Application ID: #{selectedApp?.id}</p>
                     </div>
                   </div>
                   <button onClick={() => setSelectedApp(null)} className="p-2 text-gray-400 hover:text-secondary transition-colors">
-                    <X size={28} />
+                    <X size={22} />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-8 mb-10">
-                  <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-5 mb-6">
+                  <div className="space-y-4">
                     <div>
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Company Information</label>
-                      <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                      <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                         <p className="text-sm font-black text-secondary">{selectedApp.companyName}</p>
                         <p className="text-xs font-bold text-gray-500 flex items-center gap-2">
                           <Building2 size={14} /> {selectedApp.registrationNumber}
@@ -509,7 +553,7 @@ const AdminLicenceApplications = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Licence Request</label>
-                      <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                      <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                         <p className="text-sm font-black text-secondary">{selectedApp.licenceType}</p>
                         <p className="text-xs font-bold text-gray-500">Allocation: {selectedApp.cosAllocation}</p>
                         <p className="text-xs font-bold text-gray-500">Type: {selectedApp.type}</p>
@@ -517,10 +561,10 @@ const AdminLicenceApplications = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     <div>
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Authorising Officer</label>
-                      <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                      <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                         <p className="text-sm font-black text-secondary">{selectedApp.contactName}</p>
                         <p className="text-xs font-bold text-gray-500 flex items-center gap-2">
                           <Mail size={14} /> {selectedApp.contactEmail}
@@ -533,7 +577,7 @@ const AdminLicenceApplications = () => {
                     {selectedApp.reason && (
                       <div>
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Business Justification</label>
-                        <div className="bg-gray-50 rounded-2xl p-4">
+                        <div className="bg-gray-50 rounded-xl p-4">
                           <p className="text-xs font-bold text-gray-600 leading-relaxed italic">"{selectedApp.reason}"</p>
                         </div>
                       </div>
@@ -542,65 +586,84 @@ const AdminLicenceApplications = () => {
                 </div>
 
                 {selectedApp.documents && selectedApp.documents.length > 0 && (
-                  <div className="mb-10">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-4">Evidence & Documents</label>
-                    <div className="grid grid-cols-2 gap-4">
-                      {selectedApp.documents.map((doc, i) => (
-                        <a 
-                          key={i}
-                          href={`${API_BASE_URL}/${doc.replace(/\\/g, '/')}`} 
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:border-primary/20 transition-all shadow-sm"
-                        >
-                          <div className="flex items-center gap-3">
-                            <FileText size={18} className="text-primary" />
-                            <span className="text-xs font-black text-secondary truncate max-w-[150px]">Document {i+1}</span>
+                  <div className="mb-6">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">Evidence & Documents</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {selectedApp.documents.map((doc, i) => {
+                        const previewing = docBusy === `${i}:preview`;
+                        const downloading = docBusy === `${i}:download`;
+                        return (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl hover:border-primary/20 transition-all shadow-sm"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleDocument(i, "preview")}
+                              disabled={!!docBusy}
+                              title="Preview document"
+                              className="flex items-center gap-3 min-w-0 flex-1 text-left disabled:opacity-60"
+                            >
+                              {previewing
+                                ? <Loader2 size={18} className="text-primary animate-spin shrink-0" />
+                                : <FileText size={18} className="text-primary shrink-0" />}
+                              <span className="text-xs font-black text-secondary truncate">Document {i + 1}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDocument(i, "download")}
+                              disabled={!!docBusy}
+                              title="Download document"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all disabled:opacity-60 shrink-0"
+                            >
+                              {downloading
+                                ? <Loader2 size={16} className="animate-spin" />
+                                : <Download size={16} />}
+                            </button>
                           </div>
-                          <Download size={16} className="text-gray-300" />
-                        </a>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
-                <div className="mt-8">
+                <div className="mt-6">
                   {selectedApp.adminNotes && (
-                    <div className="mb-10">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-4">Reviewer Notes</label>
-                      <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100">
+                    <div className="mb-6">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">Reviewer Notes</label>
+                      <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
                         <p className="text-sm font-bold text-amber-900 leading-relaxed">{selectedApp.adminNotes}</p>
                       </div>
                     </div>
                   )}
 
-                  <div className="space-y-4 pt-6 border-t border-gray-50">
-                    <div className="flex gap-4">
+                  <div className="space-y-3 pt-5 border-t border-gray-50">
+                    <div className="flex gap-3">
                       <button
                         onClick={() => openAction(selectedApp, "Assign")}
-                        className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 font-black rounded-2xl py-4 transition-all flex items-center justify-center gap-2"
+                        className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2"
                       >
                         <UserPlus size={18} /> Assign
                       </button>
                       <button
                         onClick={() => openAction(selectedApp, "RequestInfo")}
-                        className="flex-1 bg-amber-50 text-amber-600 hover:bg-amber-100 font-black rounded-2xl py-4 transition-all flex items-center justify-center gap-2"
+                        className="flex-1 bg-amber-50 text-amber-600 hover:bg-amber-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2"
                       >
                         <MessageSquare size={18} /> Request Info
                       </button>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex gap-3">
                       <button
                         onClick={() => openAction(selectedApp, "Approved")}
                         disabled={selectedApp.status === 'Approved'}
-                        className="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-black rounded-2xl py-4 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <Check size={18} /> Approve
                       </button>
                       <button
                         onClick={() => openAction(selectedApp, "Rejected")}
                         disabled={selectedApp.status === 'Rejected'}
-                        className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 font-black rounded-2xl py-4 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <X size={18} /> Reject
                       </button>
@@ -619,12 +682,12 @@ const AdminLicenceApplications = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-secondary/40 backdrop-blur-md p-4"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-[2.5rem] shadow-2xl max-w-md w-full p-8"
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto custom-scrollbar"
             >
               <div className="flex items-start justify-between mb-6">
                 <div>
@@ -647,11 +710,11 @@ const AdminLicenceApplications = () => {
                 </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {actionType === 'Assign' ? (
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     <div>
-                      <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
+                      <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
                         Select Caseworkers
                         {selectedCaseworkerIds.length > 0 && (
                           <span className="ml-2 text-primary normal-case tracking-normal">
@@ -660,7 +723,7 @@ const AdminLicenceApplications = () => {
                         )}
                       </p>
                       {caseworkers.length === 0 ? (
-                        <div className="p-6 bg-gray-50 rounded-2xl text-center">
+                        <div className="p-4 bg-gray-50 rounded-xl text-center">
                           <p className="text-xs font-bold text-gray-400">No caseworkers available to assign.</p>
                         </div>
                       ) : (
@@ -678,7 +741,7 @@ const AdminLicenceApplications = () => {
                                     setSelectedCaseworkerIds([...selectedCaseworkerIds, cw.id]);
                                   }
                                 }}
-                                className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border ${
+                                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border ${
                                   isSelected
                                   ? "bg-primary/5 border-primary text-primary"
                                   : "bg-gray-50 border-gray-100 text-secondary hover:border-gray-200"
@@ -700,18 +763,18 @@ const AdminLicenceApplications = () => {
                       )}
                     </div>
 
-                    <div className="flex gap-4">
+                    <div className="flex gap-3">
                       <button
                         onClick={() => handleAssign(selectedApp?.id, selectedCaseworkerIds)}
                         disabled={actionLoading || selectedCaseworkerIds.length === 0}
-                        className="flex-[2] bg-primary text-white font-black py-4 rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                        className="flex-[2] bg-primary text-white font-black py-3 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                       >
                         {actionLoading ? <Loader2 className="animate-spin" /> : <><UserPlus size={18} /> Confirm Assignment</>}
                       </button>
                       <button
                         onClick={closeActionModal}
                         disabled={actionLoading}
-                        className="flex-1 bg-gray-50 text-gray-500 font-black py-4 rounded-2xl disabled:opacity-40"
+                        className="flex-1 bg-gray-50 text-gray-500 font-black py-3 rounded-xl disabled:opacity-40"
                       >
                         Cancel
                       </button>
@@ -732,7 +795,7 @@ const AdminLicenceApplications = () => {
                         {(actionType === 'Rejected' || actionType === 'RequestInfo') && <span className="text-red-500 ml-1">*</span>}
                       </label>
                       <textarea
-                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm font-bold text-secondary focus:ring-4 focus:ring-primary/5 outline-none resize-none"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-bold text-secondary focus:ring-4 focus:ring-primary/5 outline-none resize-none"
                         rows={4}
                         placeholder={actionType === 'Approved' ? 'Optional note for the business...' : 'Enter details here...'}
                         value={adminNotes}
@@ -745,7 +808,7 @@ const AdminLicenceApplications = () => {
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Requested Documents (Comma separated)</label>
                         <input
                           type="text"
-                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm font-bold text-secondary outline-none"
+                          className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-bold text-secondary outline-none"
                           placeholder="e.g. Passport, Bank Statements"
                           value={requestedDocs}
                           onChange={(e) => setRequestedDocs(e.target.value)}
@@ -753,11 +816,11 @@ const AdminLicenceApplications = () => {
                       </div>
                     )}
 
-                    <div className="flex gap-4">
+                    <div className="flex gap-3">
                       <button
                         onClick={handleAction}
                         disabled={actionLoading}
-                        className={`flex-[2] py-4 rounded-2xl font-black text-white transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:active:scale-100 ${
+                        className={`flex-[2] py-3 rounded-xl font-black text-white transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:active:scale-100 ${
                           actionType === 'Approved' ? 'bg-emerald-500 shadow-emerald-100' :
                           actionType === 'Rejected' ? 'bg-red-500 shadow-red-100' :
                           'bg-primary shadow-primary/20'
@@ -772,7 +835,7 @@ const AdminLicenceApplications = () => {
                       <button
                         onClick={closeActionModal}
                         disabled={actionLoading}
-                        className="flex-1 bg-gray-50 text-gray-500 font-black py-4 rounded-2xl disabled:opacity-40"
+                        className="flex-1 bg-gray-50 text-gray-500 font-black py-3 rounded-xl disabled:opacity-40"
                       >
                         Cancel
                       </button>
@@ -792,37 +855,37 @@ const AdminLicenceApplications = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-secondary/40 backdrop-blur-md p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-[3rem] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-100"
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-100 custom-scrollbar"
             >
-              <div className="p-10">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-primary/5 rounded-2xl text-primary">
-                      <Pencil size={28} />
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-primary/5 rounded-xl text-primary">
+                      <Pencil size={24} />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-black text-secondary">Edit Application</h2>
+                      <h2 className="text-xl font-black text-secondary">Edit Application</h2>
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ID: #LIC-{selectedApp?.id}</p>
                     </div>
                   </div>
                   <button onClick={closeEditModal} className="p-2 text-gray-400 hover:text-secondary transition-colors">
-                    <X size={28} />
+                    <X size={22} />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Company Name</label>
                     <input
                       type="text"
                       value={editData.companyName ?? ""}
                       onChange={(e) => setEditData({ ...editData, companyName: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
                     />
                   </div>
                   <div>
@@ -831,7 +894,7 @@ const AdminLicenceApplications = () => {
                       type="text"
                       value={editData.registrationNumber ?? ""}
                       onChange={(e) => setEditData({ ...editData, registrationNumber: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
                     />
                   </div>
                   <div>
@@ -840,7 +903,7 @@ const AdminLicenceApplications = () => {
                       type="text"
                       value={editData.licenceType ?? ""}
                       onChange={(e) => setEditData({ ...editData, licenceType: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
                     />
                   </div>
                   <div>
@@ -849,7 +912,7 @@ const AdminLicenceApplications = () => {
                       type="text"
                       value={editData.cosAllocation ?? ""}
                       onChange={(e) => setEditData({ ...editData, cosAllocation: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
                     />
                   </div>
                   <div>
@@ -858,7 +921,7 @@ const AdminLicenceApplications = () => {
                       type="text"
                       value={editData.contactName ?? ""}
                       onChange={(e) => setEditData({ ...editData, contactName: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
                     />
                   </div>
                   <div>
@@ -867,27 +930,78 @@ const AdminLicenceApplications = () => {
                       type="email"
                       value={editData.contactEmail ?? ""}
                       onChange={(e) => setEditData({ ...editData, contactEmail: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
                     />
                   </div>
                 </div>
 
-                <div className="mt-8 flex gap-4">
+                <div className="mt-6 flex gap-3">
                   <button
                     onClick={handleEditSubmit}
                     disabled={actionLoading}
-                    className="flex-[2] bg-primary hover:bg-primary-dark text-white font-black rounded-2xl py-4 transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2 active:scale-95"
+                    className="flex-[2] bg-primary hover:bg-primary-dark text-white font-black rounded-xl py-3 transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-60"
                   >
                     {actionLoading ? <Loader2 className="animate-spin" /> : <><Save size={18} /> Save Changes</>}
                   </button>
                   <button
                     onClick={closeEditModal}
                     disabled={actionLoading}
-                    className="flex-1 bg-gray-50 text-gray-500 font-black rounded-2xl py-4 transition-all disabled:opacity-40"
+                    className="flex-1 bg-gray-50 text-gray-500 font-black rounded-xl py-3 transition-all disabled:opacity-40"
                   >
                     Cancel
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 bg-red-50 rounded-xl text-red-500">
+                  <Trash2 size={22} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-secondary">Delete Application</h3>
+                  <p className="text-xs font-bold text-gray-400 truncate max-w-[16rem]">
+                    {deleteTarget?.companyName || 'Application'} · #{deleteTarget?.id}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm font-bold text-gray-500 leading-relaxed mb-6">
+                Are you sure you want to delete this licence application? This action cannot be undone.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteLoading}
+                  className="flex-[2] bg-red-500 hover:bg-red-600 text-white font-black py-3 rounded-xl shadow-lg shadow-red-100 flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60 disabled:active:scale-100"
+                >
+                  {deleteLoading ? <Loader2 className="animate-spin" /> : <><Trash2 size={18} /> Delete</>}
+                </button>
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deleteLoading}
+                  className="flex-1 bg-gray-50 text-gray-500 font-black py-3 rounded-xl disabled:opacity-40"
+                >
+                  Cancel
+                </button>
               </div>
             </motion.div>
           </motion.div>

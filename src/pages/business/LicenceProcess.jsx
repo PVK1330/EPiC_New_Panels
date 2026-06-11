@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Stepper from "../../components/stepper"
+import LicenceStages from "../../components/licence/LicenceStages";
+import { listLicenceV2Applications, getLicenceV2Application } from "../../services/licenceV2Api";
 import {
   LayoutDashboard,
   CheckCircle,
@@ -38,6 +40,29 @@ const LicenceProcess = () => {
     { name: 'Identification Documents', status: 'uploaded' },
     { name: 'HR Policy Document', status: 'pending' },
   ]);
+
+  // Latest V2 application — drives the read-only Stages tracker. Null until loaded
+  // (or if the sponsor has no V2 application yet), in which case the tracker shows
+  // the lifecycle with stage 1 active.
+  const [stageApp, setStageApp] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const list = await listLicenceV2Applications();
+        const apps = list?.data?.data || [];
+        if (!apps.length) return;
+        // Most recent application (list is typically newest-first; fall back to max id).
+        const latest = apps.reduce((a, b) => (Number(b.id) > Number(a.id) ? b : a), apps[0]);
+        const full = await getLicenceV2Application(latest.id);
+        if (active) setStageApp(full?.data?.data || null);
+      } catch {
+        /* tracker falls back to the default lifecycle view */
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   const handleViewDocument = (docName) => {
     const doc = documents.find(d => d.name === docName);
@@ -85,6 +110,10 @@ const LicenceProcess = () => {
         <p className="text-primary font-bold text-sm mt-1">
           Track your licence application progress and manage required documents.
         </p>
+      </motion.div>
+
+      <motion.div variants={cardVariants} initial="hidden" animate="visible">
+        <LicenceStages applicationId={stageApp?.id} app={stageApp} viewerRole="sponsor" />
       </motion.div>
 
       <motion.div
