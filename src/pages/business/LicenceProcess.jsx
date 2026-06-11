@@ -1,407 +1,294 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import Stepper from "../../components/stepper"
-import LicenceStages from "../../components/licence/LicenceStages";
-import { listLicenceV2Applications, getLicenceV2Application } from "../../services/licenceV2Api";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
-  CheckCircle,
-  Clock,
+  BarChart3,
+  Clock3,
+  CircleCheck,
+  ClipboardList,
+  Loader2,
+  ArrowRight,
   FileText,
-  Eye,
-  RefreshCw,
-  Upload,
-  Hash,
-  AlertCircle,
-  X,
-} from 'lucide-react';
+} from "lucide-react";
+import LicenceStages from "../../components/licence/LicenceStages";
+import { listLicenceV2Applications, getLicenceV2Application } from "../../services/licenceV2Api";
+import { getLicenceStages } from "../../services/licenceStageApi";
+import { LICENCE_STAGES, STAGE_ROLES, getSponsorStageAction } from "../../constants/licenceStages";
+import { formatDateTime } from "../../utils/datetime";
 
+const TABS = [
+  { id: "status", label: "Status", icon: BarChart3 },
+  { id: "timeline", label: "Timeline", icon: Clock3 },
+  { id: "actions", label: "Pending actions", icon: CircleCheck },
+];
+
+const STAGE_DESC = Object.fromEntries(LICENCE_STAGES.map((s) => [s.key, s.description]));
+const ROLE_LABEL = Object.fromEntries(STAGE_ROLES.map((r) => [r.key, r.label]));
+
+/**
+ * Sponsor "Licence Tracking" page — the sponsor equivalent of the candidate's
+ * Case Tracking. Three tabs: Status (current step + full stage timeline),
+ * Timeline (what has happened), and Pending actions (deep-linked next steps).
+ */
 const LicenceProcess = () => {
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('view'); // 'view' or 'replace'
-  const [selectedDocument, setSelectedDocument] = useState(null);
-  const [documentIndex, setDocumentIndex] = useState(null);
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [app, setApp] = useState(null);
+  const [stagesData, setStagesData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [applicationData, setApplicationData] = useState({
-    licenceNumber: 'LIC-2024-0987',
-    applicationType: 'Sponsor Licence Renewal',
-    requestDate: '2025-01-15',
-    licenceDuration: '12 months',
-    requestedAllocation: '',
-    reason: '',
-    contactEmail: '',
-    contactPhone: '',
-  });
-
-  const [documents, setDocuments] = useState([
-    { name: 'Business Registration Certificate', status: 'uploaded' },
-    { name: 'Financial Statements', status: 'uploaded' },
-    { name: 'Compliance Report', status: 'uploaded' },
-    { name: 'Identification Documents', status: 'uploaded' },
-    { name: 'HR Policy Document', status: 'pending' },
-  ]);
-
-  // Latest V2 application — drives the read-only Stages tracker. Null until loaded
-  // (or if the sponsor has no V2 application yet), in which case the tracker shows
-  // the lifecycle with stage 1 active.
-  const [stageApp, setStageApp] = useState(null);
-
+  // Load the sponsor's latest V2 application, then its stages.
   useEffect(() => {
     let active = true;
     (async () => {
       try {
+        setLoading(true);
         const list = await listLicenceV2Applications();
         const apps = list?.data?.data || [];
-        if (!apps.length) return;
-        // Most recent application (list is typically newest-first; fall back to max id).
+        if (!apps.length) { if (active) setLoading(false); return; }
         const latest = apps.reduce((a, b) => (Number(b.id) > Number(a.id) ? b : a), apps[0]);
-        const full = await getLicenceV2Application(latest.id);
-        if (active) setStageApp(full?.data?.data || null);
+        const [full, stages] = await Promise.all([
+          getLicenceV2Application(latest.id).catch(() => null),
+          getLicenceStages("sponsor", latest.id).catch(() => null),
+        ]);
+        if (!active) return;
+        setApp(full?.data?.data || latest);
+        setStagesData(stages?.data?.data || null);
       } catch {
-        /* tracker falls back to the default lifecycle view */
+        /* falls through to the empty state */
+      } finally {
+        if (active) setLoading(false);
       }
     })();
     return () => { active = false; };
   }, []);
 
-  const handleViewDocument = (docName) => {
-    const doc = documents.find(d => d.name === docName);
-    setSelectedDocument(doc);
-    setDocumentIndex(documents.indexOf(doc));
-    setModalMode('view');
-    setShowModal(true);
-  };
+  const activeTab = useMemo(() => {
+    const t = searchParams.get("tab");
+    return t === "timeline" || t === "actions" ? t : "status";
+  }, [searchParams]);
 
-  const handleUploadDocument = (index) => {
-    const updatedDocs = [...documents];
-    updatedDocs[index].status = 'uploaded';
-    setDocuments(updatedDocs);
-    console.log('Document uploaded:', updatedDocs[index].name);
-  };
+  const setTab = useCallback(
+    (id) => setSearchParams(id === "status" ? {} : { tab: id }, { replace: true }),
+    [setSearchParams],
+  );
 
-  const handleReplaceDocument = (index) => {
-    setSelectedDocument(documents[index]);
-    setDocumentIndex(index);
-    setModalMode('replace');
-    setShowModal(true);
-  };
+  const stages = useMemo(() => stagesData?.stages || [], [stagesData]);
+  const currentStage = stages.find((s) => s.key === stagesData?.currentStageKey) || null;
+  const doneCount = stages.filter((s) => s.status === "completed").length;
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-  };
+  // Timeline — completed tasks (most recent first) plus the submission milestone.
+  const timeline = useMemo(() => {
+    const entries = [];
+    for (const s of stages) {
+      for (const t of s.tasks || []) {
+        if (t.status === "completed" && t.completedAt) {
+          entries.push({
+            title: `${ROLE_LABEL[t.role] || t.role}: ${t.title}`,
+            stage: s.title,
+            time: t.completedAt,
+            tone: "bg-emerald-500",
+          });
+        }
+      }
+    }
+    if (app?.submittedAt) {
+      entries.push({ title: "Application submitted", stage: "Submission", time: app.submittedAt, tone: "bg-secondary" });
+    }
+    return entries.sort((a, b) => new Date(b.time) - new Date(a.time));
+  }, [stages, app?.submittedAt]);
 
-  const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-  };
+  // Pending actions — the sponsor's incomplete tasks, with a deep-link to act.
+  const pendingActions = useMemo(() => {
+    const out = [];
+    for (const s of stages) {
+      if (s.status === "completed") continue;
+      const task = (s.tasks || []).find((t) => t.role === "sponsor" && t.status !== "completed");
+      const cta = getSponsorStageAction(s.key);
+      if (task && cta) {
+        out.push({ title: task.title, stage: s.title, current: s.key === stagesData?.currentStageKey, cta });
+      }
+    }
+    return out;
+  }, [stages, stagesData?.currentStageKey]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-9 h-9 animate-spin text-primary" />
+        <p className="text-sm font-bold text-gray-400">Loading your licence tracking…</p>
+      </div>
+    );
+  }
+
+  // No V2 application yet — guide the sponsor to start one.
+  if (!app) {
+    return (
+      <div className="space-y-8 pb-10">
+        <Header />
+        <div className="rounded-3xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+          <FileText className="mx-auto text-gray-300 mb-4" size={40} />
+          <h2 className="text-lg font-black text-secondary">No licence application yet</h2>
+          <p className="text-sm font-bold text-gray-500 mt-1 max-w-md mx-auto">
+            Start your sponsor licence application to begin tracking its stages, tasks and progress here.
+          </p>
+          <button
+            onClick={() => navigate("/business/apply-licence-v2")}
+            className="mt-5 inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white font-black px-6 py-3 rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-95"
+          >
+            Start application <ArrowRight size={18} />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-10 pb-10">
-      <motion.div
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <LayoutDashboard className="text-primary" size={36} />
-          Licence Process
-        </h1>
-        <p className="text-primary font-bold text-sm mt-1">
-          Track your licence application progress and manage required documents.
-        </p>
-      </motion.div>
+    <div className="space-y-6 pb-10">
+      <Header
+        subtitle={
+          <>
+            Reference: <span className="text-secondary font-black">#LIC-{app.id}</span>
+            <span className="mx-2 text-gray-300">·</span>
+            <span className="capitalize">{app.status}</span>
+          </>
+        }
+      />
 
-      <motion.div variants={cardVariants} initial="hidden" animate="visible">
-        <LicenceStages applicationId={stageApp?.id} app={stageApp} viewerRole="sponsor" />
-      </motion.div>
-
-      <motion.div
-        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <Stepper></Stepper>
-      </motion.div>
-
-      <motion.div
-        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <h2 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
-          <FileText size={24} className="text-primary" />
-          Application Details
-        </h2>
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="text-xs font-bold text-gray-700 mb-2">Licence Number</label>
-            <input
-              type="text"
-              value={applicationData.licenceNumber}
-              readOnly
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-700 mb-2">Application Type</label>
-            <select
-              value={applicationData.applicationType}
-              onChange={(e) => setApplicationData({ ...applicationData, applicationType: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-1 p-1 rounded-xl border border-gray-200 bg-gray-50/80 w-fit">
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          const count = tab.id === "actions" ? pendingActions.length : 0;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setTab(tab.id)}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-xs font-black uppercase tracking-wide transition-all ${
+                isActive ? "bg-secondary text-white shadow-md shadow-secondary/20" : "text-gray-500 hover:text-primary hover:bg-white"
+              }`}
             >
-              <option>Sponsor Licence Renewal</option>
-              <option>Allocation Increase</option>
-              <option>Licence Type Change</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-700 mb-2">Request Date</label>
-            <input
-              type="text"
-              value={applicationData.requestDate}
-              readOnly
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-700 mb-2">Licence Duration</label>
-            <input
-              type="text"
-              value={applicationData.licenceDuration}
-              readOnly
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-700 mb-2">Requested CoS Allocation *</label>
-            <input
-              type="number"
-              value={applicationData.requestedAllocation}
-              onChange={(e) => setApplicationData({ ...applicationData, requestedAllocation: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
-              placeholder="Enter requested allocation"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-700 mb-2">Reason for Renewal *</label>
-            <textarea
-              value={applicationData.reason}
-              onChange={(e) => setApplicationData({ ...applicationData, reason: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 resize-none"
-              placeholder="Explain why you need to renew your licence"
-              rows={1}
-            />
-          </div>
-        </form>
-      </motion.div>
-
-      <motion.div
-        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <h2 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
-          <FileText size={24} className="text-primary" />
-          Contact Information
-        </h2>
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="text-xs font-bold text-gray-700 mb-2">Contact Email *</label>
-            <input
-              type="email"
-              value={applicationData.contactEmail}
-              onChange={(e) => setApplicationData({ ...applicationData, contactEmail: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
-              placeholder="contact@company.com"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-700 mb-2">Contact Phone *</label>
-            <input
-              type="tel"
-              value={applicationData.contactPhone}
-              onChange={(e) => setApplicationData({ ...applicationData, contactPhone: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
-              placeholder="+44 20 1234 5678"
-            />
-          </div>
-        </form>
-      </motion.div>
-
-      <motion.div
-        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <h2 className="text-xl font-black text-secondary mb-6 flex items-center gap-2">
-          <FileText size={24} className="text-primary" />
-          Required Documents
-        </h2>
-        <div className="space-y-4">
-          {documents.map((doc, index) => (
-            <div key={index} className="flex items-center justify-between rounded-2xl bg-gray-50 p-4">
-              <div className="flex items-center gap-3">
-                {doc.status === 'uploaded' ? (
-                  <CheckCircle size={20} className="text-emerald-600" />
-                ) : (
-                  <Upload size={20} className="text-amber-600" />
-                )}
-                <div>
-                  <p className="text-sm font-black text-secondary">{doc.name}</p>
-                  <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-black ${
-                    doc.status === 'uploaded' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {doc.status === 'uploaded' ? 'Uploaded' : 'Pending'}
-                  </span>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                {doc.status === 'uploaded' ? (
-                  <button 
-                    onClick={() => handleViewDocument(doc.name)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-black text-white transition hover:bg-primary-dark"
-                  >
-                    <Eye size={14} />
-                    View
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => handleUploadDocument(index)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-black text-white transition hover:bg-primary-dark"
-                  >
-                    <Upload size={14} />
-                    Upload
-                  </button>
-                )}
-                <button 
-                  onClick={() => handleReplaceDocument(index)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-300"
-                >
-                  <RefreshCw size={14} />
-                  Replace
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
-      <motion.div
-        className="flex gap-4"
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <button
-          onClick={() => console.log('Submitting application:', applicationData)}
-          className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition"
-        >
-          Submit Application
-        </button>
-        <button
-          className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-6 py-3 transition"
-        >
-          Cancel
-        </button>
-      </motion.div>
-
-      {/* Document View/Replace Modal */}
-      {showModal && selectedDocument && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-3xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-          >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-black text-secondary">
-                  {modalMode === 'view' ? 'View Document' : 'Replace Document'}
-                </h2>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="text-gray-500 hover:text-gray-700 transition"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              
-              {modalMode === 'view' ? (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50">
-                    <FileText size={32} className="text-primary" />
-                    <div>
-                      <p className="text-sm font-black text-secondary">{selectedDocument.name}</p>
-                      <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-black ${
-                        selectedDocument.status === 'uploaded' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {selectedDocument.status === 'uploaded' ? 'Uploaded' : 'Pending'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-6 rounded-xl bg-gray-50 border-2 border-dashed border-gray-300 text-center">
-                    <FileText size={48} className="text-gray-400 mx-auto mb-3" />
-                    <p className="text-sm font-bold text-gray-600">Document preview would appear here</p>
-                    <p className="text-xs font-bold text-gray-500 mt-1">File: {selectedDocument.name}.pdf</p>
-                  </div>
-                  <div className="flex gap-4 pt-4">
-                    <button
-                      onClick={() => setShowModal(false)}
-                      className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="p-4 rounded-xl bg-gray-50">
-                    <p className="text-sm font-black text-secondary mb-2">Current Document</p>
-                    <p className="text-xs font-bold text-gray-600">{selectedDocument.name}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-700 mb-2">Upload New Document *</label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-primary transition cursor-pointer">
-                      <Upload size={40} className="text-gray-400 mx-auto mb-3" />
-                      <p className="text-sm font-bold text-gray-600">Click to upload or drag and drop</p>
-                      <p className="text-xs font-bold text-gray-500 mt-1">PDF, DOC, DOCX up to 10MB</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-4 pt-4">
-                    <button
-                      onClick={() => {
-                        console.log('Document replaced:', selectedDocument.name);
-                        setShowModal(false);
-                      }}
-                      className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition"
-                    >
-                      Replace Document
-                    </button>
-                    <button
-                      onClick={() => setShowModal(false)}
-                      className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-6 py-3 transition"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
+              <Icon size={16} />
+              {tab.label}
+              {count > 0 && (
+                <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] ${isActive ? "bg-white/20" : "bg-primary/10 text-primary"}`}>
+                  {count}
+                </span>
               )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Status ── */}
+      {activeTab === "status" && (
+        <div className="space-y-6">
+          {currentStage && (
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 md:p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/5 border border-gray-100">
+                  <ClipboardList className="text-primary" size={26} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-black uppercase tracking-widest text-gray-400">
+                    Step {currentStage.order} of {stages.length} · {doneCount} complete
+                  </p>
+                  <h2 className="text-xl font-black text-secondary tracking-tight">{currentStage.title}</h2>
+                  <p className="text-sm font-bold text-gray-500 mt-0.5">{STAGE_DESC[currentStage.key]}</p>
+                </div>
+              </div>
             </div>
-          </motion.div>
-        </motion.div>
+          )}
+
+          <LicenceStages
+            applicationId={app.id}
+            data={stagesData}
+            viewerRole="sponsor"
+            onChange={setStagesData}
+          />
+        </div>
+      )}
+
+      {/* ── Timeline ── */}
+      {activeTab === "timeline" && (
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 md:p-8 shadow-sm max-w-3xl">
+          {timeline.length > 0 ? (
+            timeline.map((e, i) => (
+              <div key={`${e.title}-${e.time}-${i}`} className="flex gap-4">
+                <div className="flex flex-col items-center w-6 shrink-0">
+                  <div className={`mt-1.5 h-3 w-3 rounded-full shrink-0 ${e.tone}`} />
+                  {i < timeline.length - 1 && <div className="w-0.5 flex-1 min-h-[20px] bg-gray-200" />}
+                </div>
+                <div className="pb-6 flex-1 min-w-0">
+                  <p className="text-sm font-black text-secondary">{e.title}</p>
+                  <p className="text-[11px] font-bold text-gray-400 mt-0.5">
+                    {e.stage} · {formatDateTime(e.time)}
+                  </p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-10">
+              <Clock3 className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+              <p className="text-sm font-bold text-gray-400">No activity yet.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Pending actions ── */}
+      {activeTab === "actions" && (
+        <div className="max-w-3xl space-y-3">
+          {pendingActions.length > 0 ? (
+            pendingActions.map((a, idx) => (
+              <div
+                key={`${a.title}-${idx}`}
+                className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border border-gray-100 bg-white p-4 md:p-5 shadow-sm"
+              >
+                <span className={`h-2 w-2 rounded-full shrink-0 ${a.current ? "bg-primary" : "bg-gray-300"}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black text-secondary">
+                    {a.title}
+                    {a.current && (
+                      <span className="text-[10px] font-black text-primary border border-primary/20 bg-primary/5 rounded-full px-2 py-0.5 ml-2 uppercase">
+                        Current
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs font-bold text-gray-500 mt-0.5">{a.stage}</p>
+                </div>
+                <Link
+                  to={a.cta.to}
+                  className="shrink-0 inline-flex items-center gap-1.5 justify-center rounded-lg bg-secondary px-4 py-2.5 text-xs font-black text-white hover:bg-secondary-dark shadow-md shadow-secondary/20 transition-all"
+                >
+                  {a.cta.label} <ArrowRight size={14} />
+                </Link>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-10 bg-white rounded-2xl border border-gray-100">
+              <CircleCheck className="mx-auto h-12 w-12 text-emerald-400 mb-3" />
+              <p className="text-sm font-bold text-gray-400">No pending actions — you&apos;re all caught up!</p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
 };
+
+const Header = ({ subtitle }) => (
+  <div>
+    <h1 className="text-3xl font-black text-secondary tracking-tight flex items-center gap-3">
+      <LayoutDashboard className="text-primary" size={30} />
+      Licence Tracking
+    </h1>
+    <p className="text-gray-500 font-bold text-sm mt-1">
+      {subtitle || "Track your sponsor licence application through every stage."}
+    </p>
+  </div>
+);
 
 export default LicenceProcess;

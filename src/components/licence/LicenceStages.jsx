@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { CheckCircle2, Circle, Loader2, XCircle, ChevronDown, Check, User, AlertCircle } from "lucide-react";
-import { LICENCE_STAGES, STAGE_ROLES, deriveStageStatuses } from "../../constants/licenceStages";
+import { Link } from "react-router-dom";
+import { CheckCircle2, Circle, Loader2, XCircle, ChevronDown, Check, User, AlertCircle, ArrowRight } from "lucide-react";
+import { LICENCE_STAGES, STAGE_ROLES, deriveStageStatuses, getSponsorStageAction } from "../../constants/licenceStages";
 import { getLicenceStages, completeLicenceStageTask } from "../../services/licenceStageApi";
 import { useToast } from "../../context/ToastContext";
 
@@ -30,12 +31,16 @@ function buildStaticModel(app) {
  * complete (which fires in-app + email notifications server-side). Without an
  * application id it renders a read-only view inferred from `app`.
  *
- * @param {{ applicationId?: number, app?: object, viewerRole?: 'sponsor'|'caseworker'|'admin'|'candidate' }} props
+ * If `data` (a pre-fetched stages model) is supplied, the component renders it
+ * directly and skips the initial fetch — used by the Licence Tracking page which
+ * already loaded the stages. It still re-fetches after a task is completed.
+ *
+ * @param {{ applicationId?: number, app?: object, data?: object, viewerRole?: 'sponsor'|'caseworker'|'admin'|'candidate' }} props
  */
-export default function LicenceStages({ applicationId, app, viewerRole }) {
+export default function LicenceStages({ applicationId, app, data, viewerRole, onChange }) {
   const { showToast } = useToast();
-  const [model, setModel] = useState(null);
-  const [loading, setLoading] = useState(!!applicationId);
+  const [model, setModel] = useState(data || null);
+  const [loading, setLoading] = useState(!!applicationId && !data);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState({});
   const [busyKey, setBusyKey] = useState(null); // `${stageKey}:${role}` while completing
@@ -56,7 +61,11 @@ export default function LicenceStages({ applicationId, app, viewerRole }) {
     }
   }, [applicationId, viewerRole]);
 
-  useEffect(() => { load(); }, [load]);
+  // Adopt parent-provided data when present; otherwise fetch our own.
+  useEffect(() => {
+    if (data) { setModel(data); setLoading(false); setError(null); }
+  }, [data]);
+  useEffect(() => { if (!data) load(); }, [load, data]);
 
   const active = applicationId ? model : staticModel;
 
@@ -72,7 +81,9 @@ export default function LicenceStages({ applicationId, app, viewerRole }) {
     setBusyKey(`${stageKey}:${role}`);
     try {
       const res = await completeLicenceStageTask(viewerRole, applicationId, stageKey, role);
-      setModel(res.data?.data || null);
+      const next = res.data?.data || null;
+      setModel(next);
+      onChange?.(next);
       showToast({ message: "Task marked complete. The team has been notified.", variant: "success" });
     } catch (err) {
       showToast({ message: err?.response?.data?.message || "Couldn't complete this task.", variant: "danger" });
@@ -202,6 +213,11 @@ export default function LicenceStages({ applicationId, app, viewerRole }) {
                     const isDone = task.status === "completed";
                     const showButton = canComplete(task, stage);
                     const busy = busyKey === `${stage.key}:${task.role}`;
+                    // Sponsor's own incomplete task → deep-link to the page to do it.
+                    const action =
+                      viewerRole === "sponsor" && task.role === "sponsor" && !isDone
+                        ? getSponsorStageAction(stage.key)
+                        : null;
                     return (
                       <div key={task.role} className={`rounded-xl border p-3 ${isViewer ? "ring-2 ring-primary/20" : ""} ${meta.chip}`}>
                         <div className="flex items-center justify-between gap-2 mb-1">
@@ -216,24 +232,34 @@ export default function LicenceStages({ applicationId, app, viewerRole }) {
                         </div>
                         <p className="text-xs font-bold leading-snug text-secondary">{task.title}</p>
 
-                        {interactive && (task.assigneeName || task.status) && (
-                          <div className="flex items-center justify-between gap-2 mt-2">
+                        {interactive && (task.assigneeName || task.status || action || showButton) && (
+                          <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
                             {task.assigneeName ? (
                               <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500 truncate">
                                 <User size={11} className="shrink-0" /> {task.assigneeName}
                               </span>
                             ) : <span />}
-                            {showButton && (
-                              <button
-                                type="button"
-                                onClick={() => handleComplete(stage.key, task.role)}
-                                disabled={busy}
-                                className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-primary text-white hover:bg-primary-dark transition-all disabled:opacity-50 flex items-center gap-1 shrink-0"
-                              >
-                                {busy ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
-                                Mark complete
-                              </button>
-                            )}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {action && (
+                                <Link
+                                  to={action.to}
+                                  className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-white border border-primary/30 text-primary hover:bg-primary/5 transition-all flex items-center gap-1"
+                                >
+                                  {action.label} <ArrowRight size={11} />
+                                </Link>
+                              )}
+                              {showButton && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleComplete(stage.key, task.role)}
+                                  disabled={busy}
+                                  className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-primary text-white hover:bg-primary-dark transition-all disabled:opacity-50 flex items-center gap-1"
+                                >
+                                  {busy ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                                  Mark complete
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>

@@ -14,7 +14,21 @@
   --color-text-muted: #64748b;
   --color-danger: #ef4444;
   --color-success: #22c55e;
+
+  --spacing: 0.23rem;
+  --radius-sm: 0.2rem;
+  --radius-md: 0.3rem;
+  --radius-lg: 0.4rem;
+  --radius-xl: 0.55rem;
+  --radius-2xl: 0.8rem;
+  --radius-3xl: 1.1rem;
+  --radius-4xl: 1.5rem;
 }
+
+/* Portal-wide density and rounding: --spacing is reduced about 8 percent
+   (smaller buttons and less padding wherever spacing utilities are used) and
+   the border-radius scale about 20-30 percent (less bubbly). Overriding these
+   Tailwind v4 tokens updates every spacing and rounding utility at once. */
 button{
   cursor: pointer;
 }

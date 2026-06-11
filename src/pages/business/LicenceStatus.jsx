@@ -20,17 +20,19 @@ import {
   Save,
   Plus,
   Trash2,
-  Eye
+  Eye,
+  Download
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../../utils/constants";
 import {
   getMyLicenceApplications,
   getLicenceSummary,
   submitLicenceApplication,
   updateLicenceApplication,
   deleteMyLicenceApplication,
+  downloadSponsorLicenceDocument,
 } from "../../services/licenceApi";
+import { triggerDownload } from "../../services/documentApi";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 import { Skeleton } from "boneyard-js/react";
@@ -41,7 +43,7 @@ const LicenceStatus = () => {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [applications, setApplications] = useState([]);
-  
+
   const [summaryStats, setSummaryStats] = useState({
     licenceId: "Pending",
     status: "No Active Licence",
@@ -56,6 +58,7 @@ const LicenceStatus = () => {
   // Form states
   const [submitting, setSubmitting] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
+  const [docBusy, setDocBusy] = useState(null); // `${index}:${mode}` while a doc loads
   const [editData, setEditData] = useState({});
   const [newFiles, setNewFiles] = useState([]);
   const [renewalData, setRenewalData] = useState({
@@ -121,6 +124,35 @@ const LicenceStatus = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Documents stream through an authenticated endpoint (no static serving).
+  const handleDocument = async (index, mode) => {
+    if (!selectedApp || docBusy) return;
+    try {
+      setDocBusy(`${index}:${mode}`);
+      const res = await downloadSponsorLicenceDocument(selectedApp.id, index, { download: mode === "download" });
+      const blob = res.data;
+      const cd = res.headers?.["content-disposition"] || "";
+      const match = cd.match(/filename="?([^"]+)"?/i);
+      const filename = match ? match[1] : `document-${index + 1}`;
+      if (mode === "download") {
+        triggerDownload(blob, filename);
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) triggerDownload(blob, filename);
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      }
+    } catch (err) {
+      let message = err?.response?.data?.message;
+      if (!message && err?.response?.data instanceof Blob) {
+        try { message = JSON.parse(await err.response.data.text())?.message; } catch { /* ignore */ }
+      }
+      showToast({ message: message || "Unable to open this document", variant: "danger" });
+    } finally {
+      setDocBusy(null);
+    }
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this application?")) return;
@@ -634,26 +666,38 @@ const LicenceStatus = () => {
                   <div>
                     <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-4">Evidence & Documents</label>
                     <div className="space-y-3 mb-6">
-                      {selectedApp?.documents?.map((doc, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-50 group hover:border-primary/20 transition-all">
-                          <div className="flex items-center gap-3">
-                            <FileText size={18} className="text-gray-400" />
-                            <span className="text-xs font-bold text-gray-500 truncate max-w-[200px]">{doc.split('\\').pop().split('/').pop()}</span>
+                      {selectedApp?.documents?.map((doc, i) => {
+                        const previewing = docBusy === `${i}:preview`;
+                        const downloading = docBusy === `${i}:download`;
+                        return (
+                          <div key={i} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-50 group hover:border-primary/20 transition-all">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <FileText size={18} className="text-gray-400 shrink-0" />
+                              <span className="text-xs font-bold text-gray-500 truncate max-w-[200px]">{doc.split('\\').pop().split('/').pop()}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleDocument(i, "preview")}
+                                disabled={!!docBusy}
+                                className="p-1.5 bg-white text-gray-400 rounded-lg hover:text-primary transition-all disabled:opacity-60"
+                                title="View document"
+                              >
+                                {previewing ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDocument(i, "download")}
+                                disabled={!!docBusy}
+                                className="p-1.5 bg-white text-gray-400 rounded-lg hover:text-primary transition-all disabled:opacity-60"
+                                title="Download document"
+                              >
+                                {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                             <a 
-                               href={`${API_BASE_URL}/${doc.replace(/\\/g, '/')}`}
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               className="p-1.5 bg-white text-gray-400 rounded-lg hover:text-primary transition-all"
-                               title="View Document"
-                             >
-                               <Eye size={14} />
-                             </a>
-                             <span className="text-[10px] font-black text-emerald-600 uppercase ml-2">Uploaded</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       {newFiles.map((file, i) => (
                         <div key={i} className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl border border-primary/10 animate-pulse">
                           <div className="flex items-center gap-3">

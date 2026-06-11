@@ -18,6 +18,9 @@ import {
   Loader2
 } from "lucide-react";
 import api from "../../services/api";
+import { downloadCaseworkerLicenceDocument } from "../../services/licenceApi";
+import { triggerDownload } from "../../services/documentApi";
+import LicenceStages from "../../components/licence/LicenceStages";
 import { useToast } from "../../context/ToastContext";
 import { formatDate } from "../../utils/datetime";
 
@@ -33,6 +36,36 @@ const CaseworkerLicenceApplications = () => {
   const [actionType, setActionType] = useState(""); // Approved, Rejected, Information Requested
   const [adminNotes, setAdminNotes] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [docBusy, setDocBusy] = useState(null); // `${index}:${mode}` while a doc loads
+
+  // Documents stream through an authenticated endpoint (no static serving).
+  const handleDocument = async (index, mode) => {
+    if (!selectedApp || docBusy) return;
+    try {
+      setDocBusy(`${index}:${mode}`);
+      const res = await downloadCaseworkerLicenceDocument(selectedApp.id, index, { download: mode === "download" });
+      const blob = res.data;
+      const cd = res.headers?.["content-disposition"] || "";
+      const match = cd.match(/filename="?([^"]+)"?/i);
+      const filename = match ? match[1] : `document-${index + 1}`;
+      if (mode === "download") {
+        triggerDownload(blob, filename);
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) triggerDownload(blob, filename);
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      }
+    } catch (err) {
+      let message = err?.response?.data?.message;
+      if (!message && err?.response?.data instanceof Blob) {
+        try { message = JSON.parse(await err.response.data.text())?.message; } catch { /* ignore */ }
+      }
+      showToast({ message: message || "Unable to open this document", variant: "danger" });
+    } finally {
+      setDocBusy(null);
+    }
+  };
 
   const fetchApplications = async () => {
     try {
@@ -292,26 +325,50 @@ const CaseworkerLicenceApplications = () => {
                 </div>
 
                 {selectedApp.documents && selectedApp.documents.length > 0 && (
-                  <div className="mb-10">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-4">Evidence & Documents</label>
-                    <div className="grid grid-cols-2 gap-4">
-                      {selectedApp.documents.map((doc, i) => (
-                        <a 
-                          key={i}
-                          href={`/${doc}`} 
-                          target="_blank"
-                          className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:border-primary/20 transition-all shadow-sm"
-                        >
-                          <div className="flex items-center gap-3">
-                            <FileText size={18} className="text-primary" />
-                            <span className="text-xs font-black text-secondary truncate max-w-[150px]">Document {i+1}</span>
+                  <div className="mb-6">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">Evidence & Documents</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {selectedApp.documents.map((doc, i) => {
+                        const previewing = docBusy === `${i}:preview`;
+                        const downloading = docBusy === `${i}:download`;
+                        return (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl hover:border-primary/20 transition-all shadow-sm"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleDocument(i, "preview")}
+                              disabled={!!docBusy}
+                              title="Preview document"
+                              className="flex items-center gap-3 min-w-0 flex-1 text-left disabled:opacity-60"
+                            >
+                              {previewing
+                                ? <Loader2 size={18} className="text-primary animate-spin shrink-0" />
+                                : <FileText size={18} className="text-primary shrink-0" />}
+                              <span className="text-xs font-black text-secondary truncate">Document {i + 1}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDocument(i, "download")}
+                              disabled={!!docBusy}
+                              title="Download document"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all disabled:opacity-60 shrink-0"
+                            >
+                              {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                            </button>
                           </div>
-                          <Download size={16} className="text-gray-300" />
-                        </a>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
+
+                {/* Application stages — the communication channel: update status here,
+                    the sponsor sees it. */}
+                <div className="mb-6">
+                  <LicenceStages applicationId={selectedApp.id} viewerRole="caseworker" />
+                </div>
 
                 <div className="space-y-4 pt-6 border-t border-gray-50">
                   <div className="flex gap-4">

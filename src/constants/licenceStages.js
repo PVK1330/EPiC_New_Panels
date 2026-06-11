@@ -210,3 +210,26 @@ export function deriveStageStatuses(app) {
 
   return statuses;
 }
+
+/**
+ * Sponsor-facing deep-link for each stage — "where do I go to do this?".
+ * Mirrors the candidate flow's CANDIDATE_STAGE_ACTIONS: turns an abstract task
+ * into a concrete call-to-action that routes the sponsor to the right page.
+ * All routes are real sponsor routes (see AppRouter `/business/*`).
+ */
+export const SPONSOR_STAGE_ACTIONS = {
+  enquiry_onboarding: { label: "View licence", to: "/business/licence" },
+  licence_routes: { label: "Open application", to: "/business/apply-licence-v2" },
+  organisation_details: { label: "Complete organisation details", to: "/business/apply-licence-v2" },
+  cos_requirements: { label: "Add CoS requirements", to: "/business/apply-licence-v2" },
+  supporting_documents: { label: "Upload documents", to: "/business/licence-documents" },
+  key_personnel: { label: "Add key personnel", to: "/business/personnel" },
+  declarations: { label: "Complete declarations", to: "/business/apply-licence-v2" },
+  payment: { label: "Pay licence fee", to: "/business/payment" },
+  submission: { label: "Review & submit", to: "/business/apply-licence-v2" },
+  decision_activation: { label: "View licence & CoS", to: "/business/cosallocation" },
+};
+
+export function getSponsorStageAction(stageKey) {
+  return SPONSOR_STAGE_ACTIONS[stageKey] || null;
+}

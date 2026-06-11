@@ -59,6 +59,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
       label: "Sponsorship & HR",
       items: [
         { to: "/business/licence",           label: "Licence Management",  icon: ShieldCheck, moduleKey: "business.licence" },
+        { to: "/business/licence-process",   label: "Licence Tracking",    icon: Activity,    moduleKey: "business.licence" },
         { to: "/business/apply-licence-v2",  label: "Apply for Licence",   icon: FileText,    moduleKey: "business.licence" },
         { to: "/business/licence-documents", label: "Licence Documents",   icon: Files,       moduleKey: "business.licence" },
         { to: "/business/cosallocation",     label: "CoS Allocation",      icon: Package,     moduleKey: "business.licence" },

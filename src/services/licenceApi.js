@@ -61,6 +61,20 @@ export const downloadAdminLicenceDocument = (id, index, { download = false } = {
     responseType: "blob",
   });
 
+// Caseworker: stream a document on an assigned licence application (blob).
+export const downloadCaseworkerLicenceDocument = (id, index, { download = false } = {}) =>
+  api.get(`/api/caseworker/licence/${id}/documents/${index}/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
+
+// Sponsor: stream a document on the sponsor's own licence application (blob).
+export const downloadSponsorLicenceDocument = (id, index, { download = false } = {}) =>
+  api.get(`/api/business/licence/${id}/documents/${index}/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
+
 // Business: Licence Summary (real CoS used count from DB)
 export const getLicenceSummary = () =>
   api.get("/api/business/licence/summary");

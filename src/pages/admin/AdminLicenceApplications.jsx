@@ -36,6 +36,7 @@ import {
   downloadAdminLicenceDocument
 } from "../../services/licenceApi";
 import { triggerDownload } from "../../services/documentApi";
+import LicenceStages from "../../components/licence/LicenceStages";
 import api from "../../services/api";
 import { getCaseworkers } from "../../services/caseWorker";
 import { useToast } from "../../context/ToastContext";
@@ -626,6 +627,11 @@ const AdminLicenceApplications = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Application stages — the communication channel shared with the sponsor. */}
+                <div className="mb-6">
+                  <LicenceStages applicationId={selectedApp.id} viewerRole="admin" />
+                </div>
 
                 <div className="mt-6">
                   {selectedApp.adminNotes && (
