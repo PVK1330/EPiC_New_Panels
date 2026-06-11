@@ -216,7 +216,7 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
                     // Sponsor's own incomplete task → deep-link to the page to do it.
                     const action =
                       viewerRole === "sponsor" && task.role === "sponsor" && !isDone
-                        ? getSponsorStageAction(stage.key)
+                        ? getSponsorStageAction(stage.key, applicationId)
                         : null;
                     return (
                       <div key={task.role} className={`rounded-xl border p-3 ${isViewer ? "ring-2 ring-primary/20" : ""} ${meta.chip}`}>

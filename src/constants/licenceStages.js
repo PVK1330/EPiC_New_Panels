@@ -230,6 +230,17 @@ export const SPONSOR_STAGE_ACTIONS = {
   decision_activation: { label: "View licence & CoS", to: "/business/cosallocation" },
 };
 
-export function getSponsorStageAction(stageKey) {
-  return SPONSOR_STAGE_ACTIONS[stageKey] || null;
+// Routes that open the V2 application form. When we know which application the
+// sponsor is working on, we deep-link to it (`/business/apply-licence-v2/:id`)
+// so the existing draft resumes instead of starting a fresh, blank application.
+const V2_APP_ROUTE = "/business/apply-licence-v2";
+
+export function getSponsorStageAction(stageKey, appId) {
+  const action = SPONSOR_STAGE_ACTIONS[stageKey];
+  if (!action) return null;
+  // Append the application id to the V2 routes so deep-links resume the draft.
+  if (appId != null && action.to === V2_APP_ROUTE) {
+    return { ...action, to: `${V2_APP_ROUTE}/${appId}` };
+  }
+  return action;
 }

@@ -104,13 +104,13 @@ const LicenceProcess = () => {
     for (const s of stages) {
       if (s.status === "completed") continue;
       const task = (s.tasks || []).find((t) => t.role === "sponsor" && t.status !== "completed");
-      const cta = getSponsorStageAction(s.key);
+      const cta = getSponsorStageAction(s.key, app?.id);
       if (task && cta) {
         out.push({ title: task.title, stage: s.title, current: s.key === stagesData?.currentStageKey, cta });
       }
     }
     return out;
-  }, [stages, stagesData?.currentStageKey]);
+  }, [stages, stagesData?.currentStageKey, app?.id]);
 
   if (loading) {
     return (

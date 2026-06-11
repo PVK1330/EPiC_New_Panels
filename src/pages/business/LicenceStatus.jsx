@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import {
   LayoutDashboard,
   Hash,
@@ -393,10 +393,20 @@ const LicenceStatus = () => {
                       </tr>
                     ))
                   ) : applications.length > 0 ? (
-                    applications.map((app) => (
-                      <tr key={app.id} className="group hover:bg-gray-50/50 transition-colors">
+                    applications.map((app) => {
+                      const isV2 = Number(app.applicationVersion) === 2;
+                      return (
+                      <Fragment key={app.id}>
+                      <tr className="group hover:bg-gray-50/50 transition-colors">
                         <td className="px-6 py-4">
-                          <p className="text-sm font-black text-secondary">{app.type} Application</p>
+                          <p className="text-sm font-black text-secondary flex items-center gap-2">
+                            {app.type} Application
+                            {isV2 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide bg-primary/10 text-primary">
+                                V2
+                              </span>
+                            )}
+                          </p>
                           <p className="text-[10px] font-bold text-gray-400 mt-0.5">
                             #LIC-{app.id}{app.licenceType ? ` · ${app.licenceType}` : ""}
                           </p>
@@ -429,7 +439,27 @@ const LicenceStatus = () => {
                           </div>
                         </td>
                       </tr>
-                    ))
+                      {isV2 && (
+                        <tr className="bg-primary/5">
+                          <td colSpan={4} className="px-6 py-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                              <p className="text-[11px] font-bold text-secondary/70 flex-1">
+                                This application uses the new V2 process. View full details and stages on the Licence Tracking page.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => navigate("/business/licence-process")}
+                                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-white rounded-lg hover:bg-secondary-dark transition-all text-[10px] font-black uppercase"
+                              >
+                                Open Licence Tracking <ChevronRight size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan={4} className="px-6 py-10 text-center">
