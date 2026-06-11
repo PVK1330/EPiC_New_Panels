@@ -49,14 +49,14 @@ import {
 } from "../../services/candidateApi";
 import { getSponsors } from "../../services/sponsorApi";
 import { getApiError } from "../../utils/apiError";
+import { RoleBadge, StatusBadge } from "../../components/common/Badge";
+import { formatDateLong } from "../../utils/datetime";
+import { AVATAR_COLORS, initialsFrom, fullName } from "./adminHelpers";
 
 const PASSWORD_MIN = 6;
 
 /** Session draft for Add client application wizard (partial saves before account creation). */
 const ADMIN_CREATE_APPLICATION_DRAFT_KEY = "elitepic_admin_create_application_draft";
-
-import { RoleBadge, StatusBadge } from "../../components/common/Badge";
-import { formatDateLong } from "../../utils/datetime";
 
 const CASE_CHIPS = {
   "On Track": "bg-green-100 text-green-700",
@@ -86,16 +86,6 @@ const VISA_CHIPS = {
   "Visitor Visa": "bg-orange-100 text-orange-700",
 };
 
-
-const AVATAR_COLORS = [
-  "bg-blue-500",
-  "bg-yellow-500",
-  "bg-red-500",
-  "bg-green-500",
-  "bg-purple-500",
-  "bg-pink-500",
-  "bg-teal-500",
-];
 
 const ROLE_OPTIONS = [{ value: "1", label: "Candidate" }];
 
@@ -161,17 +151,6 @@ function formatStatusLabel(status) {
   if (status === "active") return "Active";
   if (status === "inactive") return "Inactive";
   return status || "—";
-}
-
-function initialsFrom(row) {
-  const a = (row.first_name || "").trim().charAt(0);
-  const b = (row.last_name || "").trim().charAt(0);
-  const s = `${a}${b}`.toUpperCase();
-  return s || "?";
-}
-
-function fullName(row) {
-  return `${row.first_name || ""} ${row.last_name || ""}`.trim() || "—";
 }
 
 function formatDate(date) {

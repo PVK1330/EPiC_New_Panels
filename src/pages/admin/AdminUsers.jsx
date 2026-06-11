@@ -27,16 +27,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { updateUser } from "../../store/slices/authSlice";
 
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
-
-const AVATAR_COLORS = [
-  "bg-blue-500",
-  "bg-yellow-500",
-  "bg-red-500",
-  "bg-green-500",
-  "bg-purple-500",
-  "bg-pink-500",
-  "bg-teal-500",
-];
+import { AVATAR_COLORS, initialsFrom, fullName } from "./adminHelpers";
 
 /** Tenant role_id for admin (matches backend ROLES.ADMIN / org provisioning). */
 const ADMIN_ROLE_ID = "3";
@@ -88,17 +79,6 @@ function formatStatusLabel(status) {
   if (status === "inactive") return "Inactive";
   if (status === "suspended") return "Suspended";
   return status || "—";
-}
-
-function initialsFrom(admin) {
-  const a = (admin.first_name || "").trim().charAt(0);
-  const b = (admin.last_name || "").trim().charAt(0);
-  const s = `${a}${b}`.toUpperCase();
-  return s || "?";
-}
-
-function fullName(admin) {
-  return `${admin.first_name || ""} ${admin.last_name || ""}`.trim() || "—";
 }
 
 export default function AdminUsers() {

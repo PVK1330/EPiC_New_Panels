@@ -35,6 +35,7 @@ const PASSWORD_MIN = 6;
 
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
 import { formatDateLong } from "../../utils/datetime";
+import { AVATAR_COLORS, initialsFrom, fullName, fmtDate } from "./adminHelpers";
 
 const LICENCE_CHIPS = {
   Active: "bg-green-100 text-green-700",
@@ -49,16 +50,6 @@ const RISK_CHIPS = {
   High: "bg-orange-100 text-orange-600",
   Critical: "bg-red-100 text-red-600",
 };
-
-const AVATAR_COLORS = [
-  "bg-blue-500",
-  "bg-yellow-500",
-  "bg-red-500",
-  "bg-purple-500",
-  "bg-green-500",
-  "bg-teal-500",
-  "bg-pink-500",
-];
 
 const STATUS_FILTER_OPTIONS = [
   { value: "All", label: "All" },
@@ -101,22 +92,6 @@ function formatStatusLabel(status) {
   if (status === "inactive") return "Inactive";
   return status || "—";
 }
-
-function initialsFrom(row) {
-  const a = (row.first_name || "").trim().charAt(0);
-  const b = (row.last_name || "").trim().charAt(0);
-  const s = `${a}${b}`.toUpperCase();
-  return s || "?";
-}
-
-function fullName(row) {
-  return `${row.first_name || ""} ${row.last_name || ""}`.trim() || "—";
-}
-
-const fmtDate = (iso) => {
-  if (!iso) return "—";
-  return formatDateLong(iso, { month: "short" });
-};
 
 export default function AdminBusinesses() {
   const { showToast } = useToast();
