@@ -16,6 +16,8 @@ import {
   Send,
 } from "lucide-react";
 import { getBusinessDashboard, getBusinessCases } from "../../services/businessProfileApi";
+import LicenceStatusBadge from "../../components/business/LicenceStatusBadge";
+import LicenceGateBanner from "../../components/business/LicenceGateBanner";
 import { getSponsoredWorkers } from "../../services/sponsoredWorkerApi";
 import { getNotifications } from "../../services/notificationApi";
 import messagingApi from "../../services/messagingApi";
@@ -113,6 +115,41 @@ export default function BusinessDashboard() {
         bg: "bg-purple-100",
         color: "text-purple-600",
       },
+      {
+        label: "Licence Number",
+        value: dashboard?.licenceNumber || "Not issued",
+        icon: ShieldCheck,
+        bg: "bg-indigo-100",
+        color: "text-indigo-600",
+      },
+      {
+        label: "Licence Expiry",
+        value: dashboard?.licenceExpiry?.date ? formatDate(dashboard.licenceExpiry.date) : "—",
+        icon: Clock,
+        bg: "bg-sky-100",
+        color: "text-sky-600",
+      },
+      {
+        label: "Available CoS",
+        value: dashboard?.cos?.available ?? 0,
+        icon: Briefcase,
+        bg: "bg-emerald-100",
+        color: "text-emerald-600",
+      },
+      {
+        label: "Pending CoS Requests",
+        value: dashboard?.pendingCosRequests ?? 0,
+        icon: Inbox,
+        bg: "bg-amber-100",
+        color: "text-amber-600",
+      },
+      {
+        label: "Compliance Alerts",
+        value: dashboard?.complianceAlerts ?? 0,
+        icon: AlertTriangle,
+        bg: "bg-red-100",
+        color: "text-red-600",
+      },
     ],
     [dashboard, workers.length, cases.length]
   );
@@ -138,6 +175,26 @@ export default function BusinessDashboard() {
         dueDate: "Immediate",
         priority: "High",
         status: "Overdue",
+      });
+    }
+    if ((dashboard?.complianceAlerts ?? 0) > 0) {
+      items.push({
+        id: "compliance-alerts",
+        title: "Compliance Action Required",
+        description: `${dashboard.complianceAlerts} compliance item(s) awaiting your response`,
+        dueDate: "Immediate",
+        priority: "High",
+        status: "Pending",
+      });
+    }
+    if ((dashboard?.pendingCosRequests ?? 0) > 0) {
+      items.push({
+        id: "pending-cos",
+        title: "CoS Requests Under Review",
+        description: `${dashboard.pendingCosRequests} request(s) awaiting a decision`,
+        dueDate: "In progress",
+        priority: "Medium",
+        status: "In Progress",
       });
     }
     return items;
@@ -179,12 +236,24 @@ export default function BusinessDashboard() {
   return (
     <div className="space-y-8 pb-10">
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <LayoutDashboard className="text-red-600" size={36} />
-          Business Dashboard
-        </h1>
-        <p className="text-primary font-bold text-sm mt-1">Manage your business operations and workers.</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
+            <LayoutDashboard className="text-red-600" size={36} />
+            Business Dashboard
+          </h1>
+          {dashboard?.licenceStatus && <LicenceStatusBadge status={dashboard.licenceStatus} />}
+        </div>
+        <p className="text-primary font-bold text-sm mt-1">
+          Manage your business operations and workers.
+          {dashboard?.licenceNumber && (
+            <span className="ml-2 text-gray-500">• Licence No. {dashboard.licenceNumber}</span>
+          )}
+        </p>
       </motion.div>
+
+      {dashboard && dashboard.licenceActive === false && (
+        <LicenceGateBanner status={dashboard.licenceStatus} />
+      )}
 
       <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" variants={containerVariants} initial="hidden" animate="visible">
         {stats.map(({ label, value, icon: Icon, bg, color }) => (

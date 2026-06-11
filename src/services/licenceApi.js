@@ -83,14 +83,15 @@ export const getCosSummary = () =>
 export const requestCosAllocation = (data) =>
   api.post("/api/business/cos/request", data);
 
-export const getCosRequests = () => 
-  api.get("/api/business/licence/cos-requests");
+// Canonical CoS request endpoints (the /licence/cos-requests aliases are deprecated).
+export const getCosRequests = () =>
+  api.get("/api/business/cos/requests");
 
 export const updateCosRequest = (id, data) =>
-  api.put(`/api/business/licence/cos-requests/${id}`, data);
+  api.put(`/api/business/cos/requests/${id}`, data);
 
 export const deleteCosRequest = (id) =>
-  api.delete(`/api/business/licence/cos-requests/${id}`);
+  api.delete(`/api/business/cos/requests/${id}`);
 
 // Business: Renew licence (route already exists in backend)
 export const renewLicence = (id) =>

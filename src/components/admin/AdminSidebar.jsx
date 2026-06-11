@@ -64,6 +64,8 @@ const navSections = [
       { to: "/admin/calendar",          label: "Calendar",          icon: RiCalendarLine,                                moduleKey: "admin.calendar" },
       { to: "/admin/escalations",       label: "Escalations",       icon: RiAlarmWarningLine,                            moduleKey: "admin.escalations" },
       { to: "/admin/licence-requests",  label: "Licence Requests",  icon: RiShieldCheckLine,                             moduleKey: "admin.licence-requests" },
+      { to: "/admin/cos-requests",      label: "CoS Requests",      icon: RiShieldCheckLine,                             moduleKey: "admin.licence-requests" },
+      { to: "/admin/compliance-review", label: "Compliance Review", icon: RiShieldCheckLine,                             moduleKey: "admin.licence-requests" },
     ],
   },
   {

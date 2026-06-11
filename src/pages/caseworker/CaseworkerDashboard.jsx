@@ -140,6 +140,20 @@ const CaseworkerDashboard = () => {
       valueClass: "text-secondary",
     },
     {
+      key: "applications",
+      label: "Assigned applications",
+      value: stats.licences?.toString() || "0",
+      borderClass: "border-t-blue-500",
+      valueClass: "text-blue-600",
+    },
+    {
+      key: "assignedCos",
+      label: "Assigned CoS requests",
+      value: stats.assignedCos?.toString() || "0",
+      borderClass: "border-t-purple-500",
+      valueClass: "text-purple-600",
+    },
+    {
       key: "active",
       label: "Active cases",
       value: stats.active?.toString() || "0",
