@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Loader2,
   History,
+  MessageSquare,
 } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
 import useNotifications from "../../hooks/useNotifications";
@@ -18,7 +19,7 @@ import CosStatusBadge from "./CosStatusBadge";
 import CosReviewModal from "./CosReviewModal";
 import CosHistoryPanel from "./CosHistoryPanel";
 
-const STATUS_FILTERS = ["All", "Pending", "Under Review", "Approved", "Rejected"];
+const STATUS_FILTERS = ["All", "Pending", "Under Review", "Approved", "Allocated", "Rejected"];
 const REVIEWABLE = ["Pending", "Under Review"];
 
 const fullName = (u) =>
@@ -32,10 +33,11 @@ const fullName = (u) =>
 export default function CosReviewQueue({
   title,
   subtitle,
-  loadRequests,        // (params) => Promise<axiosRes>  — list endpoint
-  approveRequest,      // (id, payload) => Promise
-  rejectRequest,       // (id, payload) => Promise
-  assignRequest,       // (id, { caseworkerIds }) => Promise   (optional)
+  loadRequests,          // (params) => Promise<axiosRes>  — list endpoint
+  approveRequest,        // (id, payload) => Promise
+  rejectRequest,         // (id, payload) => Promise
+  requestInfoRequest,    // (id, payload) => Promise   (optional — caseworker "request info")
+  assignRequest,         // (id, { caseworkerIds }) => Promise   (optional)
   caseworkers = [],
   showAssign = false,
 }) {
@@ -82,10 +84,13 @@ export default function CosReviewQueue({
       setBusy(true);
       if (action === "approve") {
         await approveRequest(request.id, payload);
-        showToast({ message: "CoS request approved", variant: "success" });
-      } else {
+        showToast({ message: "CoS request approved and allocated", variant: "success" });
+      } else if (action === "reject") {
         await rejectRequest(request.id, payload);
         showToast({ message: "CoS request rejected", variant: "success" });
+      } else if (action === "requestInfo") {
+        await requestInfoRequest(request.id, payload);
+        showToast({ message: "Information requested from sponsor", variant: "success" });
       }
       setReview({ open: false, request: null, action: "approve" });
       refreshAll();
@@ -130,7 +135,7 @@ export default function CosReviewQueue({
     () => ({
       total: requests.length,
       pending: requests.filter((r) => r.status === "Pending").length,
-      approved: requests.filter((r) => r.status === "Approved").length,
+      allocated: requests.filter((r) => r.status === "Allocated").length,
       rejected: requests.filter((r) => r.status === "Rejected").length,
     }),
     [requests]
@@ -151,8 +156,8 @@ export default function CosReviewQueue({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {[
           { label: "Total", value: counts.total, color: "text-secondary" },
-          { label: "Pending / Review", value: counts.pending, color: "text-amber-600" },
-          { label: "Approved", value: counts.approved, color: "text-emerald-600" },
+          { label: "Pending", value: counts.pending, color: "text-amber-600" },
+          { label: "Allocated", value: counts.allocated, color: "text-violet-600" },
           { label: "Rejected", value: counts.rejected, color: "text-red-600" },
         ].map((s, i) => (
           <div key={i} className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
@@ -245,6 +250,14 @@ export default function CosReviewQueue({
                         )}
                         {canReview && (
                           <>
+                            {requestInfoRequest && (
+                              <button
+                                onClick={() => setReview({ open: true, request: r, action: "requestInfo" })}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all text-[9px] font-black uppercase"
+                              >
+                                <MessageSquare size={14} /> Info
+                              </button>
+                            )}
                             <button
                               onClick={() => setReview({ open: true, request: r, action: "approve" })}
                               className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all text-[9px] font-black uppercase"

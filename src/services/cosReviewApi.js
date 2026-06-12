@@ -31,3 +31,9 @@ export const approveCosRequestCaseworker = (id, data) =>
 
 export const rejectCosRequestCaseworker = (id, data) =>
   api.patch(`/api/caseworker/cos/${id}/reject`, data);
+
+export const requestInfoCosRequestCaseworker = (id, data) =>
+  api.patch(`/api/caseworker/cos/${id}/request-info`, data);
+
+export const requestInfoCosRequestAdmin = (id, data) =>
+  api.patch(`/api/admin/licence/cos-requests/${id}/request-info`, data);

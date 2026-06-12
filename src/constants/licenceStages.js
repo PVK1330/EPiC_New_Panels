@@ -1,23 +1,23 @@
 /**
- * Sponsor Licence application stages.
+ * Sponsor Licence application stages — 16 stages mirroring the backend service.
  *
- * Derived from the UK Visas & Immigration "Apply for a sponsor licence" form
- * (8 official sections) wrapped with the firm's intake and post-decision steps.
- * Each stage carries a task for every role: Sponsor, Caseworker, Admin, Candidate.
+ * Stages 1-8:  Pre-submission (intake, application, documents, declarations, payment)
+ * Stages 9-14: Government processing pipeline (Phase 2 additions)
+ * Stage 15:    Submission
+ * Stage 16:    UKVI Decision & Activation
  *
- * This is the single source of truth for the read-only Stages tracker. Status is
- * INFERRED from the serialized V2 application (see deriveStageStatuses) — there is
- * no task-completion persistence yet; that is a later phase.
+ * This is the single source of truth for the read-only Stages tracker.
  */
 
 export const STAGE_ROLES = [
-  { key: "sponsor", label: "Sponsor", chip: "bg-blue-50 text-blue-600 border-blue-100" },
+  { key: "sponsor",    label: "Sponsor",    chip: "bg-blue-50 text-blue-600 border-blue-100" },
   { key: "caseworker", label: "Caseworker", chip: "bg-indigo-50 text-indigo-600 border-indigo-100" },
-  { key: "admin", label: "Admin", chip: "bg-primary/5 text-primary border-primary/10" },
-  { key: "candidate", label: "Candidate", chip: "bg-emerald-50 text-emerald-600 border-emerald-100" },
+  { key: "admin",      label: "Admin",      chip: "bg-primary/5 text-primary border-primary/10" },
+  { key: "candidate",  label: "Candidate",  chip: "bg-emerald-50 text-emerald-600 border-emerald-100" },
 ];
 
 export const LICENCE_STAGES = [
+  // ── Pre-submission stages (1-8) ───────────────────────────────────────────
   {
     key: "enquiry_onboarding",
     order: 1,
@@ -122,9 +122,89 @@ export const LICENCE_STAGES = [
       candidate: null,
     },
   },
+  // ── Government processing pipeline (9-14) ────────────────────────────────
+  {
+    key: "sponsor_information_provision",
+    order: 9,
+    title: "Sponsor Information Provision",
+    govSection: "Government Prep",
+    description: "Caseworker validates completeness of the sponsor's information pack before government portal entry.",
+    tasks: {
+      sponsor: "Confirm all organisational details, personnel, and documents are accurate and up-to-date before portal submission.",
+      caseworker: "Validate completeness of the sponsor's information pack and confirm readiness for government portal entry.",
+      admin: "Authorise the information pack for government portal submission.",
+      candidate: null,
+    },
+  },
+  {
+    key: "government_sms_registration",
+    order: 10,
+    title: "Government SMS Registration",
+    govSection: "Government Prep",
+    description: "Register the sponsor on the UKVI Sponsorship Management System (SMS) portal.",
+    tasks: {
+      sponsor: "Await confirmation that your organisation has been registered on the UKVI Sponsorship Management System (SMS).",
+      caseworker: "Register the sponsor organisation on the SMS portal and obtain the SMS portal username and registration reference.",
+      admin: "Verify the SMS registration details and record the reference number.",
+      candidate: null,
+    },
+  },
+  {
+    key: "sponsor_portal_onboarding",
+    order: 11,
+    title: "Sponsor Portal Onboarding",
+    govSection: "Government Prep",
+    description: "Onboard the sponsor onto the UKVI SMS portal with login credentials.",
+    tasks: {
+      sponsor: "Log in to the UKVI Sponsor Management System using the credentials provided and confirm access.",
+      caseworker: "Guide the sponsor through the SMS portal login and confirm the sponsor can access their account.",
+      admin: "Record that the sponsor has been successfully onboarded to the SMS portal.",
+      candidate: null,
+    },
+  },
+  {
+    key: "government_portal_credentials",
+    order: 12,
+    title: "Government Portal Credentials",
+    govSection: "Government Application",
+    description: "Generate and securely share the UKVI online application portal credentials with the sponsor.",
+    tasks: {
+      sponsor: "Receive and confirm receipt of the UKVI online application portal credentials.",
+      caseworker: "Generate the UKVI online application portal user ID and password; share securely with the sponsor.",
+      admin: "Confirm credentials have been generated and securely transmitted.",
+      candidate: null,
+    },
+  },
+  {
+    key: "government_application_forms",
+    order: 13,
+    title: "Government Application Forms",
+    govSection: "Government Application",
+    description: "Complete the online sponsor licence application forms on the UKVI portal.",
+    tasks: {
+      sponsor: "Log in to the UKVI portal and complete the online sponsor licence application forms.",
+      caseworker: "Review and verify all form entries with the sponsor; ensure declarations and supporting data are correctly entered.",
+      admin: "Carry out a final QA check of the completed government application forms before submission.",
+      candidate: null,
+    },
+  },
+  {
+    key: "government_submission",
+    order: 14,
+    title: "Government Submission",
+    govSection: "Government Application",
+    description: "Submit the completed online application form to UKVI and record the submission reference.",
+    tasks: {
+      sponsor: "Confirm submission of the online application to UKVI and note the government submission reference number.",
+      caseworker: "Submit the completed online application form to UKVI and record the submission reference and date.",
+      admin: "Record the government submission reference, date, and fee payment confirmation.",
+      candidate: null,
+    },
+  },
+  // ── Post-submission outcome stages (15-16) ────────────────────────────────
   {
     key: "submission",
-    order: 9,
+    order: 15,
     title: "Submission",
     govSection: "Section 8",
     description: "Generate the submission sheet and submit the application to UKVI.",
@@ -137,7 +217,7 @@ export const LICENCE_STAGES = [
   },
   {
     key: "decision_activation",
-    order: 10,
+    order: 16,
     title: "UKVI Decision & Activation",
     govSection: "Outcome",
     description: "Record the UKVI decision; on approval the licence is activated and CoS can be assigned.",
@@ -153,10 +233,6 @@ export const LICENCE_STAGES = [
 /**
  * Infer per-stage completion from the serialized V2 application (read-only).
  * Returns a map of stageKey -> 'done' | 'current' | 'upcoming' | 'rejected'.
- *
- * The first stage whose data signal is incomplete becomes 'current'; everything
- * before it is 'done', everything after is 'upcoming'. Application status takes
- * precedence at the terminal stages (Approved => all done, Rejected => flagged).
  */
 export function deriveStageStatuses(app) {
   const statuses = {};
@@ -170,27 +246,39 @@ export function deriveStageStatuses(app) {
   const docs = app.appendixDocuments || [];
   const docsComplete = docs.length > 0 && docs.every((d) => d.verificationStatus === "Verified");
 
-  // Per-stage "is this stage's work complete?" signal.
+  // Status-based sentinels for government pipeline stages.
+  const govActive  = ["Government Processing", "Decision Pending", "Approved"].includes(status);
+  const decisionActive = ["Decision Pending", "Approved"].includes(status);
+  // Sponsor re-submitted after info request; or the application is past Pending.
+  const infoProvided = submitted && !["Draft", "Pending"].includes(status);
+
   const complete = {
-    enquiry_onboarding: true, // an application existing means intake happened
-    licence_routes: (app.routes || []).length > 0,
-    organisation_details: !!(app.organisationInfo && (app.organisationInfo.companiesHouseNumber || app.organisationInfo.organisationType)),
-    cos_requirements: (app.cosRequirements || []).length > 0,
-    supporting_documents: docsComplete,
-    key_personnel: !!app.authorisingOfficer,
-    declarations: !!(app.declaration && app.declaration.accuracyConfirmed),
-    payment: submitted || app.fee?.total != null,
-    submission: submitted,
-    decision_activation: status === "Approved",
+    // Pre-submission stages (1-8)
+    enquiry_onboarding:        true, // an application existing means intake happened
+    licence_routes:            (app.routes || []).length > 0,
+    organisation_details:      !!(app.organisationInfo && (app.organisationInfo.companiesHouseNumber || app.organisationInfo.organisationType)),
+    cos_requirements:          (app.cosRequirements || []).length > 0,
+    supporting_documents:      docsComplete,
+    key_personnel:             !!app.authorisingOfficer,
+    declarations:              !!(app.declaration && app.declaration.accuracyConfirmed),
+    payment:                   submitted || app.fee?.total != null,
+    // Government pipeline (9-14)
+    sponsor_information_provision: infoProvided,
+    government_sms_registration:   govActive,
+    sponsor_portal_onboarding:     govActive,
+    government_portal_credentials: govActive,
+    government_application_forms:  decisionActive,
+    government_submission:         decisionActive,
+    // Post-submission (15-16)
+    submission:                submitted,
+    decision_activation:       status === "Approved",
   };
 
-  // Terminal states drive everything.
   if (status === "Approved") {
     LICENCE_STAGES.forEach((s) => (statuses[s.key] = "done"));
     return statuses;
   }
 
-  // Find the first incomplete stage = current; before it = done; after = upcoming.
   let currentReached = false;
   LICENCE_STAGES.forEach((s) => {
     if (currentReached) {
@@ -203,7 +291,6 @@ export function deriveStageStatuses(app) {
     }
   });
 
-  // A rejected application: flag the decision stage instead of leaving it 'current'.
   if (status === "Rejected") {
     statuses.decision_activation = "rejected";
   }
@@ -211,34 +298,30 @@ export function deriveStageStatuses(app) {
   return statuses;
 }
 
-/**
- * Sponsor-facing deep-link for each stage — "where do I go to do this?".
- * Mirrors the candidate flow's CANDIDATE_STAGE_ACTIONS: turns an abstract task
- * into a concrete call-to-action that routes the sponsor to the right page.
- * All routes are real sponsor routes (see AppRouter `/business/*`).
- */
 export const SPONSOR_STAGE_ACTIONS = {
-  enquiry_onboarding: { label: "View licence", to: "/business/licence" },
-  licence_routes: { label: "Open application", to: "/business/apply-licence-v2" },
-  organisation_details: { label: "Complete organisation details", to: "/business/apply-licence-v2" },
-  cos_requirements: { label: "Add CoS requirements", to: "/business/apply-licence-v2" },
-  supporting_documents: { label: "Upload documents", to: "/business/licence-documents" },
-  key_personnel: { label: "Add key personnel", to: "/business/personnel" },
-  declarations: { label: "Complete declarations", to: "/business/apply-licence-v2" },
-  payment: { label: "Pay licence fee", to: "/business/payment" },
-  submission: { label: "Review & submit", to: "/business/apply-licence-v2" },
-  decision_activation: { label: "View licence & CoS", to: "/business/cosallocation" },
+  enquiry_onboarding:            { label: "View licence",               to: "/business/licence" },
+  licence_routes:                { label: "Open application",            to: "/business/apply-licence-v2" },
+  organisation_details:          { label: "Complete organisation details",to: "/business/apply-licence-v2" },
+  cos_requirements:              { label: "Add CoS requirements",         to: "/business/apply-licence-v2" },
+  supporting_documents:          { label: "Upload documents",             to: "/business/licence-documents" },
+  key_personnel:                 { label: "Add key personnel",            to: "/business/personnel" },
+  declarations:                  { label: "Complete declarations",        to: "/business/apply-licence-v2" },
+  payment:                       { label: "Pay licence fee",              to: "/business/payment" },
+  sponsor_information_provision: { label: "Confirm information",          to: "/business/licence" },
+  government_sms_registration:   { label: "View registration status",     to: "/business/licence" },
+  sponsor_portal_onboarding:     { label: "Access SMS portal",            to: "/business/licence" },
+  government_portal_credentials: { label: "Confirm credentials received", to: "/business/licence" },
+  government_application_forms:  { label: "View application status",      to: "/business/licence" },
+  government_submission:         { label: "View submission status",        to: "/business/licence" },
+  submission:                    { label: "Review & submit",               to: "/business/apply-licence-v2" },
+  decision_activation:           { label: "View licence & CoS",           to: "/business/cosallocation" },
 };
 
-// Routes that open the V2 application form. When we know which application the
-// sponsor is working on, we deep-link to it (`/business/apply-licence-v2/:id`)
-// so the existing draft resumes instead of starting a fresh, blank application.
 const V2_APP_ROUTE = "/business/apply-licence-v2";
 
 export function getSponsorStageAction(stageKey, appId) {
   const action = SPONSOR_STAGE_ACTIONS[stageKey];
   if (!action) return null;
-  // Append the application id to the V2 routes so deep-links resume the draft.
   if (appId != null && action.to === V2_APP_ROUTE) {
     return { ...action, to: `${V2_APP_ROUTE}/${appId}` };
   }

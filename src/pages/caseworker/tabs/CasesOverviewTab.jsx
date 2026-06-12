@@ -8,7 +8,7 @@ import {
   resolveCaseStage,
   getStepById,
 } from "../../../constants/immigrationCaseProcess";
-import { badgeStatus, badgePriority, priorityLabel, formatTarget } from "../casesHelpers";
+import { badgeStatus, badgePriority, priorityLabel, formatTarget } from "../casesHelpers.jsx";
 
 function Field({ label, children }) {
   return (

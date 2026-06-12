@@ -27,13 +27,13 @@ import { useNavigate } from "react-router-dom";
 import {
   getMyLicenceApplications,
   getLicenceSummary,
+  renewLicence,
   submitLicenceApplication,
   updateLicenceApplication,
   deleteMyLicenceApplication,
   downloadSponsorLicenceDocument,
 } from "../../services/licenceApi";
 import { triggerDownload } from "../../services/documentApi";
-import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 import { Skeleton } from "boneyard-js/react";
 import { formatDate, formatDateLong } from "../../utils/datetime";
@@ -48,7 +48,10 @@ const LicenceStatus = () => {
     licenceId: "Pending",
     status: "No Active Licence",
     allocation: { total: 0, used: 0, available: 0 },
-    renewalDue: "N/A"
+    renewalDue: "N/A",
+    daysRemaining: null,
+    renewalEligible: false,
+    pendingRenewal: null,
   });
 
   // Modals state
@@ -91,6 +94,9 @@ const LicenceStatus = () => {
             available: s.cos?.available ?? s.cosAllocation?.available ?? 0,
           },
           renewalDue: s.expiryDate ? formatDate(s.expiryDate) : "N/A",
+          daysRemaining: s.daysRemaining ?? null,
+          renewalEligible: s.renewalEligible ?? false,
+          pendingRenewal: s.pendingRenewal ?? null,
         });
       } else {
         const latestApproved = data.find((app) => app.status === "Approved");
@@ -112,6 +118,9 @@ const LicenceStatus = () => {
           renewalDue: latestApproved?.proposedStartDate
             ? formatDate(latestApproved.proposedStartDate)
             : "N/A",
+          daysRemaining: null,
+          renewalEligible: false,
+          pendingRenewal: null,
         });
       }
     } catch (err) {
@@ -205,19 +214,32 @@ const LicenceStatus = () => {
   };
 
   const handleRenewalSubmit = async () => {
+    if (!renewalData.renewalType) {
+      showToast({ message: "Please select a renewal category before submitting.", variant: "danger" });
+      return;
+    }
+    const approvedApp = applications.find((a) => a.status === "Approved");
+    if (!approvedApp) {
+      showToast({ message: "No approved licence application found to renew.", variant: "danger" });
+      return;
+    }
     try {
-      if (!applications[0]?.id) return;
       setSubmitting(true);
-      
-      const res = await api.post(`/api/business/licence/renew/${applications[0].id}`, renewalData);
-      
-      if (res.data.status === "success") {
-        showToast({ message: "Quick Renewal submitted successfully!", variant: "success" });
-        setShowRenewalForm(false);
-        fetchData();
-      }
+      await renewLicence(approvedApp.id, renewalData);
+      showToast({ message: "Renewal application submitted successfully!", variant: "success" });
+      setShowRenewalForm(false);
+      setRenewalData({ renewalType: "", requestedAllocation: "", reason: "" });
+      fetchData();
     } catch (err) {
-      showToast({ message: err.response?.data?.message || "Failed to submit renewal", variant: "danger" });
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.message;
+      if (status === 409) {
+        showToast({ message: msg || "A renewal is already in progress for this licence.", variant: "danger" });
+      } else if (status === 400) {
+        showToast({ message: msg || "Your licence is not yet eligible for renewal (within 90 days of expiry).", variant: "danger" });
+      } else {
+        showToast({ message: msg || "Failed to submit renewal. Please try again.", variant: "danger" });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -225,11 +247,13 @@ const LicenceStatus = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Approved': return 'bg-emerald-100 text-emerald-700';
-      case 'Rejected': return 'bg-red-100 text-red-700';
-      case 'Under Review': return 'bg-blue-100 text-blue-700';
+      case 'Approved':              return 'bg-emerald-100 text-emerald-700';
+      case 'Rejected':              return 'bg-red-100 text-red-700';
+      case 'Under Review':          return 'bg-blue-100 text-blue-700';
       case 'Information Requested': return 'bg-red-100 text-red-700 animate-pulse';
-      default: return 'bg-amber-100 text-amber-700';
+      case 'Government Processing': return 'bg-violet-100 text-violet-700';
+      case 'Decision Pending':      return 'bg-orange-100 text-orange-700';
+      default:                      return 'bg-amber-100 text-amber-700';
     }
   };
 
@@ -289,7 +313,7 @@ const LicenceStatus = () => {
               <p className="text-sm font-bold text-gray-500">The Admin has requested more evidence for your application. Please review the details in the history table.</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => {
               const app = applications.find(a => a.status.toLowerCase() === 'information requested');
               if (app) handleEditClick(app);
@@ -297,6 +321,56 @@ const LicenceStatus = () => {
             className="bg-red-600 hover:bg-red-700 text-white font-black px-6 py-3 rounded-xl transition-all shadow-lg shadow-red-200 active:scale-95"
           >
             Review Request
+          </button>
+        </motion.div>
+      )}
+
+      {/* Government Processing Banner */}
+      {applications.find(app => app.status === 'Government Processing') && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-violet-50 border border-violet-100 rounded-3xl p-6 flex items-center justify-between gap-6 shadow-sm"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-violet-100 rounded-2xl text-violet-600">
+              <ExternalLink size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-secondary">Government Portal Processing</h3>
+              <p className="text-sm font-bold text-gray-500">Your application is being processed through the UK government portal. Track progress and confirm credentials in Licence Tracking.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/business/licence-process")}
+            className="bg-violet-600 hover:bg-violet-700 text-white font-black px-6 py-3 rounded-xl transition-all shadow-lg shadow-violet-200 active:scale-95 whitespace-nowrap"
+          >
+            Track Progress
+          </button>
+        </motion.div>
+      )}
+
+      {/* Decision Pending Banner */}
+      {applications.find(app => app.status === 'Decision Pending') && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-orange-50 border border-orange-100 rounded-3xl p-6 flex items-center justify-between gap-6 shadow-sm"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-orange-100 rounded-2xl text-orange-600">
+              <Clock size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-secondary">Awaiting UKVI Decision</h3>
+              <p className="text-sm font-bold text-gray-500">Your application has been submitted to UKVI. Decisions typically take 8–12 weeks. You will be notified when a decision is made.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/business/licence-process")}
+            className="bg-orange-500 hover:bg-orange-600 text-white font-black px-6 py-3 rounded-xl transition-all shadow-lg shadow-orange-200 active:scale-95 whitespace-nowrap"
+          >
+            View Status
           </button>
         </motion.div>
       )}
@@ -518,23 +592,104 @@ const LicenceStatus = () => {
         {/* Right Column: Alerts & Quick Actions */}
         <div className="space-y-8">
           
-          <motion.div variants={cardVariants} className="bg-secondary text-white rounded-3xl p-6 shadow-xl shadow-secondary/20 relative overflow-hidden group">
-            <div className="absolute -right-8 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
-            <ShieldAlert size={48} className="text-white/20 mb-6" />
-            <h3 className="text-2xl font-black mb-2">Renewal</h3>
-            <p className="text-white/70 text-sm font-bold mb-6">
-              {summaryStats.renewalDue && summaryStats.renewalDue !== "N/A"
-                ? `Your licence renewal is due on ${summaryStats.renewalDue}.`
-                : "When you're ready, submit a renewal based on your current licence."}
-            </p>
-            <button
-              onClick={() => setShowRenewalForm(true)}
-              className="w-full bg-white text-secondary font-black py-4 rounded-2xl hover:bg-primary hover:text-white transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
-            >
-              <RefreshCw size={18} />
-              Quick Renew
-            </button>
-          </motion.div>
+          {/* Renewal card — 4 states */}
+          {(() => {
+            const { daysRemaining, renewalEligible, pendingRenewal, status, renewalDue } = summaryStats;
+            const isExpired = status === "Expired" || (daysRemaining !== null && daysRemaining <= 0);
+            const isPending = pendingRenewal !== null;
+            const isEligible = renewalEligible && !isPending && !isExpired;
+            const isNotEligible = !isEligible && !isPending && !isExpired;
+
+            if (isPending) {
+              return (
+                <motion.div variants={cardVariants} className="bg-white rounded-3xl border border-amber-100 p-6 shadow-sm relative overflow-hidden">
+                  <div className="absolute -right-8 -top-6 w-32 h-32 bg-amber-50 rounded-full blur-2xl" />
+                  <Clock size={36} className="text-amber-400 mb-4" />
+                  <h3 className="text-xl font-black text-secondary mb-1">Renewal In Progress</h3>
+                  <p className="text-sm font-bold text-gray-500 mb-4">
+                    A renewal application has been submitted and is being reviewed.
+                  </p>
+                  <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 text-xs font-black text-amber-700">
+                    #{`LIC-${pendingRenewal.id}`} · {pendingRenewal.status}
+                  </div>
+                </motion.div>
+              );
+            }
+
+            if (isExpired) {
+              return (
+                <motion.div variants={cardVariants} className="bg-red-600 text-white rounded-3xl p-6 shadow-xl shadow-red-200 relative overflow-hidden group">
+                  <div className="absolute -right-8 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                  <ShieldAlert size={48} className="text-white/20 mb-4" />
+                  <h3 className="text-2xl font-black mb-1">Licence Expired</h3>
+                  <p className="text-white/70 text-sm font-bold mb-6">
+                    Your licence has expired. Submit a renewal application immediately.
+                  </p>
+                  <button
+                    onClick={() => setShowRenewalForm(true)}
+                    className="w-full bg-white text-red-600 font-black py-4 rounded-2xl hover:bg-red-50 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw size={18} />
+                    Renew Now
+                  </button>
+                </motion.div>
+              );
+            }
+
+            if (isEligible) {
+              const urgency = daysRemaining !== null && daysRemaining <= 14
+                ? "bg-red-600 shadow-red-200"
+                : daysRemaining !== null && daysRemaining <= 30
+                  ? "bg-orange-500 shadow-orange-200"
+                  : "bg-secondary shadow-secondary/20";
+              return (
+                <motion.div variants={cardVariants} className={`${urgency} text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group`}>
+                  <div className="absolute -right-8 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                  <ShieldAlert size={48} className="text-white/20 mb-4" />
+                  <h3 className="text-2xl font-black mb-1">Renewal Due</h3>
+                  <p className="text-white/70 text-sm font-bold mb-1">
+                    {daysRemaining !== null
+                      ? `${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} remaining until expiry.`
+                      : `Renewal due ${renewalDue}.`}
+                  </p>
+                  {renewalDue && renewalDue !== "N/A" && (
+                    <p className="text-white/50 text-xs font-bold mb-6">Expires: {renewalDue}</p>
+                  )}
+                  <button
+                    onClick={() => setShowRenewalForm(true)}
+                    className="w-full bg-white text-secondary font-black py-4 rounded-2xl hover:bg-primary hover:text-white transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw size={18} />
+                    Quick Renew
+                  </button>
+                </motion.div>
+              );
+            }
+
+            // Not eligible — window not open yet
+            const daysUntilWindow = daysRemaining !== null ? daysRemaining - 90 : null;
+            return (
+              <motion.div variants={cardVariants} className="bg-secondary text-white rounded-3xl p-6 shadow-xl shadow-secondary/20 relative overflow-hidden group">
+                <div className="absolute -right-8 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                <ShieldAlert size={48} className="text-white/20 mb-4" />
+                <h3 className="text-2xl font-black mb-2">Renewal</h3>
+                <p className="text-white/70 text-sm font-bold mb-6">
+                  {daysUntilWindow !== null && daysUntilWindow > 0
+                    ? `Renewal window opens in ${daysUntilWindow} day${daysUntilWindow !== 1 ? "s" : ""} (90 days before expiry).`
+                    : renewalDue && renewalDue !== "N/A"
+                      ? `Your licence is due for renewal on ${renewalDue}.`
+                      : "Submit a renewal when your licence is within 90 days of expiry."}
+                </p>
+                <button
+                  disabled
+                  className="w-full bg-white/20 text-white/50 font-black py-4 rounded-2xl cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <RefreshCw size={18} />
+                  Not Yet Eligible
+                </button>
+              </motion.div>
+            );
+          })()}
 
           <motion.div variants={cardVariants} className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">How it works</h3>
@@ -823,37 +978,64 @@ const LicenceStatus = () => {
                   </button>
                 </div>
 
+                {/* Pre-fill notice */}
+                {(() => {
+                  const approvedApp = applications.find((a) => a.status === "Approved");
+                  return approvedApp ? (
+                    <div className="mb-6 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-xs font-bold text-blue-700">
+                      Renewing licence #{`LIC-${approvedApp.id}`} · {approvedApp.licenceType || "Sponsor Licence"}
+                    </div>
+                  ) : null;
+                })()}
+
                 <div className="space-y-6">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Renewal Category</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                      Renewal Category <span className="text-red-500">*</span>
+                    </label>
                     <select
                       value={renewalData.renewalType}
                       onChange={(e) => setRenewalData({ ...renewalData, renewalType: e.target.value })}
                       className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary"
                     >
                       <option value="">Select type</option>
-                      <option>Standard Renewal</option>
-                      <option>Allocation Increase</option>
+                      <option value="Standard Renewal">Standard Renewal</option>
+                      <option value="Allocation Increase">Allocation Increase</option>
                     </select>
                   </div>
-                  
+
+                  {renewalData.renewalType === "Allocation Increase" && (
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Requested CoS Allocation</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={renewalData.requestedAllocation}
+                        onChange={(e) => setRenewalData({ ...renewalData, requestedAllocation: e.target.value })}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary"
+                        placeholder="Number of CoS required"
+                      />
+                    </div>
+                  )}
+
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Reason</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Reason / Notes</label>
                     <textarea
                       value={renewalData.reason}
                       onChange={(e) => setRenewalData({ ...renewalData, reason: e.target.value })}
                       className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary resize-none"
                       rows={3}
+                      placeholder="Briefly describe the purpose of this renewal…"
                     />
                   </div>
 
                   <div className="flex gap-4 pt-6">
                     <button
                       onClick={handleRenewalSubmit}
-                      disabled={submitting}
-                      className="flex-1 bg-secondary hover:bg-secondary-dark text-white font-black rounded-xl py-3 transition-all shadow-lg active:scale-95"
+                      disabled={submitting || !renewalData.renewalType}
+                      className="flex-1 bg-secondary hover:bg-secondary-dark text-white font-black rounded-xl py-3 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      {submitting ? <Loader2 className="animate-spin" /> : "Submit Request"}
+                      {submitting ? <Loader2 className="animate-spin" size={18} /> : <><RefreshCw size={18} /> Submit Renewal</>}
                     </button>
                     <button
                       onClick={() => setShowRenewalForm(false)}

@@ -3,6 +3,7 @@ import {
   getCaseworkerCosRequests,
   approveCosRequestCaseworker,
   rejectCosRequestCaseworker,
+  requestInfoCosRequestCaseworker,
 } from "../../services/cosReviewApi";
 
 export default function CaseworkerCosRequests() {
@@ -13,6 +14,7 @@ export default function CaseworkerCosRequests() {
       loadRequests={getCaseworkerCosRequests}
       approveRequest={approveCosRequestCaseworker}
       rejectRequest={rejectCosRequestCaseworker}
+      requestInfoRequest={requestInfoCosRequestCaseworker}
     />
   );
 }

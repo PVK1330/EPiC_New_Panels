@@ -25,7 +25,15 @@ import {
   Trash2,
   Pencil,
   Save,
-  Loader2
+  Loader2,
+  Key,
+  Send,
+  Lock,
+  EyeOff,
+  Globe,
+  ClipboardCheck,
+  BadgeCheck,
+  CircleDot,
 } from "lucide-react";
 import {
   getAllLicenceApplications,
@@ -33,7 +41,9 @@ import {
   requestLicenceInfo,
   assignLicenceCaseworker,
   deleteLicenceApplicationByAdmin,
-  downloadAdminLicenceDocument
+  downloadAdminLicenceDocument,
+  generateLicenceCredentials,
+  resendLicenceCredentials,
 } from "../../services/licenceApi";
 import { triggerDownload } from "../../services/documentApi";
 import LicenceStages from "../../components/licence/LicenceStages";
@@ -63,6 +73,10 @@ const AdminLicenceApplications = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [docBusy, setDocBusy] = useState(null); // `${index}:${mode}` while a doc loads
+  const [credForm, setCredForm] = useState({ ukviPortalUserId: "", ukviPortalPassword: "", smsPortalUsername: "" });
+  const [showPwd, setShowPwd] = useState(false);
+  const [credLoading, setCredLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const fetchApplications = async () => {
     try {
@@ -100,6 +114,10 @@ const AdminLicenceApplications = () => {
     if (type === "Assign") {
       setSelectedCaseworkerIds(Array.isArray(app?.assignedcaseworkerId) ? app.assignedcaseworkerId : []);
     }
+    if (type === "GenerateCredentials") {
+      setCredForm({ ukviPortalUserId: "", ukviPortalPassword: "", smsPortalUsername: "" });
+      setShowPwd(false);
+    }
     setShowActionModal(true);
   };
 
@@ -111,6 +129,8 @@ const AdminLicenceApplications = () => {
     setAdminNotes("");
     setRequestedDocs("");
     setSelectedCaseworkerIds([]);
+    setCredForm({ ukviPortalUserId: "", ukviPortalPassword: "", smsPortalUsername: "" });
+    setShowPwd(false);
     setSelectedApp(null);
   };
 
@@ -223,6 +243,53 @@ const AdminLicenceApplications = () => {
     }
   };
 
+  const handleGenerateCredentials = async () => {
+    if (credLoading || !selectedApp) return;
+    if (!credForm.ukviPortalUserId.trim() || !credForm.ukviPortalPassword.trim()) {
+      showToast({ message: "UKVI Portal User ID and password are required", variant: "warning" });
+      return;
+    }
+    if (credForm.ukviPortalPassword.length < 8) {
+      showToast({ message: "Password must be at least 8 characters", variant: "warning" });
+      return;
+    }
+    try {
+      setCredLoading(true);
+      await generateLicenceCredentials(selectedApp.id, {
+        ukviPortalUserId: credForm.ukviPortalUserId.trim(),
+        ukviPortalPassword: credForm.ukviPortalPassword,
+        ...(credForm.smsPortalUsername.trim() && { smsPortalUsername: credForm.smsPortalUsername.trim() }),
+      });
+      showToast({ message: "Credentials generated. Caseworkers have been notified.", variant: "success" });
+      closeActionModal();
+      fetchApplications();
+    } catch (err) {
+      const message = err?.response?.data?.message || "Failed to generate credentials";
+      showToast({ message, variant: "danger" });
+    } finally {
+      setCredLoading(false);
+    }
+  };
+
+  const handleResendCredentials = async (appId) => {
+    if (resendLoading) return;
+    try {
+      setResendLoading(true);
+      await resendLicenceCredentials(appId);
+      showToast({ message: "Credentials resent to sponsor.", variant: "success" });
+      const res = await getAllLicenceApplications();
+      const updated = res.data.data;
+      setApplications(updated);
+      const refreshed = updated.find((a) => a.id === appId);
+      if (refreshed) setSelectedApp(refreshed);
+    } catch (err) {
+      const message = err?.response?.data?.message || "Failed to resend credentials";
+      showToast({ message, variant: "danger" });
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   const closeEditModal = () => {
     setShowEditModal(false);
     setEditData({});
@@ -285,11 +352,13 @@ const AdminLicenceApplications = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Approved': return 'bg-emerald-100 text-emerald-700';
-      case 'Rejected': return 'bg-red-100 text-red-700';
-      case 'Under Review': return 'bg-blue-100 text-blue-700';
+      case 'Approved':              return 'bg-emerald-100 text-emerald-700';
+      case 'Rejected':              return 'bg-red-100 text-red-700';
+      case 'Under Review':          return 'bg-blue-100 text-blue-700';
       case 'Information Requested': return 'bg-amber-100 text-amber-700';
-      default: return 'bg-gray-100 text-gray-500';
+      case 'Government Processing': return 'bg-violet-100 text-violet-700';
+      case 'Decision Pending':      return 'bg-orange-100 text-orange-700';
+      default:                      return 'bg-gray-100 text-gray-500';
     }
   };
 
@@ -307,12 +376,12 @@ const AdminLicenceApplications = () => {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {[
-          { label: "Total Requests", value: applications.length, color: "text-secondary" },
-          { label: "Pending Approval", value: applications.filter(a => a.status === "Pending").length, color: "text-amber-600" },
-          { label: "Approved", value: applications.filter(a => a.status === "Approved").length, color: "text-emerald-600" },
-          { label: "Rejected", value: applications.filter(a => a.status === "Rejected").length, color: "text-red-600" },
+          { label: "Total Requests",       value: applications.length,                                                                                                        color: "text-secondary" },
+          { label: "Pending Approval",     value: applications.filter(a => a.status === "Pending").length,                                                                     color: "text-amber-600" },
+          { label: "Gov. Processing",      value: applications.filter(a => ["Government Processing", "Decision Pending"].includes(a.status)).length,                           color: "text-violet-600" },
+          { label: "Approved",             value: applications.filter(a => a.status === "Approved").length,                                                                    color: "text-emerald-600" },
         ].map((stat, i) => (
           <div key={i} className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">{stat.label}</p>
@@ -342,7 +411,7 @@ const AdminLicenceApplications = () => {
               onChange={(e) => setFilter(e.target.value)}
               className="bg-transparent border-none text-xs font-black text-secondary outline-none cursor-pointer py-1 w-full sm:w-auto"
             >
-              {["All", "Pending", "Approved", "Rejected", "Under Review", "Information Requested"].map((f) => (
+              {["All", "Pending", "Under Review", "Information Requested", "Government Processing", "Decision Pending", "Approved", "Rejected"].map((f) => (
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>
@@ -628,6 +697,199 @@ const AdminLicenceApplications = () => {
                   </div>
                 )}
 
+                {/* Government Processing Panel */}
+                {["Government Processing", "Decision Pending", "Approved"].includes(selectedApp.status) && (
+                  <div className="mb-6">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3 flex items-center gap-2">
+                      <Globe size={12} /> Government Processing
+                    </label>
+                    <div className="bg-violet-50 border border-violet-100 rounded-xl p-4 space-y-4">
+
+                      {/* Row 1 — registration references */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-1.5">Registration Ref</p>
+                          {selectedApp.governmentRegistrationRef ? (
+                            <p className="text-sm font-black text-secondary font-mono">{selectedApp.governmentRegistrationRef}</p>
+                          ) : (
+                            <span className="text-[10px] font-bold text-gray-400 italic">Not yet recorded</span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-1.5">SMS Reg. Ref</p>
+                          {selectedApp.governmentTracking?.smsRegistrationRef ? (
+                            <p className="text-sm font-black text-secondary font-mono">{selectedApp.governmentTracking.smsRegistrationRef}</p>
+                          ) : (
+                            <span className="text-[10px] font-bold text-gray-400 italic">Not yet recorded</span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-1.5">Submission Ref</p>
+                          {selectedApp.governmentSubmissionRef ? (
+                            <p className="text-sm font-black text-secondary font-mono">{selectedApp.governmentSubmissionRef}</p>
+                          ) : (
+                            <span className="text-[10px] font-bold text-gray-400 italic">Not yet submitted</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Row 2 — credential status + timestamps */}
+                      <div className="pt-3 border-t border-violet-100">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-1.5">Credential Status</p>
+                            {selectedApp.governmentTracking?.credentialsSentAt ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                                <BadgeCheck size={10} /> Sent to sponsor
+                              </span>
+                            ) : selectedApp.governmentTracking?.credentialsGeneratedAt ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                                <Key size={10} /> Generated
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                <CircleDot size={10} /> Pending
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-1.5">Generated At</p>
+                            {selectedApp.governmentTracking?.credentialsGeneratedAt ? (
+                              <p className="text-xs font-black text-secondary">{formatDateLong(selectedApp.governmentTracking.credentialsGeneratedAt)}</p>
+                            ) : (
+                              <span className="text-[10px] font-bold text-gray-400 italic">—</span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-1.5">Sent At</p>
+                            {selectedApp.governmentTracking?.credentialsSentAt ? (
+                              <p className="text-xs font-black text-secondary">{formatDateLong(selectedApp.governmentTracking.credentialsSentAt)}</p>
+                            ) : (
+                              <span className="text-[10px] font-bold text-gray-400 italic">—</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Portal User ID + Resend button (only once credentials exist) */}
+                      {selectedApp.governmentTracking?.ukviPortalUserId && (
+                        <div className="pt-3 border-t border-violet-100 flex items-center justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-1">SMS Portal User ID</p>
+                            <p className="text-sm font-black text-secondary font-mono truncate">{selectedApp.governmentTracking.ukviPortalUserId}</p>
+                          </div>
+                          <button
+                            onClick={() => handleResendCredentials(selectedApp.id)}
+                            disabled={resendLoading}
+                            className="shrink-0 flex items-center gap-2 px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-xl transition-all active:scale-95 disabled:opacity-60 disabled:active:scale-100 shadow-sm shadow-violet-200"
+                          >
+                            {resendLoading ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                            Resend Credentials
+                          </button>
+                        </div>
+                      )}
+
+                      {selectedApp.governmentSubmissionDate && (
+                        <div className="pt-3 border-t border-violet-100 flex items-center gap-2 text-xs font-bold text-violet-500">
+                          <Calendar size={12} />
+                          Submitted on {new Date(selectedApp.governmentSubmissionDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Task Center — pending admin actions */}
+                {(() => {
+                  const noAssignment = !selectedApp.assignedcaseworkerId ||
+                    (Array.isArray(selectedApp.assignedcaseworkerId) && selectedApp.assignedcaseworkerId.length === 0);
+                  const tasks = [
+                    ...(noAssignment ? [{
+                      key: "assign",
+                      label: "Assign a caseworker to this application",
+                      icon: UserPlus,
+                      urgency: "amber",
+                      actionType: "Assign",
+                      cta: "Assign",
+                    }] : []),
+                    ...(selectedApp.status === "Government Processing" && !selectedApp.governmentTracking?.credentialsGeneratedAt ? [{
+                      key: "credentials",
+                      label: "Generate UKVI portal credentials for the sponsor",
+                      icon: Key,
+                      urgency: "violet",
+                      actionType: "GenerateCredentials",
+                      cta: "Generate",
+                    }] : []),
+                    ...(selectedApp.governmentTracking?.credentialsGeneratedAt && !selectedApp.governmentTracking?.credentialsSentAt ? [{
+                      key: "resend",
+                      label: "Portal credentials generated — send them to the sponsor",
+                      icon: Send,
+                      urgency: "violet",
+                      actionType: "Resend",
+                      cta: "Resend",
+                    }] : []),
+                    ...(selectedApp.status === "Decision Pending" ? [
+                      {
+                        key: "decision-approve",
+                        label: "UKVI decision received — approve the licence",
+                        icon: CheckCircle2,
+                        urgency: "emerald",
+                        actionType: "Approved",
+                        cta: "Approve",
+                      },
+                      {
+                        key: "decision-reject",
+                        label: "UKVI decision received — reject the licence",
+                        icon: XCircle,
+                        urgency: "red",
+                        actionType: "Rejected",
+                        cta: "Reject",
+                      },
+                    ] : []),
+                  ];
+                  if (tasks.length === 0) return null;
+                  const urgencyStyles = {
+                    amber:   { bg: "bg-amber-50 border-amber-100",  icon: "text-amber-500",   btn: "bg-amber-500 hover:bg-amber-600" },
+                    violet:  { bg: "bg-violet-50 border-violet-100", icon: "text-violet-500",  btn: "bg-violet-600 hover:bg-violet-700" },
+                    emerald: { bg: "bg-emerald-50 border-emerald-100", icon: "text-emerald-500", btn: "bg-emerald-500 hover:bg-emerald-600" },
+                    red:     { bg: "bg-red-50 border-red-100",       icon: "text-red-500",     btn: "bg-red-500 hover:bg-red-600" },
+                  };
+                  return (
+                    <div className="mb-6">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3 flex items-center gap-2">
+                        <ClipboardCheck size={12} /> Pending Actions
+                        <span className="text-primary normal-case tracking-normal">({tasks.length})</span>
+                      </label>
+                      <div className="space-y-2">
+                        {tasks.map((task) => {
+                          const s = urgencyStyles[task.urgency];
+                          const Icon = task.icon;
+                          return (
+                            <div key={task.key} className={`flex items-center justify-between p-3.5 rounded-xl border ${s.bg}`}>
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <Icon size={16} className={`${s.icon} shrink-0`} />
+                                <p className="text-sm font-black text-secondary truncate">{task.label}</p>
+                              </div>
+                              <button
+                                onClick={() => task.actionType === "Resend"
+                                  ? handleResendCredentials(selectedApp.id)
+                                  : openAction(selectedApp, task.actionType)
+                                }
+                                disabled={task.actionType === "Resend" && resendLoading}
+                                className={`ml-3 shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-black text-white transition-all active:scale-95 disabled:opacity-60 ${s.btn}`}
+                              >
+                                {task.actionType === "Resend" && resendLoading
+                                  ? <Loader2 size={13} className="animate-spin" />
+                                  : task.cta}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Application stages — the communication channel shared with the sponsor. */}
                 <div className="mb-6">
                   <LicenceStages applicationId={selectedApp.id} viewerRole="admin" />
@@ -658,6 +920,25 @@ const AdminLicenceApplications = () => {
                         <MessageSquare size={18} /> Request Info
                       </button>
                     </div>
+                    {selectedApp.status === "Government Processing" && (
+                      <button
+                        onClick={() => openAction(selectedApp, "GenerateCredentials")}
+                        className="w-full bg-violet-50 text-violet-700 hover:bg-violet-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Key size={18} />
+                        {selectedApp.governmentTracking?.credentialsGeneratedAt ? "Re-generate Credentials" : "Generate Portal Credentials"}
+                      </button>
+                    )}
+                    {selectedApp.governmentTracking?.credentialsGeneratedAt && (
+                      <button
+                        onClick={() => handleResendCredentials(selectedApp.id)}
+                        disabled={resendLoading}
+                        className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                      >
+                        {resendLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                        Resend Credentials to Sponsor
+                      </button>
+                    )}
                     <div className="flex gap-3">
                       <button
                         onClick={() => openAction(selectedApp, "Approved")}
@@ -698,9 +979,10 @@ const AdminLicenceApplications = () => {
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <h3 className="text-xl font-black text-secondary">
-                    {actionType === 'Approved' ? 'Confirm Approval' :
-                     actionType === 'Rejected' ? 'Confirm Rejection' :
-                     actionType === 'Assign' ? 'Assign Caseworker' :
+                    {actionType === 'Approved'             ? 'Confirm Approval' :
+                     actionType === 'Rejected'             ? 'Confirm Rejection' :
+                     actionType === 'Assign'               ? 'Assign Caseworker' :
+                     actionType === 'GenerateCredentials'  ? 'Generate UKVI Credentials' :
                      'Request More Evidence'}
                   </h3>
                   <p className="text-xs font-bold text-gray-400 mt-1 truncate max-w-[20rem]">
@@ -717,7 +999,85 @@ const AdminLicenceApplications = () => {
               </div>
 
               <div className="space-y-5">
-                {actionType === 'Assign' ? (
+                {actionType === 'GenerateCredentials' ? (
+                  <div className="space-y-4">
+                    <p className="text-xs font-bold text-gray-500 leading-relaxed -mt-2">
+                      Generate secure UKVI portal credentials for this sponsor. The password is encrypted before storage. Assigned caseworkers will be notified to send them securely to the sponsor.
+                    </p>
+
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                        SMS Portal Username <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={credForm.ukviPortalUserId}
+                        onChange={(e) => setCredForm({ ...credForm, ukviPortalUserId: e.target.value })}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all"
+                        placeholder="e.g. sponsor@sms.ukvi.gov.uk"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                        Temporary Password <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPwd ? "text" : "password"}
+                          value={credForm.ukviPortalPassword}
+                          onChange={(e) => setCredForm({ ...credForm, ukviPortalPassword: e.target.value })}
+                          className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 pr-12 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all"
+                          placeholder="Min. 8 characters"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPwd(!showPwd)}
+                          className="absolute right-3 top-3.5 text-gray-400 hover:text-secondary transition-colors"
+                        >
+                          {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                        SMS Reference <span className="text-gray-300 font-bold normal-case tracking-normal">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={credForm.smsPortalUsername}
+                        onChange={(e) => setCredForm({ ...credForm, smsPortalUsername: e.target.value })}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all"
+                        placeholder="e.g. REF-2024-001"
+                      />
+                    </div>
+
+                    <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-2">
+                      <Lock size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                      <p className="text-xs font-bold text-amber-700 leading-snug">
+                        The password is AES-256 encrypted before being stored. Only authorised users can request it to be sent to the sponsor.
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3 pt-1">
+                      <button
+                        onClick={handleGenerateCredentials}
+                        disabled={credLoading}
+                        className="flex-[2] bg-violet-600 hover:bg-violet-700 text-white font-black py-3 rounded-xl shadow-lg shadow-violet-100 flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60 disabled:active:scale-100"
+                      >
+                        {credLoading ? <Loader2 className="animate-spin" size={18} /> : <><Key size={18} /> Generate Credentials</>}
+                      </button>
+                      <button
+                        onClick={closeActionModal}
+                        disabled={credLoading}
+                        className="flex-1 bg-gray-50 text-gray-500 font-black py-3 rounded-xl disabled:opacity-40"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : actionType === 'Assign' ? (
                   <div className="space-y-5">
                     <div>
                       <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">

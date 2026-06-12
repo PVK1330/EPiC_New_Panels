@@ -15,15 +15,14 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-import { uploadLicenceDocument, getLicenceDocuments, getMyLicenceApplications } from "../../services/licenceApi";
+import { uploadLicenceDocument, getLicenceDocuments, getMyLicenceApplications, downloadSponsorLicenceDocument } from "../../services/licenceApi";
 import { useToast } from "../../context/ToastContext";
-import useDownloads from "../../hooks/useDownloads";
 import { formatDateLong } from "../../utils/datetime";
 
 const LicenceDocuments = () => {
   const { showToast } = useToast();
-  const { downloadAssetFile, busy } = useDownloads();
   const [loading, setLoading] = useState(true);
+  const [docBusy, setDocBusy] = useState({});
   const [documents, setDocuments] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -47,11 +46,18 @@ const LicenceDocuments = () => {
       setLoading(true);
       const res = await getLicenceDocuments();
       if (res.data.status === "success") {
+        const appCounters = {};
         const rows = Array.isArray(res.data.data)
-          ? res.data.data.map((doc) => ({
-              ...doc,
-              uploadDate: doc.uploadDate || doc.upload_date || Date.now(),
-            }))
+          ? res.data.data.map((doc) => {
+              const appId = doc.applicationId;
+              if (appCounters[appId] === undefined) appCounters[appId] = 0;
+              const docIndex = appCounters[appId]++;
+              return {
+                ...doc,
+                docIndex,
+                uploadDate: doc.uploadDate || doc.upload_date || Date.now(),
+              };
+            })
           : [];
         setDocuments(rows);
       }
@@ -119,16 +125,41 @@ const LicenceDocuments = () => {
   const actionDocs = documents.filter((d) => d.status === "Action Required").length;
   const expiredDocs = documents.filter((d) => d.status === "Expired" || d.status === "Rejected").length;
 
-  const handleView = (doc) => {
-    const fullPath = doc.path.replace(/\\/g, '/');
-    window.open(`${window.location.origin}/${fullPath}`, "_blank");
+  const handleView = async (doc) => {
+    setDocBusy((s) => ({ ...s, [doc.id]: "view" }));
+    try {
+      const res = await downloadSponsorLicenceDocument(doc.applicationId, doc.docIndex, { download: false });
+      const blob = new Blob([res.data], { type: res.headers["content-type"] || "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      showToast({ message: "Failed to open document", variant: "danger" });
+    } finally {
+      setDocBusy((s) => ({ ...s, [doc.id]: null }));
+    }
   };
 
   const handleDownload = async (doc) => {
-    const fullPath = doc.path.replace(/\\/g, '/');
-    const result = await downloadAssetFile(fullPath, doc.name);
-    if (!result.ok) {
-      showToast({ message: result.message || "Failed to download document", variant: "danger" });
+    setDocBusy((s) => ({ ...s, [doc.id]: "download" }));
+    try {
+      const res = await downloadSponsorLicenceDocument(doc.applicationId, doc.docIndex, { download: true });
+      const blob = new Blob([res.data], { type: res.headers["content-type"] || "application/octet-stream" });
+      const cd = res.headers["content-disposition"] || "";
+      const match = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(cd);
+      const filename = match ? match[1].replace(/['"]/g, "") : doc.name;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      showToast({ message: "Failed to download document", variant: "danger" });
+    } finally {
+      setDocBusy((s) => ({ ...s, [doc.id]: null }));
     }
   };
 
@@ -302,17 +333,19 @@ const LicenceDocuments = () => {
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => handleView(doc)}
-                            className="p-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm"
+                            disabled={!!docBusy[doc.id]}
+                            className="p-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             title="View Document"
                           >
-                            <Eye size={18} />
+                            {docBusy[doc.id] === "view" ? <Loader2 size={18} className="animate-spin" /> : <Eye size={18} />}
                           </button>
                           <button
                             onClick={() => handleDownload(doc)}
-                            className="p-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-secondary hover:text-white transition-all shadow-sm"
+                            disabled={!!docBusy[doc.id]}
+                            className="p-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-secondary hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Download"
                           >
-                            <Download size={18} />
+                            {docBusy[doc.id] === "download" ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
                           </button>
                           <button
                             onClick={() => handleDelete(doc.id)}

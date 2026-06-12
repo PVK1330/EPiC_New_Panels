@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { getCosSummary, requestCosAllocation, getCosRequests, updateCosRequest, deleteCosRequest } from "../../services/licenceApi";
 import toast from "react-hot-toast";
@@ -40,6 +40,7 @@ const COSPage = () => {
   const [stats, setStats] = useState({ total: 0, used: 0, remaining: 0 });
   const [cosList, setCosList] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [visaTypeOptions, setVisaTypeOptions] = useState([]);
@@ -139,6 +140,26 @@ const COSPage = () => {
   const filteredCosList = cosList.filter((item) =>
     (item.visaType || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const filteredRequests = useMemo(() => {
+    return requests.filter((request) => {
+      const matchesQuery = (request.visaType || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus =
+        statusFilter === "All" || request.status === statusFilter;
+      return matchesQuery && matchesStatus;
+    });
+  }, [requests, searchQuery, statusFilter]);
+
+  const requestStatusCounts = useMemo(() => {
+    const counts = { All: requests.length };
+    requests.forEach((request) => {
+      const status = request.status || "Pending";
+      counts[status] = (counts[status] || 0) + 1;
+    });
+    return counts;
+  }, [requests]);
+
+  const STATUS_FILTERS = ["All", "Pending", "Under Review", "Information Requested", "Approved", "Rejected"];
 
   // Utility to generate initials
   const getInitials = (text) => {
@@ -274,6 +295,20 @@ const COSPage = () => {
                 className="w-64 rounded-lg border border-gray-200 bg-white pl-9 pr-3 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
               />
             </div>
+            {activeTab === 'history' && (
+              <div className="flex flex-wrap items-center gap-2 text-xs font-black text-gray-500">
+                {STATUS_FILTERS.map((filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => setStatusFilter(filter)}
+                    className={`rounded-full px-3 py-1 transition ${statusFilter === filter ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  >
+                    {filter} ({requestStatusCounts[filter] || 0})
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               onClick={handleDownload}
               disabled={busy.cosSummaryExcel || busy.cosRequestsExcel}
@@ -419,9 +454,7 @@ const COSPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {requests
-                  .filter(r => (r.visaType || "").toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map((r) => (
+                {filteredRequests.map((r) => (
                   <tr key={r.id} className="hover:bg-gray-50 transition">
                     <td className="px-4 py-4 text-xs font-black text-secondary">#REQ-{r.id}</td>
                     <td className="px-4 py-4 text-sm font-bold text-gray-700">{r.visaType}</td>

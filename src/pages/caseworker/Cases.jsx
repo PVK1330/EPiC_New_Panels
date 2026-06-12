@@ -14,6 +14,9 @@ import {
   ArrowRightLeft,
   Table,
   LayoutGrid,
+  FileText,
+  Clock,
+  Check,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
@@ -32,15 +35,15 @@ import {
   updatePipelineStage,
   assignCase,
 } from "../../services/caseApi";
-import { useToast } from “../../context/ToastContext”;
-import CaseworkerApplicationTab from “../../components/caseDetail/CaseworkerApplicationTab”;
-import { sendBiometricSlot } from “../../services/workflowApi”;
-import { formatDate, formatDateLong } from “../../utils/datetime”;
-import CasesOverviewTab from “./tabs/CasesOverviewTab”;
-import CasesDocumentsTab from “./tabs/CasesDocumentsTab”;
-import CasesTasksTab from “./tabs/CasesTasksTab”;
-import CasesPaymentsTab from “./tabs/CasesPaymentsTab”;
-import CasesNotesTab from “./tabs/CasesNotesTab”;
+import { useToast } from "../../context/ToastContext";
+import CaseworkerApplicationTab from "../../components/caseDetail/CaseworkerApplicationTab";
+import { sendBiometricSlot } from "../../services/workflowApi";
+import { formatDate, formatDateLong } from "../../utils/datetime";
+import CasesOverviewTab from "./tabs/CasesOverviewTab";
+import CasesDocumentsTab from "./tabs/CasesDocumentsTab";
+import CasesTasksTab from "./tabs/CasesTasksTab";
+import CasesPaymentsTab from "./tabs/CasesPaymentsTab";
+import CasesNotesTab from "./tabs/CasesNotesTab";
 import {
   PAGE_SIZE,
   REASSIGN_REASONS,
@@ -63,10 +66,10 @@ import {
   loadColor,
   priorityLabel,
   CaseworkerMultiSelect,
-} from “./casesHelpers”;
+} from "./casesHelpers.jsx";
 
 // Lazy: pulls in react-quill (heavy rich-text editor) — only load when the CCL tab opens.
-const CaseDetailCcl = lazy(() => import(“../../components/caseDetail/CaseDetailCcl”));
+const CaseDetailCcl = lazy(() => import("../../components/caseDetail/CaseDetailCcl"));
 
 const Cases = () => {
   const user = useSelector((state) => state.auth.user);
