@@ -13,7 +13,6 @@ export const STAGE_ROLES = [
   { key: "sponsor",    label: "Sponsor",    chip: "bg-blue-50 text-blue-600 border-blue-100" },
   { key: "caseworker", label: "Caseworker", chip: "bg-indigo-50 text-indigo-600 border-indigo-100" },
   { key: "admin",      label: "Admin",      chip: "bg-primary/5 text-primary border-primary/10" },
-  { key: "candidate",  label: "Candidate",  chip: "bg-emerald-50 text-emerald-600 border-emerald-100" },
 ];
 
 export const LICENCE_STAGES = [

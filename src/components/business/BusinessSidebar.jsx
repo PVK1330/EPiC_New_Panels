@@ -21,6 +21,7 @@ import {
   FileWarning,
   Receipt,
   UserCog,
+  CheckSquare,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { performLogout } from "../../utils/performLogout";
@@ -46,6 +47,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
     {
       items: [
         { to: "/business/dashboard", label: "Dashboard", icon: BarChart3, moduleKey: "business.dashboard" },
+        { to: "/business/tasks",     label: "My Tasks",  icon: CheckSquare, moduleKey: "business.dashboard" },
       ],
     },
     {

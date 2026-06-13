@@ -115,6 +115,7 @@ const ApplyLicence = lazy(() => import('../pages/business/ApplyLicence'));
 const ApplyLicenceV2 = lazy(() => import('../pages/business/ApplyLicenceV2'));
 const LicenceApplicationV2Detail = lazy(() => import('../components/licence/LicenceApplicationV2Detail'));
 const LicenceDocuments = lazy(() => import('../pages/business/LicenceDocuments'));
+const BusinessTasks = lazy(() => import('../pages/business/BusinessTasks'));
 
 // ── Superadmin pages ─────────────────────────────────────────────────────────
 const SuperadminDashboard = lazy(() => import('../pages/superadmin/SuperadminDashboard'));
@@ -356,6 +357,7 @@ const AppRouter = () => {
           <Route path="employee-records" element={<EmployeeRecords />} />
           <Route path="invoices" element={<Invoices />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="tasks" element={<BusinessTasks />} />
         </Route>
 
         <Route
