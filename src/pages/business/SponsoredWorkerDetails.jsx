@@ -22,6 +22,8 @@ import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
 import useDownloads from "../../hooks/useDownloads";
 import { formatDate } from "../../utils/datetime";
 import DatePicker from "../../components/DatePicker";
+import useSponsorLicence from "../../hooks/useSponsorLicence";
+import LicenceGateBanner from "../../components/business/LicenceGateBanner";
 
 const SponsoredWorkerDetails = () => {
   const [activeTab, setActiveTab] = useState("details");
@@ -33,6 +35,9 @@ const SponsoredWorkerDetails = () => {
   const [statusToUpdate, setStatusToUpdate] = useState("");
   const [statusNote, setStatusNote] = useState("");
   const [visaTypeOptions, setVisaTypeOptions] = useState([]);
+  const { ready: licenceReady, licenceStatus, canSponsorWorkers } = useSponsorLicence();
+  const workerBlocked = licenceReady && !canSponsorWorkers;
+  const LICENCE_BLOCK_MSG = "Your Sponsorship Licence is not active. Approval is required before sponsorship actions can be performed.";
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -92,6 +97,7 @@ const SponsoredWorkerDetails = () => {
   };
 
   const handleUpdateWorker = async () => {
+    if (workerBlocked) { toast.error(LICENCE_BLOCK_MSG); return; }
     try {
       const response = await updateSponsoredWorker(candidateId, editForm);
       if (response.data.status === "success") {
@@ -114,6 +120,7 @@ const SponsoredWorkerDetails = () => {
   };
 
   const handleStatusUpdate = async () => {
+    if (workerBlocked) { toast.error(LICENCE_BLOCK_MSG); return; }
     try {
       const response = await updateWorkerStatus(candidateId, { status: statusToUpdate, note: statusNote });
       if (response.data.status === "success") {
@@ -227,31 +234,39 @@ const SponsoredWorkerDetails = () => {
           ) : (
             <>
               <button
-                onClick={() => setIsEditing(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50 shadow-sm"
+                onClick={() => { if (!workerBlocked) setIsEditing(true); }}
+                disabled={workerBlocked}
+                title={workerBlocked ? LICENCE_BLOCK_MSG : "Edit worker"}
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Briefcase size={18} className="text-primary" />
                 EDIT WORKER
               </button>
-              
+
               <div className="h-10 w-[1px] bg-gray-200 mx-1 hidden md:block" />
-              
+
               <button
                 onClick={() => {
+                  if (workerBlocked) return;
                   setStatusToUpdate("Approved");
                   setShowStatusModal(true);
                 }}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-black text-white transition hover:bg-emerald-700 shadow-md"
+                disabled={workerBlocked}
+                title={workerBlocked ? LICENCE_BLOCK_MSG : "Approve worker"}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-black text-white transition hover:bg-emerald-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Check size={18} />
                 APPROVE
               </button>
               <button
                 onClick={() => {
+                  if (workerBlocked) return;
                   setStatusToUpdate("Rejected");
                   setShowStatusModal(true);
                 }}
-                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-black text-white transition hover:bg-red-700 shadow-md"
+                disabled={workerBlocked}
+                title={workerBlocked ? LICENCE_BLOCK_MSG : "Reject worker"}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-black text-white transition hover:bg-red-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <XCircle size={18} />
                 REJECT
@@ -260,6 +275,8 @@ const SponsoredWorkerDetails = () => {
           )}
         </div>
       </div>
+
+      {workerBlocked && <LicenceGateBanner status={licenceStatus} />}
 
       <motion.div
         className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"

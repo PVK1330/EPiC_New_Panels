@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { getCosSummary, requestCosAllocation, getCosRequests, updateCosRequest, deleteCosRequest } from "../../services/licenceApi";
 import toast from "react-hot-toast";
 import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
 import useDownloads from "../../hooks/useDownloads";
 import { formatDate } from "../../utils/datetime";
+import useSponsorLicence from "../../hooks/useSponsorLicence";
+import LicenceGateBanner from "../../components/business/LicenceGateBanner";
 import {
   LayoutDashboard,
   Hash,
@@ -38,11 +40,14 @@ const COSPage = () => {
   const [stats, setStats] = useState({ total: 0, used: 0, remaining: 0 });
   const [cosList, setCosList] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [visaTypeOptions, setVisaTypeOptions] = useState([]);
 
   const { downloadCosSummaryExcel, downloadCosRequestsExcel, busy } = useDownloads();
+  const { ready: licenceReady, licenceStatus, canRequestCos } = useSponsorLicence();
+  const cosBlocked = licenceReady && !canRequestCos;
 
   useEffect(() => {
     fetchCosSummary();
@@ -85,9 +90,9 @@ const COSPage = () => {
   const handleEditRequest = (request) => {
     setEditingRequest(request);
     setRequestData({
-      visaType: request.licenceType,
-      requestedAmount: request.cosAllocation,
-      reason: request.reason.replace("CoS Request: ", "").replace("CoS Allocation Request: ", ""),
+      visaType: request.visaType || "",
+      requestedAmount: request.requestedAmount ?? "",
+      reason: request.reason || "",
     });
     setShowRequestModal(true);
   };
@@ -136,6 +141,26 @@ const COSPage = () => {
     (item.visaType || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredRequests = useMemo(() => {
+    return requests.filter((request) => {
+      const matchesQuery = (request.visaType || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus =
+        statusFilter === "All" || request.status === statusFilter;
+      return matchesQuery && matchesStatus;
+    });
+  }, [requests, searchQuery, statusFilter]);
+
+  const requestStatusCounts = useMemo(() => {
+    const counts = { All: requests.length };
+    requests.forEach((request) => {
+      const status = request.status || "Pending";
+      counts[status] = (counts[status] || 0) + 1;
+    });
+    return counts;
+  }, [requests]);
+
+  const STATUS_FILTERS = ["All", "Pending", "Under Review", "Information Requested", "Approved", "Rejected"];
+
   // Utility to generate initials
   const getInitials = (text) => {
     return text
@@ -173,6 +198,8 @@ const COSPage = () => {
           <p className="text-xs font-bold text-gray-400 mt-2">Loading CoS summary…</p>
         )}
       </motion.div>
+
+      {cosBlocked && <LicenceGateBanner status={licenceStatus} />}
 
       <motion.div
         className="grid grid-cols-1 md:grid-cols-3 gap-4"
@@ -268,6 +295,20 @@ const COSPage = () => {
                 className="w-64 rounded-lg border border-gray-200 bg-white pl-9 pr-3 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
               />
             </div>
+            {activeTab === 'history' && (
+              <div className="flex flex-wrap items-center gap-2 text-xs font-black text-gray-500">
+                {STATUS_FILTERS.map((filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => setStatusFilter(filter)}
+                    className={`rounded-full px-3 py-1 transition ${statusFilter === filter ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  >
+                    {filter} ({requestStatusCounts[filter] || 0})
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               onClick={handleDownload}
               disabled={busy.cosSummaryExcel || busy.cosRequestsExcel}
@@ -278,11 +319,14 @@ const COSPage = () => {
             </button>
             <button
               onClick={() => {
+                if (cosBlocked) return;
                 setEditingRequest(null);
                 setRequestData({ visaType: '', requestedAmount: '', reason: '' });
                 setShowRequestModal(true);
               }}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark"
+              disabled={cosBlocked}
+              title={cosBlocked ? "Your Sponsorship Licence is not active." : "Request CoS"}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus size={16} />
               Request CoS
@@ -363,14 +407,16 @@ const COSPage = () => {
                         </span>
                       </td>
                       <td className="px-4 py-4 flex gap-2 justify-center">
-                        <button 
+                        <button
                           onClick={() => {
+                            if (cosBlocked) return;
                             setEditingRequest(null);
                             setRequestData({ visaType: item.visaType, requestedAmount: '', reason: '' });
                             setShowRequestModal(true);
                           }}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition"
-                          title="Request More Slots"
+                          disabled={cosBlocked}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition disabled:opacity-40 disabled:cursor-not-allowed"
+                          title={cosBlocked ? "Licence not active" : "Request More Slots"}
                         >
                           <Pencil size={14} />
                         </button>
@@ -408,25 +454,41 @@ const COSPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {requests
-                  .filter(r => r.licenceType.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map((r) => (
+                {filteredRequests.map((r) => (
                   <tr key={r.id} className="hover:bg-gray-50 transition">
                     <td className="px-4 py-4 text-xs font-black text-secondary">#REQ-{r.id}</td>
-                    <td className="px-4 py-4 text-sm font-bold text-gray-700">{r.licenceType}</td>
-                    <td className="px-4 py-4 text-sm font-black text-primary">{r.cosAllocation} Slots</td>
+                    <td className="px-4 py-4 text-sm font-bold text-gray-700">{r.visaType}</td>
+                    <td className="px-4 py-4 text-sm font-black text-primary">
+                      {r.requestedAmount} Slots
+                      {r.status === 'Approved' && r.approvedAmount != null && (
+                        <span className="block text-[10px] font-bold text-emerald-600">
+                          Approved: {r.approvedAmount}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-4">
-                      <span className={`px-2 py-1 rounded-full text-[10px] font-black ${
-                        r.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' :
-                        r.status === 'Rejected' ? 'bg-red-50 text-red-600' :
-                        r.status === 'Under Review' ? 'bg-blue-50 text-blue-600' :
-                        'bg-amber-50 text-amber-600'
-                      }`}>
+                      <span
+                        title={r.reviewNotes || ''}
+                        className={`px-2 py-1 rounded-full text-[10px] font-black ${
+                          r.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' :
+                          r.status === 'Rejected' ? 'bg-red-50 text-red-600' :
+                          r.status === 'Under Review' ? 'bg-blue-50 text-blue-600' :
+                          'bg-amber-50 text-amber-600'
+                        }`}
+                      >
                         {r.status}
                       </span>
+                      {r.reviewNotes && (r.status === 'Rejected' || r.status === 'Information Requested') && (
+                        <p
+                          className="text-[10px] font-bold text-gray-400 mt-1 max-w-[180px] truncate"
+                          title={r.reviewNotes}
+                        >
+                          {r.reviewNotes}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-xs font-bold text-gray-500">
-                      {formatDate(r.createdAt)}
+                      {formatDate(r.created_at)}
                     </td>
                     <td className="px-4 py-4 flex gap-2">
                       {['Pending', 'Under Review'].includes(r.status) && (

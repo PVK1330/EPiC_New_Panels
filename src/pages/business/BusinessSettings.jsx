@@ -50,7 +50,7 @@ const BusinessSettings = () => {
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
     { id: "company", label: "Company Info", icon: Building2 },
-    { id: "appearance", label: "Appearance", icon: Moon },
+    // { id: "appearance", label: "Appearance", icon: Moon },
   ];
 
   // Fetch profile data on mount
@@ -441,7 +441,7 @@ const BusinessSettings = () => {
             )}
 
             {/* Appearance Settings */}
-            {activeTab === "appearance" && (
+            {/* {activeTab === "appearance" && (
               <div className="space-y-6">
                 <h2 className="text-xl font-black text-secondary flex items-center gap-2">
                   <Moon size={24} className="text-primary" />
@@ -498,10 +498,10 @@ const BusinessSettings = () => {
                   </div>
                 </div>
               </div>
-            )}
+            )} */}
 
             {/* Save Button */}
-            <div className="flex justify-end pt-6 border-t border-gray-200 mt-6">
+            {/* <div className="flex justify-end pt-6 border-t border-gray-200 mt-6">
               <button
                 onClick={handleSave}
                 disabled={loading}
@@ -514,7 +514,7 @@ const BusinessSettings = () => {
                 )}
                 {loading ? "Saving..." : "Save Changes"}
               </button>
-            </div>
+            </div> */}
           </motion.div>
         </div>
       </motion.div>

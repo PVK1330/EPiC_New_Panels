@@ -51,6 +51,42 @@ export const getAdminLicenceApplicationDetails = (id) => api.get(`/api/admin/lic
 export const requestLicenceInfo = (id, data) => api.patch(`/api/admin/licence/request-info/${id}`, data);
 export const assignLicenceCaseworker = (id, data) => api.post(`/api/admin/licence/assign-caseworker/${id}`, data);
 export const deleteLicenceApplicationByAdmin = (id) => api.delete(`/api/admin/licence/delete/${id}`);
+// Admin: government credential management (Phase 3)
+export const generateLicenceCredentials = (id, data) => api.post(`/api/admin/licence/${id}/generate-credentials`, data);
+export const resendLicenceCredentials = (id) => api.post(`/api/admin/licence/${id}/resend-credentials`);
+
+// Sponsor: confirm UKVI portal credentials received
+export const confirmSponsorGovCredentials = (id) => api.post(`/api/business/licence/${id}/government-credentials`);
+
+// Caseworker: government pipeline (Phase 3)
+export const startLicenceReview = (id) => api.post(`/api/caseworker/licence/${id}/start-review`);
+export const startGovRegistration = (id) => api.post(`/api/caseworker/licence/${id}/government-registration/start`);
+export const completeGovRegistration = (id, data) => api.post(`/api/caseworker/licence/${id}/government-registration/complete`, data);
+export const requestGovCredentials = (id) => api.post(`/api/caseworker/licence/${id}/request-government-credentials`);
+export const recordGovSubmission = (id, data) => api.post(`/api/caseworker/licence/${id}/government-submission`, data);
+
+// Admin: stream a licence application's uploaded document (preview or download).
+// Files are no longer served statically — they must come through this authenticated
+// endpoint as a blob. Pass { download: true } to force a download disposition.
+export const downloadAdminLicenceDocument = (id, index, { download = false } = {}) =>
+  api.get(`/api/admin/licence/${id}/documents/${index}/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
+
+// Caseworker: stream a document on an assigned licence application (blob).
+export const downloadCaseworkerLicenceDocument = (id, index, { download = false } = {}) =>
+  api.get(`/api/caseworker/licence/${id}/documents/${index}/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
+
+// Sponsor: stream a document on the sponsor's own licence application (blob).
+export const downloadSponsorLicenceDocument = (id, index, { download = false } = {}) =>
+  api.get(`/api/business/licence/${id}/documents/${index}/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
 
 // Business: Licence Summary (real CoS used count from DB)
 export const getLicenceSummary = () =>
@@ -83,18 +119,44 @@ export const getCosSummary = () =>
 export const requestCosAllocation = (data) =>
   api.post("/api/business/cos/request", data);
 
-export const getCosRequests = () => 
-  api.get("/api/business/licence/cos-requests");
+// Canonical CoS request endpoints (the /licence/cos-requests aliases are deprecated).
+export const getCosRequests = () =>
+  api.get("/api/business/cos/requests");
 
 export const updateCosRequest = (id, data) =>
-  api.put(`/api/business/licence/cos-requests/${id}`, data);
+  api.put(`/api/business/cos/requests/${id}`, data);
 
 export const deleteCosRequest = (id) =>
-  api.delete(`/api/business/licence/cos-requests/${id}`);
+  api.delete(`/api/business/cos/requests/${id}`);
 
-// Business: Renew licence (route already exists in backend)
-export const renewLicence = (id) =>
-  api.post(`/api/business/licence/renew/${id}`);
+// Business: Renew licence
+export const renewLicence = (id, data = {}) =>
+  api.post(`/api/business/licence/renew/${id}`, data);
+
+// ── V2 Wizard ────────────────────────────────────────────────────────────────
+export const createLicenceV2Draft = () =>
+  api.post("/api/business/licence/v2/applications");
+export const listLicenceV2Applications = () =>
+  api.get("/api/business/licence/v2/applications");
+export const getLicenceV2Application = (id) =>
+  api.get(`/api/business/licence/v2/applications/${id}`);
+export const saveLicenceV2Draft = (id, data) =>
+  api.put(`/api/business/licence/v2/applications/${id}`, data);
+export const submitLicenceV2Application = (id) =>
+  api.post(`/api/business/licence/v2/applications/${id}/submit`);
+export const deleteLicenceV2Draft = (id) =>
+  api.delete(`/api/business/licence/v2/applications/${id}`);
+export const uploadLicenceV2AppendixDocument = (appId, docId, file) => {
+  const fd = new FormData();
+  fd.append("file", file);
+  return api.post(
+    `/api/business/licence/v2/applications/${appId}/appendix-documents/${docId}/file`,
+    fd,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+};
+export const getLicenceV2FeePreview = (data) =>
+  api.post("/api/business/licence/v2/fee/preview", data);
 
 // Business: Compliance summary
 export const getComplianceSummary = () =>
@@ -118,6 +180,53 @@ export const deleteComplianceDocument = (id) =>
 // Business: Employee records (sponsored workers with compliance info)
 export const getEmployeeRecords = () =>
   api.get("/api/business/workers/employee-records");
+
+// ── Intake: Information Form + Document Checklist ────────────────────────────
+
+// Sponsor: get intake summary (form + document checklist)
+export const getSponsorIntakeSummary = (id) =>
+  api.get(`/api/business/licence/${id}/intake`);
+
+// Sponsor: save intake form fields
+export const updateSponsorIntakeForm = (id, data) =>
+  api.put(`/api/business/licence/${id}/intake`, data);
+
+// Sponsor: mark intake form as submitted/complete
+export const submitSponsorIntakeForm = (id) =>
+  api.post(`/api/business/licence/${id}/intake/submit`);
+
+// Sponsor: upload a single document to a checklist slot
+export const uploadIntakeDocument = (id, documentKey, file) => {
+  const fd = new FormData();
+  fd.append("document", file);
+  return api.post(`/api/business/licence/${id}/intake/documents/${documentKey}/upload`, fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};
+
+// Sponsor: remove an uploaded intake document
+export const deleteIntakeDocument = (id, documentKey) =>
+  api.delete(`/api/business/licence/${id}/intake/documents/${documentKey}`);
+
+// Caseworker: get intake summary for review
+export const getCaseworkerIntakeSummary = (id) =>
+  api.get(`/api/caseworker/licence/${id}/intake`);
+
+// Caseworker: check readiness for government registration
+export const getIntakeReadiness = (id) =>
+  api.get(`/api/caseworker/licence/${id}/intake/readiness`);
+
+// Caseworker: verify a document
+export const verifyIntakeDocument = (id, documentKey, notes = "") =>
+  api.patch(`/api/caseworker/licence/${id}/intake/documents/${documentKey}/verify`, { notes });
+
+// Caseworker: reject a document
+export const rejectIntakeDocument = (id, documentKey, reason) =>
+  api.patch(`/api/caseworker/licence/${id}/intake/documents/${documentKey}/reject`, { reason });
+
+// Caseworker: request more information on a document
+export const requestIntakeDocumentInfo = (id, documentKey, notes) =>
+  api.patch(`/api/caseworker/licence/${id}/intake/documents/${documentKey}/request-info`, { notes });
 
 // Business: Reporting obligations
 export const getReportingObligations = () =>

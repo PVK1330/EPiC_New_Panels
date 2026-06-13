@@ -6,9 +6,16 @@ export const MOCK_DASHBOARD_STATS = {
     activeCases: 86,
     completedCases: 142,
     pendingCases: 20,
+    newImmigrationCases: 11,
+    unassignedCases: 5,
     visaExpiryAlerts: 7,
     sponsorExpiryAlerts: 3,
     completionRate: 57,
+  },
+  reviewStats: {
+    pendingLicenceReviews: 6,
+    pendingCosRequests: 4,
+    pendingComplianceReviews: 9,
   },
   userStats: {
     totalAdmins: 4,

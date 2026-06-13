@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { getSponsoredWorkers, deleteSponsoredWorker } from "../../services/sponsoredWorkerApi";
 import { toast } from "react-hot-toast";
+import useSponsorLicence from "../../hooks/useSponsorLicence";
+import LicenceGateBanner from "../../components/business/LicenceGateBanner";
 
 const BusinessWorkers = () => {
   const [workers, setWorkers] = useState([]);
@@ -25,6 +27,8 @@ const BusinessWorkers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const navigate = useNavigate();
+  const { ready: licenceReady, licenceStatus, canSponsorWorkers } = useSponsorLicence();
+  const workerBlocked = licenceReady && !canSponsorWorkers;
 
   useEffect(() => {
     fetchWorkers();
@@ -145,6 +149,8 @@ const BusinessWorkers = () => {
         </p>
       </motion.div>
 
+      {workerBlocked && <LicenceGateBanner status={licenceStatus} />}
+
       {/* Stats Cards */}
       <motion.div
         className="grid grid-cols-1 md:grid-cols-3 gap-4"
@@ -212,8 +218,10 @@ const BusinessWorkers = () => {
             </select>
           </div>
           <button
-            onClick={()=>navigate("/business/sponsored-workers")}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark"
+            onClick={()=>{ if (!workerBlocked) navigate("/business/sponsored-workers"); }}
+            disabled={workerBlocked}
+            title={workerBlocked ? "Your Sponsorship Licence is not active." : "Add Worker"}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus size={16} />
             Add Worker
@@ -305,8 +313,10 @@ const BusinessWorkers = () => {
           <Users size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-sm font-bold text-gray-600">No workers found matching your search</p>
           <button
-            onClick={()=>navigate("/business/sponsored-workers")}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-primary px-6 py-2 text-sm font-black text-primary transition hover:bg-primary/5"
+            onClick={()=>{ if (!workerBlocked) navigate("/business/sponsored-workers"); }}
+            disabled={workerBlocked}
+            title={workerBlocked ? "Your Sponsorship Licence is not active." : "Add Your First Worker"}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-primary px-6 py-2 text-sm font-black text-primary transition hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus size={16} />
             Add Your First Worker

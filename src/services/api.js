@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "react-hot-toast";
 import store from "../store";
 import { logout } from "../store/slices/authSlice";
 import { API_BASE_URL } from "../utils/constants";
@@ -110,6 +111,22 @@ api.interceptors.response.use(
       !window.location.pathname.startsWith("/admin/subscription")
     ) {
       window.location.href = "/admin/subscription";
+      return Promise.reject(error);
+    }
+
+    // Sponsor licence inactive: a gated business action (CoS request, sponsored
+    // worker, worker sponsorship action) was blocked by requireActiveSponsorLicence.
+    // Surface the server's message once and refresh the cached licence state so the
+    // UI re-gates. `__licenceBlocked` lets callers skip their own duplicate toast.
+    if (
+      error.response?.status === 403 &&
+      /licence is not active/i.test(error.response?.data?.message || "")
+    ) {
+      error.__licenceBlocked = true;
+      if (typeof window !== "undefined") {
+        toast.error(error.response.data.message, { id: "licence-inactive" });
+        window.dispatchEvent(new Event("licence:refresh"));
+      }
       return Promise.reject(error);
     }
 

@@ -1,10 +1,9 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import {
   LayoutDashboard,
   Hash,
   ShieldCheck,
-  Star,
   Calendar,
   FileText,
   ShieldAlert,
@@ -21,18 +20,20 @@ import {
   Save,
   Plus,
   Trash2,
-  Eye
+  Eye,
+  Download
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../../utils/constants";
 import {
   getMyLicenceApplications,
   getLicenceSummary,
+  renewLicence,
   submitLicenceApplication,
   updateLicenceApplication,
   deleteMyLicenceApplication,
+  downloadSponsorLicenceDocument,
 } from "../../services/licenceApi";
-import api from "../../services/api";
+import { triggerDownload } from "../../services/documentApi";
 import { useToast } from "../../context/ToastContext";
 import { Skeleton } from "boneyard-js/react";
 import { formatDate, formatDateLong } from "../../utils/datetime";
@@ -42,12 +43,15 @@ const LicenceStatus = () => {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [applications, setApplications] = useState([]);
-  
+
   const [summaryStats, setSummaryStats] = useState({
     licenceId: "Pending",
     status: "No Active Licence",
     allocation: { total: 0, used: 0, available: 0 },
-    renewalDue: "N/A"
+    renewalDue: "N/A",
+    daysRemaining: null,
+    renewalEligible: false,
+    pendingRenewal: null,
   });
 
   // Modals state
@@ -57,6 +61,7 @@ const LicenceStatus = () => {
   // Form states
   const [submitting, setSubmitting] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
+  const [docBusy, setDocBusy] = useState(null); // `${index}:${mode}` while a doc loads
   const [editData, setEditData] = useState({});
   const [newFiles, setNewFiles] = useState([]);
   const [renewalData, setRenewalData] = useState({
@@ -89,6 +94,9 @@ const LicenceStatus = () => {
             available: s.cos?.available ?? s.cosAllocation?.available ?? 0,
           },
           renewalDue: s.expiryDate ? formatDate(s.expiryDate) : "N/A",
+          daysRemaining: s.daysRemaining ?? null,
+          renewalEligible: s.renewalEligible ?? false,
+          pendingRenewal: s.pendingRenewal ?? null,
         });
       } else {
         const latestApproved = data.find((app) => app.status === "Approved");
@@ -110,6 +118,9 @@ const LicenceStatus = () => {
           renewalDue: latestApproved?.proposedStartDate
             ? formatDate(latestApproved.proposedStartDate)
             : "N/A",
+          daysRemaining: null,
+          renewalEligible: false,
+          pendingRenewal: null,
         });
       }
     } catch (err) {
@@ -122,6 +133,35 @@ const LicenceStatus = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Documents stream through an authenticated endpoint (no static serving).
+  const handleDocument = async (index, mode) => {
+    if (!selectedApp || docBusy) return;
+    try {
+      setDocBusy(`${index}:${mode}`);
+      const res = await downloadSponsorLicenceDocument(selectedApp.id, index, { download: mode === "download" });
+      const blob = res.data;
+      const cd = res.headers?.["content-disposition"] || "";
+      const match = cd.match(/filename="?([^"]+)"?/i);
+      const filename = match ? match[1] : `document-${index + 1}`;
+      if (mode === "download") {
+        triggerDownload(blob, filename);
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) triggerDownload(blob, filename);
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      }
+    } catch (err) {
+      let message = err?.response?.data?.message;
+      if (!message && err?.response?.data instanceof Blob) {
+        try { message = JSON.parse(await err.response.data.text())?.message; } catch { /* ignore */ }
+      }
+      showToast({ message: message || "Unable to open this document", variant: "danger" });
+    } finally {
+      setDocBusy(null);
+    }
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this application?")) return;
@@ -174,19 +214,32 @@ const LicenceStatus = () => {
   };
 
   const handleRenewalSubmit = async () => {
+    if (!renewalData.renewalType) {
+      showToast({ message: "Please select a renewal category before submitting.", variant: "danger" });
+      return;
+    }
+    const approvedApp = applications.find((a) => a.status === "Approved");
+    if (!approvedApp) {
+      showToast({ message: "No approved licence application found to renew.", variant: "danger" });
+      return;
+    }
     try {
-      if (!applications[0]?.id) return;
       setSubmitting(true);
-      
-      const res = await api.post(`/api/business/licence/renew/${applications[0].id}`);
-      
-      if (res.data.status === "success") {
-        showToast({ message: "Quick Renewal submitted successfully!", variant: "success" });
-        setShowRenewalForm(false);
-        fetchData();
-      }
+      await renewLicence(approvedApp.id, renewalData);
+      showToast({ message: "Renewal application submitted successfully!", variant: "success" });
+      setShowRenewalForm(false);
+      setRenewalData({ renewalType: "", requestedAllocation: "", reason: "" });
+      fetchData();
     } catch (err) {
-      showToast({ message: err.response?.data?.message || "Failed to submit renewal", variant: "danger" });
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.message;
+      if (status === 409) {
+        showToast({ message: msg || "A renewal is already in progress for this licence.", variant: "danger" });
+      } else if (status === 400) {
+        showToast({ message: msg || "Your licence is not yet eligible for renewal (within 90 days of expiry).", variant: "danger" });
+      } else {
+        showToast({ message: msg || "Failed to submit renewal. Please try again.", variant: "danger" });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -194,11 +247,13 @@ const LicenceStatus = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Approved': return 'bg-emerald-100 text-emerald-700';
-      case 'Rejected': return 'bg-red-100 text-red-700';
-      case 'Under Review': return 'bg-blue-100 text-blue-700';
+      case 'Approved':              return 'bg-emerald-100 text-emerald-700';
+      case 'Rejected':              return 'bg-red-100 text-red-700';
+      case 'Under Review':          return 'bg-blue-100 text-blue-700';
       case 'Information Requested': return 'bg-red-100 text-red-700 animate-pulse';
-      default: return 'bg-amber-100 text-amber-700';
+      case 'Government Processing': return 'bg-violet-100 text-violet-700';
+      case 'Decision Pending':      return 'bg-orange-100 text-orange-700';
+      default:                      return 'bg-amber-100 text-amber-700';
     }
   };
 
@@ -213,7 +268,7 @@ const LicenceStatus = () => {
   };
 
   return (
-    <div className="space-y-10 pb-16 relative">
+    <div className="space-y-6 pb-10 relative">
       {/* Background Orbs */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-secondary/5 rounded-full blur-3xl -z-10" />
@@ -222,20 +277,20 @@ const LicenceStatus = () => {
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-6"
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-            <ShieldCheck className="text-primary" size={36} />
-            Licence Intelligence
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
+            <ShieldCheck className="text-primary shrink-0" size={28} />
+            Sponsor Licence
           </h1>
           <p className="text-gray-500 font-bold text-sm mt-1">
-            Manage your sponsor licence applications, track status, and upload evidence.
+            Manage your sponsor licence applications, track their status, and upload evidence.
           </p>
         </div>
         <button 
-          onClick={() => navigate("/business/apply-licence")}
-          className="bg-primary hover:bg-primary-dark text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95 flex items-center gap-3 w-fit"
+          onClick={() => navigate("/business/apply-licence-v2")}
+          className="bg-primary hover:bg-primary-dark text-white font-black px-6 py-3 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95 flex items-center gap-3 w-fit"
         >
           <Plus size={20} />
           New Licence Application
@@ -258,7 +313,7 @@ const LicenceStatus = () => {
               <p className="text-sm font-bold text-gray-500">The Admin has requested more evidence for your application. Please review the details in the history table.</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => {
               const app = applications.find(a => a.status.toLowerCase() === 'information requested');
               if (app) handleEditClick(app);
@@ -270,24 +325,74 @@ const LicenceStatus = () => {
         </motion.div>
       )}
 
+      {/* Government Processing Banner */}
+      {applications.find(app => app.status === 'Government Processing') && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-violet-50 border border-violet-100 rounded-3xl p-6 flex items-center justify-between gap-6 shadow-sm"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-violet-100 rounded-2xl text-violet-600">
+              <ExternalLink size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-secondary">Government Portal Processing</h3>
+              <p className="text-sm font-bold text-gray-500">Your application is being processed through the UK government portal. Track progress and confirm credentials in Licence Tracking.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/business/licence-process")}
+            className="bg-violet-600 hover:bg-violet-700 text-white font-black px-6 py-3 rounded-xl transition-all shadow-lg shadow-violet-200 active:scale-95 whitespace-nowrap"
+          >
+            Track Progress
+          </button>
+        </motion.div>
+      )}
+
+      {/* Decision Pending Banner */}
+      {applications.find(app => app.status === 'Decision Pending') && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-orange-50 border border-orange-100 rounded-3xl p-6 flex items-center justify-between gap-6 shadow-sm"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-orange-100 rounded-2xl text-orange-600">
+              <Clock size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-secondary">Awaiting UKVI Decision</h3>
+              <p className="text-sm font-bold text-gray-500">Your application has been submitted to UKVI. Decisions typically take 8–12 weeks. You will be notified when a decision is made.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/business/licence-process")}
+            className="bg-orange-500 hover:bg-orange-600 text-white font-black px-6 py-3 rounded-xl transition-all shadow-lg shadow-orange-200 active:scale-95 whitespace-nowrap"
+          >
+            View Status
+          </button>
+        </motion.div>
+      )}
+
       {/* Hero Stats */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-4 gap-6"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
         {[
           { icon: Hash, label: "Licence ID", value: summaryStats.licenceId, color: "text-primary" },
-          { 
-            icon: ShieldCheck, 
-            label: "Current Status", 
-            value: summaryStats.status, 
-            color: summaryStats.status.toLowerCase().includes('active') ? "text-emerald-600" : "text-amber-600", 
-            badge: true 
+          {
+            icon: ShieldCheck,
+            label: "Current Status",
+            value: summaryStats.status,
+            color: String(summaryStats.status).toLowerCase().includes('active') ? "text-emerald-600" : "text-amber-600",
+            badge: true
           },
-          { icon: Star, label: "Compliance Rating", value: "A+", color: "text-amber-500" },
-          { 
+          { icon: Hash, label: "CoS Available", value: summaryStats.allocation.available, color: "text-emerald-600" },
+          {
             icon: Calendar, 
             label: "Renewal Due", 
             value: summaryStats.renewalDue, 
@@ -299,7 +404,7 @@ const LicenceStatus = () => {
             key={i} 
             variants={cardVariants} 
             onClick={stat.onClick}
-            className={`bg-white/80 backdrop-blur-md rounded-[2rem] border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all ${stat.onClick ? 'cursor-pointer hover:border-primary/20 hover:scale-[1.02] active:scale-95' : ''}`}
+            className={`bg-white/80 backdrop-blur-md rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all ${stat.onClick ? 'cursor-pointer hover:border-primary/20 hover:scale-[1.02] active:scale-95' : ''}`}
           >
             <div className="flex items-center gap-3 mb-4">
               <div className={`p-2 rounded-xl bg-gray-50 ${stat.color}`}>
@@ -323,12 +428,12 @@ const LicenceStatus = () => {
         ))}
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Applications Table */}
         <div className="lg:col-span-2 space-y-8">
           
-          <motion.div variants={cardVariants} className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-sm">
-            <div className="p-8 border-b border-gray-50 bg-gray-50/30">
+          <motion.div variants={cardVariants} className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+            <div className="p-6 border-b border-gray-50 bg-gray-50/30">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-primary/5 rounded-2xl">
@@ -346,39 +451,51 @@ const LicenceStatus = () => {
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-gray-50/50 border-b border-gray-100">
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Type / ID</th>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Status</th>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Submitted</th>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
+                    <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-widest text-gray-400">Type / ID</th>
+                    <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-widest text-gray-400">Status</th>
+                    <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-widest text-gray-400">Submitted</th>
+                    <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {loading ? (
                     [1, 2, 3].map(i => (
                       <tr key={i}>
-                        <td colSpan={4} className="px-8 py-4">
+                        <td colSpan={4} className="px-6 py-3">
                           <Skeleton height={60} className="w-full rounded-2xl" />
                         </td>
                       </tr>
                     ))
                   ) : applications.length > 0 ? (
-                    applications.map((app) => (
-                      <tr key={app.id} className="group hover:bg-gray-50/50 transition-colors">
-                        <td className="px-8 py-6">
-                          <p className="text-sm font-black text-secondary">{app.type} Application</p>
-                          <p className="text-[10px] font-bold text-gray-400 mt-0.5">ID: #LIC-{app.id}</p>
+                    applications.map((app) => {
+                      const isV2 = Number(app.applicationVersion) === 2;
+                      return (
+                      <Fragment key={app.id}>
+                      <tr className="group hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-black text-secondary flex items-center gap-2">
+                            {app.type} Application
+                            {isV2 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide bg-primary/10 text-primary">
+                                V2
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-[10px] font-bold text-gray-400 mt-0.5">
+                            #LIC-{app.id}{app.licenceType ? ` · ${app.licenceType}` : ""}
+                          </p>
                         </td>
-                        <td className="px-8 py-6">
+                        <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black ${getStatusColor(app.status)}`}>
                             {app.status}
                           </span>
                         </td>
-                        <td className="px-8 py-6">
+                        <td className="px-6 py-4">
                           <p className="text-xs font-black text-secondary">
                             {formatDateLong(app.createdAt, { month: 'short' })}
                           </p>
                         </td>
-                        <td className="px-8 py-6 text-right">
+                        <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button 
                               onClick={() => handleEditClick(app)}
@@ -386,17 +503,7 @@ const LicenceStatus = () => {
                             >
                               <PencilLine size={14} /> Edit
                             </button>
-                            <button 
-                              onClick={() => {
-                                setSelectedApp(app);
-                                handleEditClick(app);
-                              }}
-                              className="p-2 bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 transition-all"
-                              title="View Details"
-                            >
-                              <ChevronRight size={16} />
-                            </button>
-                            <button 
+                            <button
                               onClick={() => handleDelete(app.id)}
                               className="p-2 bg-red-50 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all"
                               title="Delete"
@@ -406,10 +513,30 @@ const LicenceStatus = () => {
                           </div>
                         </td>
                       </tr>
-                    ))
+                      {isV2 && (
+                        <tr className="bg-primary/5">
+                          <td colSpan={4} className="px-6 py-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                              <p className="text-[11px] font-bold text-secondary/70 flex-1">
+                                This application uses the new V2 process. View full details and stages on the Licence Tracking page.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => navigate("/business/licence-process")}
+                                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-white rounded-lg hover:bg-secondary-dark transition-all text-[10px] font-black uppercase"
+                              >
+                                Open Licence Tracking <ChevronRight size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={4} className="px-8 py-12 text-center">
+                      <td colSpan={4} className="px-6 py-10 text-center">
                         <FileText className="mx-auto text-gray-200 mb-4" size={48} />
                         <p className="text-sm font-bold text-gray-400">No applications found. Click "New Application" to begin.</p>
                       </td>
@@ -421,8 +548,8 @@ const LicenceStatus = () => {
           </motion.div>
 
           {/* CoS Allocation */}
-          <motion.div variants={cardVariants} className="bg-white rounded-[2.5rem] border border-gray-100 p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-8">
+          <motion.div variants={cardVariants} className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-secondary/5 rounded-2xl">
                 <Hash size={24} className="text-secondary" />
               </div>
@@ -432,7 +559,7 @@ const LicenceStatus = () => {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               {[
                 { label: "Total Allocated", value: summaryStats.allocation.total, color: "text-secondary" },
                 { label: "Used", value: summaryStats.allocation.used, color: "text-primary" },
@@ -440,7 +567,7 @@ const LicenceStatus = () => {
               ].map((cos, i) => (
                 <div key={i} className="p-6 bg-gray-50/50 rounded-3xl border border-gray-50">
                   <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">{cos.label}</p>
-                  <p className={`text-4xl font-black ${cos.color}`}>{cos.value}</p>
+                  <p className={`text-3xl font-black ${cos.color}`}>{cos.value}</p>
                 </div>
               ))}
             </div>
@@ -465,33 +592,119 @@ const LicenceStatus = () => {
         {/* Right Column: Alerts & Quick Actions */}
         <div className="space-y-8">
           
-          <motion.div variants={cardVariants} className="bg-secondary text-white rounded-[2.5rem] p-8 shadow-xl shadow-secondary/20 relative overflow-hidden group">
-            <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
-            <ShieldAlert size={48} className="text-white/20 mb-6" />
-            <h3 className="text-2xl font-black mb-2">Renewal Window</h3>
-            <p className="text-white/70 text-sm font-bold mb-8">Your licence expires in 420 days. Strategic planning is recommended.</p>
-            <button 
-              onClick={() => setShowRenewalForm(true)}
-              className="w-full bg-white text-secondary font-black py-4 rounded-2xl hover:bg-primary hover:text-white transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
-            >
-              <RefreshCw size={18} />
-              Quick Renew
-            </button>
-          </motion.div>
+          {/* Renewal card — 4 states */}
+          {(() => {
+            const { daysRemaining, renewalEligible, pendingRenewal, status, renewalDue } = summaryStats;
+            const isExpired = status === "Expired" || (daysRemaining !== null && daysRemaining <= 0);
+            const isPending = pendingRenewal !== null;
+            const isEligible = renewalEligible && !isPending && !isExpired;
+            const isNotEligible = !isEligible && !isPending && !isExpired;
 
-          <motion.div variants={cardVariants} className="bg-white rounded-[2.5rem] border border-gray-100 p-8 shadow-sm">
-            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">Compliance Health</h3>
-            <div className="space-y-4">
+            if (isPending) {
+              return (
+                <motion.div variants={cardVariants} className="bg-white rounded-3xl border border-amber-100 p-6 shadow-sm relative overflow-hidden">
+                  <div className="absolute -right-8 -top-6 w-32 h-32 bg-amber-50 rounded-full blur-2xl" />
+                  <Clock size={36} className="text-amber-400 mb-4" />
+                  <h3 className="text-xl font-black text-secondary mb-1">Renewal In Progress</h3>
+                  <p className="text-sm font-bold text-gray-500 mb-4">
+                    A renewal application has been submitted and is being reviewed.
+                  </p>
+                  <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 text-xs font-black text-amber-700">
+                    #{`LIC-${pendingRenewal.id}`} · {pendingRenewal.status}
+                  </div>
+                </motion.div>
+              );
+            }
+
+            if (isExpired) {
+              return (
+                <motion.div variants={cardVariants} className="bg-red-600 text-white rounded-3xl p-6 shadow-xl shadow-red-200 relative overflow-hidden group">
+                  <div className="absolute -right-8 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                  <ShieldAlert size={48} className="text-white/20 mb-4" />
+                  <h3 className="text-2xl font-black mb-1">Licence Expired</h3>
+                  <p className="text-white/70 text-sm font-bold mb-6">
+                    Your licence has expired. Submit a renewal application immediately.
+                  </p>
+                  <button
+                    onClick={() => setShowRenewalForm(true)}
+                    className="w-full bg-white text-red-600 font-black py-4 rounded-2xl hover:bg-red-50 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw size={18} />
+                    Renew Now
+                  </button>
+                </motion.div>
+              );
+            }
+
+            if (isEligible) {
+              const urgency = daysRemaining !== null && daysRemaining <= 14
+                ? "bg-red-600 shadow-red-200"
+                : daysRemaining !== null && daysRemaining <= 30
+                  ? "bg-orange-500 shadow-orange-200"
+                  : "bg-secondary shadow-secondary/20";
+              return (
+                <motion.div variants={cardVariants} className={`${urgency} text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group`}>
+                  <div className="absolute -right-8 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                  <ShieldAlert size={48} className="text-white/20 mb-4" />
+                  <h3 className="text-2xl font-black mb-1">Renewal Due</h3>
+                  <p className="text-white/70 text-sm font-bold mb-1">
+                    {daysRemaining !== null
+                      ? `${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} remaining until expiry.`
+                      : `Renewal due ${renewalDue}.`}
+                  </p>
+                  {renewalDue && renewalDue !== "N/A" && (
+                    <p className="text-white/50 text-xs font-bold mb-6">Expires: {renewalDue}</p>
+                  )}
+                  <button
+                    onClick={() => setShowRenewalForm(true)}
+                    className="w-full bg-white text-secondary font-black py-4 rounded-2xl hover:bg-primary hover:text-white transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw size={18} />
+                    Quick Renew
+                  </button>
+                </motion.div>
+              );
+            }
+
+            // Not eligible — window not open yet
+            const daysUntilWindow = daysRemaining !== null ? daysRemaining - 90 : null;
+            return (
+              <motion.div variants={cardVariants} className="bg-secondary text-white rounded-3xl p-6 shadow-xl shadow-secondary/20 relative overflow-hidden group">
+                <div className="absolute -right-8 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                <ShieldAlert size={48} className="text-white/20 mb-4" />
+                <h3 className="text-2xl font-black mb-2">Renewal</h3>
+                <p className="text-white/70 text-sm font-bold mb-6">
+                  {daysUntilWindow !== null && daysUntilWindow > 0
+                    ? `Renewal window opens in ${daysUntilWindow} day${daysUntilWindow !== 1 ? "s" : ""} (90 days before expiry).`
+                    : renewalDue && renewalDue !== "N/A"
+                      ? `Your licence is due for renewal on ${renewalDue}.`
+                      : "Submit a renewal when your licence is within 90 days of expiry."}
+                </p>
+                <button
+                  disabled
+                  className="w-full bg-white/20 text-white/50 font-black py-4 rounded-2xl cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <RefreshCw size={18} />
+                  Not Yet Eligible
+                </button>
+              </motion.div>
+            );
+          })()}
+
+          <motion.div variants={cardVariants} className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">How it works</h3>
+            <div className="space-y-5">
               {[
-                { label: "Worker Records", status: "Compliant" },
-                { label: "Absence Reporting", status: "Compliant" },
-                { label: "HR Audit", status: "Action Required", warning: true },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-50">
-                  <span className="text-xs font-black text-secondary">{item.label}</span>
-                  <span className={`text-[10px] font-black px-3 py-1 rounded-full ${item.warning ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                    {item.status}
-                  </span>
+                { n: 1, label: "Submit your application", desc: "Complete the form and attach your supporting documents." },
+                { n: 2, label: "Review by our team", desc: "We check your details and may request more information." },
+                { n: 3, label: "Decision & activation", desc: "Once approved, your sponsor licence is activated." },
+              ].map((s) => (
+                <div key={s.n} className="flex items-start gap-3">
+                  <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-black">{s.n}</div>
+                  <div>
+                    <p className="text-xs font-black text-secondary">{s.label}</p>
+                    <p className="text-[11px] font-medium text-gray-400 mt-0.5">{s.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -511,10 +724,10 @@ const LicenceStatus = () => {
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-[3rem] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-100"
+              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-100"
             >
-              <div className="p-10">
-                <div className="flex items-center justify-between mb-8">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-primary/5 rounded-2xl text-primary">
                       <PencilLine size={28} />
@@ -537,7 +750,7 @@ const LicenceStatus = () => {
                 </div>
 
                 {selectedApp?.status.toLowerCase() === 'information requested' && (
-                  <div className="mb-8 p-6 bg-red-50 rounded-3xl border border-red-100">
+                  <div className="mb-6 p-6 bg-red-50 rounded-3xl border border-red-100">
                     <div className="flex items-center gap-2 mb-3">
                       <AlertCircle size={18} className="text-red-600" />
                       <h4 className="text-xs font-black text-red-600 uppercase tracking-widest">Admin Request Details</h4>
@@ -556,14 +769,14 @@ const LicenceStatus = () => {
                 )}
 
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Company Name</label>
                       <input
                         type="text"
                         disabled
                         value={selectedApp?.companyName || ""}
-                        className="w-full bg-gray-100 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-400 cursor-not-allowed"
+                        className="w-full bg-gray-100 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-gray-400 cursor-not-allowed"
                       />
                     </div>
                     <div>
@@ -572,12 +785,12 @@ const LicenceStatus = () => {
                         type="text"
                         disabled
                         value={selectedApp?.type || ""}
-                        className="w-full bg-gray-100 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-gray-400 cursor-not-allowed"
+                        className="w-full bg-gray-100 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-gray-400 cursor-not-allowed"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Registration Number</label>
                       <input
@@ -585,7 +798,7 @@ const LicenceStatus = () => {
                         disabled={selectedApp?.status.toLowerCase() === 'approved' || selectedApp?.status.toLowerCase() === 'rejected'}
                         value={editData.registrationNumber}
                         onChange={(e) => setEditData({ ...editData, registrationNumber: e.target.value })}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all disabled:opacity-60"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all disabled:opacity-60"
                       />
                     </div>
                     <div>
@@ -595,12 +808,12 @@ const LicenceStatus = () => {
                         disabled={selectedApp?.status.toLowerCase() === 'approved' || selectedApp?.status.toLowerCase() === 'rejected'}
                         value={editData.cosAllocation}
                         onChange={(e) => setEditData({ ...editData, cosAllocation: e.target.value })}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all disabled:opacity-60"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all disabled:opacity-60"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div>
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Contact Name</label>
                       <input
@@ -608,7 +821,7 @@ const LicenceStatus = () => {
                         disabled={selectedApp?.status.toLowerCase() === 'approved' || selectedApp?.status.toLowerCase() === 'rejected'}
                         value={editData.contactName}
                         onChange={(e) => setEditData({ ...editData, contactName: e.target.value })}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
                       />
                     </div>
                     <div className="col-span-2">
@@ -618,7 +831,7 @@ const LicenceStatus = () => {
                         disabled={selectedApp?.status.toLowerCase() === 'approved' || selectedApp?.status.toLowerCase() === 'rejected'}
                         value={editData.contactEmail}
                         onChange={(e) => setEditData({ ...editData, contactEmail: e.target.value })}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
                       />
                     </div>
                   </div>
@@ -629,7 +842,7 @@ const LicenceStatus = () => {
                       disabled={selectedApp?.status.toLowerCase() === 'approved' || selectedApp?.status.toLowerCase() === 'rejected'}
                       value={editData.reason}
                       onChange={(e) => setEditData({ ...editData, reason: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all resize-none disabled:opacity-60"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all resize-none disabled:opacity-60"
                       rows={4}
                     />
                   </div>
@@ -638,26 +851,38 @@ const LicenceStatus = () => {
                   <div>
                     <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-4">Evidence & Documents</label>
                     <div className="space-y-3 mb-6">
-                      {selectedApp?.documents?.map((doc, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-50 group hover:border-primary/20 transition-all">
-                          <div className="flex items-center gap-3">
-                            <FileText size={18} className="text-gray-400" />
-                            <span className="text-xs font-bold text-gray-500 truncate max-w-[200px]">{doc.split('\\').pop().split('/').pop()}</span>
+                      {selectedApp?.documents?.map((doc, i) => {
+                        const previewing = docBusy === `${i}:preview`;
+                        const downloading = docBusy === `${i}:download`;
+                        return (
+                          <div key={i} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-50 group hover:border-primary/20 transition-all">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <FileText size={18} className="text-gray-400 shrink-0" />
+                              <span className="text-xs font-bold text-gray-500 truncate max-w-[200px]">{doc.split('\\').pop().split('/').pop()}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleDocument(i, "preview")}
+                                disabled={!!docBusy}
+                                className="p-1.5 bg-white text-gray-400 rounded-lg hover:text-primary transition-all disabled:opacity-60"
+                                title="View document"
+                              >
+                                {previewing ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDocument(i, "download")}
+                                disabled={!!docBusy}
+                                className="p-1.5 bg-white text-gray-400 rounded-lg hover:text-primary transition-all disabled:opacity-60"
+                                title="Download document"
+                              >
+                                {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                             <a 
-                               href={`${API_BASE_URL}/${doc.replace(/\\/g, '/')}`}
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               className="p-1.5 bg-white text-gray-400 rounded-lg hover:text-primary transition-all"
-                               title="View Document"
-                             >
-                               <Eye size={14} />
-                             </a>
-                             <span className="text-[10px] font-black text-emerald-600 uppercase ml-2">Uploaded</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       {newFiles.map((file, i) => (
                         <div key={i} className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl border border-primary/10 animate-pulse">
                           <div className="flex items-center gap-3">
@@ -682,7 +907,7 @@ const LicenceStatus = () => {
                         />
                         <label
                           htmlFor="edit-file-upload"
-                          className="w-full flex items-center justify-center gap-3 border-2 border-dashed border-gray-100 rounded-2xl py-4 text-xs font-black text-gray-400 hover:border-primary/20 hover:text-primary transition-all cursor-pointer"
+                          className="w-full flex items-center justify-center gap-3 border-2 border-dashed border-gray-100 rounded-xl py-3 text-xs font-black text-gray-400 hover:border-primary/20 hover:text-primary transition-all cursor-pointer"
                         >
                           <Upload size={16} />
                           Add More Evidence
@@ -697,7 +922,7 @@ const LicenceStatus = () => {
                         <button
                           onClick={handleUpdateSubmit}
                           disabled={submitting}
-                          className="flex-[2] bg-primary hover:bg-primary-dark text-white font-black rounded-2xl py-4 transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2 active:scale-95"
+                          className="flex-[2] bg-primary hover:bg-primary-dark text-white font-black rounded-xl py-3 transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2 active:scale-95"
                         >
                           {submitting ? <Loader2 className="animate-spin" /> : <><Save size={18} /> Update Application</>}
                         </button>
@@ -705,7 +930,7 @@ const LicenceStatus = () => {
                     ) : (
                       <button
                         onClick={() => setShowEditForm(false)}
-                        className="flex-1 bg-secondary text-white font-black rounded-2xl py-4 transition-all"
+                        className="flex-1 bg-secondary text-white font-black rounded-xl py-3 transition-all"
                       >
                         Close Details
                       </button>
@@ -713,7 +938,7 @@ const LicenceStatus = () => {
                     {(selectedApp?.status.toLowerCase() !== 'approved' && selectedApp?.status.toLowerCase() !== 'rejected') && (
                       <button
                         onClick={() => setShowEditForm(false)}
-                        className="flex-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-black rounded-2xl py-4 transition-all"
+                        className="flex-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-black rounded-xl py-3 transition-all"
                       >
                         Cancel
                       </button>
@@ -738,10 +963,10 @@ const LicenceStatus = () => {
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-[3rem] shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-gray-100"
+              className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-gray-100"
             >
-              <div className="p-10">
-                <div className="flex items-center justify-between mb-8">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-secondary/10 rounded-2xl text-secondary">
                       <RefreshCw size={28} />
@@ -753,41 +978,68 @@ const LicenceStatus = () => {
                   </button>
                 </div>
 
+                {/* Pre-fill notice */}
+                {(() => {
+                  const approvedApp = applications.find((a) => a.status === "Approved");
+                  return approvedApp ? (
+                    <div className="mb-6 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-xs font-bold text-blue-700">
+                      Renewing licence #{`LIC-${approvedApp.id}`} · {approvedApp.licenceType || "Sponsor Licence"}
+                    </div>
+                  ) : null;
+                })()}
+
                 <div className="space-y-6">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Renewal Category</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                      Renewal Category <span className="text-red-500">*</span>
+                    </label>
                     <select
                       value={renewalData.renewalType}
                       onChange={(e) => setRenewalData({ ...renewalData, renewalType: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary"
                     >
                       <option value="">Select type</option>
-                      <option>Standard Renewal</option>
-                      <option>Allocation Increase</option>
+                      <option value="Standard Renewal">Standard Renewal</option>
+                      <option value="Allocation Increase">Allocation Increase</option>
                     </select>
                   </div>
-                  
+
+                  {renewalData.renewalType === "Allocation Increase" && (
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Requested CoS Allocation</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={renewalData.requestedAllocation}
+                        onChange={(e) => setRenewalData({ ...renewalData, requestedAllocation: e.target.value })}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary"
+                        placeholder="Number of CoS required"
+                      />
+                    </div>
+                  )}
+
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Reason</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Reason / Notes</label>
                     <textarea
                       value={renewalData.reason}
                       onChange={(e) => setRenewalData({ ...renewalData, reason: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-black text-secondary resize-none"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary resize-none"
                       rows={3}
+                      placeholder="Briefly describe the purpose of this renewal…"
                     />
                   </div>
 
                   <div className="flex gap-4 pt-6">
                     <button
                       onClick={handleRenewalSubmit}
-                      disabled={submitting}
-                      className="flex-1 bg-secondary hover:bg-secondary-dark text-white font-black rounded-2xl py-4 transition-all shadow-lg active:scale-95"
+                      disabled={submitting || !renewalData.renewalType}
+                      className="flex-1 bg-secondary hover:bg-secondary-dark text-white font-black rounded-xl py-3 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      {submitting ? <Loader2 className="animate-spin" /> : "Submit Request"}
+                      {submitting ? <Loader2 className="animate-spin" size={18} /> : <><RefreshCw size={18} /> Submit Renewal</>}
                     </button>
                     <button
                       onClick={() => setShowRenewalForm(false)}
-                      className="flex-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-black rounded-2xl py-4 transition-all"
+                      className="flex-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-black rounded-xl py-3 transition-all"
                     >
                       Cancel
                     </button>

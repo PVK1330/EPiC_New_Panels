@@ -44,6 +44,8 @@ const CaseworkerPerformance = lazy(() => import('../pages/caseworker/CaseworkerP
 const CaseworkerMessages = lazy(() => import('../pages/caseworker/CaseworkerMessages'));
 const CaseworkerFinance = lazy(() => import('../pages/caseworker/CaseworkerFinance'));
 const CaseworkerLicenceApplications = lazy(() => import('../pages/caseworker/CaseworkerLicenceApplications'));
+const CaseworkerCosRequests = lazy(() => import('../pages/caseworker/CaseworkerCosRequests'));
+const CaseworkerComplianceReview = lazy(() => import('../pages/caseworker/CaseworkerComplianceReview'));
 const CaseworkerNotifications = lazy(() => import('../pages/caseworker/CaseworkerNotifications'));
 const CaseworkerCclTemplates = lazy(() => import('../pages/caseworker/CaseworkerCclTemplates'));
 
@@ -71,6 +73,8 @@ const AdminDocuments = lazy(() => import('../pages/admin/AdminDocuments'));
 const AdminMessages = lazy(() => import('../pages/admin/AdminMessages'));
 const AdminCalendar = lazy(() => import('../pages/admin/AdminCalendar'));
 const AdminLicenceApplications = lazy(() => import('../pages/admin/AdminLicenceApplications'));
+const AdminCosRequests = lazy(() => import('../pages/admin/AdminCosRequests'));
+const AdminComplianceReview = lazy(() => import('../pages/admin/AdminComplianceReview'));
 const AdminEnquiryInbox = lazy(() => import('../pages/admin/AdminEnquiryInbox'));
 const AdminCclFeeApprovals = lazy(() => import('../pages/admin/AdminCclFeeApprovals'));
 const AdminAnnouncements = lazy(() => import('../pages/admin/AdminAnnouncements'));
@@ -97,6 +101,7 @@ const CosRegistrationForm = lazy(() => import('../pages/business/Cosregistration
 const SponsorWorkerDetails = lazy(() => import('../pages/business/SponsoredWorkerDetails'));
 const CosAllocationpage = lazy(() => import('../pages/business/CosPage'));
 const Compliacedocument = lazy(() => import('../pages/business/Compliacedocument'));
+const ComplianceReviewStatus = lazy(() => import('../pages/business/ComplianceReviewStatus'));
 const BusinessMessages = lazy(() => import('../pages/business/BusinessMessages'));
 const BusinessNotifications = lazy(() => import('../pages/business/BusinessNotifications'));
 const BusinessPayment = lazy(() => import('../pages/business/BusinessPayment'));
@@ -107,6 +112,8 @@ const EmployeeRecords = lazy(() => import('../pages/business/EmployeeRecords'));
 const Invoices = lazy(() => import('../pages/business/Invoices'));
 const Reports = lazy(() => import('../pages/business/Reports'));
 const ApplyLicence = lazy(() => import('../pages/business/ApplyLicence'));
+const ApplyLicenceV2 = lazy(() => import('../pages/business/ApplyLicenceV2'));
+const LicenceApplicationV2Detail = lazy(() => import('../components/licence/LicenceApplicationV2Detail'));
 const LicenceDocuments = lazy(() => import('../pages/business/LicenceDocuments'));
 
 // ── Superadmin pages ─────────────────────────────────────────────────────────
@@ -227,6 +234,9 @@ const AppRouter = () => {
           <Route path="documents" element={<AdminDocuments />} />
           <Route path="messages" element={<AdminMessages />} />
           <Route path="licence-requests" element={<AdminLicenceApplications />} />
+          <Route path="licence/v2/:id" element={<LicenceApplicationV2Detail role="admin" />} />
+          <Route path="cos-requests" element={<AdminCosRequests />} />
+          <Route path="compliance-review" element={<AdminComplianceReview />} />
           <Route path="activity-center" element={<AdminActivityCenter />} />
           <Route path="timeline-explorer" element={<AdminTimelineExplorer />} />
           <Route path="change-requests" element={<AdminChangeRequests />} />
@@ -302,6 +312,9 @@ const AppRouter = () => {
           <Route path="finance" element={<CaseworkerFinance />} />
           <Route path="performance" element={<CaseworkerPerformance />} />
           <Route path="licence-reviews" element={<CaseworkerLicenceApplications />} />
+          <Route path="licence/v2/:id" element={<LicenceApplicationV2Detail role="caseworker" />} />
+          <Route path="cos-requests" element={<CaseworkerCosRequests />} />
+          <Route path="compliance-review" element={<CaseworkerComplianceReview />} />
         </Route>
 
         <Route
@@ -315,6 +328,8 @@ const AppRouter = () => {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<BusinessDashboard />} />
           <Route path="apply-licence" element={<ApplyLicence />} />
+          <Route path="apply-licence-v2" element={<ApplyLicenceV2 />} />
+          <Route path="apply-licence-v2/:id" element={<ApplyLicenceV2 />} />
           <Route path="licence-documents" element={<LicenceDocuments />} />
           <Route path="profile" element={<BussinessProfile />} />
           <Route path="personnel" element={<KeyPersonnel />} />
@@ -322,6 +337,7 @@ const AppRouter = () => {
           <Route path="business-registration" element={<BusinessRegistration />} />
           <Route path="compliance-documents" element={<Compliacedocument />} />
           <Route path="compliance" element={<BusinessCompliance />} />
+          <Route path="compliance-review" element={<ComplianceReviewStatus />} />
           <Route path="cosallocation" element={<CosAllocationpage />} />
           <Route path="account" element={<BusinessAccount />} />
           <Route path="sponsored-workers" element={<SponsoredWorkerForm />} />

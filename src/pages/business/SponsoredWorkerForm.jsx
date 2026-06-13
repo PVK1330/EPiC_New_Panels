@@ -25,6 +25,8 @@ import { addSponsoredWorker } from "../../services/sponsoredWorkerApi";
 import { useToast } from "../../context/ToastContext";
 import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
 import DatePicker from "../../components/DatePicker";
+import useSponsorLicence from "../../hooks/useSponsorLicence";
+import LicenceGateBanner from "../../components/business/LicenceGateBanner";
 
 const SponsoredWorkerForm = () => {
   const navigate = useNavigate();
@@ -32,6 +34,8 @@ const SponsoredWorkerForm = () => {
   const [loading, setLoading] = useState(false);
   const [previousVisa, setPreviousVisa] = useState("no");
   const [visaTypeOptions, setVisaTypeOptions] = useState([]);
+  const { ready: licenceReady, licenceStatus, canSponsorWorkers } = useSponsorLicence();
+  const workerBlocked = licenceReady && !canSponsorWorkers;
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -79,6 +83,13 @@ const SponsoredWorkerForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (workerBlocked) {
+      showToast(
+        "Your Sponsorship Licence is not active. Approval is required before sponsorship actions can be performed.",
+        "error"
+      );
+      return;
+    }
     setLoading(true);
 
     try {
@@ -122,6 +133,8 @@ const SponsoredWorkerForm = () => {
           Register a new sponsored worker with all required information.
         </p>
       </motion.div>
+
+      {workerBlocked && <LicenceGateBanner status={licenceStatus} />}
 
       <motion.div
         className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
@@ -523,8 +536,9 @@ const SponsoredWorkerForm = () => {
           <div className="flex gap-4 pt-4">
             <button
               type="submit"
-              disabled={loading}
-              className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition flex items-center justify-center gap-2 disabled:opacity-50"
+              disabled={loading || workerBlocked}
+              title={workerBlocked ? "Your Sponsorship Licence is not active." : undefined}
+              className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>

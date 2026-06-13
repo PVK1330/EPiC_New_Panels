@@ -16,8 +16,6 @@ import { motion } from "framer-motion";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import PhoneInput from "../../components/PhoneInput";
-import DatePicker from "../../components/DatePicker";
-import CountrySelect from "../../components/CountrySelect";
 import Button from "../../components/Button";
 import { isValidPhone } from "../../utils/countries";
 import { getApiError } from "../../utils/apiError";
@@ -37,6 +35,7 @@ const PASSWORD_MIN = 6;
 
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
 import { formatDateLong } from "../../utils/datetime";
+import { AVATAR_COLORS, initialsFrom, fullName, fmtDate } from "./adminHelpers";
 
 const LICENCE_CHIPS = {
   Active: "bg-green-100 text-green-700",
@@ -52,18 +51,6 @@ const RISK_CHIPS = {
   Critical: "bg-red-100 text-red-600",
 };
 
-const AVATAR_COLORS = [
-  "bg-blue-500",
-  "bg-yellow-500",
-  "bg-red-500",
-  "bg-purple-500",
-  "bg-green-500",
-  "bg-teal-500",
-  "bg-pink-500",
-];
-
-const ROLE_OPTIONS = [{ value: "4", label: "Sponsor" }];
-
 const STATUS_FILTER_OPTIONS = [
   { value: "All", label: "All" },
   { value: "active", label: "Active" },
@@ -75,6 +62,10 @@ const EDIT_STATUS_OPTIONS = [
   { value: "inactive", label: "Inactive" },
 ];
 
+// Sponsors are created with only the basic information needed to register a
+// login. A temporary password is generated server-side and emailed to the
+// sponsor; all other company/compliance details are managed later on the
+// sponsor profile. (Sending licenceStatus here is also rejected by the backend.)
 const EMPTY_CREATE = {
   first_name: "",
   last_name: "",
@@ -82,29 +73,7 @@ const EMPTY_CREATE = {
   country_code: "+1",
   mobile: "",
   role_id: "4",
-  password: "",
-  confirm_password: "",
   companyName: "",
-  tradingName: "",
-  companiesHouseNumber: "",
-  sector: "Technology & IT",
-  sponsorLicenceNumber: "",
-  licenceStatus: "Active",
-  licenceExpiry: "",
-  address: "",
-  city: "",
-  postcode: "",
-  country: "United Kingdom",
-  contactName: "",
-  contactEmail: "",
-  contactPhone: "",
-  annualCosAllocation: "",
-  activeCases: "",
-  sponsoredWorkers: "",
-  riskLevel: "Low",
-  riskPct: "20",
-  outstanding: "",
-  notes: "",
 };
 
 const EMPTY_RESET = {
@@ -123,22 +92,6 @@ function formatStatusLabel(status) {
   if (status === "inactive") return "Inactive";
   return status || "—";
 }
-
-function initialsFrom(row) {
-  const a = (row.first_name || "").trim().charAt(0);
-  const b = (row.last_name || "").trim().charAt(0);
-  const s = `${a}${b}`.toUpperCase();
-  return s || "?";
-}
-
-function fullName(row) {
-  return `${row.first_name || ""} ${row.last_name || ""}`.trim() || "—";
-}
-
-const fmtDate = (iso) => {
-  if (!iso) return "—";
-  return formatDateLong(iso, { month: "short" });
-};
 
 export default function AdminBusinesses() {
   const { showToast } = useToast();
@@ -229,26 +182,6 @@ export default function AdminBusinesses() {
       role_id: String(row.role_id ?? 4),
       status: row.status === "inactive" ? "inactive" : "active",
       companyName: profile.companyName || "",
-      tradingName: profile.tradingName || "",
-      companiesHouseNumber: profile.registrationNumber || "",
-      sector: profile.industrySector || "",
-      sponsorLicenceNumber: profile.sponsorLicenceNumber || "",
-      licenceStatus: profile.licenceStatus || "",
-      licenceExpiry: profile.licenceExpiryDate || "",
-      address: profile.registeredAddress || "",
-      city: profile.city || "",
-      postcode: profile.postalCode || "",
-      country: profile.country || "",
-      contactName: profile.authorisingName || "",
-      contactEmail: profile.authorisingEmail || "",
-      contactPhone: profile.authorisingPhone || "",
-      annualCosAllocation: profile.cosAllocation || "",
-      activeCases: profile.activeCases || "",
-      sponsoredWorkers: profile.sponsoredWorkers || "",
-      riskLevel: profile.riskLevel || "",
-      riskPct: profile.riskPct || "",
-      outstanding: profile.outstandingBalance || "",
-      notes: profile.notes || "",
     });
     setErrors({});
     setModal({ type: "edit", data: row });
@@ -299,21 +232,7 @@ export default function AdminBusinesses() {
     else if (!isValidPhone(createForm.country_code, createForm.mobile))
       errs.mobile = "Enter a valid phone number for the selected country";
     if (!createForm.companyName.trim()) errs.companyName = "Company name is required";
-    if (createForm.licenceExpiry) {
-      const exp = new Date(`${createForm.licenceExpiry}T00:00:00`);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (Number.isNaN(exp.getTime())) errs.licenceExpiry = "Enter a valid date";
-      else if (exp < today)
-        errs.licenceExpiry = "Licence expiry cannot be in the past";
-    }
-    if (!createForm.password) errs.password = "Password is required";
-    else if (createForm.password.length < PASSWORD_MIN)
-      errs.password = `Password must be at least ${PASSWORD_MIN} characters`;
-    if (!createForm.confirm_password)
-      errs.confirm_password = "Please confirm password";
-    else if (createForm.password !== createForm.confirm_password)
-      errs.confirm_password = "Passwords do not match";
+    // Password is generated server-side and emailed to the sponsor — not collected here.
     return errs;
   };
 
@@ -360,29 +279,7 @@ export default function AdminBusinesses() {
         country_code: createForm.country_code.trim(),
         mobile: createForm.mobile.trim(),
         role_id: Number(createForm.role_id),
-        password: createForm.password,
-        confirm_password: createForm.confirm_password,
         companyName: createForm.companyName?.trim() || null,
-        tradingName: createForm.tradingName?.trim() || null,
-        registrationNumber: createForm.companiesHouseNumber?.trim() || null,
-        industrySector: createForm.sector?.trim() || null,
-        sponsorLicenceNumber: createForm.sponsorLicenceNumber?.trim() || null,
-        licenceStatus: createForm.licenceStatus || null,
-        licenceExpiryDate: createForm.licenceExpiry || null,
-        registeredAddress: createForm.address?.trim() || null,
-        city: createForm.city?.trim() || null,
-        postalCode: createForm.postcode?.trim() || null,
-        country: createForm.country?.trim() || null,
-        authorisingName: createForm.contactName?.trim() || null,
-        authorisingEmail: createForm.contactEmail?.trim() || null,
-        authorisingPhone: createForm.contactPhone?.trim() || null,
-        cosAllocation: createForm.annualCosAllocation || null,
-        activeCases: createForm.activeCases || null,
-        sponsoredWorkers: createForm.sponsoredWorkers || null,
-        riskLevel: createForm.riskLevel || null,
-        riskPct: createForm.riskPct || null,
-        outstandingBalance: createForm.outstanding || null,
-        notes: createForm.notes?.trim() || null,
       });
       showToast({
         message: res.data?.message || "Sponsor created successfully",
@@ -425,26 +322,6 @@ export default function AdminBusinesses() {
         role_id: Number(editForm.role_id),
         status: editForm.status,
         companyName: editForm.companyName?.trim() || null,
-        tradingName: editForm.tradingName?.trim() || null,
-        registrationNumber: editForm.companiesHouseNumber?.trim() || null,
-        industrySector: editForm.sector?.trim() || null,
-        sponsorLicenceNumber: editForm.sponsorLicenceNumber?.trim() || null,
-        licenceStatus: editForm.licenceStatus || null,
-        licenceExpiryDate: editForm.licenceExpiry || null,
-        registeredAddress: editForm.address?.trim() || null,
-        city: editForm.city?.trim() || null,
-        postalCode: editForm.postcode?.trim() || null,
-        country: editForm.country?.trim() || null,
-        authorisingName: editForm.contactName?.trim() || null,
-        authorisingEmail: editForm.contactEmail?.trim() || null,
-        authorisingPhone: editForm.contactPhone?.trim() || null,
-        cosAllocation: editForm.annualCosAllocation || null,
-        activeCases: editForm.activeCases || null,
-        sponsoredWorkers: editForm.sponsoredWorkers || null,
-        riskLevel: editForm.riskLevel || null,
-        riskPct: editForm.riskPct || null,
-        outstandingBalance: editForm.outstanding || null,
-        notes: editForm.notes?.trim() || null,
       });
       showToast({
         message: res.data?.message || "Sponsor updated successfully",
@@ -616,13 +493,16 @@ export default function AdminBusinesses() {
   };
 
   const downloadSampleCSV = () => {
+    // Basic-info-only import: a temporary password is generated and emailed per
+    // row; licence status / risk are managed later (licenceStatus is owned by the
+    // activation workflow), so they are intentionally not part of the template.
     const csvContent = [
-      'first_name,last_name,email,country_code,mobile,companyName,licenceStatus,riskLevel',
-      'Tech,Innovations,info@techinnovations.com,+1,5551234567,Tech Innovations Ltd,Active,Low',
-      'Global,Trade Solutions,contact@globaltrade.com,+44,2079460123,Global Trade Solutions,Active,Medium',
-      'Digital,Ventures,hello@digitalventures.io,+1,4159876543,Digital Ventures,Active,Low',
-      'Smart,Business Group,info@smartbusiness.co,+91,9876543210,Smart Business Group,Pending,Low',
-      'Enterprise,Connect,team@enterpriseconnect.net,+1,2125550199,Enterprise Connect,Active,Medium',
+      'first_name,last_name,email,country_code,mobile,companyName',
+      'Tech,Innovations,info@techinnovations.com,+1,5551234567,Tech Innovations Ltd',
+      'Global,Trade Solutions,contact@globaltrade.com,+44,2079460123,Global Trade Solutions',
+      'Digital,Ventures,hello@digitalventures.io,+1,4159876543,Digital Ventures',
+      'Smart,Business Group,info@smartbusiness.co,+91,9876543210,Smart Business Group',
+      'Enterprise,Connect,team@enterpriseconnect.net,+1,2125550199,Enterprise Connect',
     ].join('\n');
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -931,124 +811,12 @@ export default function AdminBusinesses() {
       >
         {modal.type === "create" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Company</p>
-            </div>
-            <Input
-              label="Legal Company Name"
-              name="companyName"
-              value={createForm.companyName}
-              onChange={handleCreateChange}
-              placeholder="TechNova Ltd"
-              required
-              error={errors.companyName}
-              className="sm:col-span-2"
-            />
-            <Input
-              label="Trading Name"
-              name="tradingName"
-              value={createForm.tradingName}
-              onChange={handleCreateChange}
-              placeholder="TechNova"
-            />
-            <Input
-              label="Companies House Number"
-              name="companiesHouseNumber"
-              value={createForm.companiesHouseNumber}
-              onChange={handleCreateChange}
-              placeholder="08472931"
-            />
-            <Input
-              label="Sector / Industry"
-              name="sector"
-              value={createForm.sector}
-              onChange={handleCreateChange}
-              options={[
-                { value: "Technology & IT", label: "Technology & IT" },
-                { value: "Recruitment & HR", label: "Recruitment & HR" },
-                { value: "Management Consulting", label: "Management Consulting" },
-                { value: "Financial Services", label: "Financial Services" },
-                { value: "Healthcare", label: "Healthcare" },
-                { value: "Education", label: "Education" },
-                { value: "Manufacturing", label: "Manufacturing" },
-                { value: "Other", label: "Other" },
-              ]}
-              className="sm:col-span-2"
-            />
-
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Sponsor Licence</p>
-            </div>
-            <Input
-              label="Sponsor Licence Number"
-              name="sponsorLicenceNumber"
-              value={createForm.sponsorLicenceNumber}
-              onChange={handleCreateChange}
-              placeholder="ABC123456"
-              error={errors.sponsorLicenceNumber}
-            />
-            <Input
-              label="Licence Status"
-              name="licenceStatus"
-              value={createForm.licenceStatus}
-              onChange={handleCreateChange}
-              options={[
-                { value: "Active", label: "Active" },
-                { value: "Expiring", label: "Expiring" },
-                { value: "Suspended", label: "Suspended" },
-                { value: "Revoked", label: "Revoked" },
-              ]}
-            />
-            <DatePicker
-              label="Licence Expiry Date"
-              name="licenceExpiry"
-              value={createForm.licenceExpiry}
-              onChange={handleCreateChange}
-              error={errors.licenceExpiry}
-              min={new Date().toISOString().split("T")[0]}
-            />
-
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Registered Address</p>
-            </div>
-            <Input
-              label="Street Address"
-              name="address"
-              value={createForm.address}
-              onChange={handleCreateChange}
-              placeholder="1 Canary Wharf"
-              className="sm:col-span-2"
-            />
-            <Input
-              label="City"
-              name="city"
-              value={createForm.city}
-              onChange={handleCreateChange}
-              placeholder="London"
-            />
-            <Input
-              label="Postcode"
-              name="postcode"
-              value={createForm.postcode}
-              onChange={handleCreateChange}
-              placeholder="E14 5AB"
-            />
-            <CountrySelect
-              label="Country"
-              name="country"
-              value={createForm.country}
-              onChange={handleCreateChange}
-              className="sm:col-span-2"
-            />
-
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Primary Contact (User Account)</p>
-            </div>
             <Input
               label="First name"
               name="first_name"
               value={createForm.first_name}
               onChange={handleCreateChange}
+              placeholder="John"
               required
               error={errors.first_name}
             />
@@ -1057,6 +825,7 @@ export default function AdminBusinesses() {
               name="last_name"
               value={createForm.last_name}
               onChange={handleCreateChange}
+              placeholder="Smith"
               required
               error={errors.last_name}
             />
@@ -1066,8 +835,10 @@ export default function AdminBusinesses() {
               type="email"
               value={createForm.email}
               onChange={handleCreateChange}
+              placeholder="name@company.com"
               required
               error={errors.email}
+              className="sm:col-span-2"
             />
             <PhoneInput
               split
@@ -1082,289 +853,30 @@ export default function AdminBusinesses() {
               className="sm:col-span-2"
             />
             <Input
-              label="Password"
-              name="password"
-              type="password"
-              value={createForm.password}
+              label="Company Name"
+              name="companyName"
+              value={createForm.companyName}
               onChange={handleCreateChange}
+              placeholder="TechNova Ltd"
               required
-              error={errors.password}
-            />
-            <Input
-              label="Confirm password"
-              name="confirm_password"
-              type="password"
-              value={createForm.confirm_password}
-              onChange={handleCreateChange}
-              required
-              error={errors.confirm_password}
-            />
-
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Compliance & Metrics</p>
-            </div>
-            <Input
-              label="Annual CoS Allocation"
-              name="annualCosAllocation"
-              value={createForm.annualCosAllocation}
-              onChange={handleCreateChange}
-              type="number"
-              placeholder="50"
-            />
-            <Input
-              label="Active Cases"
-              name="activeCases"
-              value={createForm.activeCases}
-              onChange={handleCreateChange}
-              type="number"
-              placeholder="12"
-            />
-            <Input
-              label="Sponsored Workers"
-              name="sponsoredWorkers"
-              value={createForm.sponsoredWorkers}
-              onChange={handleCreateChange}
-              type="number"
-              placeholder="28"
-            />
-            <Input
-              label="Risk Level"
-              name="riskLevel"
-              value={createForm.riskLevel}
-              onChange={handleCreateChange}
-              options={[
-                { value: "Low", label: "Low" },
-                { value: "Medium", label: "Medium" },
-                { value: "High", label: "High" },
-              ]}
-            />
-            <Input
-              label="Risk Score %"
-              name="riskPct"
-              value={createForm.riskPct}
-              onChange={handleCreateChange}
-              type="number"
-              placeholder="20"
-            />
-            <Input
-              label="Outstanding Fees (£)"
-              name="outstanding"
-              value={createForm.outstanding}
-              onChange={handleCreateChange}
-              type="number"
-              step="0.01"
-              placeholder="12400"
-            />
-
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Notes</p>
-            </div>
-            <Input
-              label="Internal Notes"
-              name="notes"
-              value={createForm.notes}
-              onChange={handleCreateChange}
-              rows={3}
-              placeholder="Compliance notes, renewal deadlines…"
+              error={errors.companyName}
               className="sm:col-span-2"
             />
+            <div className="sm:col-span-2 rounded-xl bg-indigo-50 border border-indigo-100 p-3 mt-1">
+              <p className="text-xs text-indigo-700 font-semibold">
+                A temporary password is generated automatically and emailed to the sponsor with their login link — no password needs to be set here. Other company &amp; compliance details can be added later from the sponsor profile.
+              </p>
+            </div>
           </div>
         )}
         {modal.type === "edit" && editForm && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Company</p>
-            </div>
-            <Input
-              label="Legal Company Name"
-              name="companyName"
-              value={editForm.companyName || ""}
-              onChange={handleEditChange}
-              className="sm:col-span-2"
-            />
-            <Input
-              label="Trading Name"
-              name="tradingName"
-              value={editForm.tradingName || ""}
-              onChange={handleEditChange}
-            />
-            <Input
-              label="Companies House Number"
-              name="companiesHouseNumber"
-              value={editForm.companiesHouseNumber || ""}
-              onChange={handleEditChange}
-            />
-            <Input
-              label="Sector / Industry"
-              name="sector"
-              value={editForm.sector || ""}
-              onChange={handleEditChange}
-              options={[
-                { value: "Technology & IT", label: "Technology & IT" },
-                { value: "Recruitment & HR", label: "Recruitment & HR" },
-                { value: "Management Consulting", label: "Management Consulting" },
-                { value: "Financial Services", label: "Financial Services" },
-                { value: "Healthcare", label: "Healthcare" },
-                { value: "Education", label: "Education" },
-                { value: "Manufacturing", label: "Manufacturing" },
-                { value: "Other", label: "Other" },
-              ]}
-              className="sm:col-span-2"
-            />
-
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Sponsor Licence</p>
-            </div>
-            <Input
-              label="Sponsor Licence Number"
-              name="sponsorLicenceNumber"
-              value={editForm.sponsorLicenceNumber || ""}
-              onChange={handleEditChange}
-            />
-            <Input
-              label="Licence Status"
-              name="licenceStatus"
-              value={editForm.licenceStatus || ""}
-              onChange={handleEditChange}
-              options={[
-                { value: "Active", label: "Active" },
-                { value: "Expiring", label: "Expiring" },
-                { value: "Suspended", label: "Suspended" },
-                { value: "Revoked", label: "Revoked" },
-              ]}
-            />
-            <DatePicker
-              label="Licence Expiry Date"
-              name="licenceExpiry"
-              value={editForm.licenceExpiry || ""}
-              onChange={handleEditChange}
-            />
-
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Registered Address</p>
-            </div>
-            <Input
-              label="Street Address"
-              name="address"
-              value={editForm.address || ""}
-              onChange={handleEditChange}
-              className="sm:col-span-2"
-            />
-            <Input
-              label="City"
-              name="city"
-              value={editForm.city || ""}
-              onChange={handleEditChange}
-            />
-            <Input
-              label="Postcode"
-              name="postcode"
-              value={editForm.postcode || ""}
-              onChange={handleEditChange}
-            />
-            <CountrySelect
-              label="Country"
-              name="country"
-              value={editForm.country || ""}
-              onChange={handleEditChange}
-              className="sm:col-span-2"
-            />
-
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Primary Contact</p>
-            </div>
-            <Input
-              label="Contact Name"
-              name="contactName"
-              value={editForm.contactName || ""}
-              onChange={handleEditChange}
-              className="sm:col-span-2"
-            />
-            <Input
-              label="Contact Email"
-              name="contactEmail"
-              type="email"
-              value={editForm.contactEmail || ""}
-              onChange={handleEditChange}
-            />
-            <PhoneInput
-              label="Contact Phone"
-              name="contactPhone"
-              value={editForm.contactPhone || ""}
-              onChange={handleEditChange}
-            />
-
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Compliance & Metrics</p>
-            </div>
-            <Input
-              label="Annual CoS Allocation"
-              name="annualCosAllocation"
-              value={editForm.annualCosAllocation || ""}
-              onChange={handleEditChange}
-              type="number"
-            />
-            <Input
-              label="Active Cases"
-              name="activeCases"
-              value={editForm.activeCases || ""}
-              onChange={handleEditChange}
-              type="number"
-            />
-            <Input
-              label="Sponsored Workers"
-              name="sponsoredWorkers"
-              value={editForm.sponsoredWorkers || ""}
-              onChange={handleEditChange}
-              type="number"
-            />
-            <Input
-              label="Risk Level"
-              name="riskLevel"
-              value={editForm.riskLevel || ""}
-              onChange={handleEditChange}
-              options={[
-                { value: "Low", label: "Low" },
-                { value: "Medium", label: "Medium" },
-                { value: "High", label: "High" },
-              ]}
-            />
-            <Input
-              label="Risk Score %"
-              name="riskPct"
-              value={editForm.riskPct || ""}
-              onChange={handleEditChange}
-              type="number"
-            />
-            <Input
-              label="Outstanding Fees (£)"
-              name="outstanding"
-              value={editForm.outstanding || ""}
-              onChange={handleEditChange}
-              type="number"
-              step="0.01"
-            />
-
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Notes</p>
-            </div>
-            <Input
-              label="Internal Notes"
-              name="notes"
-              value={editForm.notes || ""}
-              onChange={handleEditChange}
-              rows={3}
-              className="sm:col-span-2"
-            />
-
-            <div className="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">User Account Status</p>
-            </div>
             <Input
               label="First name"
               name="first_name"
               value={editForm.first_name}
               onChange={handleEditChange}
+              placeholder="John"
               required
               error={errors.first_name}
             />
@@ -1373,6 +885,7 @@ export default function AdminBusinesses() {
               name="last_name"
               value={editForm.last_name}
               onChange={handleEditChange}
+              placeholder="Smith"
               required
               error={errors.last_name}
             />
@@ -1382,8 +895,10 @@ export default function AdminBusinesses() {
               type="email"
               value={editForm.email}
               onChange={handleEditChange}
+              placeholder="name@company.com"
               required
               error={errors.email}
+              className="sm:col-span-2"
             />
             <PhoneInput
               split
@@ -1398,12 +913,13 @@ export default function AdminBusinesses() {
               className="sm:col-span-2"
             />
             <Input
-              label="Role"
-              name="role_id"
-              value={editForm.role_id}
+              label="Company Name"
+              name="companyName"
+              value={editForm.companyName || ""}
               onChange={handleEditChange}
-              options={ROLE_OPTIONS}
               required
+              error={errors.companyName}
+              className="sm:col-span-2"
             />
             <Input
               label="Status"

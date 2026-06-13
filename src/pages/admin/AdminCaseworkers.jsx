@@ -37,16 +37,7 @@ import { getOrganisationSlugFromHost } from "../../utils/organisationHost";
 import { formatDateLong } from "../../utils/datetime";
 
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
-
-const AVATAR_COLORS = [
-  "bg-blue-500",
-  "bg-yellow-500",
-  "bg-red-500",
-  "bg-green-500",
-  "bg-purple-500",
-  "bg-pink-500",
-  "bg-teal-500",
-];
+import { AVATAR_COLORS, initialsFrom, fullName } from "./adminHelpers";
 
 const ROLE_OPTIONS = [{ value: "2", label: "Caseworker" }];
 
@@ -87,17 +78,6 @@ function formatStatusLabel(status) {
   if (status === "active") return "Active";
   if (status === "inactive") return "Inactive";
   return status || "—";
-}
-
-function initialsFrom(row) {
-  const a = (row.first_name || "").trim().charAt(0);
-  const b = (row.last_name || "").trim().charAt(0);
-  const s = `${a}${b}`.toUpperCase();
-  return s || "?";
-}
-
-function fullName(row) {
-  return `${row.first_name || ""} ${row.last_name || ""}`.trim() || "—";
 }
 
 function departmentLabel(row) {
