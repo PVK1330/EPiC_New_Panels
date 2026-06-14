@@ -133,7 +133,7 @@ const SuperadminPayments = () => {
           <div className="col-span-4 text-center py-10 text-gray-400">Loading stats...</div>
         ) : (
           stats.map((stat, idx) => (
-            <StatCard key={idx} {...stat} delay={idx * 0.05} />
+            <StatCard key={stat.title} {...stat} delay={idx * 0.05} />
           ))
         )}
       </div>

@@ -1,5 +1,6 @@
 import { FiMail, FiX, FiMonitor, FiSmartphone, FiArrowLeft } from "react-icons/fi";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import DOMPurify from "dompurify";
 import Button from "../../Button";
 
 export default function EmailTemplatePreview({
@@ -7,6 +8,12 @@ export default function EmailTemplatePreview({
   onClose
 }) {
   const [device, setDevice] = useState("desktop");
+
+  // BUG-004: sanitise the template HTML before rendering to prevent stored XSS.
+  const sanitizedBody = useMemo(
+    () => DOMPurify.sanitize(template?.body ?? ""),
+    [template?.body],
+  );
 
   if (!template) return null;
 
@@ -68,7 +75,7 @@ export default function EmailTemplatePreview({
           <div className={`p-8 overflow-y-auto flex-1 ${device === 'mobile' ? 'bg-white rounded-[2rem]' : ''}`}>
             <div
               className="prose prose-sm max-w-none text-gray-700"
-              dangerouslySetInnerHTML={{ __html: template.body }}
+              dangerouslySetInnerHTML={{ __html: sanitizedBody }}
             />
           </div>
 

@@ -62,11 +62,16 @@ const useOtp = (type = "register") => {
         const normalizedEmail = String(email || "").trim().toLowerCase();
         const res = await verifyResetOtp({ email: normalizedEmail, otp });
         const token = getPasswordResetToken(res);
+        // BUG-020: only advance to /set-password when verification actually
+        // succeeded (a reset token was issued). Otherwise surface the error and
+        // stay on the OTP screen.
         if (token) {
           sessionStorage.setItem("reset_token", token);
           sessionStorage.setItem("pending_reset_email", normalizedEmail);
+          navigate("/set-password");
+        } else {
+          setError(res?.message || "Invalid or expired code. Please try again.");
         }
-        navigate("/set-password");
       }
     } catch (err) {
       setError(err.message);

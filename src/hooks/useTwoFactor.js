@@ -53,11 +53,12 @@ const useTwoFactor = () => {
     }
   };
 
-  const verifyLoginTwoFactor = async (email, password, token) => {
+  const verifyLoginTwoFactor = async (email, token) => {
     setIsLoading(true);
     setError('');
     try {
-      const res = await verifyTwoFactor({ email, password, token });
+      // BUG-003: the password is intentionally not sent — /2fa/verify needs only { email, token }.
+      const res = await verifyTwoFactor({ email, token });
       const { user: userData, allowedModules } = getAuthUserAndToken(res);
       if (!userData) {
         throw new Error(res?.message || 'Invalid 2FA response');
@@ -73,10 +74,11 @@ const useTwoFactor = () => {
         allowedModules,
       }));
       sessionStorage.removeItem('pending_2fa_email');
-      sessionStorage.removeItem('pending_2fa_password');
       navigate(getDashboardRouteForUser(user));
+      return { success: true };
     } catch (err) {
       setError(err.message);
+      return { success: false, message: err.message };
     } finally {
       setIsLoading(false);
     }

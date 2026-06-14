@@ -383,7 +383,7 @@ const AdminLicenceApplications = () => {
           { label: "Gov. Processing",      value: applications.filter(a => ["Government Processing", "Decision Pending"].includes(a.status)).length,                           color: "text-violet-600" },
           { label: "Approved",             value: applications.filter(a => a.status === "Approved").length,                                                                    color: "text-emerald-600" },
         ].map((stat, i) => (
-          <div key={i} className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+          <div key={stat.label} className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">{stat.label}</p>
             <p className={`text-3xl font-black ${stat.color}`}>{stat.value}</p>
           </div>
@@ -664,7 +664,7 @@ const AdminLicenceApplications = () => {
                         const downloading = docBusy === `${i}:download`;
                         return (
                           <div
-                            key={i}
+                            key={doc}
                             className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl hover:border-primary/20 transition-all shadow-sm"
                           >
                             <button

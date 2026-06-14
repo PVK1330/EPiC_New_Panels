@@ -52,7 +52,14 @@ api.interceptors.request.use(async (config) => {
   const method = (config.method || "get").toLowerCase();
   if (!SAFE_METHODS.has(method)) {
     const token = await ensureCsrfToken();
-    if (token) config.headers[CSRF_HEADER] = token;
+    if (!token) {
+      // BUG-021: never send a mutating request without CSRF protection. Abort and
+      // surface a clear, recoverable error instead of silently firing unprotected.
+      throw new axios.Cancel(
+        "Security token unavailable. Please refresh the page and try again.",
+      );
+    }
+    config.headers[CSRF_HEADER] = token;
   }
   return config;
 });

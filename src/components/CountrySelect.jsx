@@ -114,7 +114,7 @@ export default function CountrySelect({
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
-        <label className="text-sm font-medium text-gray-700">
+        <label htmlFor={name} className="text-sm font-medium text-gray-700">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
@@ -122,6 +122,7 @@ export default function CountrySelect({
 
       <button
         type="button"
+        id={name}
         ref={triggerRef}
         disabled={disabled}
         onClick={() => (open ? setOpen(false) : openMenu())}

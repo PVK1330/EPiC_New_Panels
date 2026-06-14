@@ -348,7 +348,7 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
               <div className="divide-y divide-gray-50">
                 {items.map((item, idx) => (
                   <div
-                    key={idx}
+                    key={item.documentName}
                     className="px-5 py-4 hover:bg-gray-50/50 transition-colors flex items-start gap-4"
                   >
                     <div className="shrink-0 mt-0.5">

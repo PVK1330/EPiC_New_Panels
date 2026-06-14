@@ -276,7 +276,7 @@ const BusinessSettings = () => {
                     "Push notifications for system updates",
                   ].map((item, index) => (
                     <div
-                      key={index}
+                      key={item}
                       className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
                     >
                       <span className="text-sm font-bold text-gray-700">{item}</span>

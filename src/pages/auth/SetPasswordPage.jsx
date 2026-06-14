@@ -15,11 +15,14 @@ export default function SetPasswordPage() {
   const email = (sessionStorage.getItem("pending_reset_email") || "").trim().toLowerCase();
   const [token, setToken] = useState(sessionStorage.getItem("reset_token") || "");
 
+  // BUG-027: without a reset token there is nothing to do on this page — send the
+  // user back to start the reset flow instead of letting them submit a tokenless
+  // request that the server will reject.
   useEffect(() => {
     if (!sessionStorage.getItem("reset_token")) {
-      setApiError("Reset session expired. Please verify OTP again.");
+      navigate("/forgot-password", { replace: true });
     }
-  }, []);
+  }, [navigate]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -42,7 +45,6 @@ export default function SetPasswordPage() {
     if (Object.keys(errs).length) return setErrors(errs);
     setIsLoading(true);
     try {
-      console.log("Submitting password reset with token:", token ? "Exists" : "MISSING");
       await setNewPassword({
         email,
         password: form.password,

@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { performLogout } from "../utils/performLogout";
 import SuperadminSidebar from "../components/superadmin/SuperadminSidebar";
 import PlatformNotificationDropdown from "../components/superadmin/PlatformNotificationDropdown";
-import useIdleTimer from "../hooks/useIdleTimer";
 import {
   RiMenuLine,
   RiHome5Line,
@@ -32,8 +31,9 @@ const SuperadminLayout = () => {
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
 
-  // ── Inactivity auto-logout (superadmin only) ──────────────────────────────
-  useIdleTimer();
+  // Inactivity auto-logout is handled app-wide by <SessionTimeout> in App.jsx
+  // (single source of truth — BUG-010). The previous superadmin-only useIdleTimer
+  // was removed to avoid two competing timers with a less-secure logout path.
 
   const handleLogout = () => {
     performLogout(dispatch, navigate);

@@ -323,7 +323,7 @@ export default function CandidateCCL() {
             <ul className="space-y-2 text-sm">
               {instalments.map((row, i) => (
                 <li
-                  key={i}
+                  key={row.label}
                   className="flex justify-between gap-2 font-bold text-secondary border-b border-gray-50 pb-2"
                 >
                   <span>{row.label}</span>

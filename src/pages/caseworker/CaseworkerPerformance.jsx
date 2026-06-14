@@ -230,7 +230,7 @@ const CaseworkerPerformance = () => {
           <div className="p-5">
             <div className="grid grid-cols-4 gap-3 mb-4">
               {(monthlyTrend || []).map((trend, idx) => (
-                <div key={idx} className="text-center">
+                <div key={trend.month} className="text-center">
                   <div className={`text-[10px] font-mono uppercase ${idx === monthlyTrend.length - 1 ? 'text-secondary' : 'text-gray-400'} mb-1`}>
                     {trend.month}
                   </div>
@@ -244,7 +244,7 @@ const CaseworkerPerformance = () => {
             <div className="flex items-end gap-2 h-28 pt-4">
               {(monthlyTrend || []).map((trend, idx) => (
                 <div
-                  key={idx}
+                  key={trend.month}
                   className={`flex-1 rounded-t-md ${idx === monthlyTrend.length - 1 ? "bg-secondary" : "bg-secondary/30"}`}
                   style={{ height: `${Math.max(10, trend.score)}%` }}
                 />

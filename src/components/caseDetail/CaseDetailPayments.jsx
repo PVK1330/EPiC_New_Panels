@@ -157,7 +157,7 @@ const CaseDetailPayments = ({ payments, onReload }) => {
             {instalments.length > 0 ? (
               <ul className="text-xs font-bold text-gray-700 space-y-1">
                 {instalments.map((row, i) => (
-                  <li key={i}>
+                  <li key={row.label}>
                     {row.label}: £{Number(row.amount).toFixed(2)}
                     {row.dueDate
                       ? ` — due ${formatDate(row.dueDate)}`

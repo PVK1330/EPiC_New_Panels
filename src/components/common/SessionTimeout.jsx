@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../../store/slices/authSlice';
 import { logoutUser } from '../../services/auth.service';
+import { getSecuritySettings } from '../../services/platformSettingsApi';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -12,11 +13,22 @@ const SessionTimeout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const token = useSelector((state) => state.auth.token);
-  
+  const user = useSelector((state) => state.auth.user);
+
+  // BUG-010: this is now the single app-wide inactivity mechanism. Superadmins
+  // previously had a separate useIdleTimer that read inactivity_timeout_minutes
+  // from the platform security settings; preserve that source for superadmins
+  // while every other role uses the env-configured default.
+  const [platformTimeoutMinutes, setPlatformTimeoutMinutes] = useState(null);
+  const isSuperadmin = String(user?.role || '').toLowerCase() === 'superadmin';
+
   // Timeout values in milliseconds
   // Get from env, fallback to 60 if not set. Default is 60 minutes.
-  const idleTimeoutMinutes = Number(import.meta.env.VITE_SESSION_IDLE_TIMEOUT) || 60;
-  
+  const idleTimeoutMinutes =
+    (isSuperadmin && platformTimeoutMinutes) ||
+    Number(import.meta.env.VITE_SESSION_IDLE_TIMEOUT) ||
+    60;
+
   // Calculate when to show the warning. If timeout is <= 5 mins, show warning at half the time.
   const warningThresholdMinutes = idleTimeoutMinutes > 5 ? 5 : idleTimeoutMinutes / 2;
   const timeoutMs = idleTimeoutMinutes * 60 * 1000;
@@ -50,6 +62,28 @@ const SessionTimeout = ({ children }) => {
     toast.error('You have been logged out due to inactivity.');
     navigate('/login');
   }, [dispatch, navigate, idleTimeoutMinutes]);
+
+  // Superadmin-only: pull the configured inactivity timeout from platform settings.
+  useEffect(() => {
+    if (!token || !isSuperadmin) {
+      setPlatformTimeoutMinutes(null);
+      return;
+    }
+    let cancelled = false;
+    getSecuritySettings()
+      .then((res) => {
+        const minutes = res?.data?.data?.settings?.inactivity_timeout_minutes;
+        if (!cancelled && Number.isFinite(Number(minutes)) && Number(minutes) > 0) {
+          setPlatformTimeoutMinutes(Number(minutes));
+        }
+      })
+      .catch(() => {
+        // Settings unreachable — fall back to the env/default timeout.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, isSuperadmin]);
 
   const startTimers = useCallback(() => {
     if (!token) return;

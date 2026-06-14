@@ -177,7 +177,7 @@ const TwoFactorSetup = ({ onSetupComplete, onCancel }) => {
             </p>
             <div className="grid grid-cols-2 gap-2">
               {backupCodes.map((code, index) => (
-                <code key={index} className="text-xs font-mono bg-white px-2 py-1 rounded border text-yellow-900">
+                <code key={code} className="text-xs font-mono bg-white px-2 py-1 rounded border text-yellow-900">
                   {code}
                 </code>
               ))}

@@ -35,8 +35,15 @@ export function AuthProvider({ children }) {
           }
         }
       })
-      .catch(() => {
-        // Not authenticated — cookie missing or expired
+      .catch((err) => {
+        // BUG-024: a failed /auth/me means no valid session (cookie missing or
+        // expired). This is expected for logged-out visitors on public pages, so
+        // we do NOT force a redirect here — route guards already send protected
+        // routes to /login. We surface it for diagnostics instead of swallowing.
+        if (err?.response && err.response.status !== 401) {
+          // 401 is the normal "not authenticated" case; anything else is unusual.
+          console.warn('Session restoration check failed:', err.message);
+        }
       })
       .finally(() => {
         if (!cancelled) setSessionChecked(true);

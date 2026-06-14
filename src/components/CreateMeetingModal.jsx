@@ -99,7 +99,7 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <label htmlFor="start_time" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                 <Calendar className="w-4 h-4" />
                 Start Time
               </label>
@@ -113,7 +113,7 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
 
             <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <label htmlFor="end_time" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                 <Clock className="w-4 h-4" />
                 End Time
               </label>
@@ -128,11 +128,12 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess }) => {
           </div>
 
           <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+            <label htmlFor="attendees" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
               <Users className="w-4 h-4" />
               Attendees (comma-separated emails)
             </label>
             <textarea
+              id="attendees"
               name="attendees"
               value={form.attendees}
               onChange={handleChange}
@@ -154,10 +155,11 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-semibold text-gray-700 mb-2 block">
+              <label htmlFor="meeting_type" className="text-sm font-semibold text-gray-700 mb-2 block">
                 Meeting Type
               </label>
               <select
+                id="meeting_type"
                 name="meeting_type"
                 value={form.meeting_type}
                 onChange={handleChange}
@@ -170,10 +172,11 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
 
             <div>
-              <label className="text-sm font-semibold text-gray-700 mb-2 block">
+              <label htmlFor="reminder_minutes" className="text-sm font-semibold text-gray-700 mb-2 block">
                 Reminder (minutes before)
               </label>
               <input
+                id="reminder_minutes"
                 type="number"
                 name="reminder_minutes"
                 value={form.reminder_minutes}

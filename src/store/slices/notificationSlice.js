@@ -13,7 +13,8 @@ export const fetchNotifications = createAsyncThunk(
   async (params = {}, { rejectWithValue }) => {
     try {
       const response = await getNotifications(params);
-      return response.data.data;
+      // BUG-022: null-safe access — never assume the nested data shape exists.
+      return response?.data?.data ?? { notifications: [] };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch notifications');
     }
@@ -25,7 +26,8 @@ export const fetchUnreadCount = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await getUnreadNotificationCount();
-      return response.data.data;
+      // BUG-022: null-safe access — default to a zero count if the shape is missing.
+      return response?.data?.data ?? { count: 0 };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch unread count');
     }

@@ -112,7 +112,7 @@ export default function AdminCclFeeApprovals() {
                 {plan.length > 0 && (
                   <ul className="text-sm font-bold text-gray-700 space-y-1 border-t border-gray-50 pt-3">
                     {plan.map((row, i) => (
-                      <li key={i} className="flex justify-between gap-2">
+                      <li key={row.label} className="flex justify-between gap-2">
                         <span>{row.label}</span>
                         <span>
                           £{Number(row.amount).toFixed(2)}

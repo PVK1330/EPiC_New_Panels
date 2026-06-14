@@ -5,14 +5,16 @@ import Button from "../../components/Button";
 import eliteLogo from "../../assets/elitepic_logo.png";
 import useTwoFactor from "../../hooks/useTwoFactor";
 
+const MAX_2FA_ATTEMPTS = 5;
+
 export default function TwoFactorPage() {
   const navigate = useNavigate();
   const { verifyLoginTwoFactor, isLoading, error } = useTwoFactor();
   const [token, setToken] = useState("");
   const [tokenError, setTokenError] = useState("");
+  const [attempts, setAttempts] = useState(0);
 
   const email = sessionStorage.getItem("pending_2fa_email") || "";
-  const password = sessionStorage.getItem("pending_2fa_password") || "";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,7 +23,24 @@ export default function TwoFactorPage() {
       return;
     }
     setTokenError("");
-    await verifyLoginTwoFactor(email, password, token.trim());
+    const result = await verifyLoginTwoFactor(email, token.trim());
+
+    // BUG-030: cap the number of invalid 2FA attempts. After the limit, clear any
+    // pending login state and bounce the user back to sign in.
+    if (result && !result.success) {
+      const nextAttempts = attempts + 1;
+      setAttempts(nextAttempts);
+      if (nextAttempts >= MAX_2FA_ATTEMPTS) {
+        sessionStorage.removeItem("pending_2fa_email");
+        navigate("/login?reason=too_many_attempts");
+      } else {
+        setTokenError(
+          `Invalid code. ${MAX_2FA_ATTEMPTS - nextAttempts} attempt${
+            MAX_2FA_ATTEMPTS - nextAttempts === 1 ? "" : "s"
+          } remaining.`,
+        );
+      }
+    }
   };
 
   return (
