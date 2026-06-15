@@ -18,9 +18,9 @@ const DECLARATIONS = [
 ];
 
 export default function Step8Declarations({ data, onChange, onBack, onSubmit, submitting, submitErrors }) {
-  const dec = data.declarations || {};
+  const dec = data.declaration || {};
 
-  const set = (key, val) => onChange({ declarations: { ...dec, [key]: val } });
+  const set = (key, val) => onChange({ declaration: { ...dec, [key]: val } });
 
   const allChecked = DECLARATIONS.every((d) => dec[d.key] === true);
   const canSubmit = allChecked && dec.signatoryName?.trim() && dec.signedDate;
@@ -81,7 +81,7 @@ export default function Step8Declarations({ data, onChange, onBack, onSubmit, su
           Back
         </button>
         <button
-          onClick={() => !submitting && canSubmit && onSubmit({ declarations: dec })}
+          onClick={() => !submitting && canSubmit && onSubmit({ declaration: dec })}
           disabled={!canSubmit || submitting}
           className="bg-secondary text-white font-black px-8 py-3 rounded-2xl shadow-xl shadow-secondary/20 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
         >

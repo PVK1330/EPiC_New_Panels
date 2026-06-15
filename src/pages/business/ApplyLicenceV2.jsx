@@ -24,7 +24,7 @@ import Step8Declarations from "../../components/licenceV2/Step8Declarations";
 const EMPTY = {
   routes: [], sponsorSize: "", organisationInfo: {}, cosRequirements: [],
   appendixDocuments: [], authorisingOfficer: {}, keyContact: {},
-  level1Users: [], declarations: {}, fee: {},
+  level1Users: [], declaration: {}, fee: {},
 };
 
 function appToFormData(app) {
@@ -38,7 +38,7 @@ function appToFormData(app) {
     authorisingOfficer: app.authorisingOfficer || {},
     keyContact: app.keyContact || {},
     level1Users: app.level1Users || [],
-    declarations: app.declaration || {},
+    declaration: app.declaration || {},
     fee: app.fee || {},
   };
 }
