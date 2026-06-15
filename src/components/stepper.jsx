@@ -58,7 +58,7 @@ const Stepper = () => {
 
           return (
             <div
-              key={index}
+              key={item.step}
               className="relative z-10 flex flex-col items-center text-center w-full"
             >
               {/* Circle */}

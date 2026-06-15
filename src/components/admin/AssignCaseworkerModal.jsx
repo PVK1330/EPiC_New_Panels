@@ -200,10 +200,11 @@ export default function AssignCaseworkerModal({
             />
 
             <div>
-              <label className="text-sm font-medium text-gray-700">
+              <label htmlFor="assign-caseworker-reason" className="text-sm font-medium text-gray-700">
                 Reason <span className="text-red-500">*</span>
               </label>
               <textarea
+                id="assign-caseworker-reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}

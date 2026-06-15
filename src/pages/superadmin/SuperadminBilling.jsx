@@ -112,7 +112,7 @@ const SuperadminBilling = () => {
  
  return (
   <motion.div
-   key={idx}
+   key={stat.title}
    initial={{ opacity: 0, scale: 0.95 }}
    animate={{ opacity: 1, scale: 1 }}
    transition={{ duration: 0.3, delay: idx * 0.05 }}
@@ -181,7 +181,7 @@ const SuperadminBilling = () => {
  </tr>
  ) : (
  filteredBilling.map((item, idx) => (
- <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
+ <tr key={item.invoice_number} className="hover:bg-gray-50/50 transition-colors group">
  <td className="px-4 py-3">
  <span className="text-sm font-semibold text-secondary bg-gray-50 px-2 py-0.5 rounded border border-gray-100 group-hover:text-primary transition-all">
  {item.invoice_number}

@@ -542,12 +542,13 @@ const Login = () => {
                   required
                 />
                 <div>
-                  <label className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2 block">
+                  <label htmlFor="register-country-code" className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2 block">
                     Phone number <span className="text-primary ml-1">*</span>
                   </label>
                   <div className="flex gap-2">
                     <div className="relative">
                       <select
+                        id="register-country-code"
                         value={selectedCountry.code}
                         onChange={(e) => {
                           const country = COUNTRIES.find(
@@ -558,7 +559,7 @@ const Login = () => {
                         className="appearance-none bg-white border border-gray-200 rounded-xl px-3 py-2 pr-8 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30 cursor-pointer"
                       >
                         {COUNTRIES.map((country, i) => (
-                          <option key={i} value={country.code}>
+                          <option key={country.name} value={country.code}>
                             {country.code}
                           </option>
                         ))}

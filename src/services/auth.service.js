@@ -1,6 +1,13 @@
 import { apiClient } from "./axios.instance";
 
+// Normalises an axios/network error into a thrown Error with a human-readable
+// message. It intentionally THROWS (every caller invokes it from a catch block
+// and relies on propagation) — see BUG-025/BUG-029. The added guard prevents a
+// crash when `error` is null/undefined or a non-object (BUG-029).
 const extractError = (error, fallback) => {
+  if (!error || typeof error !== "object") {
+    throw new Error(fallback || "An unknown error occurred");
+  }
   const d = error.response?.data;
   if (typeof d?.message === "string" && d.message.trim()) {
     throw new Error(d.message);
@@ -8,10 +15,10 @@ const extractError = (error, fallback) => {
   if (typeof d?.error === "string" && d.error.trim()) {
     throw new Error(d.error);
   }
-  if (error.message) {
+  if (typeof error.message === "string" && error.message.trim()) {
     throw new Error(error.message);
   }
-  throw new Error(fallback);
+  throw new Error(fallback || "An unknown error occurred");
 };
 
 export const registerUser = async (data) => {

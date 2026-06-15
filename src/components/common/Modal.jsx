@@ -1,22 +1,21 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RiCloseLine } from 'react-icons/ri';
+import useModalKeyboard from '../../hooks/useModalKeyboard';
 
 const Modal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidth = 'max-w-lg' }) => {
-  // Handle Escape key
+  // Handle Escape key (shared across modals)
+  useModalKeyboard({ isOpen, onClose });
+
+  // Lock body scroll while open
   useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
     if (isOpen) {
-      window.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
     }
     return () => {
-      window.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

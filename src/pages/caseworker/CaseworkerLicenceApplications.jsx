@@ -506,7 +506,7 @@ const CaseworkerLicenceApplications = () => {
                         const previewing = docBusy === `${i}:preview`;
                         const downloading = docBusy === `${i}:download`;
                         return (
-                          <div key={i} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl hover:border-primary/20 transition-all shadow-sm">
+                          <div key={doc} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl hover:border-primary/20 transition-all shadow-sm">
                             <button
                               type="button"
                               onClick={() => handleDocument(i, "preview")}
@@ -661,7 +661,7 @@ const CaseworkerLicenceApplications = () => {
                               <div>
                                 <p className="text-xs font-black text-amber-700">Intake not yet complete</p>
                                 {intakeReadiness?.reasons?.map((r, i) => (
-                                  <p key={i} className="text-[11px] text-amber-600 mt-0.5">• {r}</p>
+                                  <p key={r} className="text-[11px] text-amber-600 mt-0.5">• {r}</p>
                                 ))}
                                 <button
                                   onClick={() => setIntakeTab("intake")}

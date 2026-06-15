@@ -168,7 +168,7 @@ export default function AdminCosRequests() {
           { label: "Allocated", value: counts.allocated, color: "text-violet-600" },
           { label: "Rejected", value: counts.rejected, color: "text-red-600" },
         ].map((s, i) => (
-          <div key={i} className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+          <div key={s.label} className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
             <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">{s.label}</p>
             <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
           </div>

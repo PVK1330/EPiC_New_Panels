@@ -550,7 +550,7 @@ const LicenceProcess = () => {
                       ? app.requestedDocuments
                       : [app.requestedDocuments]
                     ).map((doc, i) => (
-                      <span key={i} className="bg-white border border-red-200 text-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wide">
+                      <span key={doc} className="bg-white border border-red-200 text-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wide">
                         {doc}
                       </span>
                     ))}
@@ -612,7 +612,7 @@ const LicenceProcess = () => {
                         : "Intake not yet complete"}
                     </p>
                     {!intakeData.readiness.isReady && intakeData.readiness.reasons?.map((r, i) => (
-                      <p key={i} className="text-xs text-amber-600 mt-1">• {r}</p>
+                      <p key={r} className="text-xs text-amber-600 mt-1">• {r}</p>
                     ))}
                   </div>
                 </div>

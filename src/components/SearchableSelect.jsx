@@ -24,6 +24,13 @@ const SearchableSelect = ({
 
   const currentValues = getValue();
 
+  // Stable id derived from the label so the <label htmlFor> matches the search
+  // input. The trigger itself is a <div> (not labelable), so the label points at
+  // the inner search field, which receives focus when the menu opens.
+  const fieldId = label
+    ? `searchable-select-${String(label).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`
+    : undefined;
+
   const selectedOptions = isMulti 
     ? options.filter(opt => currentValues.includes(opt.value))
     : options.find(opt => String(opt.value) === String(value));
@@ -64,7 +71,7 @@ const SearchableSelect = ({
   return (
     <div className="relative w-full" ref={containerRef}>
       {label && (
-        <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">
+        <label htmlFor={fieldId} className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">
           {label} {required && <span className="text-primary">*</span>}
         </label>
       )}
@@ -124,6 +131,7 @@ const SearchableSelect = ({
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                 <input
+                  id={fieldId}
                   autoFocus
                   type="text"
                   placeholder={searchPlaceholder}

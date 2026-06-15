@@ -215,7 +215,7 @@ const SuperadminDashboard = () => {
             <>
               <div className="flex-1 min-h-[200px] flex items-end gap-1.5 pb-2 border-b border-gray-100">
                 {monthlyRev.map((m, i) => (
-                  <div key={i} className="flex-1 group relative flex flex-col items-center justify-end h-full">
+                  <div key={m.month} className="flex-1 group relative flex flex-col items-center justify-end h-full">
                     <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.max((m.amount / maxChartVal) * 100, 2)}%` }}
@@ -231,7 +231,7 @@ const SuperadminDashboard = () => {
               </div>
               <div className="flex justify-between mt-2">
                 {monthlyRev.map((m, i) => (
-                  <span key={i} className="text-[10px] font-semibold text-gray-400 flex-1 text-center truncate">
+                  <span key={m.month} className="text-[10px] font-semibold text-gray-400 flex-1 text-center truncate">
                     {m.month}
                   </span>
                 ))}

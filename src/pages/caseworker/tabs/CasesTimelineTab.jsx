@@ -12,7 +12,7 @@ function CasesTimelineTab({ candidate }) {
   return (
     <div className="space-y-0">
       {items.map((item, i) => (
-        <div key={i} className="flex gap-3 pb-5 relative">
+        <div key={item.title} className="flex gap-3 pb-5 relative">
           {i < items.length - 1 && (
             <div className="absolute left-[11px] top-6 bottom-0 w-px bg-gray-200" />
           )}

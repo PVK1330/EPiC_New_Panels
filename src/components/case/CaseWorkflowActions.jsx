@@ -257,7 +257,7 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
             {instalments.length > 0 && (
               <ul className="space-y-1 font-bold text-amber-950">
                 {instalments.map((row, i) => (
-                  <li key={i}>
+                  <li key={row.label}>
                     {row.label}: £{Number(row.amount).toFixed(2)}
                     {row.dueDate ? ` — due ${formatDate(row.dueDate)}` : ""}
                   </li>

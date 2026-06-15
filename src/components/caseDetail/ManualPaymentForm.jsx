@@ -84,8 +84,9 @@ export default function ManualPaymentForm({
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-black text-gray-600 mb-1.5">Amount (£)</label>
+              <label htmlFor="manual-payment-amount" className="block text-xs font-black text-gray-600 mb-1.5">Amount (£)</label>
               <input
+                id="manual-payment-amount"
                 type="number"
                 min="0"
                 step="0.01"
@@ -105,8 +106,9 @@ export default function ManualPaymentForm({
             />
           </div>
           <div>
-            <label className="block text-xs font-black text-gray-600 mb-1.5">Notes (optional)</label>
+            <label htmlFor="manual-payment-notes" className="block text-xs font-black text-gray-600 mb-1.5">Notes (optional)</label>
             <input
+              id="manual-payment-notes"
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}

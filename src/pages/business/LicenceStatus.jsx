@@ -400,9 +400,9 @@ const LicenceStatus = () => {
             onClick: () => setShowRenewalForm(true)
           },
         ].map((stat, i) => (
-          <motion.div 
-            key={i} 
-            variants={cardVariants} 
+          <motion.div
+            key={stat.label}
+            variants={cardVariants}
             onClick={stat.onClick}
             className={`bg-white/80 backdrop-blur-md rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all ${stat.onClick ? 'cursor-pointer hover:border-primary/20 hover:scale-[1.02] active:scale-95' : ''}`}
           >
@@ -565,7 +565,7 @@ const LicenceStatus = () => {
                 { label: "Used", value: summaryStats.allocation.used, color: "text-primary" },
                 { label: "Available", value: summaryStats.allocation.available, color: "text-emerald-600" },
               ].map((cos, i) => (
-                <div key={i} className="p-6 bg-gray-50/50 rounded-3xl border border-gray-50">
+                <div key={cos.label} className="p-6 bg-gray-50/50 rounded-3xl border border-gray-50">
                   <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">{cos.label}</p>
                   <p className={`text-3xl font-black ${cos.color}`}>{cos.value}</p>
                 </div>
@@ -759,7 +759,7 @@ const LicenceStatus = () => {
                     {selectedApp.requestedDocuments && (
                       <div className="flex flex-wrap gap-2">
                         {Array.isArray(selectedApp.requestedDocuments) ? selectedApp.requestedDocuments.map((doc, idx) => (
-                          <span key={idx} className="bg-white border border-red-100 text-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase">{doc}</span>
+                          <span key={doc} className="bg-white border border-red-100 text-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase">{doc}</span>
                         )) : (
                           <span className="bg-white border border-red-100 text-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase">{selectedApp.requestedDocuments}</span>
                         )}
@@ -855,7 +855,7 @@ const LicenceStatus = () => {
                         const previewing = docBusy === `${i}:preview`;
                         const downloading = docBusy === `${i}:download`;
                         return (
-                          <div key={i} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-50 group hover:border-primary/20 transition-all">
+                          <div key={doc} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-50 group hover:border-primary/20 transition-all">
                             <div className="flex items-center gap-3 min-w-0">
                               <FileText size={18} className="text-gray-400 shrink-0" />
                               <span className="text-xs font-bold text-gray-500 truncate max-w-[200px]">{doc.split('\\').pop().split('/').pop()}</span>

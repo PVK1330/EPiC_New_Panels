@@ -505,7 +505,7 @@ const BusinessProfile = () => {
                   <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Level 1 Users</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {(registrationData.level1Users).map((u, idx) => (
-                      <div key={idx} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                      <div key={u.email} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
                         <p className="text-sm font-black text-secondary">{u.name}</p>
                         <p className="text-[10px] font-bold text-gray-500 mt-1">{u.email}</p>
                         <p className="text-[10px] font-bold text-gray-500">{u.phone}</p>

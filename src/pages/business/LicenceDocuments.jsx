@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -14,6 +14,7 @@ import {
   Clock,
   X,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { uploadLicenceDocument, getLicenceDocuments, getMyLicenceApplications, downloadSponsorLicenceDocument } from "../../services/licenceApi";
 import { useToast } from "../../context/ToastContext";
@@ -33,6 +34,10 @@ const LicenceDocuments = () => {
   const [uploadDocType, setUploadDocType] = useState("");
   const [uploading, setUploading] = useState(false);
   const [applications, setApplications] = useState([]);
+  const [reuploadDoc, setReuploadDoc] = useState(null); // doc being re-uploaded
+  const [reuploadFile, setReuploadFile] = useState(null);
+  const [reuploading, setReuploading] = useState(false);
+  const reuploadInputRef = useRef(null);
 
   useEffect(() => {
     fetchDocuments();
@@ -165,6 +170,38 @@ const LicenceDocuments = () => {
 
   const handleDelete = (docId) => {
     showToast({ message: "Manual deletion of licence evidence is restricted. Please update the application.", variant: "info" });
+  };
+
+  const handleReuploadClick = (doc) => {
+    setReuploadDoc(doc);
+    setReuploadFile(null);
+    // Trigger hidden file input
+    setTimeout(() => reuploadInputRef.current?.click(), 50);
+  };
+
+  const handleReuploadFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) setReuploadFile(file);
+  };
+
+  const handleReuploadSubmit = async () => {
+    if (!reuploadFile || !reuploadDoc) return;
+    try {
+      setReuploading(true);
+      await uploadLicenceDocument({
+        files: [reuploadFile],
+        applicationId: reuploadDoc.applicationId,
+        documentType: reuploadDoc.name,
+      });
+      showToast({ message: "Document re-uploaded successfully. Status reset to Pending.", variant: "success" });
+      setReuploadDoc(null);
+      setReuploadFile(null);
+      fetchDocuments();
+    } catch (err) {
+      showToast({ message: err.response?.data?.message || "Re-upload failed", variant: "danger" });
+    } finally {
+      setReuploading(false);
+    }
   };
 
   return (
@@ -330,7 +367,22 @@ const LicenceDocuments = () => {
                         </div>
                       </td>
                       <td className="px-6 py-6 text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2 flex-wrap">
+                          {(doc.status === "Rejected" || doc.status === "rejected") && (
+                            <button
+                              onClick={() => handleReuploadClick(doc)}
+                              disabled={reuploading && reuploadDoc?.id === doc.id}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all shadow-sm text-xs font-black disabled:opacity-50"
+                              title="Re-upload rejected document"
+                            >
+                              {reuploading && reuploadDoc?.id === doc.id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <RefreshCw size={14} />
+                              )}
+                              Re-upload
+                            </button>
+                          )}
                           <button
                             onClick={() => handleView(doc)}
                             disabled={!!docBusy[doc.id]}
@@ -376,6 +428,65 @@ const LicenceDocuments = () => {
           </div>
         )}
       </motion.div>
+
+      {/* Hidden file input for re-upload */}
+      <input
+        ref={reuploadInputRef}
+        type="file"
+        className="hidden"
+        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+        onChange={handleReuploadFileChange}
+      />
+
+      {/* Re-upload confirmation modal */}
+      {reuploadDoc && reuploadFile && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <RefreshCw size={20} className="text-amber-600" />
+              </div>
+              <h3 className="text-lg font-black text-secondary">Re-upload Document</h3>
+            </div>
+            <p className="text-sm font-bold text-gray-600 mb-2">
+              Replacing: <span className="text-secondary">{reuploadDoc.name}</span>
+            </p>
+            <p className="text-sm font-bold text-gray-600 mb-4">
+              New file: <span className="text-secondary">{reuploadFile.name}</span>
+            </p>
+            <p className="text-xs text-gray-500 mb-6">
+              The document status will reset to <strong>Pending</strong> for caseworker review.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => { setReuploadDoc(null); setReuploadFile(null); }}
+                className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-4 py-3 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleReuploadSubmit}
+                disabled={reuploading}
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl px-4 py-3 transition disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {reuploading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                {reuploading ? "Uploading…" : "Confirm Re-upload"}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       {/* Upload Modal */}
       {showUploadModal && (

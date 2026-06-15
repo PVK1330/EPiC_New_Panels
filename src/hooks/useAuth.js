@@ -17,8 +17,9 @@ const useAuth = () => {
     try {
       const res = await loginUser({ email, password });
       if (res?.data?.requires_2fa || res?.requires_2fa || res?.data?.data?.requires_2fa) {
+        // BUG-003: never persist the plaintext password. The /2fa/verify endpoint
+        // only needs { email, token }, so the email alone carries the pending step.
         sessionStorage.setItem("pending_2fa_email", email);
-        sessionStorage.setItem("pending_2fa_password", password);
         navigate("/2fa");
         return { twoFactorRequired: true };
       }
@@ -54,6 +55,9 @@ const useAuth = () => {
       navigate("/verify-otp");
       return { success: true };
     } finally {
+      // BUG-009: `finally` guarantees the loading spinner always clears, even when
+      // registerUser throws. The error intentionally propagates to the caller
+      // (RegisterPage's try/catch surfaces it) — no swallowing here.
       setIsLoading(false);
     }
   };

@@ -1,7 +1,23 @@
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:5000";
+// Robust email validation (BUG-034). Phone validation (BUG-035) already lives in
+// utils/countries.js (isValidPhone, libphonenumber-js backed) and is reused here.
+import isEmail from "validator/lib/isEmail";
+
+// BUG-032: require an explicit API base URL in production builds.
+// In development, leave VITE_API_BASE_URL unset (or empty) to use the Vite dev
+// server proxy (/api → localhost:5000). This avoids cross-origin cookie issues
+// when accessing tenant subdomains like elite-visa.localhost:5173.
+// Set VITE_API_BASE_URL=http://localhost:5000 only to bypass the proxy.
+const CONFIGURED_API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL;
+
+if (!CONFIGURED_API_BASE_URL && import.meta.env.PROD) {
+  throw new Error(
+    "VITE_API_BASE_URL (or VITE_API_URL) must be set for production builds",
+  );
+}
+
+// Empty string → axios uses relative paths (/api/...) → Vite proxy forwards them.
+export const API_BASE_URL = CONFIGURED_API_BASE_URL ?? "";
 
 export const ROLE_NAMES = {
   1: "candidate",
@@ -65,11 +81,21 @@ export const COUNTRY_CODE_VALIDATION = {
   message: "Invalid country code (e.g. +44, +91, +1)",
 };
 
-/** Email format */
+/** Email format (kept for backward-compat with consumers reading `.pattern`). */
 export const EMAIL_VALIDATION = {
   pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   message: "Please enter a valid email address",
 };
+
+/**
+ * BUG-034: robust email validation via validator.js (RFC-aware) instead of the
+ * permissive regex above. Prefer this in new/validated code paths.
+ * @param {string} value
+ * @returns {boolean}
+ */
+export function isValidEmail(value) {
+  return isEmail(String(value || "").trim());
+}
 
 /** Password: minimum 8 characters */
 export const PASSWORD_VALIDATION = {
@@ -126,7 +152,8 @@ export function validateDateOfBirth(value) {
 export function validateMobile(value) {
   if (!value || !String(value).trim()) return "Mobile number is required";
   const cleaned = String(value).trim().replace(/\s+/g, "");
-  if (!MOBILE_VALIDATION.pattern.test(cleaned)) return MOBILE_VALIDATION.message;
+  if (!MOBILE_VALIDATION.pattern.test(cleaned))
+    return MOBILE_VALIDATION.message;
   return null;
 }
 

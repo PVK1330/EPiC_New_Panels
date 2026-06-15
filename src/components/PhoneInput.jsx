@@ -231,7 +231,10 @@ export default function PhoneInput({
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
-        <label className="text-sm font-medium text-gray-700">
+        <label
+          htmlFor={split ? nationalName : name}
+          className="text-sm font-medium text-gray-700"
+        >
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
@@ -261,6 +264,7 @@ export default function PhoneInput({
             className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300"
           />
           <input
+            id={split ? nationalName : name}
             type="tel"
             name={split ? nationalName : name}
             value={national}
