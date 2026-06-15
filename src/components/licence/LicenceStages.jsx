@@ -17,7 +17,7 @@ function buildStaticModel(app) {
     title: s.title,
     govSection: s.govSection,
     status: map[statuses[s.key]] || "pending",
-    tasks: STAGE_ROLES.map((r) => (s.tasks[r.key] ? { role: r.key, title: s.tasks[r.key], status: null, assigneeName: null, completedAt: null } : null)).filter(Boolean),
+    tasks: STAGE_ROLES.map((r) => (s.tasks[r.key] ? { role: r.key, title: s.tasks[r.key], status: "loading", assigneeName: "Loading...", completedAt: null } : null)).filter(Boolean),
   }));
   const current = stages.find((s) => s.status === "in_progress");
   return { stages, currentStageKey: current?.key || null };
@@ -143,6 +143,7 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
     interactive &&
     stage.status !== "completed" &&
     task.status !== "completed" &&
+    task.status !== "loading" &&
     ((viewerRole === task.role && task.role !== "candidate") || viewerRole === "admin");
 
   return (

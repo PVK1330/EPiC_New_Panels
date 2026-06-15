@@ -110,10 +110,10 @@ const COSPage = () => {
   };
 
   const handleDownload = async () => {
-    const result = activeTab === 'summary' 
+    const result = activeTab === 'summary'
       ? await downloadCosSummaryExcel()
       : await downloadCosRequestsExcel();
-    
+
     if (!result.ok) {
       toast.error(result.message || 'Export failed');
     }
@@ -181,17 +181,17 @@ const COSPage = () => {
   ];
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-5 pb-6">
       <motion.div
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <LayoutDashboard className="text-primary" size={36} />
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+          <LayoutDashboard className="text-primary" size={26} />
           CoS Management
         </h1>
-        <p className="text-primary font-bold text-sm mt-1">
+        <p className="text-primary font-bold text-sm mt-0.5">
           Manage your Certificate of Sponsorship allocations and requests.
         </p>
         {loading && (
@@ -202,317 +202,326 @@ const COSPage = () => {
       {cosBlocked && <LicenceGateBanner status={licenceStatus} />}
 
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        className="grid grid-cols-1 md:grid-cols-3 gap-3"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900">
+        <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="flex items-center gap-3 mb-3 text-gray-900">
             <FilesIcon size={20} className="text-primary" />
-            <span className="font-black">Total CoS Allocated</span>
+            <span className="font-black text-sm">Total CoS Allocated</span>
           </div>
           <p className="text-3xl font-black text-secondary">{stats.total}</p>
         </motion.div>
 
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900">
+        <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="flex items-center gap-3 mb-3 text-gray-900">
             <FileText size={20} className="text-emerald-600" />
-            <span className="font-black">CoS Used</span>
+            <span className="font-black text-sm">CoS Used</span>
           </div>
-          <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-sm font-black text-emerald-700">
+          <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
             {stats.used}
           </span>
         </motion.div>
 
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900">
+        <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="flex items-center gap-3 mb-3 text-gray-900">
             <FilesIcon size={20} className="text-amber-500" />
-            <span className="font-black">CoS Remaining</span>
+            <span className="font-black text-sm">CoS Remaining</span>
           </div>
           <p className="text-3xl font-black text-secondary">{stats.remaining}</p>
         </motion.div>
       </motion.div>
 
       <motion.div
-        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+        className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-black text-secondary flex items-center gap-2">
-            <Hash size={24} className="text-primary" />
-            CoS Usage Progress
-          </h2>
-          <div className="flex bg-gray-100 p-1 rounded-xl">
-            <button
-              onClick={() => setActiveTab('summary')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'summary' ? 'bg-white text-secondary shadow-sm' : 'text-gray-500'}`}
-            >
-              Summary
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'history' ? 'bg-white text-secondary shadow-sm' : 'text-gray-500'}`}
-            >
-              Requests History
-            </button>
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+        <div className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-black text-secondary flex items-center gap-2">
+              <Hash size={16} className="text-primary" />
+              CoS Usage Progress
+            </h2>
+            <div className="flex bg-gray-100 p-1 rounded-xl">
+              <button
+                onClick={() => setActiveTab('summary')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'summary' ? 'bg-white text-secondary shadow-sm' : 'text-gray-500'}`}
+              >
+                Summary
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'history' ? 'bg-white text-secondary shadow-sm' : 'text-gray-500'}`}
+              >
+                Requests History
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="w-full bg-gray-200 h-3 rounded-full">
-          <div
-            className="bg-primary h-3 rounded-full transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
+          <div className="w-full bg-gray-200 h-3 rounded-full">
+            <div
+              className="bg-primary h-3 rounded-full transition-all duration-500"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
 
-        <p className="text-xs font-bold text-gray-600 mt-2">
-          {stats.used} of {stats.total} CoS used ({progress.toFixed(1)}%)
-        </p>
+          <p className="text-xs font-bold text-gray-600 mt-2">
+            {stats.used} of {stats.total} CoS used ({progress.toFixed(1)}%)
+          </p>
+        </div>
       </motion.div>
 
       <motion.div
-        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+        className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-black text-secondary flex items-center gap-2">
-            <FileText size={24} className="text-primary" />
-            {activeTab === 'summary' ? 'Active Allocations' : 'Request History'}
-          </h2>
-          <div className="flex gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-64 rounded-lg border border-gray-200 bg-white pl-9 pr-3 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-              />
-            </div>
-            {activeTab === 'history' && (
-              <div className="flex flex-wrap items-center gap-2 text-xs font-black text-gray-500">
-                {STATUS_FILTERS.map((filter) => (
-                  <button
-                    key={filter}
-                    type="button"
-                    onClick={() => setStatusFilter(filter)}
-                    className={`rounded-full px-3 py-1 transition ${statusFilter === filter ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                  >
-                    {filter} ({requestStatusCounts[filter] || 0})
-                  </button>
-                ))}
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+        <div className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-black text-secondary flex items-center gap-2">
+              <FileText size={16} className="text-primary" />
+              {activeTab === 'summary' ? 'Active Allocations' : 'Request History'}
+            </h2>
+            <div className="flex gap-2 flex-wrap items-center">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="w-56 rounded-lg border border-gray-200 bg-white pl-8 pr-3 py-2 text-xs font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                />
               </div>
-            )}
-            <button
-              onClick={handleDownload}
-              disabled={busy.cosSummaryExcel || busy.cosRequestsExcel}
-              className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600 transition disabled:opacity-50"
-              title="Download Report"
-            >
-              <Download size={20} />
-            </button>
-            <button
-              onClick={() => {
-                if (cosBlocked) return;
-                setEditingRequest(null);
-                setRequestData({ visaType: '', requestedAmount: '', reason: '' });
-                setShowRequestModal(true);
-              }}
-              disabled={cosBlocked}
-              title={cosBlocked ? "Your Sponsorship Licence is not active." : "Request CoS"}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Plus size={16} />
-              Request CoS
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          {activeTab === 'summary' ? (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Visa Type</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Allocated</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Used</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Remaining</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Expiry Date</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Last Used</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500 text-center">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-gray-100">
-                {filteredCosList.map((item, index) => {
-                  const initials = getInitials(item.visaType || "?");
-                  const bgColor = avatarColors[index % avatarColors.length];
-
-                  const status =
-                    item.remaining === 0
-                      ? "Exhausted"
-                      : item.remaining < 10
-                      ? "Low"
-                      : "Active";
-
-                  const statusStyle =
-                    status === "Active"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : status === "Low"
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-red-100 text-red-700";
-
-                  const exp =
-                    item.expiryDate instanceof Date
-                      ? formatDate(item.expiryDate)
-                      : item.expiryDate || "N/A";
-                  const lastUsedDisp =
-                    item.lastUsed instanceof Date
-                      ? formatDate(item.lastUsed)
-                      : item.lastUsed || "—";
-
-                  return (
-                    <tr
-                      key={`${item.visaType}-${index}`}
-                      className="hover:bg-gray-50 transition"
+              {activeTab === 'history' && (
+                <div className="flex flex-wrap items-center gap-1.5 text-xs font-black text-gray-500">
+                  {STATUS_FILTERS.map((filter) => (
+                    <button
+                      key={filter}
+                      type="button"
+                      onClick={() => setStatusFilter(filter)}
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-black transition ${statusFilter === filter ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                     >
-                      <td className="px-4 py-4 flex items-center gap-3">
-                        <div
-                          className={`w-8 h-8 flex items-center justify-center text-white rounded-2xl ${bgColor}`}
-                        >
-                          {initials}
-                        </div>
-                        <span className="text-sm font-black text-secondary">
-                          {item.visaType}
-                        </span>
-                      </td>
+                      {filter} ({requestStatusCounts[filter] || 0})
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={handleDownload}
+                disabled={busy.cosSummaryExcel || busy.cosRequestsExcel}
+                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 transition disabled:opacity-50"
+                title="Download Report"
+              >
+                <Download size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  if (cosBlocked) return;
+                  setEditingRequest(null);
+                  setRequestData({ visaType: '', requestedAmount: '', reason: '' });
+                  setShowRequestModal(true);
+                }}
+                disabled={cosBlocked}
+                title={cosBlocked ? "Your Sponsorship Licence is not active." : "Request CoS"}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus size={14} />
+                Request CoS
+              </button>
+            </div>
+          </div>
 
-                      <td className="px-4 py-4 text-sm font-bold text-gray-700">{item.allocated}</td>
-                      <td className="px-4 py-4 text-sm font-bold text-gray-700">{item.used}</td>
-                      <td className="px-4 py-4 text-sm font-bold text-gray-700">{item.remaining}</td>
-                      <td className="px-4 py-4 text-xs font-bold text-gray-600">{exp}</td>
-                      <td className="px-4 py-4 text-xs font-bold text-gray-600">{lastUsedDisp}</td>
-                      <td className="px-4 py-4">
-                        <span
-                          className={`inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full ${statusStyle}`}
-                        >
-                          {status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 flex gap-2 justify-center">
-                        <button
-                          onClick={() => {
-                            if (cosBlocked) return;
-                            setEditingRequest(null);
-                            setRequestData({ visaType: item.visaType, requestedAmount: '', reason: '' });
-                            setShowRequestModal(true);
-                          }}
-                          disabled={cosBlocked}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition disabled:opacity-40 disabled:cursor-not-allowed"
-                          title={cosBlocked ? "Licence not active" : "Request More Slots"}
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button 
-                          onClick={handleDownloadRow}
-                          disabled={busy.cosSummaryExcel}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition disabled:opacity-50"
-                          title="Download Report"
-                        >
-                          <Download size={14} />
-                        </button>
-                        <button 
-                          className="p-1.5 rounded-lg text-gray-200 cursor-not-allowed transition"
-                          title="Approved allocations cannot be deleted"
-                          disabled
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          ) : (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Request ID</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Visa Type</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Requested</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Date</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredRequests.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50 transition">
-                    <td className="px-4 py-4 text-xs font-black text-secondary">#REQ-{r.id}</td>
-                    <td className="px-4 py-4 text-sm font-bold text-gray-700">{r.visaType}</td>
-                    <td className="px-4 py-4 text-sm font-black text-primary">
-                      {r.requestedAmount} Slots
-                      {r.status === 'Approved' && r.approvedAmount != null && (
-                        <span className="block text-[10px] font-bold text-emerald-600">
-                          Approved: {r.approvedAmount}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4">
-                      <span
-                        title={r.reviewNotes || ''}
-                        className={`px-2 py-1 rounded-full text-[10px] font-black ${
-                          r.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' :
-                          r.status === 'Rejected' ? 'bg-red-50 text-red-600' :
-                          r.status === 'Under Review' ? 'bg-blue-50 text-blue-600' :
-                          'bg-amber-50 text-amber-600'
-                        }`}
+          <div className="overflow-x-auto">
+            {activeTab === 'summary' ? (
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Visa Type</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Allocated</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Used</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Remaining</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Expiry Date</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Last Used</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px] text-center">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filteredCosList.map((item, index) => {
+                    const initials = getInitials(item.visaType || "?");
+                    const bgColor = avatarColors[index % avatarColors.length];
+
+                    const status =
+                      item.remaining === 0
+                        ? "Exhausted"
+                        : item.remaining < 10
+                        ? "Low"
+                        : "Active";
+
+                    const statusStyle =
+                      status === "Active"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : status === "Low"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-red-100 text-red-700";
+
+                    const exp =
+                      item.expiryDate instanceof Date
+                        ? formatDate(item.expiryDate)
+                        : item.expiryDate || "N/A";
+                    const lastUsedDisp =
+                      item.lastUsed instanceof Date
+                        ? formatDate(item.lastUsed)
+                        : item.lastUsed || "—";
+
+                    return (
+                      <tr
+                        key={`${item.visaType}-${index}`}
+                        className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition"
                       >
-                        {r.status}
-                      </span>
-                      {r.reviewNotes && (r.status === 'Rejected' || r.status === 'Information Requested') && (
-                        <p
-                          className="text-[10px] font-bold text-gray-400 mt-1 max-w-[180px] truncate"
-                          title={r.reviewNotes}
-                        >
-                          {r.reviewNotes}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 text-xs font-bold text-gray-500">
-                      {formatDate(r.created_at)}
-                    </td>
-                    <td className="px-4 py-4 flex gap-2">
-                      {['Pending', 'Under Review'].includes(r.status) && (
-                        <>
-                          <button 
-                            onClick={() => handleEditRequest(r)}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition"
+                        <td className="px-3 py-2 flex items-center gap-2">
+                          <div
+                            className={`w-7 h-7 flex items-center justify-center text-white rounded-xl text-xs font-black ${bgColor}`}
+                          >
+                            {initials}
+                          </div>
+                          <span className="text-xs font-black text-secondary">
+                            {item.visaType}
+                          </span>
+                        </td>
+
+                        <td className="px-3 py-2 text-xs font-bold text-gray-700">{item.allocated}</td>
+                        <td className="px-3 py-2 text-xs font-bold text-gray-700">{item.used}</td>
+                        <td className="px-3 py-2 text-xs font-bold text-gray-700">{item.remaining}</td>
+                        <td className="px-3 py-2 text-[10px] font-bold text-gray-600">{exp}</td>
+                        <td className="px-3 py-2 text-[10px] font-bold text-gray-600">{lastUsedDisp}</td>
+                        <td className="px-3 py-2">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 text-[10px] font-black rounded-full ${statusStyle}`}
+                          >
+                            {status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 flex gap-1.5 justify-center">
+                          <button
+                            onClick={() => {
+                              if (cosBlocked) return;
+                              setEditingRequest(null);
+                              setRequestData({ visaType: item.visaType, requestedAmount: '', reason: '' });
+                              setShowRequestModal(true);
+                            }}
+                            disabled={cosBlocked}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={cosBlocked ? "Licence not active" : "Request More Slots"}
                           >
                             <Pencil size={14} />
                           </button>
-                          <button 
-                            onClick={() => handleDeleteRequest(r.id)}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-600 transition"
+                          <button
+                            onClick={handleDownloadRow}
+                            disabled={busy.cosSummaryExcel}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition disabled:opacity-50"
+                            title="Download Report"
+                          >
+                            <Download size={14} />
+                          </button>
+                          <button
+                            className="p-1.5 rounded-lg text-gray-200 cursor-not-allowed transition"
+                            title="Approved allocations cannot be deleted"
+                            disabled
                           >
                             <Trash2 size={14} />
                           </button>
-                        </>
-                      )}
-                    </td>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Request ID</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Visa Type</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Requested</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Date</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {filteredRequests.map((r) => (
+                    <tr key={r.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition">
+                      <td className="px-3 py-2 text-xs font-black text-secondary">#REQ-{r.id}</td>
+                      <td className="px-3 py-2 text-xs font-bold text-gray-700">{r.visaType}</td>
+                      <td className="px-3 py-2 text-xs font-black text-primary">
+                        {r.requestedAmount} Slots
+                        {r.status === 'Approved' && r.approvedAmount != null && (
+                          <span className="block text-[10px] font-bold text-emerald-600">
+                            Approved: {r.approvedAmount}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          title={r.reviewNotes || ''}
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                            r.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' :
+                            r.status === 'Rejected' ? 'bg-red-50 text-red-600' :
+                            r.status === 'Under Review' ? 'bg-blue-50 text-blue-600' :
+                            'bg-amber-50 text-amber-600'
+                          }`}
+                        >
+                          {r.status}
+                        </span>
+                        {r.reviewNotes && (r.status === 'Rejected' || r.status === 'Information Requested') && (
+                          <p
+                            className="text-[10px] font-bold text-gray-400 mt-1 max-w-[180px] truncate"
+                            title={r.reviewNotes}
+                          >
+                            {r.reviewNotes}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-[10px] font-bold text-gray-500">
+                        {formatDate(r.created_at)}
+                      </td>
+                      <td className="px-3 py-2 flex gap-1.5">
+                        {['Pending', 'Under Review'].includes(r.status) && (
+                          <>
+                            <button
+                              onClick={() => handleEditRequest(r)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRequest(r.id)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-600 transition"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       </motion.div>
 
@@ -527,11 +536,11 @@ const COSPage = () => {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-3xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
           >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-black text-secondary">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-black text-secondary">
                   {editingRequest ? "Edit CoS Request" : "Request Additional CoS"}
                 </h2>
                 <button
@@ -541,16 +550,16 @@ const COSPage = () => {
                   }}
                   className="text-gray-500 hover:text-gray-700 transition"
                 >
-                  <X size={24} />
+                  <X size={20} />
                 </button>
               </div>
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-gray-700 mb-2">Visa Type *</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Visa Type *</label>
                   <select
                     value={requestData.visaType}
                     onChange={(e) => setRequestData({ ...requestData, visaType: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 pr-10 text-xs font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                   >
                     <option value="">Select visa type</option>
                     {visaTypeOptions.map((visa) => (
@@ -561,26 +570,26 @@ const COSPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-700 mb-2">Requested Amount *</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Requested Amount *</label>
                   <input
                     type="number"
                     value={requestData.requestedAmount}
                     onChange={(e) => setRequestData({ ...requestData, requestedAmount: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 pr-10 text-xs font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                     placeholder="Enter requested amount"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-700 mb-2">Reason for Request *</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Reason for Request *</label>
                   <textarea
                     value={requestData.reason}
                     onChange={(e) => setRequestData({ ...requestData, reason: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 resize-none"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 resize-none"
                     placeholder="Explain why you need additional CoS"
                     rows={4}
                   />
                 </div>
-                <div className="flex gap-4 pt-4">
+                <div className="flex gap-3 pt-3">
                   <button
                     type="button"
                     disabled={submitting}
@@ -609,13 +618,13 @@ const COSPage = () => {
                         setSubmitting(false);
                       }
                     }}
-                    className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition disabled:opacity-60"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm disabled:opacity-60"
                   >
                     {submitting ? "Processing…" : editingRequest ? "Update Request" : "Submit Request"}
                   </button>
                   <button
                     onClick={() => setShowRequestModal(false)}
-                    className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-6 py-3 transition"
+                    className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-lg px-3 py-1.5 text-xs transition"
                   >
                     Cancel
                   </button>
@@ -630,5 +639,3 @@ const COSPage = () => {
 };
 
 export default COSPage;
-
-

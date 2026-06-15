@@ -1,6 +1,4 @@
-import { useState, useEffect } from "react";
 import { Briefcase, GraduationCap, TrendingUp, Globe, Users, Loader2 } from "lucide-react";
-import { getLicenceV2FeePreview } from "../../services/licenceApi";
 
 const ROUTES = [
   { code: "SkilledWorker", label: "Skilled Worker", icon: Briefcase, desc: "Sponsor overseas nationals for skilled roles (RQF 3+)." },
@@ -10,25 +8,9 @@ const ROUTES = [
   { code: "GAE", label: "Government Authorised Exchange", icon: Users, desc: "Sponsor participants in approved government exchange schemes." },
 ];
 
-function fmt(n) {
-  return typeof n === "number" ? `£${n.toLocaleString("en-GB")}` : "—";
-}
-
 export default function Step1Routes({ data, onChange, onNext, saving }) {
-  const [fee, setFee] = useState(null);
-  const [feeLoading, setFeeLoading] = useState(false);
-
   const routes = data.routes || [];
   const sponsorSize = data.sponsorSize || "";
-
-  useEffect(() => {
-    if (!routes.length) { setFee(null); return; }
-    setFeeLoading(true);
-    getLicenceV2FeePreview({ routes, sponsorSize: sponsorSize || null })
-      .then((r) => setFee(r.data.data))
-      .catch(() => setFee(null))
-      .finally(() => setFeeLoading(false));
-  }, [routes.join(","), sponsorSize]);
 
   const toggleRoute = (code) => {
     const next = routes.includes(code) ? routes.filter((r) => r !== code) : [...routes, code];
@@ -96,35 +78,6 @@ export default function Step1Routes({ data, onChange, onNext, saving }) {
           ))}
         </div>
       </div>
-
-      {/* Fee Preview */}
-      {(feeLoading || fee) && (
-        <div className="bg-gray-50 rounded-2xl border border-gray-100 p-5">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Estimated Fee</p>
-          {feeLoading ? (
-            <div className="flex items-center gap-2 text-gray-400"><Loader2 size={16} className="animate-spin" /><span className="text-sm font-bold">Calculating…</span></div>
-          ) : fee ? (
-            <div className="space-y-2">
-              {(fee.lineItems || []).map((item) => (
-                <div key={item.key} className="flex justify-between text-sm font-bold text-secondary">
-                  <span>{item.label}</span>
-                  <span>{fmt(item.amount)}</span>
-                </div>
-              ))}
-              {fee.immigrationSkillsChargeEstimate > 0 && (
-                <div className="flex justify-between text-sm font-bold text-gray-400">
-                  <span>ISC estimate (informational)</span>
-                  <span>{fmt(fee.immigrationSkillsChargeEstimate)}</span>
-                </div>
-              )}
-              <div className="pt-2 border-t border-gray-100 flex justify-between font-black text-secondary">
-                <span>Application Fee Total</span>
-                <span className="text-primary">{fmt(fee.applicationFeeTotal)}</span>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      )}
 
       <div className="flex justify-end">
         <button

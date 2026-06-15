@@ -1,3 +1,4 @@
+import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, Fragment } from "react";
 import {
@@ -57,7 +58,7 @@ const LicenceStatus = () => {
   // Modals state
   const [showRenewalForm, setShowRenewalForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
-  
+
   // Form states
   const [submitting, setSubmitting] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
@@ -164,7 +165,16 @@ const LicenceStatus = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this application?")) return;
+    const result = await Swal.fire({
+      title: "Delete application?",
+      text: "This will permanently remove the licence application. This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#ef4444",
+    });
+    if (!result.isConfirmed) return;
     try {
       await deleteMyLicenceApplication(id);
       showToast({ message: "Application deleted successfully", variant: "success" });
@@ -268,7 +278,7 @@ const LicenceStatus = () => {
   };
 
   return (
-    <div className="space-y-6 pb-10 relative">
+    <div className="space-y-5 pb-6 relative">
       {/* Background Orbs */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-secondary/5 rounded-full blur-3xl -z-10" />
@@ -280,19 +290,19 @@ const LicenceStatus = () => {
         className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-            <ShieldCheck className="text-primary shrink-0" size={28} />
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+            <ShieldCheck className="text-primary shrink-0" size={26} />
             Sponsor Licence
           </h1>
-          <p className="text-gray-500 font-bold text-sm mt-1">
+          <p className="text-primary font-bold text-sm mt-0.5">
             Manage your sponsor licence applications, track their status, and upload evidence.
           </p>
         </div>
-        <button 
+        <button
           onClick={() => navigate("/business/apply-licence-v2")}
-          className="bg-primary hover:bg-primary-dark text-white font-black px-6 py-3 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95 flex items-center gap-3 w-fit"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm w-fit"
         >
-          <Plus size={20} />
+          <Plus size={14} />
           New Licence Application
         </button>
       </motion.div>
@@ -302,15 +312,16 @@ const LicenceStatus = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-red-50 border border-red-100 rounded-3xl p-6 flex items-center justify-between gap-6 shadow-sm"
+          className="rounded-2xl border border-red-100 bg-red-50 shadow-sm overflow-hidden relative flex items-center justify-between gap-4 p-5"
         >
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-red-100 rounded-2xl text-red-600">
-              <ShieldAlert size={24} />
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-red-400 to-red-600" />
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-100 rounded-xl text-red-600">
+              <ShieldAlert size={18} />
             </div>
             <div>
-              <h3 className="text-lg font-black text-secondary">Action Required: Information Requested</h3>
-              <p className="text-sm font-bold text-gray-500">The Admin has requested more evidence for your application. Please review the details in the history table.</p>
+              <h3 className="text-sm font-black text-secondary">Action Required: Information Requested</h3>
+              <p className="text-xs font-bold text-gray-500 mt-0.5">The Admin has requested more evidence for your application. Please review the details in the history table.</p>
             </div>
           </div>
           <button
@@ -318,7 +329,7 @@ const LicenceStatus = () => {
               const app = applications.find(a => a.status.toLowerCase() === 'information requested');
               if (app) handleEditClick(app);
             }}
-            className="bg-red-600 hover:bg-red-700 text-white font-black px-6 py-3 rounded-xl transition-all shadow-lg shadow-red-200 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-black text-white hover:bg-red-700 transition shadow-sm shrink-0"
           >
             Review Request
           </button>
@@ -330,20 +341,21 @@ const LicenceStatus = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-violet-50 border border-violet-100 rounded-3xl p-6 flex items-center justify-between gap-6 shadow-sm"
+          className="rounded-2xl border border-violet-100 bg-violet-50 shadow-sm overflow-hidden relative flex items-center justify-between gap-4 p-5"
         >
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-violet-100 rounded-2xl text-violet-600">
-              <ExternalLink size={24} />
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-violet-400 to-violet-600" />
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-violet-100 rounded-xl text-violet-600">
+              <ExternalLink size={18} />
             </div>
             <div>
-              <h3 className="text-lg font-black text-secondary">Government Portal Processing</h3>
-              <p className="text-sm font-bold text-gray-500">Your application is being processed through the UK government portal. Track progress and confirm credentials in Licence Tracking.</p>
+              <h3 className="text-sm font-black text-secondary">Government Portal Processing</h3>
+              <p className="text-xs font-bold text-gray-500 mt-0.5">Your application is being processed through the UK government portal. Track progress and confirm credentials in Licence Tracking.</p>
             </div>
           </div>
           <button
             onClick={() => navigate("/business/licence-process")}
-            className="bg-violet-600 hover:bg-violet-700 text-white font-black px-6 py-3 rounded-xl transition-all shadow-lg shadow-violet-200 active:scale-95 whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-black text-white hover:bg-violet-700 transition shadow-sm shrink-0 whitespace-nowrap"
           >
             Track Progress
           </button>
@@ -355,20 +367,21 @@ const LicenceStatus = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-orange-50 border border-orange-100 rounded-3xl p-6 flex items-center justify-between gap-6 shadow-sm"
+          className="rounded-2xl border border-orange-100 bg-orange-50 shadow-sm overflow-hidden relative flex items-center justify-between gap-4 p-5"
         >
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-orange-100 rounded-2xl text-orange-600">
-              <Clock size={24} />
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-400 to-orange-600" />
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-orange-100 rounded-xl text-orange-600">
+              <Clock size={18} />
             </div>
             <div>
-              <h3 className="text-lg font-black text-secondary">Awaiting UKVI Decision</h3>
-              <p className="text-sm font-bold text-gray-500">Your application has been submitted to UKVI. Decisions typically take 8–12 weeks. You will be notified when a decision is made.</p>
+              <h3 className="text-sm font-black text-secondary">Awaiting UKVI Decision</h3>
+              <p className="text-xs font-bold text-gray-500 mt-0.5">Your application has been submitted to UKVI. Decisions typically take 8–12 weeks. You will be notified when a decision is made.</p>
             </div>
           </div>
           <button
             onClick={() => navigate("/business/licence-process")}
-            className="bg-orange-500 hover:bg-orange-600 text-white font-black px-6 py-3 rounded-xl transition-all shadow-lg shadow-orange-200 active:scale-95 whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-black text-white hover:bg-orange-600 transition shadow-sm shrink-0 whitespace-nowrap"
           >
             View Status
           </button>
@@ -377,7 +390,7 @@ const LicenceStatus = () => {
 
       {/* Hero Stats */}
       <motion.div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -393,9 +406,9 @@ const LicenceStatus = () => {
           },
           { icon: Hash, label: "CoS Available", value: summaryStats.allocation.available, color: "text-emerald-600" },
           {
-            icon: Calendar, 
-            label: "Renewal Due", 
-            value: summaryStats.renewalDue, 
+            icon: Calendar,
+            label: "Renewal Due",
+            value: summaryStats.renewalDue,
             color: "text-secondary",
             onClick: () => setShowRenewalForm(true)
           },
@@ -404,23 +417,23 @@ const LicenceStatus = () => {
             key={stat.label}
             variants={cardVariants}
             onClick={stat.onClick}
-            className={`bg-white/80 backdrop-blur-md rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all ${stat.onClick ? 'cursor-pointer hover:border-primary/20 hover:scale-[1.02] active:scale-95' : ''}`}
+            className={`rounded-xl border border-gray-200 bg-white p-3 shadow-sm hover:shadow-md transition-all ${stat.onClick ? 'cursor-pointer hover:border-primary/20 hover:scale-[1.02] active:scale-95' : ''}`}
           >
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`p-2 rounded-xl bg-gray-50 ${stat.color}`}>
-                <stat.icon size={20} />
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`p-1.5 rounded-lg bg-gray-50 ${stat.color}`}>
+                <stat.icon size={16} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{stat.label}</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">{stat.label}</span>
             </div>
             {stat.badge ? (
-              <span className={`inline-flex rounded-full px-4 py-1.5 text-xs font-black ${stat.color.replace('text-', 'bg-').replace('600', '100')} ${stat.color.replace('text-', 'text-')}`}>
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-black ${stat.color.replace('text-', 'bg-').replace('600', '100')} ${stat.color.replace('text-', 'text-')}`}>
                 {stat.value}
               </span>
             ) : (
-              <p className="text-xl font-black text-secondary">{stat.value}</p>
+              <p className="text-lg font-black text-secondary">{stat.value}</p>
             )}
             {stat.onClick && (
-              <div className="mt-4 flex items-center gap-1.5 text-[10px] font-black text-primary uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="mt-3 flex items-center gap-1.5 text-[10px] font-black text-primary uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
                 Action Required <ChevronRight size={10} />
               </div>
             )}
@@ -428,20 +441,21 @@ const LicenceStatus = () => {
         ))}
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left Column: Applications Table */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          <motion.div variants={cardVariants} className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
-            <div className="p-6 border-b border-gray-50 bg-gray-50/30">
+        <div className="lg:col-span-2 space-y-4">
+
+          <motion.div variants={cardVariants} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+            <div className="p-5 border-b border-gray-100 bg-gray-50/30">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-primary/5 rounded-2xl">
-                    <Clock size={24} className="text-primary" />
+                  <div className="p-2 bg-primary/5 rounded-xl">
+                    <Clock size={18} className="text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-black text-secondary">Application History</h2>
-                    <p className="text-xs font-bold text-gray-400">Manage and edit your recent requests.</p>
+                    <h2 className="text-sm font-black text-secondary">Application History</h2>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mt-0.5">Manage and edit your recent requests.</p>
                   </div>
                 </div>
               </div>
@@ -450,19 +464,19 @@ const LicenceStatus = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-gray-50/50 border-b border-gray-100">
-                    <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-widest text-gray-400">Type / ID</th>
-                    <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-widest text-gray-400">Status</th>
-                    <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-widest text-gray-400">Submitted</th>
-                    <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Type / ID</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Submitted</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px] text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody>
                   {loading ? (
                     [1, 2, 3].map(i => (
                       <tr key={i}>
-                        <td colSpan={4} className="px-6 py-3">
-                          <Skeleton height={60} className="w-full rounded-2xl" />
+                        <td colSpan={4} className="px-3 py-2">
+                          <Skeleton height={48} className="w-full rounded-xl" />
                         </td>
                       </tr>
                     ))
@@ -471,12 +485,12 @@ const LicenceStatus = () => {
                       const isV2 = Number(app.applicationVersion) === 2;
                       return (
                       <Fragment key={app.id}>
-                      <tr className="group hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-black text-secondary flex items-center gap-2">
+                      <tr className="border-b border-gray-100 last:border-0 group hover:bg-gray-50/50 transition-colors">
+                        <td className="px-3 py-2">
+                          <p className="text-xs font-black text-secondary flex items-center gap-1.5">
                             {app.type} Application
                             {isV2 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide bg-primary/10 text-primary">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-primary/10 text-primary">
                                 V2
                               </span>
                             )}
@@ -485,47 +499,57 @@ const LicenceStatus = () => {
                             #LIC-{app.id}{app.licenceType ? ` · ${app.licenceType}` : ""}
                           </p>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black ${getStatusColor(app.status)}`}>
+                        <td className="px-3 py-2">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black ${getStatusColor(app.status)}`}>
                             {app.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 py-2">
                           <p className="text-xs font-black text-secondary">
                             {formatDateLong(app.createdAt, { month: 'short' })}
                           </p>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button 
-                              onClick={() => handleEditClick(app)}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all text-[10px] font-black uppercase"
+                        <td className="px-3 py-2 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => {
+                                if (isV2) {
+                                  if (app.status === "Draft" || app.status === "Information Requested") {
+                                    navigate(`/business/apply-licence-v2?draft=${app.id}`);
+                                  } else {
+                                    navigate("/business/licence-process");
+                                  }
+                                } else {
+                                  handleEditClick(app);
+                                }
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-black text-primary hover:bg-primary hover:text-white transition shadow-sm"
                             >
-                              <PencilLine size={14} /> Edit
+                              <PencilLine size={12} /> {isV2 ? "View" : "Edit"}
                             </button>
                             <button
                               onClick={() => handleDelete(app.id)}
-                              className="p-2 bg-red-50 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                              className="inline-flex items-center rounded-lg bg-red-50 px-2 py-1.5 text-red-400 hover:bg-red-500 hover:text-white transition shadow-sm"
                               title="Delete"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={13} />
                             </button>
                           </div>
                         </td>
                       </tr>
                       {isV2 && (
-                        <tr className="bg-primary/5">
-                          <td colSpan={4} className="px-6 py-3">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <tr className="bg-primary/5 border-b border-gray-100 last:border-0">
+                          <td colSpan={4} className="px-3 py-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                               <p className="text-[11px] font-bold text-secondary/70 flex-1">
                                 This application uses the new V2 process. View full details and stages on the Licence Tracking page.
                               </p>
                               <button
                                 type="button"
                                 onClick={() => navigate("/business/licence-process")}
-                                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-white rounded-lg hover:bg-secondary-dark transition-all text-[10px] font-black uppercase"
+                                className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-black text-white hover:bg-secondary-dark transition shadow-sm"
                               >
-                                Open Licence Tracking <ChevronRight size={14} />
+                                Open Licence Tracking <ChevronRight size={12} />
                               </button>
                             </div>
                           </td>
@@ -536,9 +560,9 @@ const LicenceStatus = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={4} className="px-6 py-10 text-center">
-                        <FileText className="mx-auto text-gray-200 mb-4" size={48} />
-                        <p className="text-sm font-bold text-gray-400">No applications found. Click "New Application" to begin.</p>
+                      <td colSpan={4} className="px-3 py-8 text-center">
+                        <FileText className="mx-auto text-gray-200 mb-3" size={36} />
+                        <p className="text-xs font-bold text-gray-400">No applications found. Click "New Application" to begin.</p>
                       </td>
                     </tr>
                   )}
@@ -548,26 +572,27 @@ const LicenceStatus = () => {
           </motion.div>
 
           {/* CoS Allocation */}
-          <motion.div variants={cardVariants} className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-secondary/5 rounded-2xl">
-                <Hash size={24} className="text-secondary" />
+          <motion.div variants={cardVariants} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative p-5">
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-secondary/5 rounded-xl">
+                <Hash size={18} className="text-secondary" />
               </div>
               <div>
-                <h2 className="text-2xl font-black text-secondary">CoS Allocation Insights</h2>
-                <p className="text-sm font-bold text-gray-400">Current Certificate of Sponsorship usage.</p>
+                <h2 className="text-sm font-black text-secondary">CoS Allocation Insights</h2>
+                <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mt-0.5">Current Certificate of Sponsorship usage.</p>
               </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
               {[
                 { label: "Total Allocated", value: summaryStats.allocation.total, color: "text-secondary" },
                 { label: "Used", value: summaryStats.allocation.used, color: "text-primary" },
                 { label: "Available", value: summaryStats.allocation.available, color: "text-emerald-600" },
               ].map((cos, i) => (
-                <div key={cos.label} className="p-6 bg-gray-50/50 rounded-3xl border border-gray-50">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">{cos.label}</p>
-                  <p className={`text-3xl font-black ${cos.color}`}>{cos.value}</p>
+                <div key={cos.label} className="rounded-xl border border-gray-200 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">{cos.label}</p>
+                  <p className={`text-2xl font-black ${cos.color}`}>{cos.value}</p>
                 </div>
               ))}
             </div>
@@ -577,8 +602,8 @@ const LicenceStatus = () => {
                 <span>Usage Efficiency</span>
                 <span>{summaryStats.allocation.total > 0 ? Math.round((summaryStats.allocation.used / summaryStats.allocation.total) * 100) : 0}%</span>
               </div>
-              <div className="h-4 bg-gray-100 rounded-full overflow-hidden p-1">
-                <motion.div 
+              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${summaryStats.allocation.total > 0 ? (summaryStats.allocation.used / summaryStats.allocation.total) * 100 : 0}%` }}
                   transition={{ duration: 1, delay: 0.5 }}
@@ -590,8 +615,8 @@ const LicenceStatus = () => {
         </div>
 
         {/* Right Column: Alerts & Quick Actions */}
-        <div className="space-y-8">
-          
+        <div className="space-y-4">
+
           {/* Renewal card — 4 states */}
           {(() => {
             const { daysRemaining, renewalEligible, pendingRenewal, status, renewalDue } = summaryStats;
@@ -602,14 +627,15 @@ const LicenceStatus = () => {
 
             if (isPending) {
               return (
-                <motion.div variants={cardVariants} className="bg-white rounded-3xl border border-amber-100 p-6 shadow-sm relative overflow-hidden">
+                <motion.div variants={cardVariants} className="rounded-2xl border border-amber-100 bg-white shadow-sm overflow-hidden relative p-5">
+                  <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-amber-400 to-amber-500" />
                   <div className="absolute -right-8 -top-6 w-32 h-32 bg-amber-50 rounded-full blur-2xl" />
-                  <Clock size={36} className="text-amber-400 mb-4" />
-                  <h3 className="text-xl font-black text-secondary mb-1">Renewal In Progress</h3>
-                  <p className="text-sm font-bold text-gray-500 mb-4">
+                  <Clock size={26} className="text-amber-400 mb-3" />
+                  <h3 className="text-sm font-black text-secondary mb-1">Renewal In Progress</h3>
+                  <p className="text-xs font-bold text-gray-500 mb-3">
                     A renewal application has been submitted and is being reviewed.
                   </p>
-                  <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 text-xs font-black text-amber-700">
+                  <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-[10px] font-black text-amber-700">
                     #{`LIC-${pendingRenewal.id}`} · {pendingRenewal.status}
                   </div>
                 </motion.div>
@@ -618,18 +644,18 @@ const LicenceStatus = () => {
 
             if (isExpired) {
               return (
-                <motion.div variants={cardVariants} className="bg-red-600 text-white rounded-3xl p-6 shadow-xl shadow-red-200 relative overflow-hidden group">
+                <motion.div variants={cardVariants} className="rounded-2xl bg-red-600 text-white shadow-sm shadow-red-200 overflow-hidden relative p-5 group">
                   <div className="absolute -right-8 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
-                  <ShieldAlert size={48} className="text-white/20 mb-4" />
-                  <h3 className="text-2xl font-black mb-1">Licence Expired</h3>
-                  <p className="text-white/70 text-sm font-bold mb-6">
+                  <ShieldAlert size={32} className="text-white/20 mb-3" />
+                  <h3 className="text-sm font-black mb-1">Licence Expired</h3>
+                  <p className="text-white/70 text-xs font-bold mb-4">
                     Your licence has expired. Submit a renewal application immediately.
                   </p>
                   <button
                     onClick={() => setShowRenewalForm(true)}
-                    className="w-full bg-white text-red-600 font-black py-4 rounded-2xl hover:bg-red-50 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                    className="w-full bg-white text-red-600 font-black py-2 rounded-xl hover:bg-red-50 transition-all active:scale-95 shadow-sm flex items-center justify-center gap-1.5 text-xs"
                   >
-                    <RefreshCw size={18} />
+                    <RefreshCw size={14} />
                     Renew Now
                   </button>
                 </motion.div>
@@ -643,23 +669,23 @@ const LicenceStatus = () => {
                   ? "bg-orange-500 shadow-orange-200"
                   : "bg-secondary shadow-secondary/20";
               return (
-                <motion.div variants={cardVariants} className={`${urgency} text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group`}>
+                <motion.div variants={cardVariants} className={`${urgency} rounded-2xl text-white shadow-sm overflow-hidden relative p-5 group`}>
                   <div className="absolute -right-8 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
-                  <ShieldAlert size={48} className="text-white/20 mb-4" />
-                  <h3 className="text-2xl font-black mb-1">Renewal Due</h3>
-                  <p className="text-white/70 text-sm font-bold mb-1">
+                  <ShieldAlert size={32} className="text-white/20 mb-3" />
+                  <h3 className="text-sm font-black mb-1">Renewal Due</h3>
+                  <p className="text-white/70 text-xs font-bold mb-1">
                     {daysRemaining !== null
                       ? `${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} remaining until expiry.`
                       : `Renewal due ${renewalDue}.`}
                   </p>
                   {renewalDue && renewalDue !== "N/A" && (
-                    <p className="text-white/50 text-xs font-bold mb-6">Expires: {renewalDue}</p>
+                    <p className="text-white/50 text-[10px] font-bold mb-4">Expires: {renewalDue}</p>
                   )}
                   <button
                     onClick={() => setShowRenewalForm(true)}
-                    className="w-full bg-white text-secondary font-black py-4 rounded-2xl hover:bg-primary hover:text-white transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                    className="w-full bg-white text-secondary font-black py-2 rounded-xl hover:bg-primary hover:text-white transition-all active:scale-95 shadow-sm flex items-center justify-center gap-1.5 text-xs"
                   >
-                    <RefreshCw size={18} />
+                    <RefreshCw size={14} />
                     Quick Renew
                   </button>
                 </motion.div>
@@ -669,11 +695,11 @@ const LicenceStatus = () => {
             // Not eligible — window not open yet
             const daysUntilWindow = daysRemaining !== null ? daysRemaining - 90 : null;
             return (
-              <motion.div variants={cardVariants} className="bg-secondary text-white rounded-3xl p-6 shadow-xl shadow-secondary/20 relative overflow-hidden group">
+              <motion.div variants={cardVariants} className="rounded-2xl bg-secondary text-white shadow-sm shadow-secondary/20 overflow-hidden relative p-5 group">
                 <div className="absolute -right-8 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
-                <ShieldAlert size={48} className="text-white/20 mb-4" />
-                <h3 className="text-2xl font-black mb-2">Renewal</h3>
-                <p className="text-white/70 text-sm font-bold mb-6">
+                <ShieldAlert size={32} className="text-white/20 mb-3" />
+                <h3 className="text-sm font-black mb-2">Renewal</h3>
+                <p className="text-white/70 text-xs font-bold mb-4">
                   {daysUntilWindow !== null && daysUntilWindow > 0
                     ? `Renewal window opens in ${daysUntilWindow} day${daysUntilWindow !== 1 ? "s" : ""} (90 days before expiry).`
                     : renewalDue && renewalDue !== "N/A"
@@ -682,25 +708,26 @@ const LicenceStatus = () => {
                 </p>
                 <button
                   disabled
-                  className="w-full bg-white/20 text-white/50 font-black py-4 rounded-2xl cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full bg-white/20 text-white/50 font-black py-2 rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5 text-xs"
                 >
-                  <RefreshCw size={18} />
+                  <RefreshCw size={14} />
                   Not Yet Eligible
                 </button>
               </motion.div>
             );
           })()}
 
-          <motion.div variants={cardVariants} className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">How it works</h3>
-            <div className="space-y-5">
+          <motion.div variants={cardVariants} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative p-5">
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-3">How it works</h3>
+            <div className="space-y-3">
               {[
                 { n: 1, label: "Submit your application", desc: "Complete the form and attach your supporting documents." },
                 { n: 2, label: "Review by our team", desc: "We check your details and may request more information." },
                 { n: 3, label: "Decision & activation", desc: "Once approved, your sponsor licence is activated." },
               ].map((s) => (
-                <div key={s.n} className="flex items-start gap-3">
-                  <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-black">{s.n}</div>
+                <div key={s.n} className="flex items-start gap-3 p-3 rounded-xl border border-gray-100">
+                  <div className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black">{s.n}</div>
                   <div>
                     <p className="text-xs font-black text-secondary">{s.label}</p>
                     <p className="text-[11px] font-medium text-gray-400 mt-0.5">{s.desc}</p>
@@ -724,140 +751,140 @@ const LicenceStatus = () => {
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-100"
+              className="rounded-2xl border border-gray-200 bg-white shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-primary/5 rounded-2xl text-primary">
-                      <PencilLine size={28} />
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/5 rounded-xl text-primary">
+                      <PencilLine size={18} />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-black text-secondary">
+                      <h2 className="text-sm font-black text-secondary">
                         {selectedApp?.status.toLowerCase() === 'pending' ? 'Edit Application' : 'Application Details'}
                       </h2>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ID: #LIC-{selectedApp?.id}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">ID: #LIC-{selectedApp?.id}</p>
                         {selectedApp?.status.toLowerCase() !== 'pending' && (
-                          <span className="text-[8px] font-black bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full uppercase">Read-only</span>
+                          <span className="text-[10px] font-black bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full uppercase">Read-only</span>
                         )}
                       </div>
                     </div>
                   </div>
-                  <button onClick={() => setShowEditForm(false)} className="p-2 text-gray-400 hover:text-secondary transition-colors">
-                    <X size={28} />
+                  <button onClick={() => setShowEditForm(false)} className="p-1.5 text-gray-400 hover:text-secondary transition-colors">
+                    <X size={20} />
                   </button>
                 </div>
 
                 {selectedApp?.status.toLowerCase() === 'information requested' && (
-                  <div className="mb-6 p-6 bg-red-50 rounded-3xl border border-red-100">
-                    <div className="flex items-center gap-2 mb-3">
-                      <AlertCircle size={18} className="text-red-600" />
-                      <h4 className="text-xs font-black text-red-600 uppercase tracking-widest">Admin Request Details</h4>
+                  <div className="mb-4 p-4 rounded-xl border border-red-100 bg-red-50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle size={15} className="text-red-600" />
+                      <h4 className="text-[10px] font-black text-red-600 uppercase tracking-wider">Admin Request Details</h4>
                     </div>
-                    <p className="text-sm font-bold text-secondary mb-4">{selectedApp.adminNotes || "Please provide the following additional documents/information."}</p>
+                    <p className="text-xs font-bold text-secondary mb-3">{selectedApp.adminNotes || "Please provide the following additional documents/information."}</p>
                     {selectedApp.requestedDocuments && (
                       <div className="flex flex-wrap gap-2">
                         {Array.isArray(selectedApp.requestedDocuments) ? selectedApp.requestedDocuments.map((doc, idx) => (
-                          <span key={doc} className="bg-white border border-red-100 text-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase">{doc}</span>
+                          <span key={doc} className="bg-white border border-red-100 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">{doc}</span>
                         )) : (
-                          <span className="bg-white border border-red-100 text-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase">{selectedApp.requestedDocuments}</span>
+                          <span className="bg-white border border-red-100 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">{selectedApp.requestedDocuments}</span>
                         )}
                       </div>
                     )}
                   </div>
                 )}
 
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Company Name</label>
+                      <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-2">Company Name</label>
                       <input
                         type="text"
                         disabled
                         value={selectedApp?.companyName || ""}
-                        className="w-full bg-gray-100 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-gray-400 cursor-not-allowed"
+                        className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2 text-xs font-black text-gray-400 cursor-not-allowed"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Application Type</label>
+                      <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-2">Application Type</label>
                       <input
                         type="text"
                         disabled
                         value={selectedApp?.type || ""}
-                        className="w-full bg-gray-100 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-gray-400 cursor-not-allowed"
+                        className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2 text-xs font-black text-gray-400 cursor-not-allowed"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Registration Number</label>
+                      <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-2">Registration Number</label>
                       <input
                         type="text"
                         disabled={selectedApp?.status.toLowerCase() === 'approved' || selectedApp?.status.toLowerCase() === 'rejected'}
                         value={editData.registrationNumber}
                         onChange={(e) => setEditData({ ...editData, registrationNumber: e.target.value })}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all disabled:opacity-60"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all disabled:opacity-60"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">CoS Allocation</label>
+                      <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-2">CoS Allocation</label>
                       <input
                         type="text"
                         disabled={selectedApp?.status.toLowerCase() === 'approved' || selectedApp?.status.toLowerCase() === 'rejected'}
                         value={editData.cosAllocation}
                         onChange={(e) => setEditData({ ...editData, cosAllocation: e.target.value })}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all disabled:opacity-60"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all disabled:opacity-60"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Contact Name</label>
+                      <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-2">Contact Name</label>
                       <input
                         type="text"
                         disabled={selectedApp?.status.toLowerCase() === 'approved' || selectedApp?.status.toLowerCase() === 'rejected'}
                         value={editData.contactName}
                         onChange={(e) => setEditData({ ...editData, contactName: e.target.value })}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-black text-secondary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
                       />
                     </div>
                     <div className="col-span-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Contact Email</label>
+                      <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-2">Contact Email</label>
                       <input
                         type="email"
                         disabled={selectedApp?.status.toLowerCase() === 'approved' || selectedApp?.status.toLowerCase() === 'rejected'}
                         value={editData.contactEmail}
                         onChange={(e) => setEditData({ ...editData, contactEmail: e.target.value })}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-black text-secondary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Business Justification</label>
+                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-2">Business Justification</label>
                     <textarea
                       disabled={selectedApp?.status.toLowerCase() === 'approved' || selectedApp?.status.toLowerCase() === 'rejected'}
                       value={editData.reason}
                       onChange={(e) => setEditData({ ...editData, reason: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all resize-none disabled:opacity-60"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all resize-none disabled:opacity-60"
                       rows={4}
                     />
                   </div>
 
                   {/* Document Management */}
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-4">Evidence & Documents</label>
-                    <div className="space-y-3 mb-6">
+                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-3">Evidence & Documents</label>
+                    <div className="space-y-2 mb-4">
                       {selectedApp?.documents?.map((doc, i) => {
                         const previewing = docBusy === `${i}:preview`;
                         const downloading = docBusy === `${i}:download`;
                         return (
-                          <div key={doc} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-50 group hover:border-primary/20 transition-all">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <FileText size={18} className="text-gray-400 shrink-0" />
+                          <div key={doc} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50 group hover:border-primary/20 transition-all">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <FileText size={15} className="text-gray-400 shrink-0" />
                               <span className="text-xs font-bold text-gray-500 truncate max-w-[200px]">{doc.split('\\').pop().split('/').pop()}</span>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
@@ -868,7 +895,7 @@ const LicenceStatus = () => {
                                 className="p-1.5 bg-white text-gray-400 rounded-lg hover:text-primary transition-all disabled:opacity-60"
                                 title="View document"
                               >
-                                {previewing ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+                                {previewing ? <Loader2 size={13} className="animate-spin" /> : <Eye size={13} />}
                               </button>
                               <button
                                 type="button"
@@ -877,25 +904,25 @@ const LicenceStatus = () => {
                                 className="p-1.5 bg-white text-gray-400 rounded-lg hover:text-primary transition-all disabled:opacity-60"
                                 title="Download document"
                               >
-                                {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                                {downloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
                               </button>
                             </div>
                           </div>
                         );
                       })}
                       {newFiles.map((file, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl border border-primary/10 animate-pulse">
-                          <div className="flex items-center gap-3">
-                            <FileText size={18} className="text-primary" />
+                        <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-primary/10 bg-primary/5 animate-pulse">
+                          <div className="flex items-center gap-2">
+                            <FileText size={15} className="text-primary" />
                             <span className="text-xs font-bold text-primary truncate max-w-[200px]">{file.name}</span>
                           </div>
                           <button onClick={() => setNewFiles(newFiles.filter((_, idx) => idx !== i))} className="text-primary/40 hover:text-primary">
-                            <X size={16} />
+                            <X size={14} />
                           </button>
                         </div>
                       ))}
                     </div>
-                    
+
                     {(selectedApp?.status.toLowerCase() !== 'approved' && selectedApp?.status.toLowerCase() !== 'rejected') && (
                       <>
                         <input
@@ -907,30 +934,30 @@ const LicenceStatus = () => {
                         />
                         <label
                           htmlFor="edit-file-upload"
-                          className="w-full flex items-center justify-center gap-3 border-2 border-dashed border-gray-100 rounded-xl py-3 text-xs font-black text-gray-400 hover:border-primary/20 hover:text-primary transition-all cursor-pointer"
+                          className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-xl py-2.5 text-[10px] font-black text-gray-400 hover:border-primary/20 hover:text-primary transition-all cursor-pointer"
                         >
-                          <Upload size={16} />
+                          <Upload size={14} />
                           Add More Evidence
                         </label>
                       </>
                     )}
                   </div>
 
-                   <div className="flex gap-4 pt-6">
+                  <div className="flex gap-3 pt-4">
                     {(selectedApp?.status.toLowerCase() !== 'approved' && selectedApp?.status.toLowerCase() !== 'rejected') ? (
                       <>
                         <button
                           onClick={handleUpdateSubmit}
                           disabled={submitting}
-                          className="flex-[2] bg-primary hover:bg-primary-dark text-white font-black rounded-xl py-3 transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2 active:scale-95"
+                          className="flex-[2] inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm disabled:opacity-60"
                         >
-                          {submitting ? <Loader2 className="animate-spin" /> : <><Save size={18} /> Update Application</>}
+                          {submitting ? <Loader2 size={14} className="animate-spin" /> : <><Save size={14} /> Update Application</>}
                         </button>
                       </>
                     ) : (
                       <button
                         onClick={() => setShowEditForm(false)}
-                        className="flex-1 bg-secondary text-white font-black rounded-xl py-3 transition-all"
+                        className="flex-1 inline-flex items-center justify-center rounded-lg bg-secondary px-3 py-1.5 text-xs font-black text-white hover:bg-secondary-dark transition shadow-sm"
                       >
                         Close Details
                       </button>
@@ -938,7 +965,7 @@ const LicenceStatus = () => {
                     {(selectedApp?.status.toLowerCase() !== 'approved' && selectedApp?.status.toLowerCase() !== 'rejected') && (
                       <button
                         onClick={() => setShowEditForm(false)}
-                        className="flex-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-black rounded-xl py-3 transition-all"
+                        className="flex-1 inline-flex items-center justify-center rounded-lg bg-gray-50 px-3 py-1.5 text-xs font-black text-gray-500 hover:bg-gray-100 transition shadow-sm"
                       >
                         Cancel
                       </button>
@@ -963,18 +990,18 @@ const LicenceStatus = () => {
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-gray-100"
+              className="rounded-2xl border border-gray-200 bg-white shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto"
             >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-secondary/10 rounded-2xl text-secondary">
-                      <RefreshCw size={28} />
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-secondary/10 rounded-xl text-secondary">
+                      <RefreshCw size={18} />
                     </div>
-                    <h2 className="text-2xl font-black text-secondary">Quick Renewal</h2>
+                    <h2 className="text-sm font-black text-secondary">Quick Renewal</h2>
                   </div>
-                  <button onClick={() => setShowRenewalForm(false)} className="p-2 text-gray-400 hover:text-secondary transition-colors">
-                    <X size={28} />
+                  <button onClick={() => setShowRenewalForm(false)} className="p-1.5 text-gray-400 hover:text-secondary transition-colors">
+                    <X size={20} />
                   </button>
                 </div>
 
@@ -982,21 +1009,21 @@ const LicenceStatus = () => {
                 {(() => {
                   const approvedApp = applications.find((a) => a.status === "Approved");
                   return approvedApp ? (
-                    <div className="mb-6 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-xs font-bold text-blue-700">
+                    <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[10px] font-bold text-blue-700">
                       Renewing licence #{`LIC-${approvedApp.id}`} · {approvedApp.licenceType || "Sponsor Licence"}
                     </div>
                   ) : null;
                 })()}
 
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-2">
                       Renewal Category <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={renewalData.renewalType}
                       onChange={(e) => setRenewalData({ ...renewalData, renewalType: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-black text-secondary"
                     >
                       <option value="">Select type</option>
                       <option value="Standard Renewal">Standard Renewal</option>
@@ -1006,40 +1033,40 @@ const LicenceStatus = () => {
 
                   {renewalData.renewalType === "Allocation Increase" && (
                     <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Requested CoS Allocation</label>
+                      <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-2">Requested CoS Allocation</label>
                       <input
                         type="number"
                         min={1}
                         value={renewalData.requestedAllocation}
                         onChange={(e) => setRenewalData({ ...renewalData, requestedAllocation: e.target.value })}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-black text-secondary"
                         placeholder="Number of CoS required"
                       />
                     </div>
                   )}
 
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Reason / Notes</label>
+                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider block mb-2">Reason / Notes</label>
                     <textarea
                       value={renewalData.reason}
                       onChange={(e) => setRenewalData({ ...renewalData, reason: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary resize-none"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-black text-secondary resize-none"
                       rows={3}
                       placeholder="Briefly describe the purpose of this renewal…"
                     />
                   </div>
 
-                  <div className="flex gap-4 pt-6">
+                  <div className="flex gap-3 pt-3">
                     <button
                       onClick={handleRenewalSubmit}
                       disabled={submitting || !renewalData.renewalType}
-                      className="flex-1 bg-secondary hover:bg-secondary-dark text-white font-black rounded-xl py-3 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-black text-white hover:bg-secondary-dark transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {submitting ? <Loader2 className="animate-spin" size={18} /> : <><RefreshCw size={18} /> Submit Renewal</>}
+                      {submitting ? <Loader2 size={14} className="animate-spin" /> : <><RefreshCw size={14} /> Submit Renewal</>}
                     </button>
                     <button
                       onClick={() => setShowRenewalForm(false)}
-                      className="flex-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-black rounded-xl py-3 transition-all"
+                      className="flex-1 inline-flex items-center justify-center rounded-lg bg-gray-50 px-3 py-1.5 text-xs font-black text-gray-500 hover:bg-gray-100 transition shadow-sm"
                     >
                       Cancel
                     </button>

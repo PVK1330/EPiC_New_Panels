@@ -78,13 +78,13 @@ export default function BusinessTasks() {
   };
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-5 pb-6">
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <CheckSquare className="text-primary" size={36} />
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+          <CheckSquare className="text-primary" size={26} />
           My Tasks
         </h1>
-        <p className="text-primary font-bold text-sm mt-1">Actions required from you across your licence applications.</p>
+        <p className="text-primary font-bold text-sm mt-0.5">Actions required from you across your licence applications.</p>
       </motion.div>
 
       {/* Filters + Search */}
@@ -96,7 +96,7 @@ export default function BusinessTasks() {
             placeholder="Search tasks…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 px-3"
           />
         </div>
         <div className="flex gap-2">
@@ -104,9 +104,9 @@ export default function BusinessTasks() {
             <button
               key={f.id}
               onClick={() => { setFilter(f.id); setPage(1); }}
-              className={`px-4 py-2 rounded-xl text-xs font-black border transition ${
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-black border transition ${
                 filter === f.id
-                  ? "bg-primary text-white border-primary"
+                  ? "bg-primary text-white border-primary shadow-sm"
                   : "bg-white text-gray-600 border-gray-200 hover:border-primary/40"
               }`}
             >
@@ -122,7 +122,8 @@ export default function BusinessTasks() {
           <Loader2 size={40} className="text-primary animate-spin" />
         </div>
       ) : tasks.length === 0 ? (
-        <div className="rounded-3xl border border-gray-200 bg-white p-16 text-center">
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
           <CheckSquare size={40} className="text-gray-200 mx-auto mb-3" />
           <p className="text-sm font-black text-secondary">No tasks found</p>
           <p className="text-xs font-bold text-gray-400 mt-1">You're all caught up!</p>
@@ -134,22 +135,23 @@ export default function BusinessTasks() {
               {s === "overdue" && <AlertCircle size={16} className="text-red-500" />}
               {s === "due_soon" && <Clock size={16} className="text-amber-500" />}
               {s === "completed" && <Check size={16} className="text-emerald-500" />}
-              <h2 className={`text-xs font-black uppercase tracking-widest ${
-                s === "overdue" ? "text-red-500" : s === "due_soon" ? "text-amber-500" : "text-gray-400"
+              <h2 className={`text-[10px] font-black uppercase tracking-wider ${
+                s === "overdue" ? "text-red-500" : s === "due_soon" ? "text-amber-500" : "text-gray-500"
               }`}>{sectionLabel(s)}</h2>
-              <span className="text-xs font-black text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{grouped[s].length}</span>
+              <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{grouped[s].length}</span>
             </div>
-            <div className="rounded-3xl border border-gray-200 bg-white divide-y divide-gray-100 overflow-hidden shadow-sm">
+            <div className="rounded-2xl border border-gray-200 bg-white divide-y divide-gray-100 overflow-hidden shadow-sm relative">
+              <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
               {grouped[s].map((task) => (
-                <div key={task.id} className="px-6 py-4 flex items-start gap-4 hover:bg-gray-50/50 transition-colors">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                <div key={task.id} className="px-3 py-2 flex items-start gap-3 hover:bg-gray-50/50 transition-colors">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
                     task.isCompleted ? "bg-emerald-100" : s === "overdue" ? "bg-red-100" : "bg-primary/10"
                   }`}>
                     {task.isCompleted
-                      ? <Check size={14} className="text-emerald-600" />
+                      ? <Check size={13} className="text-emerald-600" />
                       : s === "overdue"
-                        ? <AlertCircle size={14} className="text-red-500" />
-                        : <Clock size={14} className="text-primary" />}
+                        ? <AlertCircle size={13} className="text-red-500" />
+                        : <Clock size={13} className="text-primary" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-black ${task.isCompleted ? "text-gray-400 line-through" : "text-secondary"}`}>
@@ -187,17 +189,17 @@ export default function BusinessTasks() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-black text-gray-600 hover:border-primary/40 disabled:opacity-40"
+            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-black text-gray-600 hover:border-primary/40 disabled:opacity-40"
           >
             Previous
           </button>
-          <span className="px-4 py-2 text-xs font-black text-gray-500">
+          <span className="px-3 py-1.5 text-xs font-black text-gray-500">
             {page} / {pagination.totalPages}
           </span>
           <button
             onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
             disabled={page === pagination.totalPages}
-            className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-black text-gray-600 hover:border-primary/40 disabled:opacity-40"
+            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-black text-gray-600 hover:border-primary/40 disabled:opacity-40"
           >
             Next
           </button>

@@ -281,19 +281,22 @@ const Calendar = () => {
   // ── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 pb-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-secondary">Business Calendar</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+            <CalendarIcon size={26} />
+            Business Calendar
+          </h1>
+          <p className="text-primary font-bold text-sm mt-0.5">
             Schedule events, meetings, and deadlines
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowEventModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-xl hover:bg-secondary/90 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm"
           >
             <Plus size={16} />
             New Event
@@ -308,21 +311,21 @@ const Calendar = () => {
       </div>
 
       {/* Controls Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-white p-3 rounded-2xl border border-gray-200">
+        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigateMonth("prev")}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ChevronLeft size={20} />
             </button>
-            <h2 className="text-lg font-bold text-secondary min-w-[200px] text-center">
+            <h2 className="text-sm font-black text-secondary min-w-[180px] text-center">
               {formatMonth(currentDate)}
             </h2>
             <button
               onClick={() => navigateMonth("next")}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ChevronRight size={20} />
             </button>
@@ -330,20 +333,20 @@ const Calendar = () => {
 
           <button
             onClick={() => setCurrentDate(new Date())}
-            className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
           >
             Today
           </button>
 
           {isPastMonth && (
-            <span className="flex items-center gap-1 text-xs text-gray-400 bg-gray-50 border border-gray-200 px-2 py-1 rounded-lg">
+            <span className="flex items-center gap-1 text-[10px] text-gray-400 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full">
               <CheckCircle2 size={12} className="text-green-500" />
               Showing completed meetings
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="relative">
             <Search
               size={16}
@@ -381,13 +384,14 @@ const Calendar = () => {
       </div>
 
       {/* Calendar Grid */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
         {/* Week Days Header */}
         <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
           {weekDays.map((day) => (
             <div
               key={day}
-              className="p-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
+              className="px-3 py-2 text-center text-[10px] font-black text-gray-500 uppercase tracking-wider"
             >
               {day}
             </div>
@@ -481,16 +485,17 @@ const Calendar = () => {
       </div>
 
       {/* Events List — Upcoming */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-secondary">Upcoming Events</h3>
-          <span className="text-xs text-gray-500">
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative p-5">
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-black text-secondary">Upcoming Events</h3>
+          <span className="text-[10px] font-black uppercase tracking-wider text-gray-500">
             {upcomingEvents.length} events
           </span>
         </div>
 
         {upcomingEvents.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">
+          <p className="text-sm text-gray-400 text-center py-4">
             No upcoming events. Click a date or press "New Event" to add one.
           </p>
         ) : (
@@ -508,21 +513,22 @@ const Calendar = () => {
       </div>
 
       {/* Events List — Completed / Past */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative p-5">
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-bold text-secondary">
+            <h3 className="text-sm font-black text-secondary">
               Completed Meetings
             </h3>
             <CheckCircle2 size={16} className="text-green-500" />
           </div>
-          <span className="text-xs text-gray-500">
+          <span className="text-[10px] font-black uppercase tracking-wider text-gray-500">
             {completedEvents.length} completed
           </span>
         </div>
 
         {completedEvents.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">
+          <p className="text-sm text-gray-400 text-center py-4">
             No completed meetings yet.
           </p>
         ) : (
@@ -544,20 +550,20 @@ const Calendar = () => {
       {showEventModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-secondary">New Event</h3>
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-black text-secondary">New Event</h3>
                 <button
                   onClick={() => setShowEventModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
                     Event Title
                   </label>
                   <input
@@ -571,9 +577,9 @@ const Calendar = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
                       Date
                     </label>
                     <DatePicker
@@ -586,7 +592,7 @@ const Calendar = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
                       Time
                     </label>
                     <TimePicker
@@ -600,9 +606,9 @@ const Calendar = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
                       Duration (min)
                     </label>
                     <select
@@ -620,7 +626,7 @@ const Calendar = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
                       Type
                     </label>
                     <select
@@ -639,7 +645,7 @@ const Calendar = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
                     Location
                   </label>
                   <input
@@ -654,7 +660,7 @@ const Calendar = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
                     Attendees
                   </label>
                   <input
@@ -669,7 +675,7 @@ const Calendar = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
                     Description
                   </label>
                   <textarea
@@ -684,16 +690,16 @@ const Calendar = () => {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="flex gap-3 mt-4">
                 <button
                   onClick={() => setShowEventModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreateEvent}
-                  className="flex-1 px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors"
+                  className="flex-1 px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors text-sm font-black"
                 >
                   Create Event
                 </button>
@@ -707,36 +713,36 @@ const Calendar = () => {
       {showEventDetailModal && selectedEvent && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-secondary">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-black text-secondary">
                   Event Details
                 </h3>
                 <button
                   onClick={() => setShowEventDetailModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Event Header */}
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3">
                   <div
-                    className={`w-12 h-12 rounded-xl ${selectedEvent.color} flex items-center justify-center text-white flex-shrink-0`}
+                    className={`w-10 h-10 rounded-xl ${selectedEvent.color} flex items-center justify-center text-white flex-shrink-0`}
                   >
                     {selectedEvent.completed
-                      ? <CheckCircle2 size={20} />
+                      ? <CheckCircle2 size={18} />
                       : getEventIcon(selectedEvent.type)}
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-lg font-bold text-gray-900">
+                    <h4 className="text-sm font-black text-gray-900">
                       {selectedEvent.title}
                     </h4>
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        className={`px-2 py-0.5 text-[10px] font-black rounded-full ${
                           selectedEvent.type === "meeting"
                             ? "bg-blue-100 text-blue-700"
                             : selectedEvent.type === "call"
@@ -749,7 +755,7 @@ const Calendar = () => {
                         {selectedEvent.type}
                       </span>
                       {selectedEvent.completed && (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 flex items-center gap-1">
+                        <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-green-100 text-green-700 flex items-center gap-1">
                           <CheckCircle2 size={10} />
                           Completed
                         </span>
@@ -758,11 +764,11 @@ const Calendar = () => {
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <CalendarIcon size={16} className="text-gray-400" />
                     <div>
-                      <p className="text-xs text-gray-500">Date</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Date</p>
                       <p className="text-sm font-bold text-gray-900">
                         {formatWithOptions(selectedEvent.date, {
                           weekday: "long",
@@ -777,7 +783,7 @@ const Calendar = () => {
                   <div className="flex items-center gap-3">
                     <Clock size={16} className="text-gray-400" />
                     <div>
-                      <p className="text-xs text-gray-500">Time</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Time</p>
                       <p className="text-sm font-bold text-gray-900">
                         {formatEventTime(selectedEvent.date)} –{" "}
                         {formatEventTime(selectedEvent.endDate)}
@@ -789,7 +795,7 @@ const Calendar = () => {
                     <div className="flex items-center gap-3">
                       <MapPin size={16} className="text-gray-400" />
                       <div>
-                        <p className="text-xs text-gray-500">Location</p>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Location</p>
                         <p className="text-sm font-bold text-gray-900">
                           {selectedEvent.location}
                         </p>
@@ -801,7 +807,7 @@ const Calendar = () => {
                     <div className="flex items-center gap-3">
                       <Video size={16} className="text-gray-400" />
                       <div className="flex-1">
-                        <p className="text-xs text-gray-500">Join Meeting</p>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Join Meeting</p>
                         <a
                           href={selectedEvent.joinUrl}
                           target="_blank"
@@ -819,12 +825,12 @@ const Calendar = () => {
                       <div className="flex items-start gap-3">
                         <Users size={16} className="text-gray-400 mt-1" />
                         <div className="flex-1">
-                          <p className="text-xs text-gray-500">Attendees</p>
-                          <div className="flex flex-wrap gap-2 mt-1">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Attendees</p>
+                          <div className="flex flex-wrap gap-1.5 mt-1">
                             {selectedEvent.attendees.map((attendee, index) => (
                               <span
                                 key={index}
-                                className="px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs"
+                                className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-[10px] font-black"
                               >
                                 {attendee}
                               </span>
@@ -836,7 +842,7 @@ const Calendar = () => {
 
                   {selectedEvent.description && (
                     <div>
-                      <p className="text-xs text-gray-500 mb-2">Description</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Description</p>
                       <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
                         {selectedEvent.description}
                       </p>
@@ -844,10 +850,10 @@ const Calendar = () => {
                   )}
                 </div>
 
-                <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <div className="flex gap-3 pt-3 border-t border-gray-200">
                   <button
                     onClick={() => setShowEventDetailModal(false)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                   >
                     <Edit size={16} />
                     Edit
@@ -855,7 +861,7 @@ const Calendar = () => {
                   {!selectedEvent.isTeamsMeeting && (
                     <button
                       onClick={() => handleDeleteEvent(selectedEvent.id)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm"
                     >
                       <Trash2 size={16} />
                       Delete
@@ -895,7 +901,7 @@ const EventRow = ({ event, onClick, formatEventTime, isCompleted = false }) => {
   return (
     <div
       onClick={() => onClick(event)}
-      className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-colors border
+      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors border
         ${isCompleted
           ? "bg-gray-50/60 border-gray-100 hover:bg-gray-100/60 opacity-80"
           : "bg-gray-50 border-gray-100 hover:bg-gray-100 hover:border-gray-200"
@@ -915,7 +921,7 @@ const EventRow = ({ event, onClick, formatEventTime, isCompleted = false }) => {
             />
           )}
         </p>
-        <div className="flex items-center gap-4 text-xs text-gray-500 mt-1 flex-wrap">
+        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1 flex-wrap">
           <span className="flex items-center gap-1">
             <CalendarIcon size={12} />
             {formatDate(event.date)}
@@ -942,7 +948,7 @@ const EventRow = ({ event, onClick, formatEventTime, isCompleted = false }) => {
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <span
-          className={`px-2 py-1 text-xs font-medium rounded-full ${
+          className={`px-2 py-0.5 text-[10px] font-black rounded-full ${
             typeColors[event.type] || "bg-gray-100 text-gray-700"
           }`}
         >

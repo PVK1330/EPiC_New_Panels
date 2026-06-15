@@ -2,104 +2,114 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useSelector } from "react-redux";
 import {
-  LayoutDashboard,
+  Settings,
   User,
   Bell,
   Shield,
   Building2,
-  Moon,
-  Sun,
   ChevronRight,
   Save,
+  Lock,
 } from "lucide-react";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
-import { getBusinessProfile, updateBusinessProfile, changeBusinessPassword } from "../../services/businessProfileApi";
+import {
+  getBusinessProfile,
+  updateBusinessProfile,
+  changeBusinessPassword,
+} from "../../services/businessProfileApi";
 import { useToast } from "../../context/ToastContext";
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
+};
+
+const inputCls =
+  "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 bg-white";
+
+const Label = ({ children }) => (
+  <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1">
+    {children}
+  </label>
+);
+
+const ToggleRow = ({ label, defaultChecked }) => (
+  <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-100">
+    <span className="text-sm font-bold text-gray-700">{label}</span>
+    <label className="relative inline-flex items-center cursor-pointer">
+      <input type="checkbox" defaultChecked={defaultChecked} className="sr-only peer" />
+      <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary" />
+    </label>
+  </div>
+);
 
 const BusinessSettings = () => {
   const token = useSelector((state) => state.auth.token);
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("account");
-  const [darkMode, setDarkMode] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
-  const [twoFactorMode, setTwoFactorMode] = useState("setup"); // setup or disable
-  
+  const [twoFactorMode, setTwoFactorMode] = useState("setup");
   const [loading, setLoading] = useState(false);
-  const [profileData, setProfileData] = useState({
-    user: {},
-    profile: {}
-  });
+  const [saving, setSaving] = useState(false);
 
+  const [profileData, setProfileData] = useState({ user: {}, profile: {} });
   const [passwordForm, setPasswordForm] = useState({
     current_password: "",
     new_password: "",
-    confirm_password: ""
+    confirm_password: "",
   });
 
-  const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-  };
-
   const tabs = [
-    { id: "account", label: "Account Settings", icon: User },
+    { id: "account", label: "Account", icon: User },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
-    { id: "company", label: "Company Info", icon: Building2 },
-    // { id: "appearance", label: "Appearance", icon: Moon },
+    { id: "company", label: "Company", icon: Building2 },
   ];
 
-  // Fetch profile data on mount
   useEffect(() => {
-    const fetchProfile = async () => {
+    (async () => {
       try {
         setLoading(true);
         const res = await getBusinessProfile();
-        if (res.data.status === "success") {
-          setProfileData(res.data.data);
-        }
-      } catch (err) {
+        if (res.data.status === "success") setProfileData(res.data.data);
+      } catch {
         showToast({ message: "Failed to load profile data", variant: "danger" });
       } finally {
         setLoading(false);
       }
-    };
-    fetchProfile();
+    })();
   }, []);
 
   const handleInputChange = (e, section) => {
     const { name, value } = e.target;
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      [section]: {
-        ...prev[section],
-        [name]: value
-      }
+      [section]: { ...prev[section], [name]: value },
     }));
   };
 
   const handleSave = async () => {
     try {
-      setLoading(true);
+      setSaving(true);
       const res = await updateBusinessProfile({
         ...profileData.user,
-        ...profileData.profile
+        ...profileData.profile,
       });
       if (res.data.status === "success") {
-        showToast({ message: "Settings saved successfully!", variant: "success" });
+        showToast({ message: "Settings saved!", variant: "success" });
         setProfileData(res.data.data);
       }
     } catch (err) {
-      showToast({ 
-        message: err.response?.data?.message || "Failed to save settings", 
-        variant: "danger" 
+      showToast({
+        message: err.response?.data?.message || "Failed to save settings",
+        variant: "danger",
       });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -108,266 +118,276 @@ const BusinessSettings = () => {
       return showToast({ message: "Passwords do not match", variant: "warning" });
     }
     try {
-      setLoading(true);
+      setSaving(true);
       const res = await changeBusinessPassword({
         current_password: passwordForm.current_password,
-        new_password: passwordForm.new_password
+        new_password: passwordForm.new_password,
       });
       if (res.data.status === "success") {
-        showToast({ message: "Password updated successfully!", variant: "success" });
+        showToast({ message: "Password updated!", variant: "success" });
         setPasswordForm({ current_password: "", new_password: "", confirm_password: "" });
       }
     } catch (err) {
-      showToast({ 
-        message: err.response?.data?.message || "Failed to update password", 
-        variant: "danger" 
+      showToast({
+        message: err.response?.data?.message || "Failed to update password",
+        variant: "danger",
       });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-10 pb-10">
-      {/* Header */}
+    <div className="space-y-6 pb-6">
+      {/* Page header */}
       <motion.div
-        initial={{ opacity: 0, y: -16 }}
+        initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.4 }}
       >
-        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <LayoutDashboard className="text-primary" size={36} />
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+          <Settings className="text-primary shrink-0" size={26} />
           Settings
         </h1>
-        <p className="text-primary font-bold text-sm mt-1">
+        <p className="text-primary font-bold text-sm mt-0.5">
           Manage your account and business preferences.
         </p>
       </motion.div>
 
-      {/* Settings Container */}
+      {/* Layout */}
       <motion.div
-        className="grid grid-cols-1 lg:grid-cols-4 gap-6"
+        className="grid grid-cols-1 lg:grid-cols-4 gap-4"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
-        {/* Sidebar Tabs */}
+        {/* Sidebar */}
         <div className="lg:col-span-1">
-          <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-gray-200 bg-white p-2.5 shadow-sm">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mb-2 ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors mb-1 last:mb-0 ${
                   activeTab === tab.id
-                    ? "bg-primary text-white"
-                    : "hover:bg-gray-100 text-gray-700"
+                    ? "bg-primary text-white shadow-sm"
+                    : "hover:bg-gray-50 text-gray-600"
                 }`}
               >
-                <tab.icon size={18} />
-                <span className="text-sm font-black">{tab.label}</span>
-                {activeTab === tab.id && <ChevronRight size={16} className="ml-auto" />}
+                <tab.icon size={15} />
+                <span className="text-xs font-black">{tab.label}</span>
+                {activeTab === tab.id && (
+                  <ChevronRight size={13} className="ml-auto opacity-80" />
+                )}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Settings Content */}
+        {/* Content */}
         <div className="lg:col-span-3">
           <motion.div
-            className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+            className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
             variants={cardVariants}
             initial="hidden"
             animate="visible"
           >
-            {/* Account Settings */}
-            {activeTab === "account" && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-black text-secondary flex items-center gap-2">
-                  <User size={24} className="text-primary" />
-                  Account Settings
-                </h2>
+            {/* Top colour accent */}
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
 
+            <div className="p-5">
+              {/* ── Account ──────────────────────────────────────────── */}
+              {activeTab === "account" && (
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      First Name
-                    </label>
-                    <input
-                      type="text"
-                      name="first_name"
-                      value={profileData.user?.first_name || ""}
-                      onChange={(e) => handleInputChange(e, "user")}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                    />
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base font-black text-secondary flex items-center gap-2">
+                      <User size={18} className="text-primary" />
+                      Account Settings
+                    </h2>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label>First Name</Label>
+                      <input
+                        type="text"
+                        name="first_name"
+                        value={profileData.user?.first_name || ""}
+                        onChange={(e) => handleInputChange(e, "user")}
+                        className={inputCls}
+                        placeholder="First name"
+                      />
+                    </div>
+                    <div>
+                      <Label>Last Name</Label>
+                      <input
+                        type="text"
+                        name="last_name"
+                        value={profileData.user?.last_name || ""}
+                        onChange={(e) => handleInputChange(e, "user")}
+                        className={inputCls}
+                        placeholder="Last name"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      Last Name
-                    </label>
-                    <input
-                      type="text"
-                      name="last_name"
-                      value={profileData.user?.last_name || ""}
-                      onChange={(e) => handleInputChange(e, "user")}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      Email Address
-                    </label>
+                    <Label>Email Address</Label>
                     <input
                       type="email"
                       name="email"
                       value={profileData.user?.email || ""}
                       onChange={(e) => handleInputChange(e, "user")}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                      className={inputCls}
+                      placeholder="you@company.com"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      Phone Number
-                    </label>
+                    <Label>Phone Number</Label>
                     <input
                       type="tel"
                       name="phoneNumber"
                       value={profileData.profile?.phoneNumber || ""}
                       onChange={(e) => handleInputChange(e, "profile")}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                      className={inputCls}
+                      placeholder="+44 7700 000000"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      Timezone
-                    </label>
-                    <select
-                      defaultValue="UTC+0"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                    >
-                      <option value="UTC+0">UTC+0 (London)</option>
-                      <option value="UTC+1">UTC+1 (Central European)</option>
-                      <option value="UTC-5">UTC-5 (Eastern Time)</option>
-                      <option value="UTC-8">UTC-8 (Pacific Time)</option>
+                    <Label>Timezone</Label>
+                    <select defaultValue="UTC+0" className={inputCls}>
+                      <option value="UTC+0">UTC+0 — London</option>
+                      <option value="UTC+1">UTC+1 — Central European</option>
+                      <option value="UTC-5">UTC-5 — Eastern Time</option>
+                      <option value="UTC-8">UTC-8 — Pacific Time</option>
                     </select>
                   </div>
-                </div>
-              </div>
-            )}
 
-            {/* Notification Settings */}
-            {activeTab === "notifications" && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-black text-secondary flex items-center gap-2">
-                  <Bell size={24} className="text-primary" />
-                  Notification Preferences
-                </h2>
-
-                <div className="space-y-4">
-                  {[
-                    "Email notifications for visa expirations",
-                    "Email notifications for compliance updates",
-                    "Email notifications for payment reminders",
-                    "SMS alerts for urgent notifications",
-                    "Push notifications for system updates",
-                  ].map((item, index) => (
-                    <div
-                      key={item}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                  <div className="flex justify-end pt-2 border-t border-gray-100">
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-black text-white transition hover:bg-primary-dark disabled:opacity-50 shadow-sm"
                     >
-                      <span className="text-sm font-bold text-gray-700">{item}</span>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked={index < 3} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                      </label>
-                    </div>
-                  ))}
+                      {saving ? (
+                        <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Save size={13} />
+                      )}
+                      {saving ? "Saving…" : "Save Changes"}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Security Settings */}
-            {activeTab === "security" && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-black text-secondary flex items-center gap-2">
-                  <Shield size={24} className="text-primary" />
-                  Security Settings
-                </h2>
-
+              {/* ── Notifications ─────────────────────────────────────── */}
+              {activeTab === "notifications" && (
                 <div className="space-y-4">
-                  <Input
-                    label="Current Password"
-                    name="current_password"
-                    type="password"
-                    value={passwordForm.current_password}
-                    onChange={(e) => setPasswordForm({...passwordForm, current_password: e.target.value})}
-                    placeholder="Enter current password"
-                  />
+                  <h2 className="text-base font-black text-secondary flex items-center gap-2">
+                    <Bell size={18} className="text-primary" />
+                    Notification Preferences
+                  </h2>
 
-                  <Input
-                    label="New Password"
-                    name="new_password"
-                    type="password"
-                    value={passwordForm.new_password}
-                    onChange={(e) => setPasswordForm({...passwordForm, new_password: e.target.value})}
-                    placeholder="Enter new password"
-                  />
+                  <div className="space-y-2">
+                    {[
+                      { label: "Email — visa expirations", on: true },
+                      { label: "Email — compliance updates", on: true },
+                      { label: "Email — payment reminders", on: true },
+                      { label: "SMS — urgent alerts", on: false },
+                      { label: "Push — system updates", on: false },
+                    ].map((item) => (
+                      <ToggleRow key={item.label} label={item.label} defaultChecked={item.on} />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                  <Input
-                    label="Confirm New Password"
-                    name="confirm_password"
-                    type="password"
-                    value={passwordForm.confirm_password}
-                    onChange={(e) => setPasswordForm({...passwordForm, confirm_password: e.target.value})}
-                    placeholder="Confirm new password"
-                  />
+              {/* ── Security ──────────────────────────────────────────── */}
+              {activeTab === "security" && (
+                <div className="space-y-4">
+                  <h2 className="text-base font-black text-secondary flex items-center gap-2">
+                    <Shield size={18} className="text-primary" />
+                    Security Settings
+                  </h2>
 
-                  <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
-                    <p className="text-xs font-bold text-amber-700">
-                      Last password change: 30 days ago. We recommend changing your password every 90 days.
-                    </p>
+                  {/* Password */}
+                  <div className="space-y-3">
+                    <Input
+                      label="Current Password"
+                      name="current_password"
+                      type="password"
+                      value={passwordForm.current_password}
+                      onChange={(e) =>
+                        setPasswordForm({ ...passwordForm, current_password: e.target.value })
+                      }
+                      placeholder="Enter current password"
+                    />
+                    <Input
+                      label="New Password"
+                      name="new_password"
+                      type="password"
+                      value={passwordForm.new_password}
+                      onChange={(e) =>
+                        setPasswordForm({ ...passwordForm, new_password: e.target.value })
+                      }
+                      placeholder="Enter new password"
+                    />
+                    <Input
+                      label="Confirm New Password"
+                      name="confirm_password"
+                      type="password"
+                      value={passwordForm.confirm_password}
+                      onChange={(e) =>
+                        setPasswordForm({ ...passwordForm, confirm_password: e.target.value })
+                      }
+                      placeholder="Confirm new password"
+                    />
+
+                    <div className="px-3 py-2 bg-amber-50 rounded-xl border border-amber-200">
+                      <p className="text-[11px] font-bold text-amber-700">
+                        Recommended: change your password every 90 days.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={handlePasswordChange}
+                      disabled={saving}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-black text-white transition hover:bg-primary-dark disabled:opacity-50 shadow-sm"
+                    >
+                      <Lock size={13} />
+                      {saving ? "Updating…" : "Change Password"}
+                    </button>
                   </div>
 
-                  <button 
-                    onClick={handlePasswordChange}
-                    disabled={loading}
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark disabled:opacity-50"
-                  >
-                    {loading ? "Changing..." : "Change Password"}
-                  </button>
-
-                  <div className="pt-4 border-t border-gray-200">
-                    <h3 className="text-sm font-black text-secondary mb-3">Two-Factor Authentication</h3>
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  {/* 2FA */}
+                  <div className="pt-3 border-t border-gray-100">
+                    <p className="text-xs font-black text-secondary mb-2">
+                      Two-Factor Authentication
+                    </p>
+                    <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-100">
                       <div>
-                        <p className="text-sm font-bold text-secondary">
-                          {twoFactorEnabled ? "2FA is enabled" : "2FA is disabled"}
+                        <p className="text-sm font-black text-secondary">
+                          {twoFactorEnabled ? "2FA enabled" : "2FA disabled"}
                         </p>
-                        <p className="text-xs font-bold text-gray-500 mt-0.5">
-                          {twoFactorEnabled ? "Your account is protected with 2FA" : "Enable 2FA for enhanced security"}
+                        <p className="text-[11px] font-bold text-gray-500 mt-0.5">
+                          {twoFactorEnabled
+                            ? "Your account is protected with 2FA"
+                            : "Enable for enhanced security"}
                         </p>
                       </div>
                       {twoFactorEnabled ? (
                         <button
-                          onClick={() => {
-                            setTwoFactorMode("disable");
-                            setTwoFactorModalOpen(true);
-                          }}
-                          className="px-4 py-2 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition"
+                          onClick={() => { setTwoFactorMode("disable"); setTwoFactorModalOpen(true); }}
+                          className="px-3 py-1.5 rounded-xl text-xs font-black text-red-600 hover:bg-red-50 border border-red-200 transition"
                         >
-                          Disable 2FA
+                          Disable
                         </button>
                       ) : (
                         <button
-                          onClick={() => {
-                            setTwoFactorMode("setup");
-                            setTwoFactorModalOpen(true);
-                          }}
-                          className="px-4 py-2 rounded-xl text-sm font-black text-white bg-primary hover:bg-primary-dark transition"
+                          onClick={() => { setTwoFactorMode("setup"); setTwoFactorModalOpen(true); }}
+                          className="px-3 py-1.5 rounded-xl text-xs font-black text-white bg-primary hover:bg-primary-dark transition shadow-sm"
                         >
                           Enable 2FA
                         </button>
@@ -375,150 +395,84 @@ const BusinessSettings = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Company Settings */}
-            {activeTab === "company" && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-black text-secondary flex items-center gap-2">
-                  <Building2 size={24} className="text-primary" />
-                  Company Information
-                </h2>
-
+              {/* ── Company ───────────────────────────────────────────── */}
+              {activeTab === "company" && (
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      Company Name
-                    </label>
-                    <input
-                      type="text"
-                      name="companyName"
-                      value={profileData.profile?.companyName || ""}
-                      onChange={(e) => handleInputChange(e, "profile")}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                    />
-                  </div>
+                  <h2 className="text-base font-black text-secondary flex items-center gap-2">
+                    <Building2 size={18} className="text-primary" />
+                    Company Information
+                  </h2>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      Registration Number
-                    </label>
-                    <input
-                      type="text"
-                      name="registrationNumber"
-                      value={profileData.profile?.registrationNumber || ""}
-                      onChange={(e) => handleInputChange(e, "profile")}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      Business Address
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={profileData.profile?.address || ""}
-                      onChange={(e) => handleInputChange(e, "profile")}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      VAT Number
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="GB123456789"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Appearance Settings */}
-            {/* {activeTab === "appearance" && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-black text-secondary flex items-center gap-2">
-                  <Moon size={24} className="text-primary" />
-                  Appearance
-                </h2>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <Sun size={20} className="text-amber-500" />
-                      <div>
-                        <p className="text-sm font-black text-secondary">Dark Mode</p>
-                        <p className="text-xs font-bold text-gray-500">Switch between light and dark themes</p>
-                      </div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="sm:col-span-2">
+                      <Label>Company Name</Label>
                       <input
-                        type="checkbox"
-                        checked={darkMode}
-                        onChange={(e) => setDarkMode(e.target.checked)}
-                        className="sr-only peer"
+                        type="text"
+                        name="companyName"
+                        value={profileData.profile?.companyName || ""}
+                        onChange={(e) => handleInputChange(e, "profile")}
+                        className={inputCls}
+                        placeholder="Acme Ltd"
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
+                    </div>
+                    <div>
+                      <Label>Registration Number</Label>
+                      <input
+                        type="text"
+                        name="registrationNumber"
+                        value={profileData.profile?.registrationNumber || ""}
+                        onChange={(e) => handleInputChange(e, "profile")}
+                        className={inputCls}
+                        placeholder="12345678"
+                      />
+                    </div>
+                    <div>
+                      <Label>VAT Number</Label>
+                      <input
+                        type="text"
+                        name="vatNumber"
+                        defaultValue="GB123456789"
+                        className={inputCls}
+                        placeholder="GB123456789"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label>Business Address</Label>
+                      <input
+                        type="text"
+                        name="address"
+                        value={profileData.profile?.address || ""}
+                        onChange={(e) => handleInputChange(e, "profile")}
+                        className={inputCls}
+                        placeholder="123 Business Street, London"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      Language
-                    </label>
-                    <select
-                      defaultValue="en"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                  <div className="flex justify-end pt-2 border-t border-gray-100">
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-black text-white transition hover:bg-primary-dark disabled:opacity-50 shadow-sm"
                     >
-                      <option value="en">English</option>
-                      <option value="es">Spanish</option>
-                      <option value="fr">French</option>
-                      <option value="de">German</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">
-                      Date Format
-                    </label>
-                    <select
-                      defaultValue="dd/mm/yyyy"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                    >
-                      <option value="dd/mm/yyyy">DD/MM/YYYY</option>
-                      <option value="mm/dd/yyyy">MM/DD/YYYY</option>
-                      <option value="yyyy-mm-dd">YYYY-MM-DD</option>
-                    </select>
+                      {saving ? (
+                        <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Save size={13} />
+                      )}
+                      {saving ? "Saving…" : "Save Changes"}
+                    </button>
                   </div>
                 </div>
-              </div>
-            )} */}
-
-            {/* Save Button */}
-            {/* <div className="flex justify-end pt-6 border-t border-gray-200 mt-6">
-              <button
-                onClick={handleSave}
-                disabled={loading}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-black text-white transition hover:bg-primary-dark disabled:opacity-50 shadow-md shadow-primary/20"
-              >
-                {loading ? (
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <Save size={16} />
-                )}
-                {loading ? "Saving..." : "Save Changes"}
-              </button>
-            </div> */}
+              )}
+            </div>
           </motion.div>
         </div>
       </motion.div>
 
+      {/* 2FA Modal */}
       <Modal
         open={twoFactorModalOpen}
         onClose={() => setTwoFactorModalOpen(false)}
@@ -530,19 +484,13 @@ const BusinessSettings = () => {
         {twoFactorMode === "setup" ? (
           <TwoFactorSetup
             token={token}
-            onSetupComplete={() => {
-              setTwoFactorEnabled(true);
-              setTwoFactorModalOpen(false);
-            }}
+            onSetupComplete={() => { setTwoFactorEnabled(true); setTwoFactorModalOpen(false); }}
             onCancel={() => setTwoFactorModalOpen(false)}
           />
         ) : (
           <TwoFactorDisable
             token={token}
-            onDisableComplete={() => {
-              setTwoFactorEnabled(false);
-              setTwoFactorModalOpen(false);
-            }}
+            onDisableComplete={() => { setTwoFactorEnabled(false); setTwoFactorModalOpen(false); }}
             onCancel={() => setTwoFactorModalOpen(false)}
           />
         )}
