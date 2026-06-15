@@ -1,12 +1,5 @@
-// Robust email validation (BUG-034). Phone validation (BUG-035) already lives in
-// utils/countries.js (isValidPhone, libphonenumber-js backed) and is reused here.
 import isEmail from "validator/lib/isEmail";
 
-// BUG-032: require an explicit API base URL in production builds.
-// In development, leave VITE_API_BASE_URL unset (or empty) to use the Vite dev
-// server proxy (/api → localhost:5000). This avoids cross-origin cookie issues
-// when accessing tenant subdomains like elite-visa.localhost:5173.
-// Set VITE_API_BASE_URL=http://localhost:5000 only to bypass the proxy.
 const CONFIGURED_API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL;
 
@@ -103,13 +96,6 @@ export const PASSWORD_VALIDATION = {
   message: "Password must be at least 8 characters",
 };
 
-/**
- * Date of birth validation helpers.
- *
- * Usage:
- *   const error = validateDateOfBirth(value);
- *   if (error) setFieldError("date_of_birth", error);
- */
 export const DOB_VALIDATION = {
   minAgeYears: 16,
   message: {
@@ -120,11 +106,6 @@ export const DOB_VALIDATION = {
   },
 };
 
-/**
- * Returns an error string if the date of birth is invalid, otherwise null.
- * @param {string|Date} value
- * @returns {string|null}
- */
 export function validateDateOfBirth(value) {
   if (!value) return DOB_VALIDATION.message.required;
 
@@ -143,12 +124,6 @@ export function validateDateOfBirth(value) {
   return null;
 }
 
-/**
- * Returns an error string if the mobile number is invalid, otherwise null.
- * Strips leading/trailing whitespace before checking.
- * @param {string} value
- * @returns {string|null}
- */
 export function validateMobile(value) {
   if (!value || !String(value).trim()) return "Mobile number is required";
   const cleaned = String(value).trim().replace(/\s+/g, "");
@@ -157,22 +132,12 @@ export function validateMobile(value) {
   return null;
 }
 
-/**
- * Returns the maximum selectable date for a date-of-birth input
- * (yesterday's date, so today is never selectable).
- * @returns {string} ISO date string "YYYY-MM-DD"
- */
 export function getMaxDobDate() {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   return yesterday.toISOString().split("T")[0];
 }
 
-/**
- * Returns the minimum selectable date for a date-of-birth input
- * (120 years ago — a reasonable upper bound for human age).
- * @returns {string} ISO date string "YYYY-MM-DD"
- */
 export function getMinDobDate() {
   const d = new Date();
   d.setFullYear(d.getFullYear() - 120);
