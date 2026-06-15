@@ -3,7 +3,6 @@ import {
   LogOut,
   Building2,
   Users,
-  FileText,
   Package,
   BarChart3,
   MessageSquare,
@@ -21,7 +20,6 @@ import {
   FileWarning,
   Receipt,
   UserCog,
-  CheckSquare,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { performLogout } from "../../utils/performLogout";
@@ -47,7 +45,6 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
     {
       items: [
         { to: "/business/dashboard", label: "Dashboard", icon: BarChart3, moduleKey: "business.dashboard" },
-        { to: "/business/tasks",     label: "My Tasks",  icon: CheckSquare, moduleKey: "business.dashboard" },
       ],
     },
     {
@@ -62,7 +59,6 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
       items: [
         { to: "/business/licence",           label: "Licence Management",  icon: ShieldCheck, moduleKey: "business.licence" },
         { to: "/business/licence-process",   label: "Licence Tracking",    icon: Activity,    moduleKey: "business.licence" },
-        { to: "/business/apply-licence-v2",  label: "Apply for Licence",   icon: FileText,    moduleKey: "business.licence" },
         { to: "/business/licence-documents", label: "Licence Documents",   icon: Files,       moduleKey: "business.licence" },
         { to: "/business/cosallocation",     label: "CoS Allocation",      icon: Package,     moduleKey: "business.licence" },
         { to: "/business/workers",           label: "Sponsored Workers",   icon: UserCog,     moduleKey: "business.workers" },

@@ -19,6 +19,9 @@ export const uploadAppendixDocument = (id, docId, file) => {
   });
 };
 
+// Immutable audit-trail for the Timeline tab (sponsor-owned applications only).
+export const getLicenceApplicationAuditTrail = (id) => api.get(`${BASE}/applications/${id}/audit-trail`);
+
 // Reviewer (read-only) detail.
 export const getAdminLicenceV2 = (id) => api.get(`/api/admin/licence/v2/${id}`);
 export const getCaseworkerLicenceV2 = (id) => api.get(`/api/caseworker/licence/v2/${id}`);

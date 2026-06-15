@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShieldCheck, FileText, Loader2, Trash2 } from "lucide-react";
+import { ShieldCheck, FileText, Loader2, Trash2, Clock } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
 import {
   createLicenceV2Draft,
@@ -24,7 +24,7 @@ import Step8Declarations from "../../components/licenceV2/Step8Declarations";
 const EMPTY = {
   routes: [], sponsorSize: "", organisationInfo: {}, cosRequirements: [],
   appendixDocuments: [], authorisingOfficer: {}, keyContact: {},
-  level1Users: [], declarations: {}, fee: {},
+  level1Users: [], declaration: {}, fee: {},
 };
 
 function appToFormData(app) {
@@ -38,21 +38,21 @@ function appToFormData(app) {
     authorisingOfficer: app.authorisingOfficer || {},
     keyContact: app.keyContact || {},
     level1Users: app.level1Users || [],
-    declarations: app.declaration || {},
+    declaration: app.declaration || {},
     fee: app.fee || {},
   };
 }
 
 function DraftPicker({ drafts, onResume, onNew, onDelete, deleting }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-black text-secondary mb-1">Resume or Start New</h2>
-        <p className="text-sm font-bold text-gray-400">You have saved drafts. Continue where you left off, or start a fresh application.</p>
+        <h2 className="text-sm font-black text-secondary mb-0.5">Resume or Start New</h2>
+        <p className="text-xs font-bold text-gray-400">You have saved drafts. Continue where you left off, or start a fresh application.</p>
       </div>
       <div className="space-y-3">
         {drafts.map((d) => (
-          <div key={d.id} className="flex items-center justify-between bg-white border border-gray-100 rounded-2xl px-5 py-4 gap-4">
+          <div key={d.id} className="flex items-center justify-between bg-white border border-gray-100 rounded-2xl px-4 py-3 gap-3">
             <div>
               <p className="text-sm font-black text-secondary">Draft #{d.id} — {d.companyName || "Untitled"}</p>
               <p className="text-xs font-bold text-gray-400">
@@ -60,18 +60,40 @@ function DraftPicker({ drafts, onResume, onNew, onDelete, deleting }) {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => onDelete(d.id)} disabled={deleting === d.id} className="p-2 text-red-400 hover:text-red-600 transition-colors disabled:opacity-40">
-                {deleting === d.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+              <button onClick={() => onDelete(d.id)} disabled={deleting === d.id} className="p-1.5 text-red-400 hover:text-red-600 transition-colors disabled:opacity-40">
+                {deleting === d.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
               </button>
-              <button onClick={() => onResume(d.id)} className="bg-primary/10 text-primary font-black text-xs px-4 py-2 rounded-xl hover:bg-primary/20 transition-all">
+              <button onClick={() => onResume(d.id)} className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 text-primary font-black text-xs px-3 py-1.5 hover:bg-primary/20 transition-all">
                 Resume
               </button>
             </div>
           </div>
         ))}
       </div>
-      <button onClick={onNew} className="w-full border-2 border-dashed border-gray-200 rounded-2xl py-4 text-sm font-black text-gray-400 hover:border-primary/30 hover:text-primary transition-all">
+      <button onClick={onNew} className="w-full border-2 border-dashed border-gray-200 rounded-2xl py-3 text-xs font-black text-gray-400 hover:border-primary/30 hover:text-primary transition-all">
         + Start New Application
+      </button>
+    </div>
+  );
+}
+
+function ApplicationBlocked({ status, navigate }) {
+  return (
+    <div className="text-center py-10 space-y-4">
+      <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto">
+        <Clock size={26} className="text-amber-500" />
+      </div>
+      <div>
+        <h2 className="text-2xl font-black text-secondary mb-1">Application Already Submitted</h2>
+        <p className="text-sm font-bold text-gray-500 max-w-md mx-auto">
+          You already have an application currently <span className="text-amber-600 font-black">{status}</span>. You can only submit a new application once your current one has been approved.
+        </p>
+      </div>
+      <button
+        onClick={() => navigate("/business/licence")}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-black text-white hover:bg-primary-dark transition shadow-sm"
+      >
+        View Current Application
       </button>
     </div>
   );
@@ -79,17 +101,17 @@ function DraftPicker({ drafts, onResume, onNew, onDelete, deleting }) {
 
 function SubmitSuccess({ navigate }) {
   return (
-    <div className="text-center py-16 space-y-6">
-      <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
-        <ShieldCheck size={36} className="text-emerald-600" />
+    <div className="text-center py-10 space-y-4">
+      <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+        <ShieldCheck size={26} className="text-emerald-600" />
       </div>
       <div>
-        <h2 className="text-2xl font-black text-secondary mb-2">Application Submitted!</h2>
+        <h2 className="text-2xl font-black text-secondary mb-1">Application Submitted!</h2>
         <p className="text-sm font-bold text-gray-500 max-w-md mx-auto">
           Your sponsor licence application has been received. Our team will review it and be in touch. Track progress from your Licence Status page.
         </p>
       </div>
-      <button onClick={() => navigate("/business/licence")} className="bg-primary text-white font-black px-8 py-3 rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-95">
+      <button onClick={() => navigate("/business/licence")} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-black text-white hover:bg-primary-dark transition shadow-sm">
         View Licence Status
       </button>
     </div>
@@ -101,7 +123,8 @@ export default function ApplyLicenceV2() {
   const [searchParams] = useSearchParams();
   const { showToast } = useToast();
 
-  const [phase, setPhase] = useState("loading"); // loading | pick | wizard | submitted
+  const [phase, setPhase] = useState("loading"); // loading | pick | wizard | submitted | blocked
+  const [blockedStatus, setBlockedStatus] = useState(null);
   const [drafts, setDrafts] = useState([]);
   const [appId, setAppId] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
@@ -110,17 +133,26 @@ export default function ApplyLicenceV2() {
   const [submitting, setSubmitting] = useState(false);
   const [submitErrors, setSubmitErrors] = useState([]);
   const [deleting, setDeleting] = useState(null);
+  const submitInFlight = useRef(false);
+
+  const BLOCKING_STATUSES = ["Pending", "Under Review", "Government Processing", "Decision Pending", "Information Requested"];
 
   useEffect(() => {
+    let cancelled = false;
     const draftParam = searchParams.get("draft");
     if (draftParam) { loadDraft(draftParam); return; }
     listLicenceV2Applications()
       .then((r) => {
-        const existing = (r.data.data || []).filter((a) => a.status === "Draft");
-        if (existing.length > 0) { setDrafts(existing); setPhase("pick"); }
+        if (cancelled) return;
+        const all = r.data.data || [];
+        const blocking = all.find((a) => BLOCKING_STATUSES.includes(a.status));
+        if (blocking) { setBlockedStatus(blocking.status); setPhase("blocked"); return; }
+        const draftsOnly = all.filter((a) => a.status === "Draft");
+        if (draftsOnly.length > 0) { setDrafts(draftsOnly); setPhase("pick"); }
         else startNew();
       })
-      .catch(() => startNew());
+      .catch(() => { if (!cancelled) startNew(); });
+    return () => { cancelled = true; };
   }, []);
 
   const startNew = async () => {
@@ -129,9 +161,17 @@ export default function ApplyLicenceV2() {
       const r = await createLicenceV2Draft();
       const app = r.data.data;
       setAppId(app.id); setFormData(appToFormData(app)); setCurrentStep(app.currentStep || 1); setPhase("wizard");
-    } catch {
-      showToast({ message: "Failed to create draft application", variant: "danger" });
-      navigate("/business/licence");
+    } catch (err) {
+      if (err?.response?.status === 409) {
+        // Server blocked the new application (pending one already exists)
+        const msg = err?.response?.data?.message || "";
+        const match = msg.match(/\(([^)]+)\)/);
+        setBlockedStatus(match ? match[1] : "Under Review");
+        setPhase("blocked");
+      } else {
+        showToast({ message: "Failed to create draft application", variant: "danger" });
+        navigate("/business/licence");
+      }
     }
   };
 
@@ -194,6 +234,8 @@ export default function ApplyLicenceV2() {
   const handleBack = () => { setCurrentStep((s) => Math.max(1, s - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   const handleSubmit = async (patch) => {
+    if (submitInFlight.current) return;
+    submitInFlight.current = true;
     setSubmitting(true); setSubmitErrors([]);
     try {
       await saveLicenceV2Draft(appId, { currentStep: 8, ...patch });
@@ -209,6 +251,7 @@ export default function ApplyLicenceV2() {
         showToast({ message: data?.message || "Submission failed", variant: "danger" });
       }
     } finally {
+      submitInFlight.current = false;
       setSubmitting(false);
     }
   };
@@ -225,50 +268,54 @@ export default function ApplyLicenceV2() {
   }
 
   if (phase === "submitted") return <SubmitSuccess navigate={navigate} />;
+  if (phase === "blocked") return <ApplicationBlocked status={blockedStatus} navigate={navigate} />;
 
   const stepProps = { data: formData, onChange: merge, onNext: handleNext, onBack: handleBack, saving };
 
   return (
-    <div className="space-y-6 pb-10 relative max-w-3xl mx-auto">
+    <div className="space-y-5 pb-6 relative max-w-3xl mx-auto">
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10" />
 
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-3 mb-1">
-          <ShieldCheck size={24} className="text-primary" />
-          <h1 className="text-2xl font-black text-secondary">Sponsor Licence Application</h1>
+        <div className="flex items-center gap-2.5 mb-0.5">
+          <ShieldCheck size={26} className="text-primary" />
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">Sponsor Licence Application</h1>
         </div>
-        <p className="text-sm font-bold text-gray-400 pl-9">
+        <p className="text-primary font-bold text-sm mt-0.5 pl-9">
           {phase === "pick" ? "Continue a saved draft or start fresh." : `Step ${currentStep} of 8`}
         </p>
       </motion.div>
 
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8 space-y-8">
-        {phase === "pick" ? (
-          <DraftPicker drafts={drafts} onResume={loadDraft} onNew={startNew} onDelete={handleDeleteDraft} deleting={deleting} />
-        ) : (
-          <>
-            <WizardStepBar current={currentStep} />
-            <div className="pt-2">
-              {currentStep === 1 && <Step1Routes {...stepProps} />}
-              {currentStep === 2 && <Step2Organisation {...stepProps} />}
-              {currentStep === 3 && <Step3CosRequirements {...stepProps} />}
-              {currentStep === 4 && (
-                <Step4AppendixDocuments appId={appId} data={formData} onRefresh={refreshAppendix} onNext={handleNext} onBack={handleBack} saving={saving} />
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+        <div className="p-5 space-y-4">
+          {phase === "pick" ? (
+            <DraftPicker drafts={drafts} onResume={loadDraft} onNew={startNew} onDelete={handleDeleteDraft} deleting={deleting} />
+          ) : (
+            <>
+              <WizardStepBar current={currentStep} />
+              <div className="pt-1">
+                {currentStep === 1 && <Step1Routes {...stepProps} />}
+                {currentStep === 2 && <Step2Organisation {...stepProps} />}
+                {currentStep === 3 && <Step3CosRequirements {...stepProps} />}
+                {currentStep === 4 && (
+                  <Step4AppendixDocuments appId={appId} data={formData} onRefresh={refreshAppendix} onNext={handleNext} onBack={handleBack} saving={saving} />
+                )}
+                {currentStep === 5 && <Step5AuthorisingOfficer {...stepProps} />}
+                {currentStep === 6 && <Step6KeyContact {...stepProps} />}
+                {currentStep === 7 && <Step7Level1Users {...stepProps} />}
+                {currentStep === 8 && (
+                  <Step8Declarations data={formData} onChange={merge} onBack={handleBack} onSubmit={handleSubmit} submitting={submitting} submitErrors={submitErrors} />
+                )}
+              </div>
+              {appId && (
+                <p className="text-center text-[10px] font-bold text-gray-400 flex items-center justify-center gap-1.5">
+                  <FileText size={11} /> Draft #{appId} — progress saved automatically on each step
+                </p>
               )}
-              {currentStep === 5 && <Step5AuthorisingOfficer {...stepProps} />}
-              {currentStep === 6 && <Step6KeyContact {...stepProps} />}
-              {currentStep === 7 && <Step7Level1Users {...stepProps} />}
-              {currentStep === 8 && (
-                <Step8Declarations data={formData} onChange={merge} onBack={handleBack} onSubmit={handleSubmit} submitting={submitting} submitErrors={submitErrors} />
-              )}
-            </div>
-            {appId && (
-              <p className="text-center text-[11px] font-bold text-gray-400 flex items-center justify-center gap-1.5">
-                <FileText size={12} /> Draft #{appId} — progress saved automatically on each step
-              </p>
-            )}
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

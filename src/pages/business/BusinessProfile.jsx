@@ -313,9 +313,9 @@ const BusinessProfile = () => {
   };
 
   const Field = ({ label, value }) => (
-    <div className="rounded-2xl border border-gray-200 bg-gray-50/40 p-4">
+    <div className="rounded-2xl border border-gray-200 bg-gray-50/40 p-3">
       <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">{label}</p>
-      <p className="mt-1 text-sm font-black text-secondary break-words">{value || "—"}</p>
+      <p className="mt-0.5 text-sm font-black text-secondary break-words">{value || "—"}</p>
     </div>
   );
 
@@ -326,29 +326,29 @@ const BusinessProfile = () => {
   };
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-5 pb-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <LayoutDashboard className="text-primary shrink-0" size={28} />
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+          <LayoutDashboard className="text-primary shrink-0" size={26} />
           Business Profile
         </h1>
-        <p className="text-primary font-bold text-sm mt-1">Manage your company information.</p>
+        <p className="text-primary font-bold text-sm mt-0.5">Manage your company information.</p>
       </motion.div>
 
       {/* User Info Card */}
       <motion.div
-        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm overflow-hidden relative"
+        className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-primary-dark" />
-        <div className="flex flex-col md:flex-row items-center gap-6">
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+        <div className="flex flex-col md:flex-row items-center gap-4 p-5">
           <div className="relative group">
             <div className="w-24 h-24 rounded-2xl bg-gray-100 flex items-center justify-center border-4 border-white shadow-md overflow-hidden">
               {userData?.profile_pic ? (
@@ -363,15 +363,15 @@ const BusinessProfile = () => {
             </div>
           </div>
           <div className="flex-1 text-center md:text-left">
-            <h2 className="text-2xl font-black text-secondary">
+            <h2 className="text-xl font-black text-secondary">
               {userData?.first_name} {userData?.last_name || ""}
             </h2>
-            <p className="text-sm font-bold text-gray-500 mt-1">{userData?.email}</p>
-            <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
-              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider">
+            <p className="text-sm font-bold text-gray-500 mt-0.5">{userData?.email}</p>
+            <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
+              <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider">
                 {userData?.role_name || "Business User"}
               </span>
-              <span className="px-3 py-1 rounded-full bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-wider">
+              <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-wider">
                 Account Active
               </span>
             </div>
@@ -382,7 +382,7 @@ const BusinessProfile = () => {
       {/* Complete-your-registration prompt — shown until the sponsor completes it */}
       {!hasRegistration && (
         <motion.div
-          className="rounded-3xl border border-primary/20 bg-primary/5 p-6"
+          className="rounded-2xl border border-primary/20 bg-primary/5 p-5"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -402,10 +402,10 @@ const BusinessProfile = () => {
             <button
               type="button"
               onClick={() => setRegistrationOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-black text-white transition hover:bg-primary-dark w-full sm:w-auto shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm w-full sm:w-auto shrink-0"
             >
               Complete Registration
-              <ArrowRight size={16} />
+              <ArrowRight size={14} />
             </button>
           </div>
         </motion.div>
@@ -413,19 +413,21 @@ const BusinessProfile = () => {
 
       {/* Company Information Section */}
       <motion.div
-        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+        className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-6">
-          <h2 className="text-xl font-black text-secondary flex items-center gap-2">
-            <FileText size={24} className="text-primary shrink-0" />
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+        <div className="p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
+          <h2 className="text-sm font-black text-secondary flex items-center gap-2">
+            <FileText size={16} className="text-primary shrink-0" />
             Company Information
           </h2>
 
           <button
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark w-full sm:w-auto shrink-0"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm w-full sm:w-auto shrink-0"
             type="button"
             onClick={() => setRegistrationOpen(true)}
           >
@@ -434,9 +436,9 @@ const BusinessProfile = () => {
         </div>
 
         {hasRegistration ? (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Company Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Field label="Company Name" value={registrationData?.companyName} />
               <Field label="Trading Name" value={registrationData?.tradingName} />
               <Field label="Company Registration Number" value={registrationData?.registrationNumber} />
@@ -448,22 +450,22 @@ const BusinessProfile = () => {
             </div>
 
             {/* Address Section with Edit Button */}
-            <div className="border-t border-gray-200 pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-black text-secondary flex items-center gap-2">
-                  <MapPin size={20} className="text-primary" />
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-black text-secondary flex items-center gap-2">
+                  <MapPin size={15} className="text-primary" />
                   Address Information
                 </h3>
                 <button
                   type="button"
                   onClick={openAddressModal}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-black text-white transition hover:bg-primary-dark"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm"
                 >
-                  <Pencil size={14} />
+                  <Pencil size={13} />
                   Edit
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Field label="Registered Address" value={registrationData?.registeredAddress} />
                 <Field label="Trading Address" value={registrationData?.tradingAddress} />
                 <Field label="City" value={registrationData?.city} />
@@ -474,22 +476,22 @@ const BusinessProfile = () => {
             </div>
 
             {/* Key Person Section with Edit Button */}
-            <div className="border-t border-gray-200 pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-black text-secondary flex items-center gap-2">
-                  <User size={20} className="text-primary" />
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-black text-secondary flex items-center gap-2">
+                  <User size={15} className="text-primary" />
                   Key Personnel
                 </h3>
                 <button
                   type="button"
                   onClick={openKeyPersonModal}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-black text-white transition hover:bg-primary-dark"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm"
                 >
-                  <Pencil size={14} />
+                  <Pencil size={13} />
                   Edit
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Field label="Authorising Officer Name" value={registrationData?.authorisingName} />
                 <Field label="Authorising Officer Phone" value={registrationData?.authorisingPhone} />
                 <Field label="Authorising Officer Email" value={registrationData?.authorisingEmail} />
@@ -501,9 +503,9 @@ const BusinessProfile = () => {
               </div>
 
               {(registrationData?.level1Users || []).length > 0 && (
-                <div className="mt-4 p-4 rounded-2xl border border-gray-200 bg-gray-50/40">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Level 1 Users</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="mt-3 p-3 rounded-2xl border border-gray-200 bg-gray-50/40">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Level 1 Users</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {(registrationData.level1Users).map((u, idx) => (
                       <div key={u.email} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
                         <p className="text-sm font-black text-secondary">{u.name}</p>
@@ -517,27 +519,27 @@ const BusinessProfile = () => {
             </div>
 
             {/* Ownership Section with Edit Button */}
-            <div className="border-t border-gray-200 pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-black text-secondary flex items-center gap-2">
-                  <Building2 size={20} className="text-primary" />
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-black text-secondary flex items-center gap-2">
+                  <Building2 size={15} className="text-primary" />
                   Ownership Structure
                 </h3>
                 <button
                   type="button"
                   onClick={openOwnershipModal}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-black text-white transition hover:bg-primary-dark"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm"
                 >
-                  <Pencil size={14} />
+                  <Pencil size={13} />
                   Edit
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Field label="Ownership Type" value={registrationData?.ownershipType} />
               </div>
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="rounded-2xl border border-gray-200 bg-gray-50/40 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Shareholders</p>
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50/40 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Shareholders</p>
                   {(registrationData?.shareholders || []).map((s, idx) => (
                     <div key={idx} className="mb-2 last:mb-0">
                       <p className="text-sm font-black text-secondary">{s.name}</p>
@@ -545,8 +547,8 @@ const BusinessProfile = () => {
                     </div>
                   ))}
                 </div>
-                <div className="rounded-2xl border border-gray-200 bg-gray-50/40 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Directors</p>
+                <div className="rounded-2xl border border-gray-200 bg-gray-50/40 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Directors</p>
                   {(registrationData?.directors || []).map((d, idx) => (
                     <div key={idx} className="mb-2 last:mb-0">
                       <p className="text-sm font-black text-secondary">{d.name}</p>
@@ -558,22 +560,22 @@ const BusinessProfile = () => {
             </div>
 
             {/* HR & Licence Info */}
-            <div className="border-t border-gray-200 pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-black text-secondary flex items-center gap-2">
-                  <FileCheck size={20} className="text-primary" />
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-black text-secondary flex items-center gap-2">
+                  <FileCheck size={15} className="text-primary" />
                   HR & Licence Information
                 </h3>
                 <button
                   type="button"
                   onClick={openHrModal}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-black text-white transition hover:bg-primary-dark"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm"
                 >
-                  <Pencil size={14} />
+                  <Pencil size={13} />
                   Edit
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Field label="HR Manager Name" value={registrationData?.hrName} />
                 <Field label="HR Manager Phone" value={registrationData?.hrPhone} />
                 <Field label="HR Manager Email" value={registrationData?.hrEmail} />
@@ -586,22 +588,22 @@ const BusinessProfile = () => {
             </div>
 
             {/* Billing Info */}
-            <div className="border-t border-gray-200 pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-black text-secondary flex items-center gap-2">
-                  <CreditCard size={20} className="text-primary" />
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-black text-secondary flex items-center gap-2">
+                  <CreditCard size={15} className="text-primary" />
                   Billing Information
                 </h3>
                 <button
                   type="button"
                   onClick={openBillingModal}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-black text-white transition hover:bg-primary-dark"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm"
                 >
-                  <Pencil size={14} />
+                  <Pencil size={13} />
                   Edit
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Field label="Billing Name" value={registrationData?.billingName} />
                 <Field label="Billing Email" value={registrationData?.billingEmail} />
                 <Field label="Billing Phone" value={registrationData?.billingPhone} />
@@ -611,12 +613,12 @@ const BusinessProfile = () => {
             </div>
 
             {/* Documents Section */}
-            <div className="border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-black text-secondary mb-4 flex items-center gap-2">
-                <Folder size={20} className="text-primary" />
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-black text-secondary mb-3 flex items-center gap-2">
+                <Folder size={15} className="text-primary" />
                 Business Documents
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {[
                   { label: 'Sponsor Licence Approval', field: 'sponsorLetter' },
                   { label: 'Insurance Certificate', field: 'insuranceCertificate' },
@@ -624,7 +626,7 @@ const BusinessProfile = () => {
                   { label: 'Organisational Chart', field: 'organisationalChart' },
                   { label: 'Recruitment Process', field: 'recruitmentDocs' },
                 ].map((doc) => (
-                  <div key={doc.field} className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 bg-gray-50/30">
+                  <div key={doc.field} className="flex items-center justify-between p-3 rounded-2xl border border-gray-100 bg-gray-50/30">
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-white shadow-sm">
                         <FileText size={18} className="text-primary" />
@@ -652,31 +654,31 @@ const BusinessProfile = () => {
             </div>
 
             {/* Level 1 Users */}
-            <div className="border-t border-gray-200 pt-6">
-              <div className="rounded-2xl border border-gray-200 bg-gray-50/40 p-4">
-                <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">
+            <div className="border-t border-gray-200 pt-4">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50/40 p-3">
+                <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
                   Level 1 Users
                 </p>
-                <div className="mt-3 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
                   <table className="min-w-full text-left divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Name</th>
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Phone</th>
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Email</th>
+                        <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Name</th>
+                        <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Phone</th>
+                        <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Email</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {(registrationData?.level1Users ?? []).map((u, idx) => (
-                        <tr key={`${u.email ?? "u"}-${idx}`} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 text-sm font-black text-secondary whitespace-nowrap">{u?.name || "—"}</td>
-                          <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{u?.phone || "—"}</td>
-                          <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{u?.email || "—"}</td>
+                        <tr key={`${u.email ?? "u"}-${idx}`} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                          <td className="px-3 py-2 text-sm font-black text-secondary whitespace-nowrap">{u?.name || "—"}</td>
+                          <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{u?.phone || "—"}</td>
+                          <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{u?.email || "—"}</td>
                         </tr>
                       ))}
                       {(registrationData?.level1Users ?? []).length === 0 && (
                         <tr>
-                          <td colSpan={3} className="px-4 py-8 text-center text-sm font-bold text-gray-500">
+                          <td colSpan={3} className="px-3 py-6 text-center text-sm font-bold text-gray-500">
                             No Level 1 users added.
                           </td>
                         </tr>
@@ -700,13 +702,14 @@ const BusinessProfile = () => {
             <button
               type="button"
               onClick={() => setRegistrationOpen(true)}
-              className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-black text-white transition hover:bg-primary-dark"
+              className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm"
             >
               Start Registration
               <ArrowRight size={16} />
             </button>
           </div>
         )}
+        </div>
       </motion.div>
 
       {/* Address Edit Modal */}
@@ -734,58 +737,58 @@ const BusinessProfile = () => {
           </div>
         }
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-5">
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Registered Address</label>
+            <label className="text-xs font-bold text-gray-700 mb-1 block">Registered Address</label>
             <input
               value={addressDraft.registeredAddress}
               onChange={(e) => setAddressDraft({ ...addressDraft, registeredAddress: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               placeholder="Enter registered address"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Trading Address</label>
+            <label className="text-xs font-bold text-gray-700 mb-1 block">Trading Address</label>
             <input
               value={addressDraft.tradingAddress}
               onChange={(e) => setAddressDraft({ ...addressDraft, tradingAddress: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               placeholder="Enter trading address"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">City</label>
+            <label className="text-xs font-bold text-gray-700 mb-1 block">City</label>
             <input
               value={addressDraft.city}
               onChange={(e) => setAddressDraft({ ...addressDraft, city: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               placeholder="Enter city"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">State / Region</label>
+            <label className="text-xs font-bold text-gray-700 mb-1 block">State / Region</label>
             <input
               value={addressDraft.state}
               onChange={(e) => setAddressDraft({ ...addressDraft, state: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               placeholder="Enter state/region"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Country</label>
+            <label className="text-xs font-bold text-gray-700 mb-1 block">Country</label>
             <input
               value={addressDraft.country}
               onChange={(e) => setAddressDraft({ ...addressDraft, country: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               placeholder="Enter country"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Postal Code</label>
+            <label className="text-xs font-bold text-gray-700 mb-1 block">Postal Code</label>
             <input
               value={addressDraft.postalCode}
               onChange={(e) => setAddressDraft({ ...addressDraft, postalCode: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               placeholder="Enter postal code"
             />
           </div>
@@ -817,88 +820,88 @@ const BusinessProfile = () => {
           </div>
         }
       >
-        <div className="space-y-4 p-6">
+        <div className="space-y-3 p-5">
           <h4 className="text-sm font-black text-secondary">Authorising Officer</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Name</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Name</label>
               <input
                 value={keyPersonDraft.authorisingName || ""}
                 onChange={(e) => setKeyPersonDraft({ ...keyPersonDraft, authorisingName: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 placeholder="Enter name"
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Phone</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Phone</label>
               <input
                 value={keyPersonDraft.authorisingPhone || ""}
                 onChange={(e) => setKeyPersonDraft({ ...keyPersonDraft, authorisingPhone: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 placeholder="Enter phone"
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Email</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Email</label>
               <input
                 value={keyPersonDraft.authorisingEmail || ""}
                 onChange={(e) => setKeyPersonDraft({ ...keyPersonDraft, authorisingEmail: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 placeholder="Enter email"
               />
             </div>
             <div className="md:col-span-3">
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Job Title</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Job Title</label>
               <input
                 value={keyPersonDraft.authorisingJobTitle || ""}
                 onChange={(e) => setKeyPersonDraft({ ...keyPersonDraft, authorisingJobTitle: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 placeholder="Enter job title"
               />
             </div>
           </div>
-          <h4 className="text-sm font-black text-secondary mt-4">Key Contact</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <h4 className="text-sm font-black text-secondary mt-3">Key Contact</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Name</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Name</label>
               <input
                 value={keyPersonDraft.keyContactName || ""}
                 onChange={(e) => setKeyPersonDraft({ ...keyPersonDraft, keyContactName: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 placeholder="Enter name"
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Phone</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Phone</label>
               <input
                 value={keyPersonDraft.keyContactPhone || ""}
                 onChange={(e) => setKeyPersonDraft({ ...keyPersonDraft, keyContactPhone: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 placeholder="Enter phone"
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Email</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Email</label>
               <input
                 value={keyPersonDraft.keyContactEmail || ""}
                 onChange={(e) => setKeyPersonDraft({ ...keyPersonDraft, keyContactEmail: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 placeholder="Enter email"
               />
             </div>
             <div className="md:col-span-3">
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Department</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Department</label>
               <input
                 value={keyPersonDraft.keyContactDepartment || ""}
                 onChange={(e) => setKeyPersonDraft({ ...keyPersonDraft, keyContactDepartment: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 placeholder="Enter department"
               />
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-6 mt-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="border-t border-gray-100 pt-4 mt-4">
+            <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-black text-secondary">Level 1 Users</h4>
               <button
                 type="button"
@@ -911,10 +914,10 @@ const BusinessProfile = () => {
                 + Add User
               </button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {(keyPersonDraft.level1Users || []).map((user, idx) => (
-                <div key={idx} className="flex items-start gap-4 bg-gray-50/30 p-4 rounded-2xl border border-gray-100">
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div key={idx} className="flex items-start gap-3 bg-gray-50/30 p-3 rounded-2xl border border-gray-100">
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <input
                       placeholder="Name"
                       value={user.name || ""}
@@ -923,7 +926,7 @@ const BusinessProfile = () => {
                         newList[idx].name = e.target.value;
                         setKeyPersonDraft({ ...keyPersonDraft, level1Users: newList });
                       }}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-white"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary bg-white"
                     />
                     <input
                       placeholder="Phone"
@@ -933,7 +936,7 @@ const BusinessProfile = () => {
                         newList[idx].phone = e.target.value;
                         setKeyPersonDraft({ ...keyPersonDraft, level1Users: newList });
                       }}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-white"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary bg-white"
                     />
                     <input
                       placeholder="Email"
@@ -943,7 +946,7 @@ const BusinessProfile = () => {
                         newList[idx].email = e.target.value;
                         setKeyPersonDraft({ ...keyPersonDraft, level1Users: newList });
                       }}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-white"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary bg-white"
                     />
                   </div>
                   <button
@@ -988,19 +991,19 @@ const BusinessProfile = () => {
           </div>
         }
       >
-        <div className="space-y-6 max-h-[60vh] overflow-y-auto p-6 pr-2 custom-scrollbar">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto p-5 pr-2 custom-scrollbar">
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Ownership Type</label>
+            <label className="text-xs font-bold text-gray-700 mb-1 block">Ownership Type</label>
             <input
               value={ownershipDraft.ownershipType || ""}
               onChange={(e) => setOwnershipDraft({ ...ownershipDraft, ownershipType: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               placeholder="Enter ownership type (e.g. Private Limited)"
             />
           </div>
 
-          <div className="border-t border-gray-100 pt-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="border-t border-gray-100 pt-4">
+            <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-black text-secondary">Shareholders</h4>
               <button
                 type="button"
@@ -1042,8 +1045,8 @@ const BusinessProfile = () => {
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="border-t border-gray-100 pt-4">
+            <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-black text-secondary">Directors</h4>
               <button
                 type="button"
@@ -1119,39 +1122,39 @@ const BusinessProfile = () => {
           </div>
         }
       >
-        <div className="space-y-6 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4 p-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">HR Manager Name</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">HR Manager Name</label>
               <input
                 value={hrDraft.hrName || ""}
                 onChange={(e) => setHrDraft({ ...hrDraft, hrName: e.target.value })}
                 placeholder="Enter HR manager name"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">HR Manager Phone</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">HR Manager Phone</label>
               <input
                 value={hrDraft.hrPhone || ""}
                 onChange={(e) => setHrDraft({ ...hrDraft, hrPhone: e.target.value })}
                 placeholder="Enter HR manager phone"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="text-xs font-bold text-gray-700 mb-2 block">HR Manager Email</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">HR Manager Email</label>
               <input
                 value={hrDraft.hrEmail || ""}
                 onChange={(e) => setHrDraft({ ...hrDraft, hrEmail: e.target.value })}
                 placeholder="Enter HR manager email"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-100 pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border-t border-gray-100 pt-4">
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Licence Issue Date</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Licence Issue Date</label>
               <DatePicker
                 name="licenceIssueDate"
                 value={hrDraft.licenceIssueDate || ""}
@@ -1160,7 +1163,7 @@ const BusinessProfile = () => {
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Licence Expiry Date</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Licence Expiry Date</label>
               <DatePicker
                 name="licenceExpiryDate"
                 value={hrDraft.licenceExpiryDate || ""}
@@ -1169,12 +1172,12 @@ const BusinessProfile = () => {
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">CoS Allocation</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">CoS Allocation</label>
               <input
                 value={hrDraft.cosAllocation || ""}
                 onChange={(e) => setHrDraft({ ...hrDraft, cosAllocation: e.target.value })}
                 placeholder="e.g. 50"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               />
             </div>
           </div>
@@ -1204,50 +1207,50 @@ const BusinessProfile = () => {
           </div>
         }
       >
-        <div className="space-y-6 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4 p-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Billing Contact Name</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Billing Contact Name</label>
               <input
                 value={billingDraft.billingName || ""}
                 onChange={(e) => setBillingDraft({ ...billingDraft, billingName: e.target.value })}
                 placeholder="Enter billing contact name"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary bg-gray-50/40"
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Billing Phone</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Billing Phone</label>
               <input
                 value={billingDraft.billingPhone || ""}
                 onChange={(e) => setBillingDraft({ ...billingDraft, billingPhone: e.target.value })}
                 placeholder="Enter billing phone"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary bg-gray-50/40"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Billing Email</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Billing Email</label>
               <input
                 value={billingDraft.billingEmail || ""}
                 onChange={(e) => setBillingDraft({ ...billingDraft, billingEmail: e.target.value })}
                 placeholder="Enter billing email"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary bg-gray-50/40"
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Outstanding Balance</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Outstanding Balance</label>
               <input
                 value={billingDraft.outstandingBalance || ""}
                 onChange={(e) => setBillingDraft({ ...billingDraft, outstandingBalance: e.target.value })}
                 placeholder="e.g. 0.00"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary bg-gray-50/40"
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Payment Terms</label>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Payment Terms</label>
               <select
                 value={billingDraft.paymentTerms || ""}
                 onChange={(e) => setBillingDraft({ ...billingDraft, paymentTerms: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-gray-50/40"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary bg-gray-50/40"
               >
                 <option value="">Select terms</option>
                 <option>Net 30</option>

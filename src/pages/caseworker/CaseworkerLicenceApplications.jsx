@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldCheck, Search, Eye, Download, Building2, Mail, Phone, AlertCircle,
   Check, X, FileText, MessageSquare, Loader2, Play, Globe, Key, Send,
-  ClipboardCheck, Calendar, Landmark,
+  ClipboardCheck, Calendar, Landmark, Hash, ExternalLink,
 } from "lucide-react";
 import api from "../../services/api";
 import {
@@ -23,62 +23,67 @@ import IntakeDocumentChecklist from "../../components/licence/IntakeDocumentChec
 import { useToast } from "../../context/ToastContext";
 import { formatDate } from "../../utils/datetime";
 
-const GOV_PIPELINE_STATUSES = ["Pending", "Under Review", "Government Processing", "Decision Pending"];
+const ACTIVE_STATUSES   = ["Pending", "Under Review", "Government Processing", "Decision Pending"];
+const TERMINAL_STATUSES = ["Approved", "Rejected"];
+
+const STATUS_COLOR = {
+  "Approved":              "bg-emerald-100 text-emerald-700",
+  "Rejected":              "bg-red-100 text-red-700",
+  "Under Review":          "bg-blue-100 text-blue-700",
+  "Information Requested": "bg-amber-100 text-amber-700",
+  "Government Processing": "bg-violet-100 text-violet-700",
+  "Decision Pending":      "bg-orange-100 text-orange-700",
+  "Pending":               "bg-amber-100 text-amber-700",
+};
+
+const inp = "w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-bold text-secondary outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20";
+
+const GOV_MODAL_META = {
+  startReview:  { title: "Start Review",                 Icon: Play },
+  startGovReg:  { title: "Start Government Registration", Icon: Globe },
+  completeReg:  { title: "Complete SMS Registration",     Icon: ClipboardCheck },
+  requestCreds: { title: "Send Credentials to Sponsor",   Icon: Key },
+  submitUKVI:   { title: "Submit Application to UKVI",    Icon: Send },
+};
+
+const InfoRow = ({ label, value }) =>
+  value ? (
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
+      <p className="text-xs font-bold text-secondary">{value}</p>
+    </div>
+  ) : null;
 
 const CaseworkerLicenceApplications = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+
+  const [loading,      setLoading]      = useState(true);
   const [applications, setApplications] = useState([]);
-  const [filter, setFilter] = useState("All");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedApp, setSelectedApp] = useState(null);
+  const [filter,       setFilter]       = useState("All");
+  const [searchTerm,   setSearchTerm]   = useState("");
+
+  // Details modal
+  const [selectedApp,     setSelectedApp]     = useState(null);
+  const [intakeTab,       setIntakeTab]       = useState("govpipeline");
+  const [intakeData,      setIntakeData]      = useState(null);
+  const [intakeLoading,   setIntakeLoading]   = useState(false);
+  const [intakeReadiness, setIntakeReadiness] = useState(null);
+  const [docBusy,         setDocBusy]         = useState(null);
+
+  // Review action modal
   const [showActionModal, setShowActionModal] = useState(false);
-  const [actionType, setActionType] = useState("");
-  const [adminNotes, setAdminNotes] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
-  const [docBusy, setDocBusy] = useState(null);
+  const [actionType,      setActionType]      = useState("");
+  const [adminNotes,      setAdminNotes]      = useState("");
+  const [actionLoading,   setActionLoading]   = useState(false);
 
-  // Government pipeline modal state
-  const [govModal, setGovModal] = useState(null); // { type, app }
-  const [govLoading, setGovLoading] = useState(false);
-  const [regForm, setRegForm] = useState({ smsRegistrationRef: "", governmentRegistrationRef: "" });
-  const [subForm, setSubForm] = useState({ submissionRef: "", submissionDate: "" });
+  // Gov pipeline modal
+  const [govModal,  setGovModal]  = useState(null);
+  const [govLoading,setGovLoading]= useState(false);
+  const [regForm,   setRegForm]   = useState({ smsRegistrationRef: "", governmentRegistrationRef: "" });
+  const [subForm,   setSubForm]   = useState({ submissionRef: "", submissionDate: "" });
 
-  // Intake panel state
-  const [intakeData, setIntakeData] = useState(null);
-  const [intakeLoading, setIntakeLoading] = useState(false);
-  const [intakeReadiness, setIntakeReadiness] = useState(null); // { isReady, reasons }
-  const [intakeTab, setIntakeTab] = useState("govpipeline"); // "govpipeline" | "intake"
-
-  const handleDocument = async (index, mode) => {
-    if (!selectedApp || docBusy) return;
-    try {
-      setDocBusy(`${index}:${mode}`);
-      const res = await downloadCaseworkerLicenceDocument(selectedApp.id, index, { download: mode === "download" });
-      const blob = res.data;
-      const cd = res.headers?.["content-disposition"] || "";
-      const match = cd.match(/filename="?([^"]+)"?/i);
-      const filename = match ? match[1] : `document-${index + 1}`;
-      if (mode === "download") {
-        triggerDownload(blob, filename);
-      } else {
-        const url = window.URL.createObjectURL(blob);
-        const opened = window.open(url, "_blank", "noopener,noreferrer");
-        if (!opened) triggerDownload(blob, filename);
-        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
-      }
-    } catch (err) {
-      let message = err?.response?.data?.message;
-      if (!message && err?.response?.data instanceof Blob) {
-        try { message = JSON.parse(await err.response.data.text())?.message; } catch { /* ignore */ }
-      }
-      showToast({ message: message || "Unable to open this document", variant: "danger" });
-    } finally {
-      setDocBusy(null);
-    }
-  };
-
+  // ── Data fetching ────────────────────────────────────────────────────────────
   const fetchApplications = async () => {
     try {
       setLoading(true);
@@ -93,9 +98,10 @@ const CaseworkerLicenceApplications = () => {
 
   useEffect(() => { fetchApplications(); }, []);
 
-  // Load intake data when an application is selected
+  // Reset modal sub-state when a different app is selected
   useEffect(() => {
     if (!selectedApp?.id) { setIntakeData(null); setIntakeReadiness(null); return; }
+    setIntakeTab("govpipeline");
     let active = true;
     (async () => {
       try {
@@ -125,7 +131,36 @@ const CaseworkerLicenceApplications = () => {
     } catch { /* ignore */ }
   };
 
-  // ── Legacy status action (Approve / Reject / Information Requested) ──────────
+  // ── Document handler ─────────────────────────────────────────────────────────
+  const handleDocument = async (index, mode) => {
+    if (!selectedApp || docBusy) return;
+    try {
+      setDocBusy(`${index}:${mode}`);
+      const res = await downloadCaseworkerLicenceDocument(selectedApp.id, index, { download: mode === "download" });
+      const blob = res.data;
+      const cd   = res.headers?.["content-disposition"] || "";
+      const match = cd.match(/filename="?([^"]+)"?/i);
+      const filename = match ? match[1] : `document-${index + 1}`;
+      if (mode === "download") {
+        triggerDownload(blob, filename);
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) triggerDownload(blob, filename);
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      }
+    } catch (err) {
+      let message = err?.response?.data?.message;
+      if (!message && err?.response?.data instanceof Blob) {
+        try { message = JSON.parse(await err.response.data.text())?.message; } catch { /* ignore */ }
+      }
+      showToast({ message: message || "Unable to open this document", variant: "danger" });
+    } finally {
+      setDocBusy(null);
+    }
+  };
+
+  // ── Review action (Approve / Reject / Info) ──────────────────────────────────
   const handleAction = async () => {
     if (!actionType) return;
     if ((actionType === "Rejected" || actionType === "Information Requested") && !adminNotes.trim()) {
@@ -134,11 +169,8 @@ const CaseworkerLicenceApplications = () => {
     }
     try {
       setActionLoading(true);
-      await api.patch(`/api/caseworker/licence/update-status/${selectedApp.id}`, {
-        status: actionType,
-        adminNotes,
-      });
-      showToast({ message: `Status updated to ${actionType} successfully`, variant: "success" });
+      await api.patch(`/api/caseworker/licence/update-status/${selectedApp.id}`, { status: actionType, adminNotes });
+      showToast({ message: `Status updated to ${actionType}`, variant: "success" });
       setShowActionModal(false);
       setAdminNotes("");
       setSelectedApp(null);
@@ -150,13 +182,12 @@ const CaseworkerLicenceApplications = () => {
     }
   };
 
-  // ── Government pipeline modal helpers ────────────────────────────────────────
+  // ── Gov pipeline modal ───────────────────────────────────────────────────────
   const openGovModal = (type, app) => {
     setRegForm({ smsRegistrationRef: "", governmentRegistrationRef: "" });
     setSubForm({ submissionRef: "", submissionDate: "" });
     setGovModal({ type, app });
   };
-
   const closeGovModal = () => { setGovModal(null); setGovLoading(false); };
 
   const handleGovAction = async () => {
@@ -177,16 +208,13 @@ const CaseworkerLicenceApplications = () => {
         case "completeReg":
           if (!regForm.smsRegistrationRef.trim()) {
             showToast({ message: "SMS Registration Reference is required", variant: "warning" });
-            setGovLoading(false);
-            return;
+            setGovLoading(false); return;
           }
           await completeGovRegistration(app.id, {
             smsRegistrationRef: regForm.smsRegistrationRef.trim(),
-            ...(regForm.governmentRegistrationRef.trim() && {
-              governmentRegistrationRef: regForm.governmentRegistrationRef.trim(),
-            }),
+            ...(regForm.governmentRegistrationRef.trim() && { governmentRegistrationRef: regForm.governmentRegistrationRef.trim() }),
           });
-          msg = "SMS registration recorded successfully";
+          msg = "SMS registration recorded";
           break;
         case "requestCreds":
           await requestGovCredentials(app.id);
@@ -195,134 +223,106 @@ const CaseworkerLicenceApplications = () => {
         case "submitUKVI":
           if (!subForm.submissionRef.trim() || !subForm.submissionDate) {
             showToast({ message: "Both submission reference and date are required", variant: "warning" });
-            setGovLoading(false);
-            return;
+            setGovLoading(false); return;
           }
-          await recordGovSubmission(app.id, {
-            submissionRef: subForm.submissionRef.trim(),
-            submissionDate: subForm.submissionDate,
-          });
+          await recordGovSubmission(app.id, { submissionRef: subForm.submissionRef.trim(), submissionDate: subForm.submissionDate });
           msg = "Application submitted to UKVI — status moved to Decision Pending";
           break;
-        default:
-          break;
+        default: break;
       }
       showToast({ message: msg, variant: "success" });
       closeGovModal();
       setSelectedApp(null);
       fetchApplications();
     } catch (err) {
-      const errMsg = err?.response?.data?.message || "Action failed — please try again";
-      showToast({ message: errMsg, variant: "danger" });
+      showToast({ message: err?.response?.data?.message || "Action failed — please try again", variant: "danger" });
       setGovLoading(false);
     }
   };
 
-  // ── Helpers ──────────────────────────────────────────────────────────────────
+  // ── Derived data ─────────────────────────────────────────────────────────────
   const filteredApps = applications.filter((app) => {
-    const matchesFilter = filter === "All" || app.status === filter;
-    const matchesSearch =
-      app.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.contactName.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
+    const matchFilter = filter === "All" || app.status === filter;
+    const q = searchTerm.toLowerCase();
+    const matchSearch =
+      (app.companyName || "").toLowerCase().includes(q) ||
+      (app.contactName || "").toLowerCase().includes(q) ||
+      (app.contactEmail || "").toLowerCase().includes(q);
+    return matchFilter && matchSearch;
   });
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Approved":             return "bg-emerald-100 text-emerald-700";
-      case "Rejected":             return "bg-red-100 text-red-700";
-      case "Under Review":         return "bg-blue-100 text-blue-700";
-      case "Information Requested":return "bg-amber-100 text-amber-700";
-      case "Government Processing":return "bg-violet-100 text-violet-700";
-      case "Decision Pending":     return "bg-orange-100 text-orange-700";
-      default:                     return "bg-amber-100 text-amber-700";
-    }
-  };
-
-  // Gov pipeline modal title / icon helpers
-  const govModalMeta = {
-    startReview:  { title: "Start Review",                   Icon: Play },
-    startGovReg:  { title: "Start Government Registration",   Icon: Globe },
-    completeReg:  { title: "Complete SMS Registration",       Icon: ClipboardCheck },
-    requestCreds: { title: "Send Credentials to Sponsor",     Icon: Key },
-    submitUKVI:   { title: "Submit Application to UKVI",      Icon: Send },
-  };
-
-  // Pipeline counts (for dashboard)
   const pipelineCounts = {
-    pending:    applications.filter((a) => a.status === "Pending").length,
-    underReview:applications.filter((a) => a.status === "Under Review").length,
-    govProcess: applications.filter((a) => a.status === "Government Processing").length,
-    decision:   applications.filter((a) => a.status === "Decision Pending").length,
+    pending:     applications.filter((a) => a.status === "Pending").length,
+    underReview: applications.filter((a) => a.status === "Under Review").length,
+    govProcess:  applications.filter((a) => a.status === "Government Processing").length,
+    decision:    applications.filter((a) => a.status === "Decision Pending").length,
   };
   const hasPipelineWork = Object.values(pipelineCounts).some(Boolean);
 
+  const isTerminal = (status) => TERMINAL_STATUSES.includes(status);
+  const isActive   = (status) => ACTIVE_STATUSES.includes(status);
+
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-8 pb-12">
-      {/* ── Page header ── */}
+    <div className="space-y-5 pb-10">
+
+      {/* Page header */}
       <div>
-        <h1 className="text-3xl font-black text-secondary flex items-center gap-3">
-          <ShieldCheck className="text-primary" size={32} />
+        <h1 className="text-2xl sm:text-3xl font-black text-secondary flex items-center gap-2.5">
+          <ShieldCheck className="text-primary shrink-0" size={26} />
           Assigned Licence Reviews
         </h1>
-        <p className="text-gray-500 font-bold text-sm mt-1">
-          Review and manage sponsor licence applications assigned to you.
+        <p className="text-sm font-bold text-gray-400 mt-0.5">
+          Review and progress sponsor licence applications assigned to you.
         </p>
       </div>
 
-      {/* ── Government Pipeline Task Dashboard ── */}
+      {/* Pipeline dashboard */}
       {hasPipelineWork && (
-        <div className="bg-white rounded-3xl border border-indigo-100 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <Landmark className="text-indigo-500" size={18} />
-            <h3 className="text-sm font-black text-secondary">Government Pipeline — Work In Progress</h3>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
-              <p className="text-2xl font-black text-amber-600">{pipelineCounts.pending}</p>
-              <p className="text-xs font-black text-gray-600 mt-1">Needs Review</p>
-              <p className="text-[10px] font-bold text-amber-400 mt-0.5">Action: Start Review</p>
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-400 to-violet-500" />
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Landmark className="text-indigo-500 shrink-0" size={16} />
+              <h3 className="text-sm font-black text-secondary">Government Pipeline — Work In Progress</h3>
             </div>
-            <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
-              <p className="text-2xl font-black text-blue-600">{pipelineCounts.underReview}</p>
-              <p className="text-xs font-black text-gray-600 mt-1">Under Review</p>
-              <p className="text-[10px] font-bold text-blue-400 mt-0.5">Action: Start Gov. Reg.</p>
-            </div>
-            <div className="bg-violet-50 rounded-2xl p-4 border border-violet-100">
-              <p className="text-2xl font-black text-violet-600">{pipelineCounts.govProcess}</p>
-              <p className="text-xs font-black text-gray-600 mt-1">Gov. Processing</p>
-              <p className="text-[10px] font-bold text-violet-400 mt-0.5">Actions required</p>
-            </div>
-            <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
-              <p className="text-2xl font-black text-orange-600">{pipelineCounts.decision}</p>
-              <p className="text-xs font-black text-gray-600 mt-1">Decision Pending</p>
-              <p className="text-[10px] font-bold text-orange-400 mt-0.5">Awaiting UKVI</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: "Needs Review",    count: pipelineCounts.pending,     color: "bg-amber-50 border-amber-100 text-amber-600",   hint: "Action: Start Review" },
+                { label: "Under Review",    count: pipelineCounts.underReview,  color: "bg-blue-50 border-blue-100 text-blue-600",      hint: "Action: Start Gov. Reg." },
+                { label: "Gov. Processing", count: pipelineCounts.govProcess,   color: "bg-violet-50 border-violet-100 text-violet-600",hint: "Actions required" },
+                { label: "Decision Pending",count: pipelineCounts.decision,     color: "bg-orange-50 border-orange-100 text-orange-600",hint: "Awaiting UKVI" },
+              ].map(({ label, count, color, hint }) => (
+                <div key={label} className={`rounded-xl border p-4 ${color}`}>
+                  <p className="text-2xl font-black">{count}</p>
+                  <p className="text-xs font-black text-gray-700 mt-1">{label}</p>
+                  <p className="text-[10px] font-bold opacity-60 mt-0.5">{hint}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Filters & Search ── */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-4 shadow-sm flex flex-col md:flex-row gap-4">
+      {/* Search + Filters */}
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-3.5 text-gray-300" size={18} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
           <input
             type="text"
-            placeholder="Search by company or contact..."
-            className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-primary/20 transition-all text-sm font-bold"
+            placeholder="Search by company, contact or email…"
+            className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {["All", "Pending", "Under Review", "Information Requested", "Government Processing", "Decision Pending"].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
-                filter === f
-                  ? "bg-primary text-white shadow-lg shadow-primary/20"
-                  : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+              className={`px-3 py-2 rounded-lg text-[11px] font-black transition-all whitespace-nowrap ${
+                filter === f ? "bg-primary text-white shadow-sm shadow-primary/20" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
               }`}
             >
               {f}
@@ -331,202 +331,231 @@ const CaseworkerLicenceApplications = () => {
         </div>
       </div>
 
-      {/* ── Applications Table ── */}
-      <div className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-sm">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-gray-50/50 border-b border-gray-50">
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Company / Type</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Contact</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Assigned At</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Status</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {loading ? (
-              [...Array(3)].map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  <td colSpan={5} className="px-8 py-6 h-20 bg-gray-50/20" />
-                </tr>
-              ))
-            ) : filteredApps.length > 0 ? (
-              filteredApps.map((app) => (
-                <tr key={app.id} className="hover:bg-gray-50/30 transition-colors">
-                  <td className="px-8 py-6">
-                    <div>
-                      <p className="text-sm font-black text-secondary">{app.companyName}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded ${app.type === "Renewal" ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"}`}>
-                          {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type}
-                        </span>
-                        {GOV_PIPELINE_STATUSES.includes(app.status) && app.status !== "Pending" && (
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">
-                            Gov. Pipeline
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <p className="text-sm font-black text-secondary">{app.contactName}</p>
-                    <p className="text-xs font-bold text-gray-400 mt-0.5">{app.contactEmail}</p>
-                  </td>
-                  <td className="px-8 py-6">
-                    <p className="text-sm font-black text-secondary">{formatDate(app.updatedAt)}</p>
-                  </td>
-                  <td className="px-8 py-6">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black ${getStatusColor(app.status)}`}>
-                      {app.status}
-                    </span>
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => setSelectedApp(app)}
-                        className="p-2.5 bg-white border border-gray-100 rounded-xl text-gray-400 hover:text-primary hover:border-primary/20 transition-all shadow-sm"
-                      >
-                        <Eye size={18} />
-                      </button>
-                      {app.applicationVersion === 2 && (
-                        <button
-                          onClick={() => navigate(`/caseworker/licence/v2/${app.id}`)}
-                          className="inline-flex items-center gap-1 px-3 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase hover:bg-indigo-600 hover:text-white transition-all"
-                          title="View the full 8-step application"
-                        >
-                          <FileText size={14} /> Full App
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={5} className="px-8 py-12 text-center">
-                  <AlertCircle className="mx-auto text-gray-200 mb-4" size={48} />
-                  <p className="text-sm font-bold text-gray-400">No assigned reviews found.</p>
-                </td>
+      {/* Applications table */}
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-0.5" />
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50/60">
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Company / Type</th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Contact</th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Updated</th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Status</th>
+                <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {loading ? (
+                [...Array(4)].map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    {[1,2,3,4,5].map((c) => (
+                      <td key={c} className="px-5 py-4">
+                        <div className="h-4 bg-gray-100 rounded-lg w-3/4" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : filteredApps.length > 0 ? (
+                filteredApps.map((app) => {
+                  const isV2 = Number(app.applicationVersion) === 2;
+                  return (
+                    <tr key={app.id} className="hover:bg-gray-50/40 transition-colors group">
+                      <td className="px-5 py-3.5">
+                        <p className="text-sm font-black text-secondary">{app.companyName || "—"}</p>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${app.type === "Renewal" ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"}`}>
+                            {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type}
+                          </span>
+                          {isV2 && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/10 text-primary">V2</span>
+                          )}
+                          {isActive(app.status) && app.status !== "Pending" && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">Gov. Pipeline</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <p className="text-sm font-black text-secondary">{app.contactName || "—"}</p>
+                        <p className="text-xs font-bold text-gray-400 mt-0.5">{app.contactEmail || ""}</p>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <p className="text-xs font-bold text-secondary">{formatDate(app.updatedAt)}</p>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black ${STATUS_COLOR[app.status] || "bg-gray-100 text-gray-600"}`}>
+                          {app.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setSelectedApp(app)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white text-[11px] font-black transition-all"
+                          >
+                            <Eye size={13} /> Review
+                          </button>
+                          {isV2 && (
+                            <button
+                              onClick={() => navigate(`/caseworker/licence/v2/${app.id}`)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white text-[11px] font-black transition-all"
+                              title="View full 8-step application"
+                            >
+                              <ExternalLink size={13} /> Full App
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-5 py-12 text-center">
+                    <ShieldCheck className="mx-auto text-gray-200 mb-3" size={36} />
+                    <p className="text-sm font-bold text-gray-400">No assigned reviews found.</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* ── Details Modal ── */}
+      {/* ── Details Modal ─────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {selectedApp && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-secondary/40 backdrop-blur-md p-4"
+            onClick={(e) => { if (e.target === e.currentTarget) setSelectedApp(null); }}
           >
             <motion.div
-              initial={{ scale: 0.95, y: 20 }}
+              initial={{ scale: 0.96, y: 16 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar"
+              exit={{ scale: 0.96, y: 16 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden"
             >
-              {/* Blue gradient header */}
-              <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 px-8 py-6 rounded-t-3xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-white/15 rounded-2xl">
-                      <FileText className="text-white" size={22} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black text-white">Review Application</h2>
-                      <p className="text-xs font-bold text-blue-200 mt-0.5">
-                        #{selectedApp.id} ·{" "}
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-white/20 text-white">
-                          {selectedApp.status}
-                        </span>
-                      </p>
-                    </div>
+              {/* Modal header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 bg-primary/10 rounded-xl shrink-0">
+                    <ShieldCheck size={18} className="text-primary" />
                   </div>
-                  <button onClick={() => setSelectedApp(null)} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all">
-                    <X size={22} />
-                  </button>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-sm font-black text-secondary truncate">
+                        {selectedApp.companyName || `Application #${selectedApp.id}`}
+                      </h2>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${STATUS_COLOR[selectedApp.status] || "bg-gray-100 text-gray-500"}`}>
+                        {selectedApp.status}
+                      </span>
+                      {Number(selectedApp.applicationVersion) === 2 && (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">V2 Application</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] font-bold text-gray-400 mt-0.5">
+                      #LIC-{selectedApp.id} · {selectedApp.type} · Updated {formatDate(selectedApp.updatedAt)}
+                    </p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setSelectedApp(null)}
+                  className="p-1.5 text-gray-400 hover:text-secondary hover:bg-gray-100 rounded-xl transition-all shrink-0 ml-2"
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <div className="p-8">
 
-                {/* Company + Contact grid */}
-                <div className="grid grid-cols-2 gap-6 mb-8">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Company Information</label>
-                      <div className="bg-slate-50 rounded-xl p-4 space-y-2">
-                        <p className="text-sm font-black text-secondary">{selectedApp.companyName}</p>
-                        <p className="text-xs font-bold text-gray-500 flex items-center gap-2">
-                          <Building2 size={14} /> {selectedApp.registrationNumber}
-                        </p>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Licence Request</label>
-                      <div className="bg-slate-50 rounded-xl p-4 space-y-2">
-                        <p className="text-sm font-black text-secondary">{selectedApp.licenceType}</p>
-                        <p className="text-xs font-bold text-gray-500">Allocation: {selectedApp.cosAllocation}</p>
-                        <p className="text-xs font-bold text-gray-500">Type: {selectedApp.type}</p>
-                      </div>
+              {/* Scrollable body */}
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 custom-scrollbar">
+
+                {/* Info grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Company */}
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-2.5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-1.5">
+                      <Building2 size={11} /> Company
+                    </p>
+                    <div className="space-y-1">
+                      <InfoRow label="Name"               value={selectedApp.companyName} />
+                      <InfoRow label="Reg. Number"        value={selectedApp.registrationNumber} />
+                      <InfoRow label="Industry"           value={selectedApp.industry} />
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Contact Officer</label>
-                      <div className="bg-slate-50 rounded-xl p-4 space-y-2">
-                        <p className="text-sm font-black text-secondary">{selectedApp.contactName}</p>
-                        <p className="text-xs font-bold text-gray-500 flex items-center gap-2">
-                          <Mail size={14} /> {selectedApp.contactEmail}
-                        </p>
-                        <p className="text-xs font-bold text-gray-500 flex items-center gap-2">
-                          <Phone size={14} /> {selectedApp.contactPhone}
-                        </p>
-                      </div>
+                  {/* Contact */}
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-2.5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-1.5">
+                      <Mail size={11} /> Contact Officer
+                    </p>
+                    <div className="space-y-1">
+                      <InfoRow label="Name"  value={selectedApp.contactName} />
+                      <InfoRow label="Email" value={selectedApp.contactEmail} />
+                      <InfoRow label="Phone" value={selectedApp.contactPhone} />
                     </div>
-                    {selectedApp.reason && (
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Justification / Reason</label>
-                        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-                          <p className="text-xs font-bold text-amber-900 leading-relaxed italic">"{selectedApp.reason}"</p>
-                        </div>
-                      </div>
-                    )}
+                  </div>
+
+                  {/* Licence details */}
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-2.5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-1.5">
+                      <Hash size={11} /> Licence Details
+                    </p>
+                    <div className="space-y-1">
+                      <InfoRow label="Type"          value={selectedApp.licenceType} />
+                      <InfoRow label="CoS Allocation"value={selectedApp.cosAllocation} />
+                      <InfoRow label="App. Type"     value={selectedApp.type} />
+                    </div>
                   </div>
                 </div>
+
+                {/* Justification */}
+                {selectedApp.reason && !String(selectedApp.reason).startsWith("CoS Request:") && (
+                  <div className="rounded-xl border border-amber-100 bg-amber-50 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-1.5">Business Justification</p>
+                    <p className="text-xs font-bold text-amber-900 leading-relaxed">"{selectedApp.reason}"</p>
+                  </div>
+                )}
+
+                {/* Admin notes (if info was requested) */}
+                {selectedApp.adminNotes && (
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-1.5">Reviewer Notes</p>
+                    <p className="text-xs font-bold text-blue-900 leading-relaxed">{selectedApp.adminNotes}</p>
+                  </div>
+                )}
 
                 {/* Documents */}
-                {selectedApp.documents && selectedApp.documents.length > 0 && (
-                  <div className="mb-6">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">Evidence & Documents</label>
-                    <div className="grid grid-cols-2 gap-3">
+                {selectedApp.documents?.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Evidence &amp; Documents</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {selectedApp.documents.map((doc, i) => {
-                        const previewing = docBusy === `${i}:preview`;
+                        const previewing  = docBusy === `${i}:preview`;
                         const downloading = docBusy === `${i}:download`;
                         return (
-                          <div key={doc} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl hover:border-primary/20 transition-all shadow-sm">
+                          <div key={doc} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-white hover:border-primary/20 transition-all">
                             <button
                               type="button"
                               onClick={() => handleDocument(i, "preview")}
                               disabled={!!docBusy}
-                              title="Preview document"
-                              className="flex items-center gap-3 min-w-0 flex-1 text-left disabled:opacity-60"
+                              className="flex items-center gap-2.5 min-w-0 flex-1 text-left disabled:opacity-60"
                             >
                               {previewing
-                                ? <Loader2 size={18} className="text-primary animate-spin shrink-0" />
-                                : <FileText size={18} className="text-primary shrink-0" />}
-                              <span className="text-xs font-black text-secondary truncate">Document {i + 1}</span>
+                                ? <Loader2 size={15} className="text-primary animate-spin shrink-0" />
+                                : <FileText size={15} className="text-gray-400 shrink-0" />}
+                              <span className="text-xs font-bold text-secondary truncate">Document {i + 1}</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDocument(i, "download")}
                               disabled={!!docBusy}
-                              title="Download document"
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all disabled:opacity-60 shrink-0"
+                              className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all disabled:opacity-60 shrink-0"
                             >
-                              {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                              {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                             </button>
                           </div>
                         );
@@ -535,16 +564,32 @@ const CaseworkerLicenceApplications = () => {
                   </div>
                 )}
 
-                {/* ── Intake Panel Tab Switcher ── */}
-                {["Pending", "Under Review", "Government Processing", "Decision Pending"].includes(selectedApp.status) && (
-                  <div className="mb-6">
+                {/* UKVI submission info (read-only for Decision Pending / Approved) */}
+                {["Decision Pending", "Approved"].includes(selectedApp.status) && selectedApp.governmentSubmissionRef && (
+                  <div className="rounded-xl border border-orange-100 bg-orange-50 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Globe className="text-orange-500 shrink-0" size={14} />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">UKVI Submission</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <InfoRow label="Submission Ref" value={selectedApp.governmentSubmissionRef} />
+                      {selectedApp.governmentSubmissionDate && (
+                        <InfoRow label="Submitted On" value={formatDate(selectedApp.governmentSubmissionDate)} />
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pipeline / Intake panel — only for active statuses */}
+                {isActive(selectedApp.status) && (
+                  <div>
                     {/* Sub-tabs */}
-                    <div className="flex gap-1 p-1 bg-gray-100 rounded-xl mb-4 w-fit">
+                    <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit mb-4">
                       {[{ id: "govpipeline", label: "Pipeline Actions" }, { id: "intake", label: "Intake & Documents" }].map(({ id, label }) => (
                         <button
                           key={id}
                           onClick={() => setIntakeTab(id)}
-                          className={`px-4 py-2 text-xs font-black rounded-lg transition-all ${
+                          className={`px-4 py-2 text-[11px] font-black rounded-lg transition-all ${
                             intakeTab === id ? "bg-white text-secondary shadow-sm" : "text-gray-500 hover:text-secondary"
                           }`}
                         >
@@ -553,21 +598,110 @@ const CaseworkerLicenceApplications = () => {
                       ))}
                     </div>
 
-                    {/* ── Intake & Documents Sub-panel ── */}
+                    {/* Pipeline actions */}
+                    {intakeTab === "govpipeline" && (
+                      <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Landmark className="text-indigo-500 shrink-0" size={14} />
+                          <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Government Pipeline Actions</p>
+                        </div>
+
+                        {selectedApp.status === "Pending" && (
+                          <div className="space-y-3">
+                            <p className="text-xs font-bold text-indigo-800">
+                              Start the review to progress this application through the government pipeline.
+                            </p>
+                            <button
+                              onClick={() => openGovModal("startReview", selectedApp)}
+                              className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-black hover:bg-indigo-700 transition-all active:scale-95"
+                            >
+                              <Play size={15} /> Start Review
+                            </button>
+                          </div>
+                        )}
+
+                        {selectedApp.status === "Under Review" && (
+                          <div className="space-y-3">
+                            {!intakeReadiness?.isReady && (
+                              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-2">
+                                <AlertCircle size={13} className="text-amber-600 shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-[11px] font-black text-amber-700">Intake not yet complete</p>
+                                  {intakeReadiness?.reasons?.map((r) => (
+                                    <p key={r} className="text-[11px] text-amber-600 mt-0.5">• {r}</p>
+                                  ))}
+                                  <button onClick={() => setIntakeTab("intake")} className="mt-1 text-[11px] text-amber-700 underline">
+                                    Review Intake &amp; Documents →
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                            <button
+                              onClick={() => openGovModal("startGovReg", selectedApp)}
+                              disabled={!intakeReadiness?.isReady}
+                              className={`w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-black transition-all active:scale-95 ${
+                                intakeReadiness?.isReady
+                                  ? "bg-violet-600 text-white hover:bg-violet-700"
+                                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                              }`}
+                            >
+                              <Globe size={15} /> Start Government Registration
+                              {!intakeReadiness?.isReady && <span className="text-[10px] opacity-70">(intake required)</span>}
+                            </button>
+                          </div>
+                        )}
+
+                        {selectedApp.status === "Government Processing" && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-bold text-indigo-800 mb-3">
+                              Government portal processing is active. Complete each step in order.
+                            </p>
+                            {[
+                              { type: "completeReg",  Icon: ClipboardCheck, label: "Complete SMS Registration",    hint: "Record SMS & Gov. ref." },
+                              { type: "requestCreds", Icon: Key,            label: "Send Credentials to Sponsor",   hint: "Admin must generate first" },
+                              { type: "submitUKVI",   Icon: Send,           label: "Submit Application to UKVI",    hint: "→ Decision Pending", primary: true },
+                            ].map(({ type, Icon, label, hint, primary }) => (
+                              <button
+                                key={type}
+                                onClick={() => openGovModal(type, selectedApp)}
+                                className={`w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-black transition-all ${
+                                  primary
+                                    ? "bg-violet-600 text-white hover:bg-violet-700 active:scale-95"
+                                    : "bg-white text-violet-700 border border-violet-200 hover:bg-violet-50"
+                                }`}
+                              >
+                                <Icon size={14} className="shrink-0" />
+                                <span>{label}</span>
+                                <span className={`ml-auto text-[10px] ${primary ? "text-violet-200" : "text-gray-400"}`}>{hint}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {selectedApp.status === "Decision Pending" && (
+                          <div className="rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
+                            <p className="text-xs font-bold text-orange-800">
+                              The application has been submitted to UKVI. Awaiting their decision — typically 8–12 weeks. No action required at this stage.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Intake & documents */}
                     {intakeTab === "intake" && (
-                      <div className="bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden">
-                        {/* Readiness status bar */}
+                      <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
                         {intakeReadiness && (
                           <div className={`px-4 py-3 border-b flex items-center gap-2 ${
                             intakeReadiness.isReady ? "bg-emerald-50 border-emerald-100" : "bg-amber-50 border-amber-100"
                           }`}>
                             {intakeReadiness.isReady
-                              ? <Check size={14} className="text-emerald-600 shrink-0" />
-                              : <AlertCircle size={14} className="text-amber-600 shrink-0" />}
+                              ? <Check size={13} className="text-emerald-600 shrink-0" />
+                              : <AlertCircle size={13} className="text-amber-600 shrink-0" />}
                             <p className={`text-xs font-black ${intakeReadiness.isReady ? "text-emerald-700" : "text-amber-700"}`}>
                               {intakeReadiness.isReady
                                 ? "All intake requirements met — ready for Government Registration"
-                                : `Not ready for Government Registration: ${intakeReadiness.reasons?.[0] || "incomplete"}`}
+                                : `Not ready: ${intakeReadiness.reasons?.[0] || "incomplete"}`}
                             </p>
                           </div>
                         )}
@@ -578,42 +712,37 @@ const CaseworkerLicenceApplications = () => {
                             </div>
                           ) : intakeData ? (
                             <>
-                              {/* Information form summary */}
                               {intakeData.form && (
-                                <div className="mb-4 bg-white rounded-xl border border-gray-200 p-4">
+                                <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4">
                                   <div className="flex items-center justify-between mb-3">
                                     <p className="text-xs font-black text-gray-700">Information Form</p>
                                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                                      intakeData.form.isComplete
-                                        ? "bg-emerald-100 text-emerald-700"
-                                        : "bg-amber-100 text-amber-700"
+                                      intakeData.form.isComplete ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                                     }`}>
                                       {intakeData.form.isComplete ? "Complete" : "Incomplete"}
                                     </span>
                                   </div>
                                   {intakeData.form.isComplete && (
-                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div className="grid grid-cols-2 gap-2">
                                       {[
-                                        ["Trading Name", intakeData.form.tradingName],
-                                        ["Named Person", intakeData.form.namedPersonOnLicence],
-                                        ["NI Number", intakeData.form.niNumber],
-                                        ["Phone", intakeData.form.phoneNumber],
-                                        ["Email", intakeData.form.emailAddress],
-                                        ["Total Employees", intakeData.form.totalEmployees],
-                                        ["Under Immigration Rules", intakeData.form.employeesUnderImmigrationRules],
-                                        ["CoS Required", intakeData.form.numberOfCosRequired],
-                                      ].map(([label, val]) => val != null && (
+                                        ["Trading Name",     intakeData.form.tradingName],
+                                        ["Named Person",     intakeData.form.namedPersonOnLicence],
+                                        ["NI Number",        intakeData.form.niNumber],
+                                        ["Phone",            intakeData.form.phoneNumber],
+                                        ["Email",            intakeData.form.emailAddress],
+                                        ["Total Employees",  intakeData.form.totalEmployees],
+                                        ["Immigration Rules",intakeData.form.employeesUnderImmigrationRules],
+                                        ["CoS Required",     intakeData.form.numberOfCosRequired],
+                                      ].map(([label, val]) => val != null ? (
                                         <div key={label}>
-                                          <span className="font-bold text-gray-400">{label}:</span>{" "}
-                                          <span className="text-gray-700">{String(val)}</span>
+                                          <span className="text-[10px] font-bold text-gray-400">{label}: </span>
+                                          <span className="text-[10px] font-black text-gray-700">{String(val)}</span>
                                         </div>
-                                      ))}
+                                      ) : null)}
                                     </div>
                                   )}
                                 </div>
                               )}
-
-                              {/* Document checklist in caseworker verify mode */}
                               <IntakeDocumentChecklist
                                 applicationId={selectedApp.id}
                                 viewerRole="caseworker"
@@ -627,221 +756,97 @@ const CaseworkerLicenceApplications = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* ── Government Pipeline Actions Sub-panel ── */}
-                    {intakeTab === "govpipeline" && ["Pending", "Under Review", "Government Processing"].includes(selectedApp.status) && (
-                  <div className="bg-indigo-50 rounded-2xl p-5 border border-indigo-100">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Landmark className="text-indigo-500" size={16} />
-                      <label className="text-[10px] font-black uppercase text-indigo-500 tracking-widest">
-                        Government Pipeline Actions
-                      </label>
-                    </div>
-
-                    {selectedApp.status === "Pending" && (
-                      <div className="space-y-3">
-                        <p className="text-xs font-bold text-indigo-800">
-                          This application is pending casework review. Start the review to progress the application through the government pipeline.
-                        </p>
-                        <button
-                          onClick={() => openGovModal("startReview", selectedApp)}
-                          className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-xl py-3 text-sm font-black hover:bg-indigo-700 transition-all active:scale-95"
-                        >
-                          <Play size={16} /> Start Review
-                        </button>
-                      </div>
-                    )}
-
-                    {selectedApp.status === "Under Review" && (
-                      <div className="space-y-3">
-                        {!intakeReadiness?.isReady && (
-                          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                            <div className="flex items-start gap-2">
-                              <AlertCircle size={14} className="text-amber-600 shrink-0 mt-0.5" />
-                              <div>
-                                <p className="text-xs font-black text-amber-700">Intake not yet complete</p>
-                                {intakeReadiness?.reasons?.map((r, i) => (
-                                  <p key={r} className="text-[11px] text-amber-600 mt-0.5">• {r}</p>
-                                ))}
-                                <button
-                                  onClick={() => setIntakeTab("intake")}
-                                  className="mt-1 text-[11px] text-amber-700 underline"
-                                >
-                                  Review Intake & Documents →
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        <p className="text-xs font-bold text-indigo-800">
-                          Review is in progress. All intake documents must be verified before Government Registration can begin.
-                        </p>
-                        <button
-                          onClick={() => openGovModal("startGovReg", selectedApp)}
-                          disabled={!intakeReadiness?.isReady}
-                          title={!intakeReadiness?.isReady ? "Complete intake verification first" : "Start Government Registration"}
-                          className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-all active:scale-95 ${
-                            intakeReadiness?.isReady
-                              ? "bg-violet-600 text-white hover:bg-violet-700"
-                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          }`}
-                        >
-                          <Globe size={16} /> Start Government Registration
-                          {!intakeReadiness?.isReady && <span className="text-[10px] ml-1">(intake required)</span>}
-                        </button>
-                      </div>
-                    )}
-
-                    {selectedApp.status === "Government Processing" && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-bold text-indigo-800 mb-3">
-                          Government portal processing is active. Complete the steps in order.
-                        </p>
-                        <button
-                          onClick={() => openGovModal("completeReg", selectedApp)}
-                          className="w-full flex items-center gap-3 bg-white text-violet-700 border border-violet-200 rounded-xl px-4 py-3 text-xs font-black hover:bg-violet-50 transition-all"
-                        >
-                          <ClipboardCheck size={15} className="shrink-0" />
-                          <span>Complete SMS Registration</span>
-                          <span className="ml-auto text-violet-300 text-[10px]">Record SMS & Gov. ref.</span>
-                        </button>
-                        <button
-                          onClick={() => openGovModal("requestCreds", selectedApp)}
-                          className="w-full flex items-center gap-3 bg-white text-violet-700 border border-violet-200 rounded-xl px-4 py-3 text-xs font-black hover:bg-violet-50 transition-all"
-                        >
-                          <Key size={15} className="shrink-0" />
-                          <span>Send Credentials to Sponsor</span>
-                          <span className="ml-auto text-violet-300 text-[10px]">Requires admin to generate first</span>
-                        </button>
-                        <button
-                          onClick={() => openGovModal("submitUKVI", selectedApp)}
-                          className="w-full flex items-center gap-3 bg-violet-600 text-white rounded-xl px-4 py-3 text-xs font-black hover:bg-violet-700 transition-all active:scale-95"
-                        >
-                          <Send size={15} className="shrink-0" />
-                          <span>Submit Application to UKVI</span>
-                          <span className="ml-auto text-violet-300 text-[10px]">→ Decision Pending</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Government registration info (read-only for Decision Pending / Approved) */}
-                {["Decision Pending", "Approved"].includes(selectedApp.status) && selectedApp.governmentSubmissionRef && (
-                  <div className="mb-6 bg-orange-50 rounded-2xl p-5 border border-orange-100">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Globe className="text-orange-500" size={16} />
-                      <label className="text-[10px] font-black uppercase text-orange-500 tracking-widest">
-                        UKVI Submission
-                      </label>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Submission Ref</p>
-                        <p className="text-sm font-black text-secondary">{selectedApp.governmentSubmissionRef}</p>
-                      </div>
-                      {selectedApp.governmentSubmissionDate && (
-                        <div>
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Submitted On</p>
-                          <p className="text-sm font-black text-secondary">{formatDate(selectedApp.governmentSubmissionDate)}</p>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 )}
 
                 {/* Application stages */}
-                <div className="mb-6">
-                  <LicenceStages applicationId={selectedApp.id} viewerRole="caseworker" />
-                </div>
+                <LicenceStages applicationId={selectedApp.id} viewerRole="caseworker" />
 
-                {/* Standard review actions */}
-                <div className="pt-5 border-t border-gray-100">
-                  <div className="flex gap-3">
+                {/* Review action buttons — hidden for terminal states */}
+                {!isTerminal(selectedApp.status) && selectedApp.status !== "Decision Pending" && (
+                  <div className="grid grid-cols-3 gap-3 pt-2 border-t border-gray-100">
                     <button
                       onClick={() => { setActionType("Approved"); setShowActionModal(true); }}
-                      className="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2 active:scale-95"
+                      className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-black text-xs transition-all active:scale-95"
                     >
-                      <Check size={16} /> Approve
+                      <Check size={14} /> Approve
                     </button>
                     <button
                       onClick={() => { setActionType("Rejected"); setShowActionModal(true); }}
-                      className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2 active:scale-95"
+                      className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 bg-red-50 text-red-600 hover:bg-red-100 font-black text-xs transition-all active:scale-95"
                     >
-                      <X size={16} /> Reject
+                      <X size={14} /> Reject
                     </button>
                     <button
                       onClick={() => { setActionType("Information Requested"); setShowActionModal(true); }}
-                      className="flex-1 bg-amber-50 text-amber-600 hover:bg-amber-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2 active:scale-95"
+                      className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 bg-amber-50 text-amber-700 hover:bg-amber-100 font-black text-xs transition-all active:scale-95"
                     >
-                      <MessageSquare size={16} /> Request Info
+                      <MessageSquare size={14} /> Request Info
                     </button>
                   </div>
-                </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Legacy Action Modal (Approve / Reject / Request Info) ── */}
+      {/* ── Review Action Modal ─────────────────────────────────────────────── */}
       <AnimatePresence>
         {showActionModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-secondary/40 backdrop-blur-md p-4"
           >
             <motion.div
-              initial={{ scale: 0.95, y: 20 }}
+              initial={{ scale: 0.96, y: 16 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+              exit={{ scale: 0.96, y: 16 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
             >
-              {/* Colour-coded gradient header */}
-              <div className={`px-6 py-5 ${
-                actionType === "Approved"
-                  ? "bg-gradient-to-r from-emerald-500 to-teal-600"
-                  : actionType === "Rejected"
-                  ? "bg-gradient-to-r from-red-500 to-rose-600"
-                  : "bg-gradient-to-r from-blue-600 to-indigo-700"
+              {/* Colour-coded header */}
+              <div className={`px-5 py-4 ${
+                actionType === "Approved"             ? "bg-gradient-to-r from-emerald-500 to-teal-600" :
+                actionType === "Rejected"             ? "bg-gradient-to-r from-red-500 to-rose-600" :
+                                                        "bg-gradient-to-r from-amber-500 to-orange-500"
               }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/15 rounded-xl">
-                      {actionType === "Approved"
-                        ? <Check size={16} className="text-white" />
-                        : actionType === "Rejected"
-                        ? <X size={16} className="text-white" />
-                        : <MessageSquare size={16} className="text-white" />}
+                    <div className="p-2 bg-white/20 rounded-xl">
+                      {actionType === "Approved"             ? <Check size={15} className="text-white" /> :
+                       actionType === "Rejected"             ? <X size={15} className="text-white" /> :
+                                                               <MessageSquare size={15} className="text-white" />}
                     </div>
-                    <h3 className="text-base font-black text-white">
-                      {actionType === "Approved" ? "Confirm Approval"
-                        : actionType === "Rejected" ? "Confirm Rejection"
-                        : "Request Information"}
-                    </h3>
+                    <div>
+                      <h3 className="text-sm font-black text-white">
+                        {actionType === "Approved" ? "Confirm Approval" : actionType === "Rejected" ? "Confirm Rejection" : "Request Information"}
+                      </h3>
+                      {selectedApp && (
+                        <p className="text-[10px] font-bold text-white/60 mt-0.5 truncate">{selectedApp.companyName} · #LIC-{selectedApp.id}</p>
+                      )}
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setShowActionModal(false)}
-                    className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                  >
-                    <X size={18} />
+                  <button onClick={() => setShowActionModal(false)} className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                    <X size={16} />
                   </button>
                 </div>
-                {selectedApp && (
-                  <p className="text-[11px] font-bold text-white/60 mt-1.5 truncate">{selectedApp.companyName} · #{selectedApp.id}</p>
-                )}
               </div>
 
-              <div className="p-6 space-y-5">
+              <div className="p-5 space-y-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Reviewer Notes</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">
+                    Reviewer Notes{(actionType === "Rejected" || actionType === "Information Requested") && <span className="text-red-400 ml-0.5">*</span>}
+                  </label>
                   <textarea
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl p-4 text-sm font-bold text-secondary focus:ring-4 focus:ring-primary/5 outline-none resize-none"
+                    className={inp + " resize-none"}
                     rows={4}
-                    placeholder="Enter your assessment notes here..."
+                    placeholder={
+                      actionType === "Approved" ? "Optional — add any approval notes for the record…" :
+                      actionType === "Rejected" ? "Required — explain the reason for rejection…" :
+                      "Required — describe what information is needed and why…"
+                    }
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
                   />
@@ -850,21 +855,21 @@ const CaseworkerLicenceApplications = () => {
                   <button
                     onClick={handleAction}
                     disabled={actionLoading}
-                    className={`flex-[2] py-3 rounded-xl font-black text-white transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg ${
-                      actionType === "Approved"
-                        ? "bg-emerald-500 shadow-emerald-100"
-                        : actionType === "Rejected"
-                        ? "bg-red-500 shadow-red-100"
-                        : "bg-primary shadow-primary/20"
+                    className={`flex-[2] py-2.5 rounded-xl font-black text-white transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 ${
+                      actionType === "Approved" ? "bg-emerald-500 hover:bg-emerald-600" :
+                      actionType === "Rejected" ? "bg-red-500 hover:bg-red-600" :
+                                                  "bg-amber-500 hover:bg-amber-600"
                     }`}
                   >
                     {actionLoading
-                      ? <Loader2 className="animate-spin" />
-                      : `Confirm ${actionType.replace("Information Requested", "Request")}`}
+                      ? <Loader2 size={16} className="animate-spin" />
+                      : actionType === "Approved" ? "Confirm Approval"
+                      : actionType === "Rejected" ? "Confirm Rejection"
+                      : "Send Request"}
                   </button>
                   <button
                     onClick={() => setShowActionModal(false)}
-                    className="flex-1 bg-gray-50 text-gray-500 font-black py-3 rounded-xl hover:bg-gray-100 transition-all"
+                    className="flex-1 bg-gray-100 text-gray-500 font-black py-2.5 rounded-xl hover:bg-gray-200 transition-all"
                   >
                     Cancel
                   </button>
@@ -875,56 +880,59 @@ const CaseworkerLicenceApplications = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Government Pipeline Action Modal ── */}
+      {/* ── Government Pipeline Action Modal ──────────────────────────────────── */}
       <AnimatePresence>
         {govModal && (() => {
-          const meta = govModalMeta[govModal.type];
+          const meta   = GOV_MODAL_META[govModal.type];
           const GovIcon = meta?.Icon ?? Globe;
           return (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+              className="fixed inset-0 z-[70] flex items-center justify-center bg-secondary/40 backdrop-blur-md p-4"
             >
               <motion.div
-                initial={{ scale: 0.95, y: 20 }}
+                initial={{ scale: 0.96, y: 16 }}
                 animate={{ scale: 1, y: 0 }}
-                className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+                exit={{ scale: 0.96, y: 16 }}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
               >
-                {/* Blue-to-violet gradient header */}
-                <div className="bg-gradient-to-br from-blue-600 via-indigo-700 to-violet-700 px-6 py-5">
+                {/* Header */}
+                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 px-5 py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-white/15 rounded-xl">
-                        <GovIcon className="text-white" size={18} />
+                      <div className="p-2 bg-white/20 rounded-xl">
+                        <GovIcon className="text-white" size={16} />
                       </div>
-                      <h3 className="text-base font-black text-white">{meta?.title}</h3>
+                      <div>
+                        <h3 className="text-sm font-black text-white">{meta?.title}</h3>
+                        {govModal?.app && (
+                          <p className="text-[10px] font-bold text-indigo-200 mt-0.5 truncate">{govModal.app.companyName} · #LIC-{govModal.app.id}</p>
+                        )}
+                      </div>
                     </div>
                     <button onClick={closeGovModal} className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all">
-                      <X size={18} />
+                      <X size={16} />
                     </button>
                   </div>
-                  {govModal?.app && (
-                    <p className="text-[11px] font-bold text-blue-200 mt-1.5 truncate">{govModal.app.companyName} · #{govModal.app.id}</p>
-                  )}
                 </div>
 
-                <div className="p-6 space-y-5">
+                <div className="p-5 space-y-4">
                   {/* Start Review */}
                   {govModal.type === "startReview" && (
-                    <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
+                    <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3">
                       <p className="text-sm font-bold text-indigo-800">
                         This will move the application from <strong>Pending</strong> to <strong>Under Review</strong>. The sponsor will be notified that casework has begun.
                       </p>
                     </div>
                   )}
 
-                  {/* Start Government Registration */}
+                  {/* Start Gov Registration */}
                   {govModal.type === "startGovReg" && (
-                    <div className="bg-violet-50 rounded-xl p-4 border border-violet-100">
+                    <div className="rounded-xl border border-violet-100 bg-violet-50 px-4 py-3">
                       <p className="text-sm font-bold text-violet-800">
-                        This will transition the application to <strong>Government Processing</strong> and create a government tracking record. The sponsor and admin will be notified.
+                        This transitions the application to <strong>Government Processing</strong> and creates a government tracking record. The sponsor and admin will be notified.
                       </p>
                     </div>
                   )}
@@ -933,26 +941,26 @@ const CaseworkerLicenceApplications = () => {
                   {govModal.type === "completeReg" && (
                     <>
                       <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">
                           SMS Registration Reference <span className="text-red-400">*</span>
                         </label>
                         <input
                           type="text"
                           value={regForm.smsRegistrationRef}
                           onChange={(e) => setRegForm((f) => ({ ...f, smsRegistrationRef: e.target.value }))}
-                          className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:ring-4 focus:ring-violet-500/10 outline-none"
+                          className={inp}
                           placeholder="e.g. SMS-2024-001234"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">
                           Government Registration Reference <span className="text-gray-300 normal-case font-bold">(optional)</span>
                         </label>
                         <input
                           type="text"
                           value={regForm.governmentRegistrationRef}
                           onChange={(e) => setRegForm((f) => ({ ...f, governmentRegistrationRef: e.target.value }))}
-                          className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:ring-4 focus:ring-violet-500/10 outline-none"
+                          className={inp}
                           placeholder="e.g. GOV-REG-001234"
                         />
                       </div>
@@ -961,9 +969,9 @@ const CaseworkerLicenceApplications = () => {
 
                   {/* Request / Send Credentials */}
                   {govModal.type === "requestCreds" && (
-                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                    <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
                       <p className="text-sm font-bold text-amber-800">
-                        This will send the UKVI portal credentials to the sponsor. <strong>Credentials must have been generated by an admin first.</strong> If none exist, this action will fail.
+                        This will forward UKVI portal credentials to the sponsor. <strong>Credentials must have been generated by an admin first.</strong>
                       </p>
                     </div>
                   )}
@@ -972,49 +980,50 @@ const CaseworkerLicenceApplications = () => {
                   {govModal.type === "submitUKVI" && (
                     <>
                       <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">
                           UKVI Submission Reference <span className="text-red-400">*</span>
                         </label>
                         <input
                           type="text"
                           value={subForm.submissionRef}
                           onChange={(e) => setSubForm((f) => ({ ...f, submissionRef: e.target.value }))}
-                          className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:ring-4 focus:ring-violet-500/10 outline-none"
+                          className={inp}
                           placeholder="e.g. UKVI-2024-SUB-001"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2 flex items-center gap-1">
-                          <Calendar size={12} />
-                          Submission Date <span className="text-red-400">*</span>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">
+                          <span className="flex items-center gap-1">
+                            <Calendar size={11} /> Submission Date <span className="text-red-400">*</span>
+                          </span>
                         </label>
                         <input
                           type="date"
                           value={subForm.submissionDate}
                           onChange={(e) => setSubForm((f) => ({ ...f, submissionDate: e.target.value }))}
-                          className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:ring-4 focus:ring-violet-500/10 outline-none"
+                          className={inp}
                         />
                       </div>
-                      <div className="bg-red-50 rounded-xl p-4 border border-red-100">
+                      <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
                         <p className="text-xs font-bold text-red-700">
-                          This action transitions the application to <strong>Decision Pending</strong>. It cannot be undone without admin intervention.
+                          This transitions the application to <strong>Decision Pending</strong>. It cannot be undone without admin intervention.
                         </p>
                       </div>
                     </>
                   )}
 
-                  {/* Confirm / Cancel */}
-                  <div className="flex gap-3 pt-2">
+                  {/* Footer buttons */}
+                  <div className="flex gap-3 pt-1">
                     <button
                       onClick={handleGovAction}
                       disabled={govLoading}
-                      className="flex-[2] bg-violet-600 text-white font-black py-3 rounded-xl hover:bg-violet-700 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-violet-100"
+                      className="flex-[2] bg-indigo-600 text-white font-black py-2.5 rounded-xl hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
                     >
-                      {govLoading ? <Loader2 className="animate-spin" size={18} /> : "Confirm"}
+                      {govLoading ? <Loader2 size={16} className="animate-spin" /> : "Confirm"}
                     </button>
                     <button
                       onClick={closeGovModal}
-                      className="flex-1 bg-gray-50 text-gray-500 font-black py-3 rounded-xl hover:bg-gray-100 transition-all"
+                      className="flex-1 bg-gray-100 text-gray-500 font-black py-2.5 rounded-xl hover:bg-gray-200 transition-all"
                     >
                       Cancel
                     </button>

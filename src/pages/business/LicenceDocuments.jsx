@@ -205,137 +205,145 @@ const LicenceDocuments = () => {
   };
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-5 pb-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <LayoutDashboard className="text-primary" size={36} />
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+          <LayoutDashboard className="text-primary" size={26} />
           Licence Documents
         </h1>
-        <p className="text-primary font-bold text-sm mt-1">
+        <p className="text-primary font-bold text-sm mt-0.5">
           Manage all documents related to your sponsor licence.
         </p>
       </motion.div>
 
       {/* Stats Cards */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-4 gap-4"
+        className="grid grid-cols-1 md:grid-cols-4 gap-3"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900">
-            <FileText size={20} className="text-primary" />
-            <span className="font-black">Total Documents</span>
+        <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="flex items-center gap-2 mb-2 text-gray-900">
+            <FileText size={16} className="text-primary" />
+            <span className="text-sm font-black">Total Documents</span>
           </div>
-          <p className="text-3xl font-black text-secondary">{totalDocs}</p>
+          <p className="text-2xl font-black text-secondary">{totalDocs}</p>
         </motion.div>
 
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900">
-            <CheckCircle2 size={20} className="text-emerald-600" />
-            <span className="font-black">Verified</span>
+        <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="flex items-center gap-2 mb-2 text-gray-900">
+            <CheckCircle2 size={16} className="text-emerald-600" />
+            <span className="text-sm font-black">Verified</span>
           </div>
-          <p className="text-3xl font-black text-secondary">{verifiedDocs}</p>
+          <p className="text-2xl font-black text-secondary">{verifiedDocs}</p>
         </motion.div>
 
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900">
-            <AlertCircle size={20} className="text-amber-500" />
-            <span className="font-black">Action Required</span>
+        <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="flex items-center gap-2 mb-2 text-gray-900">
+            <AlertCircle size={16} className="text-amber-500" />
+            <span className="text-sm font-black">Action Required</span>
           </div>
-          <p className="text-3xl font-black text-secondary">{actionDocs}</p>
+          <p className="text-2xl font-black text-secondary">{actionDocs}</p>
         </motion.div>
 
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900">
-            <AlertCircle size={20} className="text-red-600" />
-            <span className="font-black">Expired</span>
+        <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="flex items-center gap-2 mb-2 text-gray-900">
+            <AlertCircle size={16} className="text-red-600" />
+            <span className="text-sm font-black">Expired</span>
           </div>
-          <p className="text-3xl font-black text-secondary">{expiredDocs}</p>
+          <p className="text-2xl font-black text-secondary">{expiredDocs}</p>
         </motion.div>
       </motion.div>
 
       {/* Search and Filter */}
       <motion.div
-        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+        className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search documents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter size={18} className="text-gray-400" />
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+        <div className="p-5">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+              <input
+                type="text"
+                placeholder="Search documents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter size={16} className="text-gray-400" />
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+              >
+                <option value="all">All Documents</option>
+                <option value="verified">Verified</option>
+                <option value="action">Action Required</option>
+                <option value="expired">Expired / Rejected</option>
+                <option value="pending">Pending Review</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowUploadModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm"
             >
-              <option value="all">All Documents</option>
-              <option value="verified">Verified</option>
-              <option value="action">Action Required</option>
-              <option value="expired">Expired / Rejected</option>
-              <option value="pending">Pending Review</option>
-            </select>
+              <Upload size={14} />
+              Upload Document
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowUploadModal(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark"
-          >
-            <Upload size={16} />
-            Upload Document
-          </button>
         </div>
       </motion.div>
 
       {/* Documents Table */}
       <motion.div
-        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm min-h-[400px]"
+        className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative min-h-[400px]"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 size={48} className="text-primary animate-spin mb-4" />
-            <p className="text-gray-400 font-bold">Synchronizing documents...</p>
+            <Loader2 size={40} className="text-primary animate-spin mb-3" />
+            <p className="text-gray-400 font-bold text-sm">Synchronizing documents...</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50/50">
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-gray-400 text-left">Document Name</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-gray-400 text-left">Category</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-gray-400 text-left">Upload Date</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-gray-400 text-left">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-gray-400 text-right">Actions</th>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Document Name</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Category</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Upload Date</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
+                  <th className="text-right px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {filteredDocuments.length > 0 ? (
                   filteredDocuments.map((doc) => (
-                    <tr key={doc.id} className="group hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-primary/5 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <FileText size={22} className="text-primary" />
+                    <tr key={doc.id} className="border-b border-gray-100 last:border-0 group hover:bg-gray-50/50 transition-colors">
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-primary/5 rounded-lg flex items-center justify-center shrink-0">
+                            <FileText size={16} className="text-primary" />
                           </div>
                           <div>
                             <p className="text-sm font-black text-secondary">{doc.name}</p>
@@ -343,12 +351,12 @@ const LicenceDocuments = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-6">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+                      <td className="px-3 py-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                           {doc.category}
                         </span>
                       </td>
-                      <td className="px-6 py-6">
+                      <td className="px-3 py-2">
                         <p className="text-xs font-black text-secondary">
                           {(() => {
                             const d = new Date(doc.uploadDate);
@@ -358,27 +366,27 @@ const LicenceDocuments = () => {
                           })()}
                         </p>
                       </td>
-                      <td className="px-6 py-6">
-                        <div className="flex items-center gap-2">
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1.5">
                           {getStatusIcon(doc.status)}
-                          <span className={`inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full ${getStatusStyle(doc.status)}`}>
+                          <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-black rounded-full ${getStatusStyle(doc.status)}`}>
                             {doc.status}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-6 text-right">
-                        <div className="flex justify-end gap-2 flex-wrap">
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex justify-end gap-1.5 flex-wrap">
                           {(doc.status === "Rejected" || doc.status === "rejected") && (
                             <button
                               onClick={() => handleReuploadClick(doc)}
                               disabled={reuploading && reuploadDoc?.id === doc.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all shadow-sm text-xs font-black disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all shadow-sm text-xs font-black disabled:opacity-50"
                               title="Re-upload rejected document"
                             >
                               {reuploading && reuploadDoc?.id === doc.id ? (
-                                <Loader2 size={14} className="animate-spin" />
+                                <Loader2 size={13} className="animate-spin" />
                               ) : (
-                                <RefreshCw size={14} />
+                                <RefreshCw size={13} />
                               )}
                               Re-upload
                             </button>
@@ -386,25 +394,25 @@ const LicenceDocuments = () => {
                           <button
                             onClick={() => handleView(doc)}
                             disabled={!!docBusy[doc.id]}
-                            className="p-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 bg-gray-50 text-gray-400 rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             title="View Document"
                           >
-                            {docBusy[doc.id] === "view" ? <Loader2 size={18} className="animate-spin" /> : <Eye size={18} />}
+                            {docBusy[doc.id] === "view" ? <Loader2 size={15} className="animate-spin" /> : <Eye size={15} />}
                           </button>
                           <button
                             onClick={() => handleDownload(doc)}
                             disabled={!!docBusy[doc.id]}
-                            className="p-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-secondary hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 bg-gray-50 text-gray-400 rounded-lg hover:bg-secondary hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Download"
                           >
-                            {docBusy[doc.id] === "download" ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                            {docBusy[doc.id] === "download" ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
                           </button>
                           <button
                             onClick={() => handleDelete(doc.id)}
-                            className="p-2.5 bg-red-50 text-red-300 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                            className="p-1.5 bg-red-50 text-red-300 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
                             title="Delete"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>
@@ -412,10 +420,10 @@ const LicenceDocuments = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-20 text-center">
+                    <td colSpan={5} className="px-3 py-20 text-center">
                       <div className="max-w-[200px] mx-auto">
-                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <FileText size={32} className="text-gray-200" />
+                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <FileText size={24} className="text-gray-200" />
                         </div>
                         <p className="text-sm font-black text-secondary mb-1">No documents found</p>
                         <p className="text-xs font-bold text-gray-400">Try adjusting your filters or search query.</p>
@@ -449,28 +457,28 @@ const LicenceDocuments = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl"
+            className="bg-white rounded-2xl p-5 w-full max-w-md shadow-xl"
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                <RefreshCw size={20} className="text-amber-600" />
+              <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+                <RefreshCw size={17} className="text-amber-600" />
               </div>
-              <h3 className="text-lg font-black text-secondary">Re-upload Document</h3>
+              <h3 className="text-sm font-black text-secondary">Re-upload Document</h3>
             </div>
             <p className="text-sm font-bold text-gray-600 mb-2">
               Replacing: <span className="text-secondary">{reuploadDoc.name}</span>
             </p>
-            <p className="text-sm font-bold text-gray-600 mb-4">
+            <p className="text-sm font-bold text-gray-600 mb-3">
               New file: <span className="text-secondary">{reuploadFile.name}</span>
             </p>
-            <p className="text-xs text-gray-500 mb-6">
+            <p className="text-xs text-gray-500 mb-4">
               The document status will reset to <strong>Pending</strong> for caseworker review.
             </p>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => { setReuploadDoc(null); setReuploadFile(null); }}
-                className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-4 py-3 transition"
+                className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-lg px-3 py-1.5 text-xs transition"
               >
                 Cancel
               </button>
@@ -478,10 +486,10 @@ const LicenceDocuments = () => {
                 type="button"
                 onClick={handleReuploadSubmit}
                 disabled={reuploading}
-                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl px-4 py-3 transition disabled:opacity-60 flex items-center justify-center gap-2"
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg px-3 py-1.5 text-xs transition disabled:opacity-60 flex items-center justify-center gap-1.5"
               >
-                {reuploading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                {reuploading ? "Uploading…" : "Confirm Re-upload"}
+                {reuploading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                {reuploading ? "Uploading..." : "Confirm Re-upload"}
               </button>
             </div>
           </motion.div>
@@ -500,25 +508,25 @@ const LicenceDocuments = () => {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-xl"
+            className="bg-white rounded-2xl p-5 w-full max-w-lg shadow-xl"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-black text-secondary">Upload Document</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black text-secondary">Upload Document</h3>
               <button
                 onClick={() => setShowUploadModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition"
               >
-                <X size={20} className="text-gray-500" />
+                <X size={16} className="text-gray-500" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2">Application *</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Application *</label>
                 <select
                   value={uploadAppId}
                   onChange={(e) => setUploadAppId(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary mb-1"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-secondary"
                 >
                   <option value="">Select Application *</option>
                   {applications.map((a) => (
@@ -530,23 +538,23 @@ const LicenceDocuments = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2">Document type (optional)</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Document type (optional)</label>
                 <input
                   type="text"
                   value={uploadDocType}
                   onChange={(e) => setUploadDocType(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
                   placeholder="e.g. Evidence, Contract"
                 />
               </div>
 
-              <div className="p-6 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+              <div className="p-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
                 <div className="text-center">
-                  <Upload size={48} className="mx-auto text-gray-400 mb-4" />
-                  <p className="text-sm font-black text-secondary mb-2">
+                  <Upload size={32} className="mx-auto text-gray-400 mb-3" />
+                  <p className="text-sm font-black text-secondary mb-1">
                     Drag and drop file here, or click to browse
                   </p>
-                  <p className="text-xs font-bold text-gray-500 mb-4">
+                  <p className="text-xs font-bold text-gray-500 mb-3">
                     Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
                   </p>
                   <input
@@ -558,18 +566,18 @@ const LicenceDocuments = () => {
                   />
                   <label
                     htmlFor="file-upload-modal"
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-black text-white transition hover:bg-primary-dark cursor-pointer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition cursor-pointer shadow-sm"
                   >
-                    <Upload size={16} />
+                    <Upload size={13} />
                     Select File
                   </label>
                   {uploadFile ? (
-                    <p className="text-xs font-bold text-gray-600 mt-3">{uploadFile.name}</p>
+                    <p className="text-xs font-bold text-gray-600 mt-2">{uploadFile.name}</p>
                   ) : null}
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -578,7 +586,7 @@ const LicenceDocuments = () => {
                     setUploadAppId("");
                     setUploadDocType("");
                   }}
-                  className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl px-6 py-3 transition"
+                  className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-lg px-3 py-1.5 text-xs transition"
                 >
                   Cancel
                 </button>
@@ -615,9 +623,9 @@ const LicenceDocuments = () => {
                       setUploading(false);
                     }
                   }}
-                  className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition disabled:opacity-60"
+                  className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-lg px-3 py-1.5 text-xs transition disabled:opacity-60"
                 >
-                  {uploading ? "Uploading…" : "Upload"}
+                  {uploading ? "Uploading..." : "Upload"}
                 </button>
               </div>
             </div>

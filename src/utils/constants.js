@@ -1,7 +1,7 @@
 import isEmail from "validator/lib/isEmail";
 
 const CONFIGURED_API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
+  import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL;
 
 if (!CONFIGURED_API_BASE_URL && import.meta.env.PROD) {
   throw new Error(
@@ -9,7 +9,8 @@ if (!CONFIGURED_API_BASE_URL && import.meta.env.PROD) {
   );
 }
 
-export const API_BASE_URL = CONFIGURED_API_BASE_URL || "http://localhost:5000";
+// Empty string → axios uses relative paths (/api/...) → Vite proxy forwards them.
+export const API_BASE_URL = CONFIGURED_API_BASE_URL ?? "";
 
 export const ROLE_NAMES = {
   1: "candidate",

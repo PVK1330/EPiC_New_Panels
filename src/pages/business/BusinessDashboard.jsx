@@ -234,16 +234,16 @@ export default function BusinessDashboard() {
   }
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-5 pb-6">
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-            <LayoutDashboard className="text-red-600" size={36} />
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+            <LayoutDashboard className="text-red-600" size={26} />
             Business Dashboard
           </h1>
           {dashboard?.licenceStatus && <LicenceStatusBadge status={dashboard.licenceStatus} />}
         </div>
-        <p className="text-primary font-bold text-sm mt-1">
+        <p className="text-primary font-bold text-sm mt-0.5">
           Manage your business operations and workers.
           {dashboard?.licenceNumber && (
             <span className="ml-2 text-gray-500">• Licence No. {dashboard.licenceNumber}</span>
@@ -255,11 +255,11 @@ export default function BusinessDashboard() {
         <LicenceGateBanner status={dashboard.licenceStatus} />
       )}
 
-      <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" variants={containerVariants} initial="hidden" animate="visible">
+      <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" variants={containerVariants} initial="hidden" animate="visible">
         {stats.map(({ label, value, icon: Icon, bg, color }) => (
-          <motion.div key={label} variants={cardVariants} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-            <div className={`p-3 ${bg} rounded-xl`}>
-              <Icon className={`${color} h-6 w-6`} />
+          <motion.div key={label} variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm flex items-center gap-3">
+            <div className={`p-2 ${bg} rounded-xl`}>
+              <Icon className={`${color} h-5 w-5`} />
             </div>
             <div>
               <p className="text-xs font-bold text-gray-600">{label}</p>
@@ -269,47 +269,51 @@ export default function BusinessDashboard() {
         ))}
       </motion.div>
 
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
-        <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-black text-secondary flex items-center gap-2">
-              <Bell size={25} className="text-primary" /> Compliance Reminders
-            </h3>
-          </div>
-          <div className="space-y-4">
-            {remindersData.length === 0 && <p className="text-xs font-bold text-gray-500 px-4 py-6">No urgent compliance reminders.</p>}
-            {remindersData.map((item) => (
-              <div key={item.id} className="p-4 hover:bg-gray-50 transition">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="text-sm font-black text-secondary">{item.title}</h4>
-                    <p className="text-xs font-bold text-gray-500">{item.description}</p>
-                    <p className="text-[10px] font-bold text-gray-400 mt-1">Due: {item.dueDate}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(item.priority)}`}>{item.priority}</span>
-                    <div className="flex items-center gap-1 text-[10px] font-bold">
-                      {getStatusIcon(item.status)}
-                      {item.status}
+      <div className="grid md:grid-cols-2 gap-4 mb-3">
+        <motion.div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="px-5 pt-5 pb-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-black text-secondary flex items-center gap-2">
+                <Bell size={16} className="text-primary" /> Compliance Reminders
+              </h3>
+            </div>
+            <div className="space-y-3">
+              {remindersData.length === 0 && <p className="text-xs font-bold text-gray-500 px-3 py-4">No urgent compliance reminders.</p>}
+              {remindersData.map((item) => (
+                <div key={item.id} className="p-3 hover:bg-gray-50 transition border-b border-gray-100 last:border-0">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="text-sm font-black text-secondary">{item.title}</h4>
+                      <p className="text-xs font-bold text-gray-500">{item.description}</p>
+                      <p className="text-[10px] font-bold text-gray-400 mt-1">Due: {item.dueDate}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${getPriorityColor(item.priority)}`}>{item.priority}</span>
+                      <div className="flex items-center gap-1 text-[10px] font-bold">
+                        {getStatusIcon(item.status)}
+                        {item.status}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </motion.div>
 
-        <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="bg-white p-5 rounded-2xl shadow">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-black text-secondary flex items-center gap-2">
-                <Briefcase size={25} className="text-primary" /> Active Cases
+        <motion.div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="px-5 pt-5 pb-5">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-black text-secondary flex items-center gap-2">
+                <Briefcase size={16} className="text-primary" /> Active Cases
               </h3>
             </div>
-            <div className="space-y-4">
-              {cases.length === 0 && <p className="text-xs font-bold text-gray-500 px-4 py-6">No active cases yet.</p>}
+            <div className="space-y-3">
+              {cases.length === 0 && <p className="text-xs font-bold text-gray-500 px-3 py-4">No active cases yet.</p>}
               {cases.map((item) => (
-                <div key={item.id} className="p-4 hover:bg-gray-50 transition">
+                <div key={item.id} className="p-3 hover:bg-gray-50 transition border-b border-gray-100 last:border-0">
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="text-sm font-black text-secondary">
@@ -318,8 +322,8 @@ export default function BusinessDashboard() {
                       <p className="text-xs font-bold text-gray-500">{item.jobTitle || "Case in progress"}</p>
                       <p className="text-[10px] font-bold text-gray-400 mt-1">Case ID: {item.caseId || "N/A"}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded ${getPriorityColor(item.status === "Overdue" ? "High" : "Medium")}`}>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${getPriorityColor(item.status === "Overdue" ? "High" : "Medium")}`}>
                         {item.status === "Overdue" ? "High" : "Medium"}
                       </span>
                       <div className="flex items-center gap-1 text-[10px] font-bold">
@@ -335,146 +339,155 @@ export default function BusinessDashboard() {
         </motion.div>
       </div>
 
-      <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pt-5" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-black text-secondary flex items-center gap-2">
-            <Users size={25} className="text-primary" /> Recent Sponsored Workers
-          </h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Worker Name</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Visa Type</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Case Ref</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Job Title</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Added On</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {workerRows.map((worker) => (
-                <tr key={worker.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-4 text-sm font-black text-secondary">{worker.name}</td>
-                  <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.visaType}</td>
-                  <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.cosNumber}</td>
-                  <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.jobTitle}</td>
-                  <td className="px-4 py-4 text-sm font-bold text-gray-600">{worker.visaExpiry}</td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black ${worker.status === "Active" ? "bg-green-100 text-green-700" : worker.status === "Pending" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
-                      {worker.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {workerRows.length === 0 && (
+      <motion.div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+        <div className="px-5 pt-5 pb-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-black text-secondary flex items-center gap-2">
+              <Users size={16} className="text-primary" /> Recent Sponsored Workers
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-500" colSpan={6}>
-                    No sponsored workers yet.
-                  </td>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Worker Name</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Visa Type</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Case Ref</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Job Title</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Added On</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {workerRows.map((worker) => (
+                  <tr key={worker.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                    <td className="px-3 py-2 text-sm font-black text-secondary">{worker.name}</td>
+                    <td className="px-3 py-2 text-sm font-bold text-gray-600">{worker.visaType}</td>
+                    <td className="px-3 py-2 text-sm font-bold text-gray-600">{worker.cosNumber}</td>
+                    <td className="px-3 py-2 text-sm font-bold text-gray-600">{worker.jobTitle}</td>
+                    <td className="px-3 py-2 text-sm font-bold text-gray-600">{worker.visaExpiry}</td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black ${worker.status === "Active" ? "bg-green-100 text-green-700" : worker.status === "Pending" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
+                        {worker.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {workerRows.length === 0 && (
+                  <tr>
+                    <td className="px-3 py-2 text-xs font-bold text-gray-500" colSpan={6}>
+                      No sponsored workers yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </motion.div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pb-5 pt-5 flex flex-col" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-black text-secondary flex items-center gap-2">
-              <MessageSquare size={22} className="text-primary" /> Recent Messages
-            </h3>
-            <button
-              type="button"
-              onClick={() => navigate("/business/messages")}
-              className="text-xs font-bold text-primary hover:underline"
-            >
-              View all
-            </button>
-          </div>
-          <div
-            className="p-3 mb-3 rounded-xl border border-gray-100 bg-gray-50/70 cursor-pointer"
-            onClick={() => navigate("/business/messages")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") navigate("/business/messages");
-            }}
-            role="button"
-            tabIndex={0}
-          >
-            <div className="flex gap-2">
-              <input
-                type="text"
-                readOnly
-                placeholder="Type a message..."
-                className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none pointer-events-none"
-              />
-              <span className="rounded-xl bg-primary p-2.5 text-white shadow-md shadow-primary/20 flex items-center justify-center shrink-0">
-                <Send size={16} />
-              </span>
+      <div className="grid md:grid-cols-2 gap-4">
+        <motion.div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative flex flex-col" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="px-5 pt-5 pb-5 flex flex-col flex-1">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-black text-secondary flex items-center gap-2">
+                <MessageSquare size={16} className="text-primary" /> Recent Messages
+              </h3>
+              <button
+                type="button"
+                onClick={() => navigate("/business/messages")}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm"
+              >
+                View all
+              </button>
             </div>
-          </div>
-          <div className="space-y-3 flex-1">
-            {messages.map((item) => {
-              const otherUser = item.user || {};
-              const lastMsg = item.lastMessage || {};
-              const name = `${otherUser.first_name || ""} ${otherUser.last_name || ""}`.trim() || "User";
-              const preview = formatLastMessagePreview(
-                typeof lastMsg === "object" ? lastMsg?.content : lastMsg,
-              );
-              const time = String(lastMsg.createdAt || item.lastMessageTime || "").split("T")[0];
-              return (
-                <div
-                  key={item.id || Math.random()}
-                  onClick={() => navigate("/business/messages")}
-                  className="p-3 rounded-xl bg-gray-50/70 border border-gray-100 hover:bg-gray-50 cursor-pointer transition"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="text-xs font-black text-secondary truncate">{name}</h4>
-                    {time && <span className="text-[9px] font-bold text-gray-400 shrink-0">{time}</span>}
+            <div
+              className="p-3 mb-3 rounded-xl border border-gray-100 bg-gray-50/70 cursor-pointer"
+              onClick={() => navigate("/business/messages")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") navigate("/business/messages");
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  placeholder="Type a message..."
+                  className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-800 placeholder:text-gray-400 focus:outline-none pointer-events-none"
+                />
+                <span className="rounded-xl bg-primary p-2 text-white shadow-md shadow-primary/20 flex items-center justify-center shrink-0">
+                  <Send size={16} />
+                </span>
+              </div>
+            </div>
+            <div className="space-y-3 flex-1">
+              {messages.map((item) => {
+                const otherUser = item.user || {};
+                const lastMsg = item.lastMessage || {};
+                const name = `${otherUser.first_name || ""} ${otherUser.last_name || ""}`.trim() || "User";
+                const preview = formatLastMessagePreview(
+                  typeof lastMsg === "object" ? lastMsg?.content : lastMsg,
+                );
+                const time = String(lastMsg.createdAt || item.lastMessageTime || "").split("T")[0];
+                return (
+                  <div
+                    key={item.id || Math.random()}
+                    onClick={() => navigate("/business/messages")}
+                    className="p-3 rounded-xl bg-gray-50/70 border border-gray-100 hover:bg-gray-50 cursor-pointer transition"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-xs font-black text-secondary truncate">{name}</h4>
+                      {time && <span className="text-[9px] font-bold text-gray-400 shrink-0">{time}</span>}
+                    </div>
+                    <p className="text-xs text-gray-600 truncate mt-0.5">{preview || "Open conversation"}</p>
                   </div>
-                  <p className="text-xs text-gray-600 truncate mt-0.5">{preview || "Open conversation"}</p>
-                </div>
-              );
-            })}
-            {messages.length === 0 && (
-              <p className="text-xs font-bold text-gray-400 text-center py-8">No recent messages.</p>
-            )}
+                );
+              })}
+              {messages.length === 0 && (
+                <p className="text-xs font-bold text-gray-400 text-center py-8">No recent messages.</p>
+              )}
+            </div>
           </div>
         </motion.div>
 
-        <motion.div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden px-5 pb-5 pt-5 flex flex-col" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-black text-secondary flex items-center gap-2">
-              <Bell size={22} className="text-primary" /> Updates & Notifications
-            </h3>
-            <button
-              type="button"
-              onClick={() => window.location.href = '/business/notifications'}
-              className="text-xs font-bold text-primary hover:underline"
-            >
-              View all
-            </button>
-          </div>
-          <div className="space-y-3 flex-1">
-            {notifications.slice(0, 4).map((item) => (
-              <div key={item.id} className="p-3 rounded-xl bg-gray-50/70 border border-gray-100 hover:bg-gray-50 transition">
-                <div className="flex justify-between items-start gap-2">
-                  <div className="min-w-0">
-                    <h4 className="text-xs font-black text-secondary truncate">{item.title}</h4>
-                    <p className="text-xs text-gray-600 line-clamp-1 mt-0.5">{item.message}</p>
-                    <p className="text-[9px] font-bold text-gray-400 mt-1">
-                      {item.createdAt ? formatDateTime(item.createdAt) : "Recent"}
-                    </p>
+        <motion.div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative flex flex-col" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="px-5 pt-5 pb-5 flex flex-col flex-1">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-black text-secondary flex items-center gap-2">
+                <Bell size={16} className="text-primary" /> Updates & Notifications
+              </h3>
+              <button
+                type="button"
+                onClick={() => window.location.href = '/business/notifications'}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm"
+              >
+                View all
+              </button>
+            </div>
+            <div className="space-y-3 flex-1">
+              {notifications.slice(0, 4).map((item) => (
+                <div key={item.id} className="p-3 rounded-xl bg-gray-50/70 border border-gray-100 hover:bg-gray-50 transition">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-secondary truncate">{item.title}</h4>
+                      <p className="text-xs text-gray-600 line-clamp-1 mt-0.5">{item.message}</p>
+                      <p className="text-[9px] font-bold text-gray-400 mt-1">
+                        {item.createdAt ? formatDateTime(item.createdAt) : "Recent"}
+                      </p>
+                    </div>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full shrink-0 ${getPriorityColor(item.priority === "high" ? "High" : item.priority === "medium" ? "Medium" : "Low")}`}>
+                      {item.priority === "high" ? "High" : item.priority === "medium" ? "Medium" : "Low"}
+                    </span>
                   </div>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${getPriorityColor(item.priority === "high" ? "High" : item.priority === "medium" ? "Medium" : "Low")}`}>
-                    {item.priority === "high" ? "High" : item.priority === "medium" ? "Medium" : "Low"}
-                  </span>
                 </div>
-              </div>
-            ))}
-            {notifications.length === 0 && <p className="text-xs font-bold text-gray-400 text-center py-8">No notifications yet.</p>}
+              ))}
+              {notifications.length === 0 && <p className="text-xs font-bold text-gray-400 text-center py-8">No notifications yet.</p>}
+            </div>
           </div>
         </motion.div>
       </div>
