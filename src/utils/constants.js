@@ -2,11 +2,13 @@
 // utils/countries.js (isValidPhone, libphonenumber-js backed) and is reused here.
 import isEmail from "validator/lib/isEmail";
 
-// BUG-032: require an explicit API base URL in production builds; only fall back
-// to localhost during local development so a misconfigured prod build fails loud
-// instead of silently pointing at localhost.
+// BUG-032: require an explicit API base URL in production builds.
+// In development, leave VITE_API_BASE_URL unset (or empty) to use the Vite dev
+// server proxy (/api → localhost:5000). This avoids cross-origin cookie issues
+// when accessing tenant subdomains like elite-visa.localhost:5173.
+// Set VITE_API_BASE_URL=http://localhost:5000 only to bypass the proxy.
 const CONFIGURED_API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
+  import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL;
 
 if (!CONFIGURED_API_BASE_URL && import.meta.env.PROD) {
   throw new Error(
@@ -14,7 +16,8 @@ if (!CONFIGURED_API_BASE_URL && import.meta.env.PROD) {
   );
 }
 
-export const API_BASE_URL = CONFIGURED_API_BASE_URL || "http://localhost:5000";
+// Empty string → axios uses relative paths (/api/...) → Vite proxy forwards them.
+export const API_BASE_URL = CONFIGURED_API_BASE_URL ?? "";
 
 export const ROLE_NAMES = {
   1: "candidate",
