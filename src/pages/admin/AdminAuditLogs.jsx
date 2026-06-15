@@ -91,7 +91,7 @@ const AdminAuditLogs = () => {
 
   return (
     <motion.div
-      className="space-y-6 pb-10"
+      className="space-y-4 pb-5"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -99,8 +99,8 @@ const AdminAuditLogs = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-secondary tracking-tight flex items-center gap-3">
-            <ScrollText className="text-primary" size={30} />
+          <h1 className="text-2xl font-black text-secondary tracking-tight flex items-center gap-3">
+            <ScrollText className="text-primary" size={24} />
             Audit Logs
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
@@ -125,7 +125,7 @@ const AdminAuditLogs = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
         <div className="flex items-center gap-2 mb-4">
           <Filter size={16} className="text-gray-400" />
           <span className="text-sm font-black text-secondary">Filters</span>
@@ -210,7 +210,7 @@ const AdminAuditLogs = () => {
               <Loader2 className="w-10 h-10 animate-spin text-secondary" />
             </div>
           )}
-          <table className="w-full">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="bg-gray-50 text-left">
                 {TABLE_COLS.map((h) => (
@@ -228,7 +228,7 @@ const AdminAuditLogs = () => {
                 <tr>
                   <td
                     colSpan={TABLE_COLS.length}
-                    className="px-5 py-12 text-center text-sm text-gray-400"
+                    className="px-4 py-8 text-center text-sm text-gray-400"
                   >
                     No audit logs found matching criteria.
                   </td>
@@ -350,8 +350,8 @@ const AdminAuditLogs = () => {
               exit={{ x: "100%" }}
               transition={{ type: "tween", duration: 0.25 }}
             >
-              <div className="p-6 flex flex-col">
-                <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+              <div className="p-4 sm:p-6 flex flex-col">
+                <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-4">
                   <div>
                     <h2 className="text-lg font-black text-secondary">
                       Audit Record Details
@@ -368,8 +368,8 @@ const AdminAuditLogs = () => {
                   </button>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
                         Timestamp
@@ -405,7 +405,7 @@ const AdminAuditLogs = () => {
                   </div>
 
                   <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                       <div>
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
                           Entity Type

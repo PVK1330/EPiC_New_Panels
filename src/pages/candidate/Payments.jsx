@@ -426,7 +426,7 @@ const Payments = () => {
         <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-2xs animate-in fade-in duration-300">
           <h2 className="text-base font-black text-secondary mb-4">Payment Receipts</h2>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px] text-left border-collapse">
+            <table className="w-full min-w-0 text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-100 text-xs font-bold text-gray-400">
                   <th className="pb-3 pr-4">Date</th>

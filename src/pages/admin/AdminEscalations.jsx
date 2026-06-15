@@ -339,7 +339,7 @@ const AdminEscalations = () => {
     const severityClass = esc.severity === "Critical" ? "bg-red-100 text-red-700" : esc.severity === "High" ? "bg-amber-100 text-amber-800" : esc.severity === "Medium" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600";
     const statusClass = esc.status === "Resolved" ? "bg-green-100 text-green-800" : esc.status === "In Progress" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-700";
     const daysClass = esc.daysOpen > 10 ? "text-red-500 font-bold" : esc.daysOpen > 5 ? "text-amber-600 font-bold" : "text-gray-500";
-    
+
     return {
       id: esc.id,
       caseId: esc.caseId || `VF-${esc.relatedCaseId}`,
@@ -357,16 +357,16 @@ const AdminEscalations = () => {
 
   return (
     <motion.div
-      className="space-y-6 pb-10"
+      className="space-y-4 pb-6"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-3">
-          <RiAlarmWarningLine size={32} className="text-primary shrink-0 mt-1" />
+          <RiAlarmWarningLine size={24} className="text-primary shrink-0 mt-1" />
           <div>
-            <h1 className="text-3xl font-black text-secondary tracking-tight">Escalations &amp; Red Flags</h1>
+            <h1 className="text-2xl font-black text-secondary tracking-tight">Escalations &amp; Red Flags</h1>
             <p className="text-sm text-gray-500 mt-0.5">{escalations.length} active cases requiring urgent attention</p>
           </div>
         </div>
@@ -391,18 +391,18 @@ const AdminEscalations = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {mappedKPI.map((k) => (
           <div key={k.label} className={`rounded-xl border p-4 ${k.bg} ${k.border}`}>
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">{k.label}</p>
-            <p className={`text-3xl font-black ${k.valueClass}`}>{k.value}</p>
+            <p className={`text-2xl font-black ${k.valueClass}`}>{k.value}</p>
             <p className="text-xs text-gray-500 mt-1">{k.sub}</p>
           </div>
         ))}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="px-5 py-3 border-b border-gray-100 flex flex-col sm:flex-row gap-3 flex-wrap">
           <select
             value={sev}
             onChange={(e) => setSev(e.target.value)}
@@ -433,7 +433,7 @@ const AdminEscalations = () => {
               <Loader2 className="w-10 h-10 animate-spin text-secondary" />
             </div>
           )}
-          <table className="w-full min-w-[900px]">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="bg-gray-50 text-left">
                 {["Case ID", "Candidate", "Severity", "Trigger Reason", "Assigned Admin", "Days Open", "Status", "Actions"].map((h, i) => (
@@ -446,7 +446,7 @@ const AdminEscalations = () => {
             <tbody className="divide-y divide-gray-50">
               {!loading && mappedRows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-sm text-gray-400">
+                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">
                     No escalations match your filters.
                   </td>
                 </tr>
@@ -516,7 +516,7 @@ const AdminEscalations = () => {
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleCreateEscalation} className="p-6 space-y-4">
+            <form onSubmit={handleCreateEscalation} className="p-4 sm:p-6 space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Case ID</label>
                 <select
@@ -665,7 +665,7 @@ const AdminEscalations = () => {
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleUpdateEscalation} className="p-6 space-y-4">
+            <form onSubmit={handleUpdateEscalation} className="p-4 sm:p-6 space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Case ID</label>
                 <select
@@ -811,7 +811,7 @@ const AdminEscalations = () => {
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleAssignEscalation} className="p-6 space-y-4">
+            <form onSubmit={handleAssignEscalation} className="p-4 sm:p-6 space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Assign to Admin</label>
                 <select

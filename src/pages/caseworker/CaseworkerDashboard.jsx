@@ -322,7 +322,7 @@ const CaseworkerDashboard = () => {
           </Link>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left">
+          <table className="w-full min-w-0 text-left">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/80">
                 {[

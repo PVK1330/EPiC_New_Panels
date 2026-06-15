@@ -337,11 +337,11 @@ export default function AdminCandidates() {
   const openEdit = async (row) => {
     try {
       console.log("Edit candidate data:", row);
-      
+
       // Fetch complete candidate data with application details
       const res = await getCandidateById(row.id);
       const candidateData = res.data?.data?.candidate;
-      
+
       if (candidateData) {
         console.log("Fetched candidate data:", candidateData);
         const mappedForm = candidateRowToApplicationForm(candidateData);
@@ -361,11 +361,11 @@ export default function AdminCandidates() {
   const openView = async (row) => {
     try {
       console.log("View candidate data:", row);
-      
+
       // Fetch complete candidate data with application details
       const res = await getCandidateById(row.id);
       const candidateData = res.data?.data?.candidate;
-      
+
       if (candidateData) {
         console.log("Fetched candidate data for view:", candidateData);
         const mappedForm = candidateRowToApplicationForm(candidateData);
@@ -491,11 +491,11 @@ export default function AdminCandidates() {
       : {};
 
     const payloadClean = pruneCustomResponsesToDefinitions(payload, customDefsForForm);
-    const mapped = mapApplicationToCandidateRow(payloadClean, { 
-      ...rowExtras, 
-      isNewApplication: modal.type === "create" 
+    const mapped = mapApplicationToCandidateRow(payloadClean, {
+      ...rowExtras,
+      isNewApplication: modal.type === "create"
     });
-    
+
     // Use the mapped fields - now separated into user data and application data
     const backendData = {
       // Core user fields
@@ -507,13 +507,13 @@ export default function AdminCandidates() {
       role_id: 1,
       password: payload.password || "",
       confirm_password: payload.confirmPassword || "",
-      
+
       // Legacy/CRM fields for compatibility
       phone: mapped.userData.phone,
       passportExpiry: mapped.userData.passportExpiry,
       visaExpiry: mapped.userData.visaExpiry,
       countryOfBirth: mapped.userData.countryOfBirth,
-      
+
       // Case-related fields
       caseStatus: mapped.userData.caseStatus,
       rightToWork: mapped.userData.rightToWork,
@@ -525,10 +525,10 @@ export default function AdminCandidates() {
       city: mapped.userData.city,
       postcode: mapped.userData.postcode,
       country: mapped.userData.country,
-      
+
       // Store complete application data as backup
       applicationData: mapped.userData.applicationData,
-      
+
       // Application data for child table
       application: mapped.applicationData,
     };
@@ -825,14 +825,14 @@ export default function AdminCandidates() {
 
   return (
     <motion.div
-      className="space-y-6 pb-10"
+      className="space-y-4 pb-5"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-[#004ca5] tracking-tight">Clients / Candidates</h1>
+          <h1 className="text-2xl font-black text-[#004ca5] tracking-tight">Clients / Candidates</h1>
           <p className="text-sm text-gray-500 mt-0.5">All registered clients and their case details</p>
         </div>
         <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
@@ -845,7 +845,7 @@ export default function AdminCandidates() {
             {fieldPanelOpen ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />}
           </button>
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            <button 
+            <button
               onClick={handleExport}
               disabled={exporting}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -879,7 +879,7 @@ export default function AdminCandidates() {
       </div>
 
       {fieldPanelOpen && (
-        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm space-y-6">
+        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm space-y-4">
           {applicationFieldsLoading && (
             <div className="flex items-center gap-2 text-sm font-bold text-gray-400">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -975,27 +975,27 @@ export default function AdminCandidates() {
       )}
 
       {/* KPI Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-blue-50 rounded-xl p-4 border border-gray-100">
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Clients</p>
-          <p className="text-3xl font-black text-blue-600">{pagination.total || 0}</p>
+          <p className="text-2xl font-black text-blue-600">{pagination.total || 0}</p>
         </div>
         <div className="bg-green-50 rounded-xl p-4 border border-gray-100">
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Active Cases</p>
-          <p className="text-3xl font-black text-green-600">{candidates.filter(c => c.status === 'active').length}</p>
+          <p className="text-2xl font-black text-green-600">{candidates.filter(c => c.status === 'active').length}</p>
         </div>
         <div className="bg-red-50 rounded-xl p-4 border border-gray-100">
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Visa Expiry Alerts</p>
-          <p className="text-3xl font-black text-red-500">0</p>
+          <p className="text-2xl font-black text-red-500">0</p>
         </div>
         <div className="bg-yellow-50 rounded-xl p-4 border border-gray-100">
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Outstanding Fees</p>
-          <p className="text-3xl font-black text-yellow-600">£0</p>
+          <p className="text-2xl font-black text-yellow-600">£0</p>
         </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="px-5 py-3 border-b border-gray-100 flex flex-col sm:flex-row gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
             <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
@@ -1028,7 +1028,7 @@ export default function AdminCandidates() {
               <Loader2 className="w-10 h-10 animate-spin text-secondary" />
             </div>
           )}
-          <table className="w-full">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="bg-gray-50 text-left">
                 {["Name","Status","DOB","Nationality","Linked Business","Visa Type","Case Status","Visa Expiry","Payment","Actions"].map((h) => (
@@ -1039,7 +1039,7 @@ export default function AdminCandidates() {
             <tbody className="divide-y divide-gray-50">
               {!loading && candidates.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-5 py-12 text-center text-sm text-gray-400">
+                  <td colSpan={10} className="px-4 py-8 text-center text-sm text-gray-400">
                     No clients match your search.
                   </td>
                 </tr>
@@ -1068,7 +1068,7 @@ export default function AdminCandidates() {
                     caseRecord.businessName ||
                     '—';
                   const nationality = app.nationality || caseRecord.nationality || c.nationality || '—';
-                  
+
                   return (
                     <tr key={`${c.id}-${idx}`} className="hover:bg-gray-50/70 transition-colors">
                       <td className="px-4 py-3.5">
@@ -1260,7 +1260,7 @@ export default function AdminCandidates() {
         onClose={closeModal}
         title="Delete Candidate"
         maxWidthClass="max-w-sm"
-        bodyClassName="px-5 py-5 sm:px-6"
+        bodyClassName="px-4 py-4 sm:px-6"
         footer={
           <>
             <Button variant="ghost" onClick={closeModal} className="rounded-xl">
@@ -1296,7 +1296,7 @@ export default function AdminCandidates() {
         onClose={closeModal}
         title="Assign to Business"
         maxWidthClass="max-w-md"
-        bodyClassName="px-5 py-5 sm:px-6"
+        bodyClassName="px-4 py-4 sm:px-6"
         footer={
           <>
             <Button variant="ghost" onClick={closeModal} className="rounded-xl">
@@ -1369,7 +1369,7 @@ export default function AdminCandidates() {
         onClose={closeModal}
         title="Import applications (Excel)"
         maxWidthClass="max-w-md"
-        bodyClassName="px-5 py-5 sm:px-6"
+        bodyClassName="px-4 py-4 sm:px-6"
         footer={
           <>
             <Button variant="ghost" onClick={closeModal} className="rounded-xl">

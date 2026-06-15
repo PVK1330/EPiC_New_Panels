@@ -63,10 +63,10 @@ export default function AdminCclFeeApprovals() {
   };
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-4 pb-5">
       <div>
-        <h1 className="text-3xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <PoundSterling className="text-primary" size={32} />
+        <h1 className="text-2xl font-black text-secondary tracking-tight flex items-center gap-3">
+          <PoundSterling className="text-primary" size={24} />
           CCL fee approvals
         </h1>
         <p className="text-sm font-bold text-gray-500 mt-1">

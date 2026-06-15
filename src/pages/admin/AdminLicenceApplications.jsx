@@ -363,7 +363,7 @@ const AdminLicenceApplications = () => {
   };
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-4 pb-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -376,16 +376,16 @@ const AdminLicenceApplications = () => {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Total Requests",       value: applications.length,                                                                                                        color: "text-secondary" },
           { label: "Pending Approval",     value: applications.filter(a => a.status === "Pending").length,                                                                     color: "text-amber-600" },
           { label: "Gov. Processing",      value: applications.filter(a => ["Government Processing", "Decision Pending"].includes(a.status)).length,                           color: "text-violet-600" },
           { label: "Approved",             value: applications.filter(a => a.status === "Approved").length,                                                                    color: "text-emerald-600" },
         ].map((stat, i) => (
-          <div key={stat.label} className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">{stat.label}</p>
-            <p className={`text-3xl font-black ${stat.color}`}>{stat.value}</p>
+          <div key={stat.label} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">{stat.label}</p>
+            <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
           </div>
         ))}
       </div>
@@ -438,16 +438,16 @@ const AdminLicenceApplications = () => {
       </div>
 
       {/* Applications List */}
-      <div className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-sm">
-        <table className="w-full text-left">
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto shadow-sm">
+        <table className="w-full text-left min-w-[700px]">
           <thead>
             <tr className="bg-gray-50/50 border-b border-gray-50">
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Company / Type</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Contact</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Requested At</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Status</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Assigned To</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
+              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Company / Type</th>
+              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Contact</th>
+              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Requested At</th>
+              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Status</th>
+              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Assigned To</th>
+              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -460,7 +460,7 @@ const AdminLicenceApplications = () => {
             ) : filteredApps.length > 0 ? (
               filteredApps.map((app) => (
                 <tr key={app.id} className="hover:bg-gray-50/30 transition-colors">
-                  <td className="px-8 py-6">
+                  <td className="px-4 py-4">
                     <div>
                       <p className="text-sm font-black text-secondary">{app.companyName}</p>
                       <div className="flex items-center gap-2 mt-1">
@@ -475,11 +475,11 @@ const AdminLicenceApplications = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-6">
+                  <td className="px-4 py-4">
                     <p className="text-sm font-black text-secondary">{app.contactName}</p>
                     <p className="text-xs font-bold text-gray-400 mt-0.5">{app.contactEmail}</p>
                   </td>
-                  <td className="px-8 py-6">
+                  <td className="px-4 py-4">
                     <p className="text-sm font-black text-secondary">
                       {formatDateLong(app.createdAt, { month: 'short' })}
                     </p>
@@ -487,12 +487,12 @@ const AdminLicenceApplications = () => {
                       {formatTime(app.createdAt)}
                     </p>
                   </td>
-                  <td className="px-8 py-6">
+                  <td className="px-4 py-4">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black ${getStatusColor(app.status)}`}>
                       {app.status}
                     </span>
                   </td>
-                  <td className="px-8 py-6">
+                  <td className="px-4 py-4">
                     {(() => {
                       const assigned = getAssignedCaseworkers(app);
                       if (assigned.length === 0) {
@@ -567,7 +567,7 @@ const AdminLicenceApplications = () => {
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="px-8 py-12 text-center">
+                <td colSpan={6} className="px-4 py-8 text-center">
                   <AlertCircle className="mx-auto text-gray-200 mb-4" size={48} />
                   <p className="text-sm font-bold text-gray-400">No applications found matching your criteria.</p>
                 </td>
@@ -591,23 +591,23 @@ const AdminLicenceApplications = () => {
               animate={{ scale: 1, y: 0 }}
               className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar"
             >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-primary/5 rounded-xl">
-                      <FileText className="text-primary" size={24} />
+                    <div className="p-2 bg-primary/5 rounded-xl">
+                      <FileText className="text-primary" size={20} />
                     </div>
                     <div>
-                      <h2 className="text-xl font-black text-secondary">Request Details</h2>
+                      <h2 className="text-lg font-black text-secondary">Request Details</h2>
                       <p className="text-xs font-bold text-gray-400">Application ID: #{selectedApp?.id}</p>
                     </div>
                   </div>
                   <button onClick={() => setSelectedApp(null)} className="p-2 text-gray-400 hover:text-secondary transition-colors">
-                    <X size={22} />
+                    <X size={20} />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-5 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div className="space-y-4">
                     <div>
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Company Information</label>
@@ -656,9 +656,9 @@ const AdminLicenceApplications = () => {
                 </div>
 
                 {selectedApp.documents && selectedApp.documents.length > 0 && (
-                  <div className="mb-6">
+                  <div className="mb-4">
                     <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">Evidence & Documents</label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {selectedApp.documents.map((doc, i) => {
                         const previewing = docBusy === `${i}:preview`;
                         const downloading = docBusy === `${i}:download`;
@@ -699,14 +699,14 @@ const AdminLicenceApplications = () => {
 
                 {/* Government Processing Panel */}
                 {["Government Processing", "Decision Pending", "Approved"].includes(selectedApp.status) && (
-                  <div className="mb-6">
+                  <div className="mb-4">
                     <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3 flex items-center gap-2">
                       <Globe size={12} /> Government Processing
                     </label>
                     <div className="bg-violet-50 border border-violet-100 rounded-xl p-4 space-y-4">
 
                       {/* Row 1 — registration references */}
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div>
                           <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-1.5">Registration Ref</p>
                           {selectedApp.governmentRegistrationRef ? (
@@ -735,7 +735,7 @@ const AdminLicenceApplications = () => {
 
                       {/* Row 2 — credential status + timestamps */}
                       <div className="pt-3 border-t border-violet-100">
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           <div>
                             <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-1.5">Credential Status</p>
                             {selectedApp.governmentTracking?.credentialsSentAt ? (
@@ -855,7 +855,7 @@ const AdminLicenceApplications = () => {
                     red:     { bg: "bg-red-50 border-red-100",       icon: "text-red-500",     btn: "bg-red-500 hover:bg-red-600" },
                   };
                   return (
-                    <div className="mb-6">
+                    <div className="mb-4">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3 flex items-center gap-2">
                         <ClipboardCheck size={12} /> Pending Actions
                         <span className="text-primary normal-case tracking-normal">({tasks.length})</span>
@@ -891,13 +891,13 @@ const AdminLicenceApplications = () => {
                 })()}
 
                 {/* Application stages — the communication channel shared with the sponsor. */}
-                <div className="mb-6">
+                <div className="mb-4">
                   <LicenceStages applicationId={selectedApp.id} viewerRole="admin" />
                 </div>
 
-                <div className="mt-6">
+                <div className="mt-4">
                   {selectedApp.adminNotes && (
-                    <div className="mb-6">
+                    <div className="mb-4">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">Reviewer Notes</label>
                       <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
                         <p className="text-sm font-bold text-amber-900 leading-relaxed">{selectedApp.adminNotes}</p>
@@ -1228,23 +1228,23 @@ const AdminLicenceApplications = () => {
               animate={{ scale: 1, y: 0 }}
               className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-100 custom-scrollbar"
             >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-primary/5 rounded-xl text-primary">
-                      <Pencil size={24} />
+                    <div className="p-2 bg-primary/5 rounded-xl text-primary">
+                      <Pencil size={20} />
                     </div>
                     <div>
-                      <h2 className="text-xl font-black text-secondary">Edit Application</h2>
+                      <h2 className="text-lg font-black text-secondary">Edit Application</h2>
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ID: #LIC-{selectedApp?.id}</p>
                     </div>
                   </div>
                   <button onClick={closeEditModal} className="p-2 text-gray-400 hover:text-secondary transition-colors">
-                    <X size={22} />
+                    <X size={20} />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Company Name</label>
                     <input
@@ -1301,7 +1301,7 @@ const AdminLicenceApplications = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 flex gap-3">
+                <div className="mt-4 flex gap-3">
                   <button
                     onClick={handleEditSubmit}
                     disabled={actionLoading}

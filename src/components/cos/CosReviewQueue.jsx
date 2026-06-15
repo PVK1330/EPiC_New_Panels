@@ -195,7 +195,7 @@ export default function CosReviewQueue({
 
       {/* Table */}
       <div className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-sm overflow-x-auto">
-        <table className="w-full text-left min-w-[900px]">
+        <table className="w-full text-left min-w-0">
           <thead>
             <tr className="bg-gray-50/50 border-b border-gray-50">
               {["Sponsor", "Visa Type", "Requested", "Approved", "Status", "Requested Date", "Reviewer", "Actions"].map((h) => (
