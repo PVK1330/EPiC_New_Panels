@@ -988,7 +988,7 @@ export default function AdminCases() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-[600px] min-w-full divide-y divide-gray-100">
+          <table className="min-w-0 min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50">
               <tr>
                 {TABLE_COLS.map((col) => (

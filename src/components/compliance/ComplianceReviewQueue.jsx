@@ -165,7 +165,7 @@ export default function ComplianceReviewQueue({ title = "Compliance Review", sub
 
       {/* Table */}
       <div className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-sm overflow-x-auto">
-        <table className="w-full text-left min-w-[820px]">
+        <table className="w-full text-left min-w-0">
           <thead>
             <tr className="bg-gray-50/50 border-b border-gray-50">
               {["Sponsor", "Item", "Status", "Submitted", "Reviewer", "Actions"].map((h) => (

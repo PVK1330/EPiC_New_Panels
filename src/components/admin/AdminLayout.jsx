@@ -105,7 +105,7 @@ const AdminLayout = () => {
   }, []);
 
   return (
-    <div className="flex h-screen bg-surface overflow-hidden">
+    <div className="flex h-screen bg-surface overflow-hidden app-dense">
       {renderSidebar()}
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -274,9 +274,13 @@ const AdminLayout = () => {
         {/* ── Main Content ── */}
         <main
           id="main-content"
-          className="flex-1 overflow-y-auto p-4 md:p-5 bg-surface"
+          className={`flex-1 overflow-y-auto ${user?.role === 'caseworker' ? 'p-3 md:p-4' : 'p-4 md:p-5'} bg-surface`}
         >
-          <Outlet />
+          <div className="w-full">
+            <div className="max-w-7xl mx-auto w-full px-2 md:px-4 lg:px-6">
+              <Outlet />
+            </div>
+          </div>
         </main>
       </div>
     </div>

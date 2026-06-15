@@ -107,7 +107,7 @@ export default function ComplianceReviewStatus() {
       {/* List */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative overflow-x-auto">
         <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
-        <table className="w-full text-left min-w-[760px]">
+        <table className="w-full text-left min-w-0">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               {["Item", "Submitted", "Review Status", "Reviewer Comment", "Action"].map((h) => (

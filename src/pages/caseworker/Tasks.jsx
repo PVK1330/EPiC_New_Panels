@@ -442,7 +442,7 @@ export default function Tasks() {
   const renderTable = (list) => (
     <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px]">
+        <table className="w-full min-w-0">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
               <th className="w-10 py-3 px-2" />

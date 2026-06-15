@@ -386,7 +386,7 @@ const AdminWorkload = () => {
                 <Loader2 className="w-10 h-10 animate-spin text-secondary" />
               </div>
             )}
-            <table className="w-full min-w-[600px]">
+            <table className="w-full min-w-0">
               <thead>
                 <tr className="bg-gray-50 text-left">
                   {[
@@ -484,7 +484,7 @@ const AdminWorkload = () => {
                 <Loader2 className="w-10 h-10 animate-spin text-secondary" />
               </div>
             )}
-            <table className="w-full min-w-[600px]">
+            <table className="w-full min-w-0">
               <thead>
                 <tr className="bg-gray-50 text-left">
                   {["Task", "Case", "Assigned To", "Due Date", "Status"].map(
@@ -569,7 +569,7 @@ const AdminWorkload = () => {
                 <Loader2 className="w-10 h-10 animate-spin text-secondary" />
               </div>
             )}
-            <table className="w-full min-w-[600px]">
+            <table className="w-full min-w-0">
               <thead>
                 <tr className="bg-gray-50 text-left">
                   {[

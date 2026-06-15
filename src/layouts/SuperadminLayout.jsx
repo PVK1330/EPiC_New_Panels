@@ -56,7 +56,7 @@ const SuperadminLayout = () => {
   }, []);
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden ">
+    <div className="flex h-screen bg-slate-50 overflow-hidden app-dense">
       <SuperadminSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -198,11 +198,11 @@ const SuperadminLayout = () => {
         </header>
 
         {/* ── Main Content ── */}
-        <main id="main-content" className="flex-1 overflow-y-auto p-6 bg-surface custom-scrollbar">
+        <main id="main-content" className="flex-1 overflow-y-auto bg-surface custom-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              className="max-w-[1400px] mx-auto"
+              className="max-w-7xl mx-auto w-full px-2 md:px-4 lg:px-6"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}

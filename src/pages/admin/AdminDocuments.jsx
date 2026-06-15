@@ -395,7 +395,7 @@ const AdminDocuments = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1000px]">
+          <table className="w-full min-w-0">
             <thead>
               <tr className="bg-gray-50 text-left">
                 {TABLE_HEADER.map((col) => (
