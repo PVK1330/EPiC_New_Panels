@@ -118,41 +118,41 @@ export default function AdminFinance() {
   }, [loadData]);
 
   const stats = [
-    { 
-      label: "Total Revenue",    
-      value: `£${(financeStats?.summary?.totalRevenue || 0).toLocaleString()}`, 
-      sub: `${financeStats?.summary?.totalPaid || 0} payments received`, 
-      bg: "bg-green-100",  
-      color: "text-green-600",  
-      subColor: "text-green-600",  
-      icon: DollarSign 
+    {
+      label: "Total Revenue",
+      value: `£${(financeStats?.summary?.totalRevenue || 0).toLocaleString()}`,
+      sub: `${financeStats?.summary?.totalPaid || 0} payments received`,
+      bg: "bg-green-100",
+      color: "text-green-600",
+      subColor: "text-green-600",
+      icon: DollarSign
     },
-    { 
-      label: "Outstanding",      
-      value: `£${(financeStats?.summary?.totalOutstanding || 0).toLocaleString()}`,  
-      sub: "Pending payments",   
-      bg: "bg-yellow-100", 
-      color: "text-yellow-600", 
-      subColor: "text-yellow-600", 
-      icon: Clock 
+    {
+      label: "Outstanding",
+      value: `£${(financeStats?.summary?.totalOutstanding || 0).toLocaleString()}`,
+      sub: "Pending payments",
+      bg: "bg-yellow-100",
+      color: "text-yellow-600",
+      subColor: "text-yellow-600",
+      icon: Clock
     },
-    { 
-      label: "Revenue Status",  
-      value: financeStats?.statusBreakdown?.find(s => s.status === 'completed')?.count || 0,  
-      sub: "Completed transactions", 
-      bg: "bg-blue-100",  
-      color: "text-blue-600",  
-      subColor: "text-blue-600",   
-      icon: CheckCircle 
+    {
+      label: "Revenue Status",
+      value: financeStats?.statusBreakdown?.find(s => s.status === 'completed')?.count || 0,
+      sub: "Completed transactions",
+      bg: "bg-blue-100",
+      color: "text-blue-600",
+      subColor: "text-blue-600",
+      icon: CheckCircle
     },
-    { 
-      label: "Avg. Revenue",     
-      value: `£${(financeStats?.summary?.totalRevenue / (financeStats?.summary?.totalPaid || 1)).toLocaleString(undefined, {maximumFractionDigits: 0})}`,   
-      sub: "Per successful payment",             
-      bg: "bg-purple-100", 
-      color: "text-purple-600", 
-      subColor: "text-purple-600", 
-      icon: TrendingUp 
+    {
+      label: "Avg. Revenue",
+      value: `£${(financeStats?.summary?.totalRevenue / (financeStats?.summary?.totalPaid || 1)).toLocaleString(undefined, {maximumFractionDigits: 0})}`,
+      sub: "Per successful payment",
+      bg: "bg-purple-100",
+      color: "text-purple-600",
+      subColor: "text-purple-600",
+      icon: TrendingUp
     },
   ];
 
@@ -251,7 +251,7 @@ export default function AdminFinance() {
   };
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-4 pb-5">
       {usingMockData && <MockDataBanner />}
       {/* Header */}
       <motion.div
@@ -261,8 +261,8 @@ export default function AdminFinance() {
         transition={{ duration: 0.5 }}
       >
         <div>
-          <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-            <DollarSign className="text-primary" size={36} />
+          <h1 className="text-2xl font-black text-secondary tracking-tight flex items-center gap-3">
+            <DollarSign className="text-primary" size={24} />
             Finance
           </h1>
           <p className="text-primary font-bold text-sm mt-1">
@@ -291,7 +291,7 @@ export default function AdminFinance() {
 
       {/* Stats Cards */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        className="grid grid-cols-2 md:grid-cols-4 gap-3"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -300,7 +300,7 @@ export default function AdminFinance() {
           <motion.div
             key={label}
             variants={cardVariants}
-            className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-start gap-4"
+            className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-4"
           >
             <div className={`p-3 ${bg} rounded-lg shrink-0`}>
               <Icon className={`${color} h-6 w-6`} />
@@ -325,13 +325,13 @@ export default function AdminFinance() {
           <h3 className="text-lg font-black text-secondary">Recent Transactions</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
+          <table className="min-w-[600px] min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50">
               <tr>
                 {TABLE_COLS.map((col) => (
                   <th
                     key={col}
-                    className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
+                    className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
                   >
                     {col}
                   </th>
@@ -347,18 +347,18 @@ export default function AdminFinance() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: 0.4 + index * 0.08 }}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-secondary">{id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{client}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{caseId}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-secondary">{amount}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-secondary">{id}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{client}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{caseId}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-secondary">{amount}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${typeBadge[type]}`}>{type}</span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${statusBadge[status]}`}>{status}</span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{date}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
                     <button className="text-primary font-bold hover:underline">View</button>
                   </td>
                 </motion.tr>
@@ -369,7 +369,7 @@ export default function AdminFinance() {
       </motion.div>
 
       {/* Payment Methods + Upcoming Payments */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Revenue Sources (Dynamic from stats) */}
         <motion.div
           className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
@@ -380,7 +380,7 @@ export default function AdminFinance() {
           <div className="px-6 py-4 border-b border-gray-100">
             <h3 className="text-lg font-black text-secondary">Revenue Sources</h3>
           </div>
-          <div className="p-6 space-y-4">
+          <div className="p-4 space-y-4">
             {financeStats?.byVisaType?.map((v, i) => (
               <div key={v.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
@@ -410,7 +410,7 @@ export default function AdminFinance() {
           <div className="px-6 py-4 border-b border-gray-100">
             <h3 className="text-lg font-black text-secondary">Pending Payments</h3>
           </div>
-          <div className="p-6 space-y-4">
+          <div className="p-4 space-y-4">
             {transactions.filter(t => t.status === 'Pending').map((t) => (
               <div
                 key={t.id}
@@ -426,7 +426,7 @@ export default function AdminFinance() {
               <p className="text-sm text-gray-400 text-center py-4">All caught up!</p>
             )}
             {transactions.filter(t => t.status === 'Pending').length === 0 && (
-              <div className="p-12 text-center flex flex-col items-center gap-2">
+              <div className="px-4 py-8 text-center flex flex-col items-center gap-2">
                  <CheckCircle className="text-green-500" size={32} />
                  <p className="text-sm text-gray-400 font-bold italic">No pending payments found.</p>
               </div>
@@ -475,11 +475,11 @@ export default function AdminFinance() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
                 {/* Client Information */}
                 <div>
                   <h4 className="text-sm font-black text-secondary mb-4">Client Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input
                       label="Client Name"
                       name="clientName"

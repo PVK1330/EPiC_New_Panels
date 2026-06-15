@@ -80,12 +80,12 @@ const Calendar = () => {
       setLoadingAppointments(true);
       const response = await getMyAppointments();
       const appointments = response.data?.data?.appointments || [];
-      
+
       const mappedEvents = appointments.map(app => {
         const startDateTime = new Date(`${app.date}T${app.time}`);
         // Default 1 hour duration
         const endDateTime = new Date(startDateTime.getTime() + 60 * 60000);
-        
+
         return {
           id: app.id,
           title: app.title,
@@ -356,11 +356,11 @@ const Calendar = () => {
   // ── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-secondary">Calendar</h1>
+          <h1 className="text-2xl font-black text-secondary">Calendar</h1>
           <p className="text-gray-500 mt-1">
             Schedule events, meetings, and deadlines
           </p>
@@ -400,7 +400,7 @@ const Calendar = () => {
       </div>
 
       {/* Controls Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-3 rounded-xl border border-gray-200">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <button
@@ -573,7 +573,7 @@ const Calendar = () => {
       </div>
 
       {/* Events List — Upcoming */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-secondary">Upcoming Events</h3>
           <span className="text-xs text-gray-500">
@@ -600,7 +600,7 @@ const Calendar = () => {
       </div>
 
       {/* Events List — Completed / Past */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-bold text-secondary">
@@ -636,9 +636,9 @@ const Calendar = () => {
       {showEventModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-secondary">New Event</h3>
+            <div className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-secondary">New Event</h3>
                 <button
                   onClick={() => setShowEventModal(false)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -663,7 +663,7 @@ const Calendar = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Date
@@ -692,7 +692,7 @@ const Calendar = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Duration (min)
@@ -796,7 +796,7 @@ const Calendar = () => {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="flex gap-3 mt-4">
                 <button
                   type="button"
                   disabled={savingEvent}
@@ -823,9 +823,9 @@ const Calendar = () => {
       {showEventDetailModal && selectedEvent && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-secondary">
+            <div className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-secondary">
                   Event Details
                 </h3>
                 <button
@@ -836,7 +836,7 @@ const Calendar = () => {
                 </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Event Header */}
                 <div className="flex items-start gap-4">
                   <div

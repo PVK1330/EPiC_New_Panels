@@ -476,12 +476,12 @@ export default function AdminCaseworkers() {
     try {
       const res = await bulkImportCaseworkers(importFile);
       const { successful, failed, total_processed, results } = res.data?.data || {};
-      
+
       showToast({
         message: `Bulk import completed: ${successful} successful, ${failed} failed out of ${total_processed}`,
         variant: successful > 0 ? "success" : "danger",
       });
-      
+
       // Refresh the list
       const r = await fetchCaseworkers(
         page,
@@ -492,7 +492,7 @@ export default function AdminCaseworkers() {
       if (!r.ok) {
         showToast({ message: getApiError(r.error), variant: "danger" });
       }
-      
+
       setImportFile(null);
       closeModal();
     } catch (e) {
@@ -509,7 +509,7 @@ export default function AdminCaseworkers() {
       'Jane,Smith,jane.smith@example.com,+1,5559876543,Housing',
       'Michael,Johnson,michael.j@example.com,+44,2079460123,Employment',
     ].join('\n');
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -529,7 +529,7 @@ export default function AdminCaseworkers() {
         status: statusParam,
         department: deptParam,
       });
-      
+
       // Create a blob from the response
       const blob = res.data;
       const url = window.URL.createObjectURL(blob);
@@ -540,7 +540,7 @@ export default function AdminCaseworkers() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       showToast({
         message: "Caseworkers exported successfully",
         variant: "success",
@@ -570,14 +570,14 @@ export default function AdminCaseworkers() {
 
   return (
     <motion.div
-      className="space-y-6 pb-10"
+      className="space-y-4 pb-5"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-secondary tracking-tight">
+          <h1 className="text-2xl font-black text-secondary tracking-tight">
             Case Workers
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
@@ -620,27 +620,27 @@ export default function AdminCaseworkers() {
       </div>
 
       {/* KPI Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Caseworkers</p>
-          <p className="text-3xl font-black text-secondary">{pagination.total || 0}</p>
+          <p className="text-2xl font-black text-secondary">{pagination.total || 0}</p>
         </div>
         <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Active Cases</p>
-          <p className="text-3xl font-black text-blue-600">{aggregateMetrics.totalActive}</p>
+          <p className="text-2xl font-black text-blue-600">{aggregateMetrics.totalActive}</p>
         </div>
         <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Overdue/Pending</p>
-          <p className="text-3xl font-black text-red-500">{aggregateMetrics.totalOverdue}</p>
+          <p className="text-2xl font-black text-red-500">{aggregateMetrics.totalOverdue}</p>
         </div>
         <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Completed</p>
-          <p className="text-3xl font-black text-green-600">{aggregateMetrics.totalCompleted}</p>
+          <p className="text-2xl font-black text-green-600">{aggregateMetrics.totalCompleted}</p>
         </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
+        <div className="px-5 py-3 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
           <p className="text-sm font-black text-secondary">All Caseworkers</p>
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -686,7 +686,7 @@ export default function AdminCaseworkers() {
               <Loader2 className="w-10 h-10 animate-spin text-secondary" />
             </div>
           )}
-          <table className="w-full">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="bg-gray-50 text-left">
                 {[
@@ -703,7 +703,7 @@ export default function AdminCaseworkers() {
                 ].map((h) => (
                   <th
                     key={h}
-                    className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                    className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
                   >
                     {h}
                   </th>
@@ -715,7 +715,7 @@ export default function AdminCaseworkers() {
                 <tr>
                   <td
                     colSpan={10}
-                    className="px-5 py-12 text-center text-sm text-gray-400"
+                    className="px-4 py-8 text-center text-sm text-gray-400"
                   >
                     No caseworkers match your search.
                   </td>
@@ -728,15 +728,15 @@ export default function AdminCaseworkers() {
                   const overdue = perf.overdueCases || 0;
                   const completed = perf.completedCases || 0;
                   const performanceRate = parseFloat(perf.completionRate || 0);
-                  
+
                   const perfColor = performanceRate >= 85 ? { bar: "bg-green-500", text: "text-green-600" } : performanceRate >= 70 ? { bar: "bg-yellow-500", text: "text-yellow-600" } : { bar: "bg-red-500", text: "text-red-500" };
-                  
+
                   return (
                     <tr
                       key={user.id}
                       className="hover:bg-gray-50/70 transition-colors"
                     >
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div
                             className={`w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}
@@ -749,25 +749,25 @@ export default function AdminCaseworkers() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">{user.email}</td>
-                      <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">{departmentLabel(user)}</td>
-                      <td className="px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{user.email}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{departmentLabel(user)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-violet-100 text-violet-700">
                           {candidateCount}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${activeCases >= 20 ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-700"}`}>
                           {activeCases}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${overdue >= 6 ? "bg-red-100 text-red-600" : overdue >= 3 ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"}`}>
                           {overdue}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-sm font-semibold text-gray-700 whitespace-nowrap">{completed}</td>
-                      <td className="px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-700 whitespace-nowrap">{completed}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${perfColor.bar}`} style={{ width: `${performanceRate}%` }} />
@@ -775,10 +775,10 @@ export default function AdminCaseworkers() {
                           <span className={`text-xs font-black ${perfColor.text}`}>{performanceRate}%</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <StatusBadge status={formatStatusLabel(user.status)} onClick={() => handleToggleStatus(user)} />
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <button onClick={() => openView(user)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View Details">
                             <FiEye size={14} />
@@ -984,7 +984,7 @@ export default function AdminCaseworkers() {
         }
       >
         {viewingDetails && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center gap-4 p-4 rounded-xl border border-white/60 bg-white/70 backdrop-blur-sm shadow-sm">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-sm font-black shrink-0 ${AVATAR_COLORS[(viewingDetails.id || 0) % AVATAR_COLORS.length]}`}>
                 {initialsFrom(viewingDetails)}
@@ -1299,7 +1299,7 @@ export default function AdminCaseworkers() {
               Download
             </Button>
           </div>
-          
+
           <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-gray-300 transition-colors">
             <input
               type="file"

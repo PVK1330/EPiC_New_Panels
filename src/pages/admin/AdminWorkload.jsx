@@ -326,7 +326,7 @@ const AdminWorkload = () => {
   }, [exportDropOpen]);
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-4 pb-5">
       {usingMockData && <MockDataBanner />}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-3">
@@ -334,7 +334,7 @@ const AdminWorkload = () => {
             <RiBarChartLine className="text-primary" size={22} />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-secondary tracking-tight">
+            <h1 className="text-2xl font-black text-secondary tracking-tight">
               Team Workload Monitoring
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
@@ -386,7 +386,7 @@ const AdminWorkload = () => {
                 <Loader2 className="w-10 h-10 animate-spin text-secondary" />
               </div>
             )}
-            <table className="w-full min-w-[880px]">
+            <table className="w-full min-w-0">
               <thead>
                 <tr className="bg-gray-50 text-left">
                   {[
@@ -411,7 +411,7 @@ const AdminWorkload = () => {
                   <tr>
                     <td
                       colSpan={6}
-                      className="px-5 py-12 text-center text-sm text-gray-400"
+                      className="px-4 py-8 text-center text-sm text-gray-400"
                     >
                       No workload data available.
                     </td>
@@ -484,7 +484,7 @@ const AdminWorkload = () => {
                 <Loader2 className="w-10 h-10 animate-spin text-secondary" />
               </div>
             )}
-            <table className="w-full min-w-[720px]">
+            <table className="w-full min-w-0">
               <thead>
                 <tr className="bg-gray-50 text-left">
                   {["Task", "Case", "Assigned To", "Due Date", "Status"].map(
@@ -504,7 +504,7 @@ const AdminWorkload = () => {
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-5 py-12 text-center text-sm text-gray-400"
+                      className="px-4 py-8 text-center text-sm text-gray-400"
                     >
                       No pending tasks found.
                     </td>
@@ -569,7 +569,7 @@ const AdminWorkload = () => {
                 <Loader2 className="w-10 h-10 animate-spin text-secondary" />
               </div>
             )}
-            <table className="w-full min-w-[900px]">
+            <table className="w-full min-w-0">
               <thead>
                 <tr className="bg-gray-50 text-left">
                   {[
@@ -594,7 +594,7 @@ const AdminWorkload = () => {
                   <tr>
                     <td
                       colSpan={6}
-                      className="px-5 py-12 text-center text-sm text-gray-400"
+                      className="px-4 py-8 text-center text-sm text-gray-400"
                     >
                       No deadline data available.
                     </td>

@@ -1,7 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
 
   --color-primary: #C8102E;
   --color-primary-dark: #a50d25;
@@ -45,6 +46,7 @@ button{
 @layer base {
   body {
     font-family: var(--font-sans);
+    font-weight: 400;
   }
 
   /* Slim down the broad default (Windows) scrollbar across the whole portal. */
@@ -71,6 +73,64 @@ button{
     background: #94a3b8;
   }
 }
+
+/* Global typography + reduced-density helper
+   - Use the `app-dense` class on a top-level container to enable
+     slightly smaller font-size and reduced paddings across the app.
+*/
+:root {
+  --app-font-size: 12px;
+}
+
+/* Reduce base rem scale so existing rem-based sizes shrink across the app */
+/* html { font-size: 14px; } */
+
+.app-dense {
+  font-size: var(--app-font-size);
+  font-weight: 400;
+}
+
+/* Slightly smaller headings in dense mode */
+.app-dense h1 { font-size: 1.175rem; font-weight: 600 !important; }
+.app-dense h2 { font-size: 1.0525rem; font-weight: 600 !important; }
+.app-dense h3 { font-size: 0.75rem; font-weight: 600 !important; }
+.app-dense p, .app-dense input, .app-dense button, .app-dense a, .app-dense span, .app-dense li {
+  font-size: 0.8rem;
+}
+
+/* Reduce overly heavy weights from Tailwind utility classes */
+.app-dense .font-black { font-weight: 600 !important; }
+.app-dense .font-extrabold { font-weight: 600 !important; }
+.app-dense .font-bold { font-weight: 500 !important; }
+.app-dense .font-semibold { font-weight: 500 !important; }
+.app-dense strong, .app-dense b { font-weight: 600 !important; }
+.app-dense h1, .app-dense h2, .app-dense h3, .app-dense h4, .app-dense h5, .app-dense h6 {
+  letter-spacing: -0.01em;
+}
+
+/* Density overrides for common Tailwind padding utilities used across the app.
+   These reduce visual padding without changing component code.
+*/
+.app-dense .p-6 { padding: 1rem !important; }
+.app-dense .p-5 { padding: 0.875rem !important; }
+.app-dense .p-4 { padding: 0.75rem !important; }
+.app-dense .px-6 { padding-left: 1rem !important; padding-right: 1rem !important; }
+.app-dense .px-5 { padding-left: 0.875rem !important; padding-right: 0.875rem !important; }
+.app-dense .px-4 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+.app-dense .py-4 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+.app-dense .py-3 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+.app-dense .py-2\.5 { padding-top: 0.45rem !important; padding-bottom: 0.45rem !important; }
+
+/* Reduce table cell padding in dense mode for better fit */
+.app-dense table th, .app-dense table td {
+  padding: 0.5rem 0.75rem !important;
+}
+
+/* Modals and cards: slightly smaller radii + tighter card internals */
+.app-dense .rounded-2xl { border-radius: var(--radius-2xl) !important; }
+.app-dense .rounded-xl { border-radius: var(--radius-xl) !important; }
+.app-dense .rounded-lg { border-radius: var(--radius-md) !important; }
+
 
 /* Custom scrollbar styling */
 .custom-scrollbar::-webkit-scrollbar {

@@ -546,7 +546,7 @@ function PerformanceDetailModal({ caseworker, onClose, showToast }) {
     >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl border border-gray-100">
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0 ${caseworker.avatarBg || "bg-blue-500"}`}
@@ -573,9 +573,9 @@ function PerformanceDetailModal({ caseworker, onClose, showToast }) {
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-4 sm:p-6 space-y-5">
           {/* KPI Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               {
                 label: "Total Cases",
@@ -702,8 +702,8 @@ function PerformanceDetailModal({ caseworker, onClose, showToast }) {
               Recent Cases
             </p>
             {caseworker.recentCases && caseworker.recentCases.length > 0 ? (
-              <div className="rounded-xl border border-gray-100 overflow-hidden">
-                <table className="w-full text-xs">
+              <div className="rounded-xl border border-gray-100 overflow-x-auto">
+                <table className="w-full text-xs min-w-[600px]">
                   <thead>
                     <tr className="bg-gray-50 text-left">
                       {[
@@ -769,7 +769,7 @@ function PerformanceDetailModal({ caseworker, onClose, showToast }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50/60 rounded-b-2xl">
+        <div className="flex items-center justify-end gap-3 p-4 sm:p-6 border-t border-gray-100 bg-gray-50/60 rounded-b-2xl">
           <Button
             type="button"
             variant="outline"
@@ -1017,31 +1017,31 @@ function PerformanceTab({
         />
       )}
 
-      <div key="performance" className="space-y-5">
+      <div key="performance" className="space-y-4">
         {/* Summary KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Total Cases Card */}
-          <div className="rounded-xl border border-blue-100 p-4 bg-blue-50">
+          <div className="rounded-2xl border border-blue-100 p-4 bg-blue-50">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">
               Total Cases (All Staff)
             </p>
-            <p className="text-4xl font-black text-blue-600">{totalCases}</p>
+            <p className="text-3xl font-black text-blue-600">{totalCases}</p>
             <p className="text-xs text-gray-500 mt-1">across all caseworkers</p>
           </div>
 
           {/* Avg Performance Card */}
-          <div className="rounded-xl border border-green-100 p-4 bg-green-50">
+          <div className="rounded-2xl border border-green-100 p-4 bg-green-50">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">
               Avg Performance
             </p>
-            <p className="text-4xl font-black text-green-600">{avgSla}%</p>
+            <p className="text-3xl font-black text-green-600">{avgSla}%</p>
             <p className="text-xs text-gray-500 mt-1">
               team average this period
             </p>
           </div>
 
           {/* Top Performer Card */}
-          <div className="rounded-xl border border-amber-100 p-4 bg-amber-50">
+          <div className="rounded-2xl border border-amber-100 p-4 bg-amber-50">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-3">
               Top Performer
             </p>
@@ -1062,7 +1062,7 @@ function PerformanceTab({
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
           <div className="flex items-center gap-2 mb-3">
             <FiFilter size={13} className="text-gray-400" />
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
@@ -1131,7 +1131,7 @@ function PerformanceTab({
           </div>
 
           {loading ? (
-            <div className="px-5 py-12 text-center">
+            <div className="px-5 py-8 text-center">
               <FiLoader
                 className="animate-spin inline-block text-secondary mb-2"
                 size={24}
@@ -1141,7 +1141,7 @@ function PerformanceTab({
               </p>
             </div>
           ) : error ? (
-            <div className="px-5 py-12 text-center">
+            <div className="px-5 py-8 text-center">
               <FiAlertCircle
                 className="inline-block text-red-500 mb-2"
                 size={24}
@@ -1150,7 +1150,7 @@ function PerformanceTab({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="bg-gray-50 text-left">
                     {[
@@ -1177,7 +1177,7 @@ function PerformanceTab({
                     <tr>
                       <td
                         colSpan={8}
-                        className="px-4 py-12 text-center text-sm text-gray-400"
+                        className="px-4 py-8 text-center text-sm text-gray-400"
                       >
                         <div className="flex flex-col items-center gap-2">
                           <FiUser size={28} className="text-gray-200" />
@@ -1556,7 +1556,7 @@ export default function AdminReports() {
   }, [financeSearch, revenueBySponsor]);
 
   return (
-    <div className="relative space-y-6 pb-10">
+    <div className="relative space-y-4 pb-6">
       {/* Loading overlay */}
       {apiLoading && (
         <div className="absolute inset-0 z-30 bg-white/60 backdrop-blur-[1px] flex items-start justify-center pt-24 rounded-xl">
@@ -1576,7 +1576,7 @@ export default function AdminReports() {
             <RiBarChartLine className="text-primary" size={22} />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-secondary tracking-tight">
+            <h1 className="text-2xl font-black text-secondary tracking-tight">
               Reporting &amp; Analytics
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
@@ -1654,7 +1654,7 @@ export default function AdminReports() {
       </div>
 
       {/* ── Filters ── */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
         <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-3">
           Filters
         </p>
@@ -1725,25 +1725,25 @@ export default function AdminReports() {
 
       {/* ── Cases Tab ── */}
       {activeTab === "cases" && (
-        <div key="cases" className="space-y-6">
+        <div key="cases" className="space-y-4">
           {caseTypesLoading ? (
-            <div className="text-center py-12">
+            <div className="text-center py-8">
               <FiLoader
                 className="animate-spin inline-block text-secondary mb-2"
-                size={28}
+                size={24}
               />
               <p className="text-sm text-gray-500">Loading case reports...</p>
             </div>
           ) : caseTypesError ? (
-            <div className="text-center py-12">
+            <div className="text-center py-8">
               <FiAlertCircle
                 className="inline-block text-red-500 mb-2"
-                size={28}
+                size={24}
               />
               <p className="text-sm text-red-500">{caseTypesError}</p>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
               <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
                 Cases by Type
               </h2>
@@ -1808,24 +1808,24 @@ export default function AdminReports() {
           </div>
 
           {workloadLoading ? (
-            <div className="px-5 py-12 text-center">
+            <div className="px-5 py-8 text-center">
               <FiLoader
                 className="animate-spin inline-block text-secondary mb-2"
-                size={28}
+                size={24}
               />
               <p className="text-sm text-gray-500">Loading workload data...</p>
             </div>
           ) : workloadError ? (
-            <div className="px-5 py-12 text-center">
+            <div className="px-5 py-8 text-center">
               <FiAlertCircle
                 className="inline-block text-red-500 mb-2"
-                size={28}
+                size={24}
               />
               <p className="text-sm text-red-500">{workloadError}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px]">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="bg-gray-50 text-left">
                     {[
@@ -1851,7 +1851,7 @@ export default function AdminReports() {
                     <tr>
                       <td
                         colSpan={7}
-                        className="px-4 py-10 text-center text-sm text-gray-400"
+                        className="px-4 py-8 text-center text-sm text-gray-400"
                       >
                         No caseworkers match your search.
                       </td>
@@ -1907,9 +1907,9 @@ export default function AdminReports() {
 
       {/* ── Finance Tab ── */}
       {activeTab === "finance" && (
-        <div key="finance" className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div key="finance" className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {/* Revenue by Visa Type */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
             <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
               Revenue by Visa Type
             </h2>
@@ -1952,7 +1952,7 @@ export default function AdminReports() {
           </div>
 
           {/* Revenue by Sponsor */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sm:p-6">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
             <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
               Revenue by Sponsor
             </h2>

@@ -359,7 +359,7 @@ export default function AdminUsers() {
       suspended: 'active'
     };
     const newStatus = statusMap[user.status] || 'active';
-    
+
     try {
       const res = await updateAdmin(user.id, {
         first_name: user.first_name,
@@ -415,14 +415,14 @@ export default function AdminUsers() {
 
   return (
     <motion.div
-      className="space-y-6 pb-10"
+      className="space-y-4 pb-5"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-secondary tracking-tight">
+          <h1 className="text-2xl font-black text-secondary tracking-tight">
             Admin Users
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
@@ -451,7 +451,7 @@ export default function AdminUsers() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
+        <div className="px-5 py-3 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-xs">
             <FiSearch
               size={14}
@@ -486,14 +486,14 @@ export default function AdminUsers() {
               <Loader2 className="w-10 h-10 animate-spin text-secondary" />
             </div>
           )}
-          <table className="w-full">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="bg-gray-50 text-left">
                 {["Name", "Email", "Role", "Status", "Last Active", "Actions"].map(
                   (h) => (
                     <th
                       key={h}
-                      className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                      className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap"
                     >
                       {h}
                     </th>
@@ -506,7 +506,7 @@ export default function AdminUsers() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-5 py-12 text-center text-sm text-gray-400"
+                    className="px-4 py-8 text-center text-sm text-gray-400"
                   >
                     No admin users found.
                   </td>
@@ -691,8 +691,8 @@ export default function AdminUsers() {
               error={errors.mobile}
               className="sm:col-span-2"
             />
-           
-           
+
+
             <Input
               label="Password"
               name="password"
@@ -828,7 +828,7 @@ export default function AdminUsers() {
               <p className="text-sm text-gray-500">{modal.data?.email}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">
                 Country Code

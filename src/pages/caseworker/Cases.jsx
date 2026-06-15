@@ -1010,7 +1010,7 @@ const Cases = () => {
 
           <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1100px]">
+              <table className="w-full min-w-0">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
                     {[

@@ -407,8 +407,8 @@ const AdminPipeline = () => {
               className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between p-6 border-b border-gray-100">
-                <h2 className="text-xl font-black text-secondary">Case Details</h2>
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100">
+                <h2 className="text-lg font-black text-secondary">Case Details</h2>
                 <button
                   onClick={() => setIsModalOpen(false)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -422,8 +422,8 @@ const AdminPipeline = () => {
                   <div className="text-gray-500">Loading case details...</div>
                 </div>
               ) : selectedCase ? (
-                <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-                  <div className="grid grid-cols-2 gap-6">
+                <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Case ID</label>
                       <p className="text-sm font-mono font-semibold text-primary mt-1">{selectedCase.caseId}</p>
@@ -500,7 +500,7 @@ const AdminPipeline = () => {
                         {selectedCase.paidAmount || 0}
                       </p>
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 sm:col-span-2">
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Notes</label>
                       <p className="text-sm mt-1 p-3 bg-gray-50 rounded-lg">{selectedCase.notes || 'No notes'}</p>
                     </div>
