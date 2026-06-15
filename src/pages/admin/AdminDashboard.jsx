@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"; 
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Skeleton } from "boneyard-js/react";
@@ -305,9 +305,9 @@ export default function AdminDashboard() {
     : [];
 
   return (
-    <div ref={dashboardRef} className="pb-10 p-4 max-w-[1600px] mx-auto">
+    <div ref={dashboardRef} className="pb-5 p-4 max-w-[1600px] mx-auto">
       <Skeleton name="admin-dashboard" loading={loading} animate="shimmer">
-        <div className="space-y-6">
+        <div className="space-y-4">
           {usingDemoData && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 font-medium">
               Showing sample dashboard data — live stats will appear when the
@@ -315,7 +315,7 @@ export default function AdminDashboard() {
             </div>
           )}
           {/* Slim Page Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-gray-100 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-gray-100 mb-4">
             <div>
               <h1 className="text-xl font-black text-secondary tracking-tight">
                 Dashboard
@@ -385,7 +385,7 @@ export default function AdminDashboard() {
             />
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-4">
             {/* Recent Cases */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -400,7 +400,7 @@ export default function AdminDashboard() {
                 </button>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[600px]">
                   <thead>
                     <tr className="bg-gray-50 text-left border-b border-gray-100">
                       {["Case ID", "Candidate", "Visa Type", "Status"].map(
@@ -460,7 +460,7 @@ export default function AdminDashboard() {
 
             {/* Escalations */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col min-h-[400px]">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-black text-secondary uppercase tracking-widest">
                   🚩 Active Escalations
                 </h3>
@@ -502,7 +502,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Recent Activity + Recent Messages */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-sm font-black text-secondary">
@@ -633,7 +633,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Notifications Section */}
-          <div className="grid grid-cols-1 mt-6">
+          <div className="grid grid-cols-1 mt-4">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
               <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-sm font-black text-secondary">
@@ -704,7 +704,7 @@ export default function AdminDashboard() {
                 ✕
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-lg font-bold text-secondary">
                   {selectedNotification.title}
@@ -725,13 +725,13 @@ export default function AdminDashboard() {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-600 mb-6 whitespace-pre-wrap leading-relaxed">
+              <p className="text-sm text-gray-600 mb-4 whitespace-pre-wrap leading-relaxed">
                 {selectedNotification.message}
               </p>
 
               {selectedNotification.metadata &&
                 Object.keys(selectedNotification.metadata).length > 0 && (
-                  <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-100">
                     <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
                       Notification Details
                     </h5>

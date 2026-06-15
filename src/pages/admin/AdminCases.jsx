@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -352,16 +352,16 @@ export default function AdminCases() {
   const validate = () => {
     const e = {};
 
-    // â”€â”€ Required selections â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Required selections ──────────────────────────────────────────────
     if (!formData.candidateId) e.candidateId = "Please select a candidate";
     if (!formData.businessId) e.businessId = "Please select a sponsor";
     if (!formData.visaTypeId) e.visaTypeId = "Please select a visa type";
 
-    // â”€â”€ Caseworkers (optional on create, but never more than 2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Caseworkers (optional on create, but never more than 2) ──────────
     const n = formData.assignedCaseworkerIds?.length || 0;
     if (n > 2) e.assignedCaseworkers = "Select at most 2 caseworkers";
 
-    // â”€â”€ Target submission date: required, valid, not in the past â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Target submission date: required, valid, not in the past ─────────
     if (!formData.targetSubmissionDate) {
       e.targetSubmissionDate = "Please choose a target date";
     } else {
@@ -375,7 +375,7 @@ export default function AdminCases() {
       }
     }
 
-    // â”€â”€ Financials: non-negative, total > 0, paid â‰¤ total â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Financials: non-negative, total > 0, paid ≤ total ────────────────
     const total = Number(formData.totalAmount);
     const paid = Number(formData.paidAmount);
     const salary = Number(formData.salaryOffered);
@@ -396,7 +396,7 @@ export default function AdminCases() {
       e.salaryOffered = "Salary cannot be negative";
     }
 
-    // â”€â”€ CCL fee (proposedAmount): optional, but non-negative if present â”€â”€
+    // ── CCL fee (proposedAmount): optional, but non-negative if present ──
     if (
       formData.proposedAmount !== "" &&
       formData.proposedAmount != null &&
@@ -446,14 +446,14 @@ export default function AdminCases() {
           caseId: c.caseId || c.id.toString(),
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
-            : "â€”",
+            : "—",
           candidateId: c.candidateId,
           business: c.sponsor
             ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
-            : "â€”",
+            : "—",
           businessId: c.sponsorId,
-          visaType: c.visaType?.name || "â€”",
-          petitionType: c.petitionType?.name || "â€”",
+          visaType: c.visaType?.name || "—",
+          petitionType: c.petitionType?.name || "—",
           visaTypeId: c.visaTypeId,
           petitionTypeId: c.petitionTypeId,
           status: c.status,
@@ -469,7 +469,7 @@ export default function AdminCases() {
             : c.assignedcaseworkerId,
           caseworker: Array.isArray(c.assignedcaseworkerId)
             ? `${c.assignedcaseworkerId.length} assigned`
-            : "â€”",
+            : "—",
           targetSubmissionDate: c.targetSubmissionDate,
           lcaNumber: c.lcaNumber,
           receiptNumber: c.receiptNumber,
@@ -569,14 +569,14 @@ export default function AdminCases() {
           caseId: c.caseId || c.id.toString(),
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
-            : "â€”",
+            : "—",
           candidateId: c.candidateId,
           business: c.sponsor
             ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
-            : "â€”",
+            : "—",
           businessId: c.sponsorId,
-          visaType: c.visaType?.name || "â€”",
-          petitionType: c.petitionType?.name || "â€”",
+          visaType: c.visaType?.name || "—",
+          petitionType: c.petitionType?.name || "—",
           visaTypeId: c.visaTypeId,
           petitionTypeId: c.petitionTypeId,
           status: c.status,
@@ -592,7 +592,7 @@ export default function AdminCases() {
             : c.assignedcaseworkerId,
           caseworker: Array.isArray(c.assignedcaseworkerId)
             ? `${c.assignedcaseworkerId.length} assigned`
-            : "â€”",
+            : "—",
           targetSubmissionDate: c.targetSubmissionDate,
           lcaNumber: c.lcaNumber,
           receiptNumber: c.receiptNumber,
@@ -630,14 +630,14 @@ export default function AdminCases() {
           caseId: c.caseId || c.id.toString(),
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
-            : "â€”",
+            : "—",
           candidateId: c.candidateId,
           business: c.sponsor
             ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
-            : "â€”",
+            : "—",
           businessId: c.sponsorId,
-          visaType: c.visaType?.name || "â€”",
-          petitionType: c.petitionType?.name || "â€”",
+          visaType: c.visaType?.name || "—",
+          petitionType: c.petitionType?.name || "—",
           visaTypeId: c.visaTypeId,
           petitionTypeId: c.petitionTypeId,
           status: c.status,
@@ -653,7 +653,7 @@ export default function AdminCases() {
             : c.assignedcaseworkerId,
           caseworker: Array.isArray(c.assignedcaseworkerId)
             ? `${c.assignedcaseworkerId.length} assigned`
-            : "â€”",
+            : "—",
           targetSubmissionDate: c.targetSubmissionDate,
           lcaNumber: c.lcaNumber,
           receiptNumber: c.receiptNumber,
@@ -713,14 +713,14 @@ export default function AdminCases() {
           caseId: c.caseId || c.id.toString(),
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
-            : "â€”",
+            : "—",
           candidateId: c.candidateId,
           business: c.sponsor
             ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
-            : "â€”",
+            : "—",
           businessId: c.sponsorId,
-          visaType: c.visaType?.name || "â€”",
-          petitionType: c.petitionType?.name || "â€”",
+          visaType: c.visaType?.name || "—",
+          petitionType: c.petitionType?.name || "—",
           visaTypeId: c.visaTypeId,
           petitionTypeId: c.petitionTypeId,
           status: c.status,
@@ -736,7 +736,7 @@ export default function AdminCases() {
             : c.assignedcaseworkerId,
           caseworker: Array.isArray(c.assignedcaseworkerId)
             ? `${c.assignedcaseworkerId.length} assigned`
-            : "â€”",
+            : "—",
           targetSubmissionDate: c.targetSubmissionDate,
           lcaNumber: c.lcaNumber,
           receiptNumber: c.receiptNumber,
@@ -841,7 +841,7 @@ export default function AdminCases() {
   });
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-4 pb-5">
       <motion.div
         className="flex items-start justify-between"
         initial={{ opacity: 0, y: -16 }}
@@ -849,8 +849,8 @@ export default function AdminCases() {
         transition={{ duration: 0.5 }}
       >
         <div>
-          <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-            <Briefcase className="text-primary" size={36} />
+          <h1 className="text-2xl font-black text-secondary tracking-tight flex items-center gap-3">
+            <Briefcase className="text-primary" size={24} />
             Case Management
           </h1>
           <p className="text-primary font-bold text-sm mt-1">
@@ -883,7 +883,7 @@ export default function AdminCases() {
       </motion.div>
 
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        className="grid grid-cols-2 md:grid-cols-4 gap-3"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -892,7 +892,7 @@ export default function AdminCases() {
           <motion.div
             key={label}
             variants={cardVariants}
-            className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4"
+            className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4"
           >
             <div className={`p-3 ${bg} rounded-lg`}>
               <Icon className={`${color} h-6 w-6`} />
@@ -923,11 +923,11 @@ export default function AdminCases() {
 
         {loading && (
           <div className="px-6 py-8 text-center text-sm text-gray-500 font-semibold">
-            Loading casesâ€¦
+            Loading cases…
           </div>
         )}
 
-        <div className="px-6 py-4 border-b border-gray-100">
+        <div className="px-3 py-3 border-b border-gray-100">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <Search
@@ -988,13 +988,13 @@ export default function AdminCases() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
+          <table className="min-w-[600px] min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50">
               <tr>
                 {TABLE_COLS.map((col) => (
                   <th
                     key={col}
-                    className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
+                    className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
                   >
                     {col}
                   </th>
@@ -1004,7 +1004,7 @@ export default function AdminCases() {
             <tbody className="bg-white divide-y divide-gray-100">
               {!loading && filteredCases.length === 0 && (
                 <tr>
-                  <td colSpan={TABLE_COLS.length} className="px-6 py-12 text-center text-sm text-gray-500">
+                  <td colSpan={TABLE_COLS.length} className="px-4 py-8 text-center text-sm text-gray-500">
                     {error ? "Unable to display cases." : "No cases match your filters."}
                   </td>
                 </tr>
@@ -1017,16 +1017,16 @@ export default function AdminCases() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: 0.4 + i * 0.06 }}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-secondary">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-secondary">
                     {c.caseId}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
                     {c.candidate}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
                     {c.business}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700 max-w-[14rem]">
+                  <td className="px-4 py-3 text-sm text-gray-700 max-w-[14rem]">
                     {(c.caseworkerIds?.length ?? 0) === 0 ? (
                       <span className="inline-flex items-center gap-1 text-[11px] font-black text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
                         Unassigned
@@ -1037,32 +1037,32 @@ export default function AdminCases() {
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
                     {c.visaType}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span
                       className={`px-2 py-0.5 text-xs font-semibold rounded-full capitalize ${priorityBadge[c.priority]}`}
                     >
                       {c.priority}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <CaseWorkflowBadge
                       caseRecord={{ caseStage: c.caseStage, status: c.status }}
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span
                       className={`px-2 py-0.5 text-xs font-semibold rounded-full ${statusBadge[c.status] || "bg-gray-100 text-gray-700"}`}
                     >
                       {c.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
                     {c.submitted}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() =>
@@ -1199,7 +1199,7 @@ export default function AdminCases() {
               onClick={() => setApproveRejectOpen(false)}
             />
             <motion.div
-              className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6"
+              className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-4 sm:p-6"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -1266,7 +1266,7 @@ export default function AdminCases() {
               onClick={() => setDeleteId(null)}
             />
             <motion.div
-              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"
+              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-4 sm:p-6"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -1275,7 +1275,7 @@ export default function AdminCases() {
               <h3 className="text-lg font-black text-secondary mb-2">
                 Delete Case
               </h3>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-gray-600 mb-4">
                 Are you sure you want to delete{" "}
                 <span className="font-bold">{deleteId}</span>? This action
                 cannot be undone.
@@ -1310,14 +1310,14 @@ export default function AdminCases() {
               caseId: c.caseId || c.id.toString(),
               candidate: c.candidate
                 ? `${c.candidate.first_name} ${c.candidate.last_name}`
-                : "â€”",
+                : "—",
               candidateId: c.candidateId,
               business: c.sponsor
                 ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
-                : "â€”",
+                : "—",
               businessId: c.sponsorId,
-              visaType: c.visaType?.name || "â€”",
-              petitionType: c.petitionType?.name || "â€”",
+              visaType: c.visaType?.name || "—",
+              petitionType: c.petitionType?.name || "—",
               visaTypeId: c.visaTypeId,
               petitionTypeId: c.petitionTypeId,
               status: c.status,
@@ -1333,7 +1333,7 @@ export default function AdminCases() {
                 : c.assignedcaseworkerId,
               caseworker: Array.isArray(c.assignedcaseworkerId)
                 ? `${c.assignedcaseworkerId.length} assigned`
-                : "â€”",
+                : "—",
               targetSubmissionDate: c.targetSubmissionDate,
               proposedAmount: c.proposedAmount,
               lcaNumber: c.lcaNumber,

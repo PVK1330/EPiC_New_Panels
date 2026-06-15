@@ -73,11 +73,11 @@ export default function AdminEnquiryInbox() {
   };
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-4 pb-5">
       <div className="flex items-start justify-between gap-4">
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-            <Inbox className="text-primary" size={36} />
+          <h1 className="text-2xl font-black text-secondary tracking-tight flex items-center gap-3">
+            <Inbox className="text-primary" size={24} />
             Enquiry Inbox
           </h1>
           <p className="text-primary font-bold text-sm mt-1">

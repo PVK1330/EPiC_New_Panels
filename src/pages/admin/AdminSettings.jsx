@@ -557,15 +557,15 @@ export default function AdminSettings() {
           </div>
           <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-black">System Preferences</p>
         </div>
-        
-        <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar pb-8">
+
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar pb-6">
           {CONFIG_TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => { setConfigTab(tab.id); setMobileMenuOpen(false); }}
               className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all group relative ${
-                configTab === tab.id 
-                ? "bg-secondary text-white shadow-xl shadow-secondary/20" 
+                configTab === tab.id
+                ? "bg-secondary text-white shadow-xl shadow-secondary/20"
                 : "text-gray-500 hover:bg-gray-50 hover:text-secondary"
               }`}
             >
@@ -584,7 +584,7 @@ export default function AdminSettings() {
           ))}
         </nav>
 
-        <div className="p-6 border-t border-gray-50 bg-gray-50/30">
+        <div className="p-4 border-t border-gray-50 bg-gray-50/30">
           <Link to="/admin/dashboard" className="flex items-center justify-center gap-3 px-4 py-4 rounded-2xl bg-white border border-gray-100 text-primary font-black text-xs uppercase tracking-widest hover:shadow-lg transition-all">
             Dashboard <FiArrowRight />
           </Link>
@@ -592,7 +592,7 @@ export default function AdminSettings() {
       </aside>
 
       {/* Mobile Nav */}
-      <div className="md:hidden bg-white border-b border-gray-100 p-4 sticky top-0 z-50 flex items-center justify-between">
+      <div className="md:hidden bg-white border-b border-gray-100 p-3 sticky top-0 z-50 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <FiSettings className="text-primary" />
           <h1 className="text-lg font-black text-secondary uppercase tracking-tighter">Settings</h1>
@@ -601,7 +601,7 @@ export default function AdminSettings() {
           {mobileMenuOpen ? <FiX /> : <FiMenu />}
         </button>
       </div>
-      
+
       {mobileMenuOpen && (
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="md:hidden bg-white border-b border-gray-100 p-4 grid grid-cols-2 gap-2 z-40 fixed top-16 left-0 right-0 shadow-2xl">
           {CONFIG_TABS.map((tab) => (
@@ -614,10 +614,10 @@ export default function AdminSettings() {
 
       {/* Main Content Area */}
       <main className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto max-w-[1600px] mx-auto w-full">
-        <header className="mb-12">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <header className="mb-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <h2 className="text-3xl md:text-4xl font-black text-secondary tracking-tight mb-2">
+              <h2 className="text-2xl md:text-3xl font-black text-secondary tracking-tight mb-2">
                 {CONFIG_TABS.find(t => t.id === configTab)?.label}
               </h2>
               <div className="flex items-center gap-3 text-gray-500">
@@ -644,8 +644,8 @@ export default function AdminSettings() {
             transition={{ duration: 0.3, ease: "circOut" }}
           >
             {configTab === "account" && (
-              <AccountSettings 
-                profile={profile} 
+              <AccountSettings
+                profile={profile}
                 profileFile={profileFile}
                 preferences={preferences}
                 onProfileChange={(e) => setProfile({...profile, [e.target.name]: e.target.value})}
@@ -690,7 +690,7 @@ export default function AdminSettings() {
             )}
 
             {configTab === "categories" && (
-              <CategorySettings 
+              <CategorySettings
                 categories={categories}
                 loading={loading}
                 onAdd={handleCategoryAdd}
@@ -701,7 +701,7 @@ export default function AdminSettings() {
             )}
 
             {configTab === "departments" && (
-              <DepartmentSettings 
+              <DepartmentSettings
                 departments={departments}
                 loading={loading}
                 onAdd={() => { setDepartmentModalMode("add"); setDepartmentFormName(""); setDepartmentModalOpen(true); }}
@@ -712,7 +712,7 @@ export default function AdminSettings() {
             )}
 
             {configTab === "roles" && (
-              <div className="space-y-10">
+              <div className="space-y-4">
                 {/* Modern Segmented Pill Toggle for RBAC */}
                 <div className="flex justify-center sm:justify-start">
                    <div className="bg-gray-100/80 p-1.5 rounded-[1.5rem] flex items-center gap-1.5 backdrop-blur-md border border-gray-100 shadow-inner">
@@ -754,7 +754,7 @@ export default function AdminSettings() {
             )}
 
               {configTab === "integrations" && (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <MicrosoftConnect />
                     <GoogleConnect />
@@ -764,7 +764,7 @@ export default function AdminSettings() {
               )}
 
             {configTab === "email" && (
-              <EmailSettings 
+              <EmailSettings
                 templates={emailTemplates}
                 loading={loading}
                 onAdd={() => { setEmailModalMode("add"); setEmailFormKey(""); setEmailFormSubject(""); setEmailFormBody(""); setEmailModalOpen(true); }}
@@ -791,7 +791,7 @@ export default function AdminSettings() {
             )}
 
             {configTab === "payment" && (
-              <PaymentSettings 
+              <PaymentSettings
                 config={paymentConfig}
                 onConfigChange={(key, val) => setPaymentConfig({...paymentConfig, [key]: val})}
                 onToggle={(key) => setPaymentConfig({...paymentConfig, [key]: !paymentConfig[key]})}
@@ -815,7 +815,7 @@ export default function AdminSettings() {
             )}
 
             {configTab === "sla" && (
-              <SLASettings 
+              <SLASettings
                 rules={slaRules}
                 loading={loading}
                 onAdd={() => { setSlaModalMode("add"); setSlaFormName(""); setSlaFormDays(""); setSlaModalOpen(true); }}
@@ -830,32 +830,32 @@ export default function AdminSettings() {
 
       {/* Modals */}
       <Modal open={visaModalOpen} onClose={() => setVisaModalOpen(false)} title="Visa Type Configuration">
-        <form onSubmit={submitVisaForm} className="space-y-6 p-2">
+        <form onSubmit={submitVisaForm} className="space-y-4 p-2">
           <Input label="Visa Designation" value={visaFormName} onChange={(e) => setVisaFormName(e.target.value)} error={visaFormError} placeholder="e.g. EB-1 Extraordinary Ability" autoFocus />
           <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Save Configuration</Button>
         </form>
       </Modal>
 
       <Modal open={petitionModalOpen} onClose={() => setPetitionModalOpen(false)} title="Petition Type Setup">
-        <form onSubmit={submitPetitionForm} className="space-y-6 p-2">
+        <form onSubmit={submitPetitionForm} className="space-y-4 p-2">
           <Input label="Petition Identifier" value={petitionFormName} onChange={(e) => setPetitionFormName(e.target.value)} error={petitionFormError} placeholder="e.g. Form I-140" autoFocus />
           <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Initialize Petition</Button>
         </form>
       </Modal>
 
       <Modal open={departmentModalOpen} onClose={() => setDepartmentModalOpen(false)} title="Department Management">
-        <form onSubmit={submitDepartmentForm} className="space-y-6 p-2">
+        <form onSubmit={submitDepartmentForm} className="space-y-4 p-2">
           <Input label="Department Designation" value={departmentFormName} onChange={(e) => setDepartmentFormName(e.target.value)} error={departmentFormError} placeholder="e.g. Legal Compliance" autoFocus />
           <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Update Registry</Button>
         </form>
       </Modal>
 
       {/* Email Editor Modal */}
-      <Modal 
-        open={emailModalOpen} 
-        onClose={() => setEmailModalOpen(false)} 
+      <Modal
+        open={emailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
         title=""
-        maxWidthClass="max-w-6xl" 
+        maxWidthClass="max-w-6xl"
         bodyClassName="p-0"
         footer={null}
       >
@@ -878,22 +878,22 @@ export default function AdminSettings() {
       </Modal>
 
       {/* Email Preview Modal */}
-      <Modal 
-        open={viewEmailModalOpen} 
-        onClose={() => setViewEmailModalOpen(false)} 
+      <Modal
+        open={viewEmailModalOpen}
+        onClose={() => setViewEmailModalOpen(false)}
         title=""
         maxWidthClass="max-w-5xl"
         bodyClassName="p-0"
         footer={null}
       >
-        <EmailTemplatePreview 
+        <EmailTemplatePreview
           template={viewingTemplate}
           onClose={() => setViewEmailModalOpen(false)}
         />
       </Modal>
 
       <Modal open={slaModalOpen} onClose={() => setSlaModalOpen(false)} title="SLA Rule Matrix">
-        <form onSubmit={submitSlaForm} className="space-y-6 p-2">
+        <form onSubmit={submitSlaForm} className="space-y-4 p-2">
           <Input label="Rule Designation" value={slaFormName} onChange={(e) => setSlaFormName(e.target.value)} placeholder="e.g. Standard Processing" autoFocus />
           <Input label="Target Duration (Days)" type="number" value={slaFormDays} onChange={(e) => setSlaFormDays(e.target.value)} placeholder="45" />
           <div className="flex flex-col gap-3">

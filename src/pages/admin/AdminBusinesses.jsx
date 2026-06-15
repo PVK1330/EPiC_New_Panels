@@ -433,7 +433,7 @@ export default function AdminBusinesses() {
         search: debouncedSearch.trim(),
         status: statusParam,
       });
-      
+
       // Create a blob from the response
       const blob = res.data;
       const url = window.URL.createObjectURL(blob);
@@ -444,7 +444,7 @@ export default function AdminBusinesses() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       showToast({
         message: "Sponsors exported successfully",
         variant: "success",
@@ -466,12 +466,12 @@ export default function AdminBusinesses() {
     try {
       const res = await bulkImportSponsors(importFile);
       const { successful, failed, total_processed, results } = res.data?.data || {};
-      
+
       showToast({
         message: `Bulk import completed: ${successful} successful, ${failed} failed out of ${total_processed}`,
         variant: successful > 0 ? "success" : "danger",
       });
-      
+
       // Refresh the list
       const r = await fetchSponsors(
         page,
@@ -482,7 +482,7 @@ export default function AdminBusinesses() {
       if (!r.ok) {
         showToast({ message: getApiError(r.error), variant: "danger" });
       }
-      
+
       setImportFile(null);
       closeModal();
     } catch (e) {
@@ -504,7 +504,7 @@ export default function AdminBusinesses() {
       'Smart,Business Group,info@smartbusiness.co,+91,9876543210,Smart Business Group',
       'Enterprise,Connect,team@enterpriseconnect.net,+1,2125550199,Enterprise Connect',
     ].join('\n');
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -524,14 +524,14 @@ export default function AdminBusinesses() {
 
   return (
     <motion.div
-      className="space-y-6 pb-10"
+      className="space-y-4 pb-5"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-secondary tracking-tight">
+          <h1 className="text-2xl font-black text-secondary tracking-tight">
             Businesses
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
@@ -573,7 +573,7 @@ export default function AdminBusinesses() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
+        <div className="px-5 py-3 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-xs">
             <FiSearch
               size={14}
@@ -608,7 +608,7 @@ export default function AdminBusinesses() {
               <Loader2 className="w-10 h-10 animate-spin text-secondary" />
             </div>
           )}
-          <table className="w-full">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="bg-gray-50 text-left">
                 {["Company", "User Name", "Status", "Licence Status", "Licence Expiry", "Active Cases", "Sponsored Workers", "Risk Score", "Outstanding", "Actions"].map(
@@ -628,7 +628,7 @@ export default function AdminBusinesses() {
                 <tr>
                   <td
                     colSpan={9}
-                    className="px-5 py-12 text-center text-sm text-gray-400"
+                    className="px-4 py-8 text-center text-sm text-gray-400"
                   >
                     No sponsors found.
                   </td>
@@ -993,8 +993,8 @@ export default function AdminBusinesses() {
 
               <div className="flex-1 p-4 sm:p-6">
                 {detailTab === "overview" && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Company Information</h4>
                         <div className="space-y-3">
@@ -1049,8 +1049,8 @@ export default function AdminBusinesses() {
                 )}
 
                 {detailTab === "licence" && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Licence Number</p>
                         <p className="text-sm font-bold text-gray-900">{profile.sponsorLicenceNumber || "Not provided"}</p>
@@ -1072,8 +1072,8 @@ export default function AdminBusinesses() {
                 )}
 
                 {detailTab === "contact" && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Contact Name</p>
                         <p className="text-sm font-bold text-gray-900">{profile.authorisingName || "Not provided"}</p>
@@ -1095,8 +1095,8 @@ export default function AdminBusinesses() {
                 )}
 
                 {detailTab === "metrics" && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Active Cases</p>
                         <p className="text-sm font-bold text-gray-900">{profile.activeCases || "Not provided"}</p>
@@ -1256,7 +1256,7 @@ export default function AdminBusinesses() {
               Download
             </Button>
           </div>
-          
+
           <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-gray-300 transition-colors">
             <input
               type="file"

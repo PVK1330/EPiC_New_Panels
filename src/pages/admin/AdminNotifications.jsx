@@ -249,10 +249,10 @@ export default function AdminNotifications() {
   const fetchNotifications = async () => {
     setIsFetching(true);
     try {
-      const res = viewAll 
+      const res = viewAll
         ? await getAllNotifications()
         : await getNotifications();
-      
+
       if (res.data?.status === "success") {
         const mappedNotifications = (res.data.data.notifications || []).map(n => ({
           id: n.id,
@@ -473,7 +473,7 @@ export default function AdminNotifications() {
   const TypeIconPreview = notificationTypes.find((t) => t.value === formData.type)?.Icon ?? FiInfo;
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-4 pb-5">
       <motion.div
         className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4"
         initial={{ opacity: 0, y: -16 }}
@@ -481,8 +481,8 @@ export default function AdminNotifications() {
         transition={{ duration: 0.5 }}
       >
         <div>
-          <h1 className="text-3xl sm:text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-            <RiNotification3Line className="text-primary shrink-0" size={36} />
+          <h1 className="text-2xl sm:text-3xl font-black text-secondary tracking-tight flex items-center gap-3">
+            <RiNotification3Line className="text-primary shrink-0" size={24} />
             Notifications
           </h1>
           <p className="text-primary font-bold text-sm mt-1">Manage system notifications and alerts</p>
@@ -491,10 +491,10 @@ export default function AdminNotifications() {
           <Button type="button" variant="ghost" className="rounded-xl" onClick={markAllRead} disabled={stats.unread === 0}>
             Mark all read
           </Button>
-          <Button 
-            type="button" 
-            variant={viewAll ? "secondary" : "ghost"} 
-            className="rounded-xl" 
+          <Button
+            type="button"
+            variant={viewAll ? "secondary" : "ghost"}
+            className="rounded-xl"
             onClick={() => setViewAll(!viewAll)}
           >
             {viewAll ? "View My Notifications" : "View All Notifications"}
@@ -506,7 +506,7 @@ export default function AdminNotifications() {
       </motion.div>
 
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+        className="grid grid-cols-2 md:grid-cols-4 gap-3"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -515,7 +515,7 @@ export default function AdminNotifications() {
           <motion.div
             key={label}
             variants={cardVariants}
-            className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4"
+            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4"
           >
             <div className={`p-3 ${bg} rounded-lg`}>
               <FiBell className={`${color} h-6 w-6`} />
@@ -529,7 +529,7 @@ export default function AdminNotifications() {
       </motion.div>
 
       <motion.div
-        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+        className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.3 }}
@@ -543,7 +543,7 @@ export default function AdminNotifications() {
             return (
               <motion.div
                 key={item.id}
-                className={`p-6 transition-colors cursor-pointer ${
+                className={`p-4 transition-colors cursor-pointer ${
                   item.unread ? "bg-blue-50/80 hover:bg-blue-100/90" : "hover:bg-gray-50"
                 }`}
                 onClick={() => {
@@ -622,7 +622,7 @@ export default function AdminNotifications() {
       </motion.div>
 
       <motion.div
-        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+        className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.5 }}
@@ -630,7 +630,7 @@ export default function AdminNotifications() {
         <div className="px-6 py-4 border-b border-gray-100">
           <h3 className="text-lg font-black text-secondary">Notification preferences</h3>
         </div>
-        <div className="p-6 space-y-5">
+        <div className="p-4 space-y-5">
           {preferencesList.map(({ key, label, desc }) => (
             <div key={key} className="flex items-center justify-between gap-4">
               <div>
@@ -674,9 +674,9 @@ export default function AdminNotifications() {
           </>
         }
       >
-        <p className="text-xs text-gray-500 mb-5">Send notifications to system users</p>
+        <p className="text-xs text-gray-500 mb-4">Send notifications to system users</p>
         <form id={FORM_ID} onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-black text-secondary mb-3">
                 Notification type <span className="text-red-500">*</span>
@@ -754,7 +754,7 @@ export default function AdminNotifications() {
 
           <div>
             <h4 className="text-sm font-black text-secondary mb-4">Recipients</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {recipientTypes.map(({ value, label, description }) => (
                 <div
                   key={value}
@@ -904,7 +904,7 @@ export default function AdminNotifications() {
       {selectedNotif && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm" onClick={() => setSelectedNotif(null)}>
           <div
-            className="bg-white rounded-xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200"
+            className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
@@ -917,7 +917,7 @@ export default function AdminNotifications() {
                 <span className="text-lg leading-none">&times;</span>
               </button>
             </div>
-            <div className="p-6 max-h-[70vh] overflow-y-auto">
+            <div className="p-4 sm:p-6 max-h-[70vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-lg font-bold text-secondary">{selectedNotif.title}</h4>
                 {selectedNotif.priority && (
@@ -931,10 +931,10 @@ export default function AdminNotifications() {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-600 mb-6 whitespace-pre-wrap leading-relaxed">{selectedNotif.message}</p>
-              
+              <p className="text-sm text-gray-600 mb-4 whitespace-pre-wrap leading-relaxed">{selectedNotif.message}</p>
+
               {selectedNotif.metadata && Object.keys(selectedNotif.metadata).length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
+                <div className="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-100">
                   <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Notification Details</h5>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
                     {Object.entries(selectedNotif.metadata).map(([key, value]) => (
@@ -950,7 +950,7 @@ export default function AdminNotifications() {
                   </div>
                 </div>
               )}
-              
+
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                 <FiClock className="w-3 h-3" />
                 Received: {selectedNotif.time}

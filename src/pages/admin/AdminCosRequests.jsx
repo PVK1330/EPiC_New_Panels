@@ -147,11 +147,11 @@ export default function AdminCosRequests() {
   const requests = sectionMap[activeTab] || [];
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-4 pb-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-black text-secondary flex items-center gap-3">
-          <ShieldCheck className="text-primary" size={32} />
+        <h1 className="text-2xl font-black text-secondary flex items-center gap-3">
+          <ShieldCheck className="text-primary" size={24} />
           CoS Requests
         </h1>
         <p className="text-gray-500 font-bold text-sm mt-1">
@@ -168,7 +168,7 @@ export default function AdminCosRequests() {
           { label: "Allocated", value: counts.allocated, color: "text-violet-600" },
           { label: "Rejected", value: counts.rejected, color: "text-red-600" },
         ].map((s, i) => (
-          <div key={s.label} className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
             <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">{s.label}</p>
             <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
           </div>
@@ -176,7 +176,7 @@ export default function AdminCosRequests() {
       </div>
 
       {/* Search */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-4 shadow-sm flex items-center gap-4">
+      <div className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm flex items-center gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-3.5 text-gray-300" size={18} />
           <input
@@ -221,14 +221,14 @@ export default function AdminCosRequests() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-sm overflow-x-auto">
-        <table className="w-full text-left min-w-[900px]">
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm overflow-x-auto">
+        <table className="w-full text-left min-w-[600px]">
           <thead>
             <tr className="bg-gray-50/50 border-b border-gray-50">
               {["Sponsor", "Visa Type", "Requested", "Approved", "Status", "Date", "Reviewer", "Actions"].map((h) => (
                 <th
                   key={h}
-                  className={`px-6 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 ${h === "Actions" ? "text-right" : ""}`}
+                  className={`px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 ${h === "Actions" ? "text-right" : ""}`}
                 >
                   {h}
                 </th>
@@ -239,7 +239,7 @@ export default function AdminCosRequests() {
             {loading ? (
               [...Array(4)].map((_, i) => (
                 <tr key={i} className="animate-pulse">
-                  <td colSpan={8} className="px-6 py-6 h-16 bg-gray-50/20" />
+                  <td colSpan={8} className="px-4 py-4 h-16 bg-gray-50/20" />
                 </tr>
               ))
             ) : requests.length > 0 ? (
@@ -248,21 +248,21 @@ export default function AdminCosRequests() {
                 const isReviewable = isPending || r.status === "Under Review";
                 return (
                   <tr key={r.id} className="hover:bg-gray-50/30 transition-colors">
-                    <td className="px-6 py-5">
+                    <td className="px-4 py-4">
                       <p className="text-sm font-black text-secondary">{fullName(r.sponsor) || `Sponsor #${r.sponsorId}`}</p>
                       <p className="text-xs font-bold text-gray-400 mt-0.5">{r.sponsor?.email}</p>
                     </td>
-                    <td className="px-6 py-5 text-sm font-bold text-secondary">{r.visaType || "—"}</td>
-                    <td className="px-6 py-5 text-sm font-black text-primary">{r.requestedAmount}</td>
-                    <td className="px-6 py-5 text-sm font-black text-emerald-600">
+                    <td className="px-4 py-3 text-sm font-bold text-secondary">{r.visaType || "—"}</td>
+                    <td className="px-4 py-3 text-sm font-black text-primary">{r.requestedAmount}</td>
+                    <td className="px-4 py-3 text-sm font-black text-emerald-600">
                       {r.approvedAmount != null ? r.approvedAmount : "—"}
                     </td>
-                    <td className="px-6 py-5"><CosStatusBadge status={r.status} /></td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-500">
+                    <td className="px-4 py-3"><CosStatusBadge status={r.status} /></td>
+                    <td className="px-4 py-3 text-xs font-bold text-gray-500">
                       {r.created_at ? formatDateLong(r.created_at, { month: "short" }) : "—"}
                     </td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-500">{fullName(r.reviewer) || "—"}</td>
-                    <td className="px-6 py-5 text-right">
+                    <td className="px-4 py-3 text-xs font-bold text-gray-500">{fullName(r.reviewer) || "—"}</td>
+                    <td className="px-4 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5 flex-wrap">
                         <button
                           onClick={() => setHistoryRequest(r)}
@@ -308,7 +308,7 @@ export default function AdminCosRequests() {
               })
             ) : (
               <tr>
-                <td colSpan={8} className="px-6 py-12 text-center">
+                <td colSpan={8} className="px-4 py-8 text-center">
                   <AlertCircle className="mx-auto text-gray-200 mb-4" size={48} />
                   <p className="text-sm font-bold text-gray-400">No requests in this section.</p>
                 </td>
@@ -342,13 +342,13 @@ export default function AdminCosRequests() {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-[2.5rem] shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-8"
+              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-4 sm:p-6"
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 bg-primary/5 rounded-2xl text-primary"><History size={22} /></div>
                   <div>
-                    <h3 className="text-xl font-black text-secondary">CoS Request History</h3>
+                    <h3 className="text-lg font-black text-secondary">CoS Request History</h3>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">#REQ-{historyRequest.id}</p>
                   </div>
                 </div>
@@ -356,7 +356,7 @@ export default function AdminCosRequests() {
                   <X size={24} />
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                 {[
                   ["Sponsor", fullName(historyRequest.sponsor) || `#${historyRequest.sponsorId}`],
                   ["Visa Type", historyRequest.visaType || "—"],
@@ -389,13 +389,13 @@ export default function AdminCosRequests() {
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-[2.5rem] shadow-2xl max-w-md w-full p-8"
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-black text-secondary">Assign Caseworker</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-black text-secondary">Assign Caseworker</h3>
                 <button onClick={() => setAssign({ open: false, request: null, ids: [] })}><X size={24} /></button>
               </div>
-              <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-1 mb-6">
+              <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-1 mb-4">
                 {caseworkers.length === 0 && (
                   <p className="text-xs font-bold text-gray-400 text-center py-4">No caseworkers available.</p>
                 )}

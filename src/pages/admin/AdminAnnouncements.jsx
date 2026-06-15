@@ -56,14 +56,14 @@ export default function AdminAnnouncements() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-4">
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-3"
       >
         <div className="p-3 rounded-2xl bg-violet-500/10 text-violet-600">
-          <RiMegaphoneLine size={28} />
+          <RiMegaphoneLine size={22} />
         </div>
         <div>
           <h1 className="text-2xl font-black text-secondary">Announcements</h1>
@@ -75,7 +75,7 @@ export default function AdminAnnouncements() {
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 space-y-6"
+        className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-4 space-y-4"
       >
         <Input
           label="Title"
