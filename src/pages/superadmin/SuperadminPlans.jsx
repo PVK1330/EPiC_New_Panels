@@ -25,6 +25,18 @@ const PANEL_LABELS = {
 
 const PANEL_ORDER = ['admin', 'caseworker', 'candidate', 'business'];
 
+// Order modules the same way the edit modal does: by panel (PANEL_ORDER),
+// then by each module's sort_order. Unknown panels sort last.
+const sortModules = (mods) =>
+  [...mods].sort((a, b) => {
+    const pa = PANEL_ORDER.indexOf(a.panel);
+    const pb = PANEL_ORDER.indexOf(b.panel);
+    const ra = pa === -1 ? PANEL_ORDER.length : pa;
+    const rb = pb === -1 ? PANEL_ORDER.length : pb;
+    if (ra !== rb) return ra - rb;
+    return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+  });
+
 const SuperadminPlans = () => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +78,7 @@ const SuperadminPlans = () => {
           ...p,
           interval: p.billing_cycle === 'monthly' ? 'month' : 'year',
           isFeatured: p.is_public,
-          assignedModules: (p.modules || []).map((m) => m.key),
+          assignedModules: sortModules(p.modules || []),
           assignedModuleIds: (p.modules || []).map((m) => m.id),
         }));
         setPlans(mappedPlans);
@@ -243,12 +255,19 @@ const SuperadminPlans = () => {
                   Modules ({plan.assignedModules?.length || 0})
                 </p>
                 <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                  {(plan.assignedModules || []).slice(0, 8).map((key) => (
-                    <div key={key} className="flex items-center gap-2 group">
+                  {(plan.assignedModules || []).slice(0, 8).map((mod) => (
+                    <div key={mod.id} className="flex items-center gap-2 group">
                       <div className="w-4 h-4 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
                         <RiCheckLine size={10} />
                       </div>
-                      <span className="text-xs font-bold text-secondary truncate">{key}</span>
+                      <span className="text-xs font-bold text-secondary truncate">
+                        {mod.label}
+                        {PANEL_LABELS[mod.panel] && (
+                          <span className="ml-1.5 text-[10px] font-bold text-gray-300 uppercase tracking-wider">
+                            {PANEL_LABELS[mod.panel]}
+                          </span>
+                        )}
+                      </span>
                     </div>
                   ))}
                   {(plan.assignedModules?.length || 0) > 8 && (

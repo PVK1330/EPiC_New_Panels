@@ -14,6 +14,7 @@ import {
 import Button from "../Button";
 import Input from "../Input";
 import DatePicker from "../DatePicker";
+import TimePicker from "../TimePicker";
 import { formatDateLong } from "../../utils/datetime";
 
 const DAYS = [
@@ -25,6 +26,34 @@ const DAYS = [
   "Saturday",
   "Sunday",
 ];
+
+/**
+ * Normalise an incoming time value to the TimePicker's "HH:mm" 24-hour contract.
+ * Accepts "HH:mm", "h:mm AM/PM", or "10:30 AM"; returns "" when unparseable.
+ */
+function toHHmm(value) {
+  if (!value || typeof value !== "string") return "";
+  const v = value.trim();
+  const m = v.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!m) return "";
+  let h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  const period = m[3]?.toUpperCase();
+  if (period === "PM" && h < 12) h += 12;
+  if (period === "AM" && h === 12) h = 0;
+  if (h > 23 || min > 59) return "";
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+/** Format a "HH:mm" 24-hour string to a friendly 12-hour label ("10:30 AM"). */
+function toFriendlyTime(value) {
+  const hhmm = toHHmm(value);
+  if (!hhmm) return "";
+  const [h, m] = hhmm.split(":").map((x) => parseInt(x, 10));
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${period}`;
+}
 
 // Step 1: Fill appointment details
 // Step 2: Review & confirm summary before sending
@@ -52,7 +81,7 @@ export default function BiometricBookedModal({
     setLocation(initialData?.location || "");
     setAppointmentDate(initialData?.date || "");
     setAppointmentDay("");
-    setAppointmentTime(initialData?.time || "");
+    setAppointmentTime(toHHmm(initialData?.time));
     setInstructions(initialData?.instructions || "");
     setError("");
   }, [open, initialData]);
@@ -84,7 +113,9 @@ export default function BiometricBookedModal({
       biometricLocation: location.trim(),
       biometricDate: appointmentDate,
       biometricDay: appointmentDay.trim(),
-      biometricTime: appointmentTime.trim(),
+      // Persist a candidate-friendly 12-hour label (shown verbatim in emails,
+      // notifications and the candidate dashboard).
+      biometricTime: toFriendlyTime(appointmentTime),
       biometricInstructions: instructions.trim() || undefined,
     });
   };
@@ -203,11 +234,12 @@ export default function BiometricBookedModal({
                     </div>
                   </div>
 
-                  <Input
+                  <TimePicker
                     label="Time Slot"
+                    name="appointmentTime"
                     value={appointmentTime}
                     onChange={(e) => setAppointmentTime(e.target.value)}
-                    placeholder="e.g. 10:30 AM"
+                    placeholder="Select time slot"
                     required
                   />
 
@@ -286,7 +318,7 @@ export default function BiometricBookedModal({
                         </div>
                         <div>
                           <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Time</p>
-                          <p className="text-sm font-bold text-gray-800">{appointmentTime}</p>
+                          <p className="text-sm font-bold text-gray-800">{toFriendlyTime(appointmentTime)}</p>
                         </div>
                       </div>
                       {instructions && (

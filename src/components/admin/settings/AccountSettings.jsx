@@ -6,6 +6,7 @@ import Button from "../../Button";
 import Input from "../../Input";
 import PhoneInput from "../../PhoneInput";
 import { TIMEZONE_OPTIONS, DATE_FORMAT_OPTIONS } from "../../../utils/datetime";
+import { resolveAssetUrl } from "../../../utils/assetUrl";
 
 const panelMotion = {
   initial: { opacity: 0, y: 10 },
@@ -57,7 +58,7 @@ export default function AccountSettings({
                 {profileFile ? (
                   <img src={URL.createObjectURL(profileFile)} alt="Avatar Preview" className="w-full h-full object-cover" />
                 ) : profile.avatar_url ? (
-                  <img src={profile.avatar_url} alt="Current Avatar" className="w-full h-full object-cover" />
+                  <img src={resolveAssetUrl(profile.avatar_url)} alt="Current Avatar" className="w-full h-full object-cover" />
                 ) : (
                   <FiUser size={40} className="text-gray-300" />
                 )}

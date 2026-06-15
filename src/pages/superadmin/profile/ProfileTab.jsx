@@ -3,6 +3,7 @@ import { RiUser3Line, RiMailLine, RiPhoneLine, RiCamera2Line } from 'react-icons
 import Button from '../../../components/Button';
 import Input from '../../../components/Input';
 import PhoneInput from '../../../components/PhoneInput';
+import { resolveAssetUrl } from '../../../utils/assetUrl';
 
 const ProfileTab = ({ profile, saving, uploadingAvatar, onSave, onAvatarUpload }) => {
   const fileRef = useRef(null);
@@ -57,7 +58,7 @@ const ProfileTab = ({ profile, saving, uploadingAvatar, onSave, onAvatarUpload }
             onClick={() => fileRef.current?.click()}
           >
             {profile?.profile_pic ? (
-              <img src={profile.profile_pic} alt="Avatar" className="w-full h-full object-cover" />
+              <img src={resolveAssetUrl(profile.profile_pic)} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
               initials
             )}

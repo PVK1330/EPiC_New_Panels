@@ -87,6 +87,42 @@ const VISA_CHIPS = {
 };
 
 
+/**
+ * Map a stored visa value ("Skilled Worker Visa", "Indefinite Leave to Remain (ILR)")
+ * to the canonical short label used as the VISA_CHIPS / filter key ("Skilled Worker",
+ * "ILR"). Matching is normalised (lowercased, alphanumerics-only substring), mirroring
+ * the backend's visa-type filter so chips colour correctly regardless of phrasing.
+ */
+const VISA_CANONICAL_LABELS = [
+  "Skilled Worker",
+  "Student Visa",
+  "ILR",
+  "Graduate Visa",
+  "Sponsor Licence",
+  "Global Talent",
+  "Family Visa",
+  "Youth Mobility",
+  "Visitor Visa",
+];
+
+function normaliseVisa(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function canonicalVisaLabel(value) {
+  if (!value) return "—";
+  const norm = normaliseVisa(value);
+  if (!norm) return "—";
+  // "ilr" must also match "indefiniteleavetoremain".
+  const match = VISA_CANONICAL_LABELS.find((label) => {
+    const n = normaliseVisa(label);
+    return norm.includes(n) || n.includes(norm);
+  });
+  if (match) return match;
+  if (norm.includes("indefiniteleave")) return "ILR";
+  return value; // unknown — show the raw stored value
+}
+
 const ROLE_OPTIONS = [{ value: "1", label: "Candidate" }];
 
 const VISA_TYPE_OPTIONS = [
@@ -1049,8 +1085,10 @@ export default function AdminCandidates() {
                   const app = c.application || {};
                   const caseRecord = c.cases?.[0] || {};
                   const dob = app.dob ? formatDate(app.dob) : c.dob ? formatDate(c.dob) : '—';
-                  // visaType: prefer application field, then nested visaType name from Case
-                  const visaType = app.visaType || caseRecord.visaType?.name || '—';
+                  // visaType: prefer application field, then nested visaType name from Case.
+                  // Normalise to the canonical short label so the chip colours correctly.
+                  const visaTypeRaw = app.visaType || caseRecord.visaType?.name || '';
+                  const visaType = canonicalVisaLabel(visaTypeRaw);
                   const caseStatus = caseRecord.status || '—';
                   const visaExpiry = app.visaEndDate ? formatDate(app.visaEndDate) : '—';
                   // Compute payment status from Case amounts
@@ -1164,7 +1202,6 @@ export default function AdminCandidates() {
           const c = modal.data;
           const app = c.application || {};
           const dob = formatDate(app.dob || c.dob);
-          const visaType = app.visaType || c.cases?.[0]?.visaType || '—';
           const caseStatus = c.cases?.[0]?.status || '—';
           const paymentStatus = c.cases?.[0]?.paymentStatus || '—';
           return (

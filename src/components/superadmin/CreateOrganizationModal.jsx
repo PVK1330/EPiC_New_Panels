@@ -8,19 +8,25 @@ import {
 } from 'react-icons/ri';
 import Input from '../Input';
 import Button from '../Button';
+import PhoneInput from '../PhoneInput';
 import Modal from '../common/Modal';
 import {
   slugifyOrganisation,
   isValidOrganisationSlug,
   getOrganisationSubdomainLabel,
 } from '../../utils/organisationHost';
+import { COUNTRIES, isValidPhone } from '../../utils/countries';
 import { fetchPlans } from '../../services/superadminPlan.service';
+
+const SORTED_COUNTRIES = [...COUNTRIES].sort((a, b) =>
+  a.name.localeCompare(b.name),
+);
 
 const initialForm = () => ({
   name: '',
   slug: '',
   primaryEmail: '',
-  country: '',
+  country: 'United Kingdom',
   plan_id: '',
   adminFirstName: '',
   adminLastName: '',
@@ -97,6 +103,15 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
     const slug = slugifyOrganisation(formData.slug || formData.name);
     if (!isValidOrganisationSlug(slug)) {
       toast.error('Enter a valid subdomain (e.g. acme-immigration). Letters, numbers, and hyphens only.');
+      return;
+    }
+
+    if (!formData.adminMobile?.trim()) {
+      toast.error('Enter the administrator mobile number');
+      return;
+    }
+    if (!isValidPhone(formData.adminCountryCode, formData.adminMobile)) {
+      toast.error('Enter a valid mobile number for the selected country');
       return;
     }
 
@@ -179,13 +194,28 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
               onChange={handleChange}
               required
             />
-            <Input
-              label="Country"
-              name="country"
-              placeholder="United Kingdom"
-              value={formData.country}
-              onChange={handleChange}
-            />
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-gray-700 ml-1">Country</label>
+              <div className="relative">
+                <select
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-sm font-semibold text-secondary outline-none focus:ring-2 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
+                >
+                  <option value="">Select a country</option>
+                  {SORTED_COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.name}>
+                      {c.flag} {c.name}
+                    </option>
+                  ))}
+                </select>
+                <RiArrowDownSLine
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                  size={18}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -248,28 +278,17 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
               onChange={handleChange}
               required
             />
-            <div className="grid grid-cols-3 gap-2">
-              <div className="col-span-1">
-                <Input
-                  label="Code"
-                  name="adminCountryCode"
-                  placeholder="+44"
-                  value={formData.adminCountryCode}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="col-span-2">
-                <Input
-                  label="Mobile Number"
-                  name="adminMobile"
-                  placeholder="7700900123"
-                  value={formData.adminMobile}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-            </div>
+            <PhoneInput
+              split
+              label="Mobile Number"
+              dialCode={formData.adminCountryCode}
+              national={formData.adminMobile}
+              dialName="adminCountryCode"
+              nationalName="adminMobile"
+              onChange={handleChange}
+              placeholder="7700900123"
+              required
+            />
           </div>
         </div>
 

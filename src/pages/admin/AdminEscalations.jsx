@@ -313,11 +313,13 @@ const AdminEscalations = () => {
 
   const handleCaseChange = (caseId) => {
     const selectedCase = cases.find(c => c.caseId === caseId);
+    // Only sets the PRIMARY case + candidate name. relatedCaseId is an independent,
+    // optional link to a *different* case (see the Related Case dropdown) and must
+    // not be auto-filled with this case's own id.
     setFormData({
       ...formData,
       caseId,
       candidate: selectedCase?.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : "",
-      relatedCaseId: selectedCase?.id || null,
     });
   };
 
@@ -606,14 +608,22 @@ const AdminEscalations = () => {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Related Case ID</label>
-                <input
-                  type="text"
-                  value={formData.relatedCaseId}
-                  onChange={(e) => setFormData({ ...formData, relatedCaseId: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm"
-                  placeholder="Related case ID (optional)"
-                />
+                <label className="block text-sm font-bold text-gray-700 mb-1">Related Case <span className="text-gray-400 font-normal">(optional)</span></label>
+                <select
+                  value={formData.relatedCaseId ?? ""}
+                  onChange={(e) => setFormData({ ...formData, relatedCaseId: e.target.value ? Number(e.target.value) : null })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
+                >
+                  <option value="">None</option>
+                  {cases
+                    .filter((c) => c.caseId !== formData.caseId)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.caseId} — {c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown'}
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">Link this escalation to another related case (e.g. a family member's application).</p>
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Notes</label>
@@ -754,13 +764,22 @@ const AdminEscalations = () => {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Related Case ID</label>
-                <input
-                  type="text"
-                  value={formData.relatedCaseId}
-                  onChange={(e) => setFormData({ ...formData, relatedCaseId: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm"
-                />
+                <label className="block text-sm font-bold text-gray-700 mb-1">Related Case <span className="text-gray-400 font-normal">(optional)</span></label>
+                <select
+                  value={formData.relatedCaseId ?? ""}
+                  onChange={(e) => setFormData({ ...formData, relatedCaseId: e.target.value ? Number(e.target.value) : null })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 text-sm bg-white"
+                >
+                  <option value="">None</option>
+                  {cases
+                    .filter((c) => c.caseId !== formData.caseId)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.caseId} — {c.candidate ? `${c.candidate.first_name} ${c.candidate.last_name}` : 'Unknown'}
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">Link this escalation to another related case (e.g. a family member's application).</p>
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Notes</label>
