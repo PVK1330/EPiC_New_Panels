@@ -39,7 +39,7 @@ const BusinessPersonnel = () => {
       const res = await getBusinessProfile();
       if (res.data.status === "success") {
         const p = res.data.data.profile || {};
-        
+
         setAuthorisingOfficer({
           name: p.authorisingName || "",
           phone: p.authorisingPhone || "",
@@ -140,7 +140,7 @@ const BusinessPersonnel = () => {
     }
 
     closePersonModal();
-    
+
     // Auto-save to backend
     await persistChanges({
       authorisingOfficer: updatedAuthorising,
@@ -172,7 +172,7 @@ const BusinessPersonnel = () => {
   const removeLevel1User = async (index) => {
     const updated = level1Users.filter((_, i) => i !== index);
     setLevel1Users(updated);
-    
+
     await persistChanges({
       authorisingOfficer,
       keyContact,
@@ -258,19 +258,19 @@ const BusinessPersonnel = () => {
 
   return (
     <motion.div
-      className="space-y-8 pb-10"
+      className="space-y-5 pb-6"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
       {/* Header */}
-      <motion.div variants={cardVariants} className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <motion.div variants={cardVariants} className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-            <Users className="text-primary shrink-0" size={28} />
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+            <Users className="text-primary shrink-0" size={26} />
             Key Personnel
           </h1>
-          <p className="text-primary font-bold text-sm mt-1">
+          <p className="text-primary font-bold text-sm mt-0.5">
             Manage your company's key personnel for UKVI sponsor licence compliance.
           </p>
         </div>
@@ -291,253 +291,255 @@ const BusinessPersonnel = () => {
 
       {/* Form Container */}
       <motion.div
-        className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+        className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
         variants={cardVariants}
       >
-        <h2 className="text-2xl font-black mb-6 text-secondary flex items-center">
-          <User className="mr-2 text-primary" />
-          Key Personnel Details
-        </h2>
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+        <div className="p-5">
+          <h2 className="text-sm font-black text-secondary flex items-center gap-2 mb-4">
+            <User size={15} className="text-primary" />
+            Key Personnel Details
+          </h2>
 
-        <div className="space-y-8">
-          {/* Authorising Officer Section */}
-          <motion.div
-            className="border-b border-gray-200 pb-6"
-            variants={cardVariants}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-black text-secondary">Authorising Officer</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => openPersonModal("authorisingOfficer", "view")}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
-                  title="View"
-                  aria-label="View"
-                >
-                  <Eye size={18} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openPersonModal("authorisingOfficer", "edit")}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
-                  title="Edit"
-                  aria-label="Edit"
-                >
-                  <Pencil size={18} />
-                </button>
+          <div className="space-y-4">
+            {/* Authorising Officer Section */}
+            <motion.div
+              className="border-b border-gray-200 pb-4"
+              variants={cardVariants}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-500">Authorising Officer</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openPersonModal("authorisingOfficer", "view")}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
+                    title="View"
+                    aria-label="View"
+                  >
+                    <Eye size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openPersonModal("authorisingOfficer", "edit")}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
+                    title="Edit"
+                    aria-label="Edit"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-              <table className="min-w-full text-left divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Name</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Phone</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Email</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Job Title</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  <tr className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm font-black text-secondary whitespace-nowrap">{authorisingOfficer.name || "—"}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{authorisingOfficer.phone || "—"}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{authorisingOfficer.email || "—"}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{authorisingOfficer.jobTitle || "—"}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
-
-          {/* Key Contact Section */}
-          <motion.div
-            className="border-b border-gray-200 pb-6"
-            variants={cardVariants}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-black text-secondary">Key Contact</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => openPersonModal("keyContact", "view")}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
-                  title="View"
-                  aria-label="View"
-                >
-                  <Eye size={18} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openPersonModal("keyContact", "edit")}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
-                  title="Edit"
-                  aria-label="Edit"
-                >
-                  <Pencil size={18} />
-                </button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-              <table className="min-w-full text-left divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Name</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Phone</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Email</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Department</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  <tr className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm font-black text-secondary whitespace-nowrap">{keyContact.name || "—"}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{keyContact.phone || "—"}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{keyContact.email || "—"}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{keyContact.department || "—"}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
-
-          {/* HR Manager Section */}
-          <motion.div
-            className="border-b border-gray-200 pb-6"
-            variants={cardVariants}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-black text-secondary flex items-center gap-2">
-              <Briefcase size={20} className="text-primary" />
-              HR Manager
-              </h3>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => openPersonModal("hrManager", "view")}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
-                  title="View"
-                  aria-label="View"
-                >
-                  <Eye size={18} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openPersonModal("hrManager", "edit")}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
-                  title="Edit"
-                  aria-label="Edit"
-                >
-                  <Pencil size={18} />
-                </button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-              <table className="min-w-full text-left divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Name</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Phone</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Email</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Job Title</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  <tr className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm font-black text-secondary whitespace-nowrap">{hrManager.name || "—"}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{hrManager.phone || "—"}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{hrManager.email || "—"}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{hrManager.jobTitle || "—"}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
-
-          {/* Level 1 Users Section */}
-          <motion.div variants={cardVariants}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-black text-secondary flex items-center gap-2">
-                <Users size={20} className="text-primary" />
-                Level 1 Users (SMS Access)
-              </h3>
-              <button
-                type="button"
-                onClick={openAdd}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/15"
-              >
-                <Plus size={16} />
-                Add User
-              </button>
-            </div>
-            <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-              <table className="min-w-full text-left divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Name</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Phone</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Email</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Job Title</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Department</th>
-                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredLevel1Users.map((u, index) => (
-                    <tr key={`${u.email}-${index}`} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-sm font-black text-secondary whitespace-nowrap">{u.name || "—"}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{u.phone || "—"}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{u.email || "—"}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{u.jobTitle || "—"}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-gray-700 whitespace-nowrap">{u.department || "—"}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openView(index)}
-                            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
-                            title="View"
-                            aria-label="View"
-                          >
-                            <Eye size={18} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openEdit(index)}
-                            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
-                            title="Edit"
-                            aria-label="Edit"
-                          >
-                            <Pencil size={18} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeLevel1User(index)}
-                            className="p-2 rounded-lg hover:bg-red-50 text-red-600 hover:text-red-700 transition-colors"
-                            title="Delete"
-                            aria-label="Delete"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredLevel1Users.length === 0 && (
+              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                <table className="min-w-full text-left">
+                  <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-sm font-bold text-gray-500">
-                        No users yet. Click “Add User”.
-                      </td>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Name</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Phone</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Email</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Job Title</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
-        </div>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                      <td className="px-3 py-2 text-sm font-black text-secondary whitespace-nowrap">{authorisingOfficer.name || "—"}</td>
+                      <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{authorisingOfficer.phone || "—"}</td>
+                      <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{authorisingOfficer.email || "—"}</td>
+                      <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{authorisingOfficer.jobTitle || "—"}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
 
+            {/* Key Contact Section */}
+            <motion.div
+              className="border-b border-gray-200 pb-4"
+              variants={cardVariants}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-500">Key Contact</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openPersonModal("keyContact", "view")}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
+                    title="View"
+                    aria-label="View"
+                  >
+                    <Eye size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openPersonModal("keyContact", "edit")}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
+                    title="Edit"
+                    aria-label="Edit"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                <table className="min-w-full text-left">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Name</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Phone</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Email</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Department</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                      <td className="px-3 py-2 text-sm font-black text-secondary whitespace-nowrap">{keyContact.name || "—"}</td>
+                      <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{keyContact.phone || "—"}</td>
+                      <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{keyContact.email || "—"}</td>
+                      <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{keyContact.department || "—"}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+
+            {/* HR Manager Section */}
+            <motion.div
+              className="border-b border-gray-200 pb-4"
+              variants={cardVariants}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                  <Briefcase size={12} className="text-primary" />
+                  HR Manager
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openPersonModal("hrManager", "view")}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
+                    title="View"
+                    aria-label="View"
+                  >
+                    <Eye size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openPersonModal("hrManager", "edit")}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
+                    title="Edit"
+                    aria-label="Edit"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                <table className="min-w-full text-left">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Name</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Phone</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Email</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Job Title</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                      <td className="px-3 py-2 text-sm font-black text-secondary whitespace-nowrap">{hrManager.name || "—"}</td>
+                      <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{hrManager.phone || "—"}</td>
+                      <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{hrManager.email || "—"}</td>
+                      <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{hrManager.jobTitle || "—"}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+
+            {/* Level 1 Users Section */}
+            <motion.div variants={cardVariants}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                  <Users size={12} className="text-primary" />
+                  Level 1 Users (SMS Access)
+                </span>
+                <button
+                  type="button"
+                  onClick={openAdd}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm"
+                >
+                  <Plus size={13} />
+                  Add User
+                </button>
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                <table className="min-w-full text-left">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Name</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Phone</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Email</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Job Title</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Department</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px] text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredLevel1Users.map((u, index) => (
+                      <tr key={`${u.email}-${index}`} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                        <td className="px-3 py-2 text-sm font-black text-secondary whitespace-nowrap">{u.name || "—"}</td>
+                        <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{u.phone || "—"}</td>
+                        <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{u.email || "—"}</td>
+                        <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{u.jobTitle || "—"}</td>
+                        <td className="px-3 py-2 text-sm font-bold text-gray-700 whitespace-nowrap">{u.department || "—"}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openView(index)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
+                              title="View"
+                              aria-label="View"
+                            >
+                              <Eye size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openEdit(index)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
+                              title="Edit"
+                              aria-label="Edit"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeLevel1User(index)}
+                              className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 hover:text-red-700 transition-colors"
+                              title="Delete"
+                              aria-label="Delete"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredLevel1Users.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-3 py-8 text-center text-sm font-bold text-gray-500">
+                          No users yet. Click "Add User".
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          </div>
+        </div>
       </motion.div>
 
       <Modal
@@ -557,7 +559,7 @@ const BusinessPersonnel = () => {
             <button
               type="button"
               onClick={closeUserModal}
-              className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 font-black text-xs hover:bg-gray-50 transition"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-black text-gray-700 hover:bg-gray-50 transition"
             >
               Close
             </button>
@@ -565,7 +567,7 @@ const BusinessPersonnel = () => {
               <button
                 type="button"
                 onClick={saveUserDraft}
-                className="px-4 py-2 rounded-xl bg-primary text-white font-black text-xs hover:bg-primary-dark transition"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm"
               >
                 Save
               </button>
@@ -573,60 +575,60 @@ const BusinessPersonnel = () => {
           </div>
         }
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Name *</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Name *</label>
             <input
               value={userDraft.name}
               disabled={userModal.mode === "view"}
               onChange={(e) => setUserDraft((p) => ({ ...p, name: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
               placeholder="Enter name"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Phone *</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Phone *</label>
             <input
               value={userDraft.phone}
               disabled={userModal.mode === "view"}
               onChange={(e) => setUserDraft((p) => ({ ...p, phone: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
               placeholder="Enter phone number"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Email *</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Email *</label>
             <input
               value={userDraft.email}
               disabled={userModal.mode === "view"}
               onChange={(e) => setUserDraft((p) => ({ ...p, email: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
               placeholder="Enter email address"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Job Title</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Job Title</label>
             <input
               value={userDraft.jobTitle}
               disabled={userModal.mode === "view"}
               onChange={(e) => setUserDraft((p) => ({ ...p, jobTitle: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
               placeholder="Enter job title"
             />
           </div>
           <div className="md:col-span-2">
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Department</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Department</label>
             <input
               value={userDraft.department}
               disabled={userModal.mode === "view"}
               onChange={(e) => setUserDraft((p) => ({ ...p, department: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
               placeholder="Enter department"
             />
           </div>
         </div>
         {userModal.mode !== "view" && (
-          <p className="mt-4 text-[11px] font-bold text-gray-500">
+          <p className="mt-3 text-[11px] font-bold text-gray-500">
             Required: Name, Phone, Email
           </p>
         )}
@@ -657,7 +659,7 @@ const BusinessPersonnel = () => {
             <button
               type="button"
               onClick={closePersonModal}
-              className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 font-black text-xs hover:bg-gray-50 transition"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-black text-gray-700 hover:bg-gray-50 transition"
             >
               Close
             </button>
@@ -665,7 +667,7 @@ const BusinessPersonnel = () => {
               <button
                 type="button"
                 onClick={savePersonDraft}
-                className="px-4 py-2 rounded-xl bg-primary text-white font-black text-xs hover:bg-primary-dark transition"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm"
               >
                 Save
               </button>
@@ -673,56 +675,56 @@ const BusinessPersonnel = () => {
           </div>
         }
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Name *</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Name *</label>
             <input
               value={personDraft.name}
               disabled={personModal.mode !== "edit"}
               onChange={(e) => setPersonDraft((p) => ({ ...p, name: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
               placeholder="Enter name"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Phone *</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Phone *</label>
             <input
               value={personDraft.phone}
               disabled={personModal.mode !== "edit"}
               onChange={(e) => setPersonDraft((p) => ({ ...p, phone: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
               placeholder="Enter phone number"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-700 mb-2 block">Email *</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Email *</label>
             <input
               value={personDraft.email}
               disabled={personModal.mode !== "edit"}
               onChange={(e) => setPersonDraft((p) => ({ ...p, email: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
               placeholder="Enter email address"
             />
           </div>
           {personModal.target === "keyContact" ? (
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Department</label>
+              <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Department</label>
               <input
                 value={personDraft.department}
                 disabled={personModal.mode !== "edit"}
                 onChange={(e) => setPersonDraft((p) => ({ ...p, department: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
                 placeholder="Enter department"
               />
             </div>
           ) : (
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-2 block">Job Title</label>
+              <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Job Title</label>
               <input
                 value={personDraft.jobTitle}
                 disabled={personModal.mode !== "edit"}
                 onChange={(e) => setPersonDraft((p) => ({ ...p, jobTitle: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
                 placeholder="Enter job title"
               />
             </div>

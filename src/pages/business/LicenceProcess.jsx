@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import LicenceStages from "../../components/licence/LicenceStages";
 import IntakeDocumentChecklist from "../../components/licence/IntakeDocumentChecklist";
-import { listLicenceV2Applications, getLicenceV2Application } from "../../services/licenceV2Api";
+import { listLicenceV2Applications, getLicenceV2Application, getLicenceApplicationAuditTrail } from "../../services/licenceV2Api";
 import { getLicenceStages } from "../../services/licenceStageApi";
 import {
   confirmSponsorGovCredentials,
@@ -47,6 +47,26 @@ const STAGE_DESC = Object.fromEntries(LICENCE_STAGES.map((s) => [s.key, s.descri
 const ROLE_LABEL = Object.fromEntries(STAGE_ROLES.map((r) => [r.key, r.label]));
 const GOV_PIPELINE = ["Government Processing", "Decision Pending", "Approved"];
 
+// Maps each LicenceApplicationAudit action token to display label, dot colour, and section.
+const ACTION_META = {
+  SUBMIT:                             { label: "Application submitted",                   tone: "bg-secondary",   section: "Submission" },
+  assign:                             { label: "Caseworker assigned",                     tone: "bg-blue-500",    section: "Assignment" },
+  reassign:                           { label: "Caseworker reassigned",                   tone: "bg-blue-400",    section: "Assignment" },
+  approve:                            { label: "Application approved",                    tone: "bg-emerald-500", section: "Decision" },
+  reject:                             { label: "Application rejected",                    tone: "bg-red-500",     section: "Decision" },
+  request_info:                       { label: "Information requested by case team",      tone: "bg-amber-500",   section: "Review" },
+  under_review:                       { label: "Application placed under review",         tone: "bg-blue-500",    section: "Review" },
+  review_started:                     { label: "Review started",                          tone: "bg-blue-500",    section: "Review" },
+  government_registration_started:    { label: "Government registration started",          tone: "bg-violet-500",  section: "Gov. Pipeline" },
+  government_registration_completed:  { label: "SMS registration completed",              tone: "bg-violet-500",  section: "Gov. Pipeline" },
+  credentials_generated:              { label: "Portal credentials generated",            tone: "bg-violet-500",  section: "Gov. Pipeline" },
+  credentials_requested:              { label: "Credentials sent to sponsor",             tone: "bg-violet-500",  section: "Gov. Pipeline" },
+  credentials_received:               { label: "Credentials receipt confirmed",           tone: "bg-emerald-400", section: "Gov. Pipeline" },
+  government_forms_completed:         { label: "Government application forms completed",  tone: "bg-violet-500",  section: "Gov. Pipeline" },
+  government_submitted:               { label: "Application submitted to UKVI",           tone: "bg-orange-500",  section: "UKVI" },
+  decision_pending:                   { label: "Awaiting UKVI decision",                 tone: "bg-orange-400",  section: "UKVI" },
+};
+
 const LicenceProcess = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -60,6 +80,9 @@ const LicenceProcess = () => {
   const [intakeLoading, setIntakeLoading] = useState(false);
   const [intakeForm, setIntakeForm] = useState({});
   const [intakeSaving, setIntakeSaving] = useState(false);
+  const [timeline, setTimeline] = useState([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [timelineFetched, setTimelineFetched] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -99,9 +122,9 @@ const LicenceProcess = () => {
     return ["timeline", "actions", "intake"].includes(t) ? t : "status";
   }, [searchParams]);
 
-  // Load intake summary whenever the intake tab is active
+  // Load intake summary on mount so the Status-tab banner has data, and again on tab switch to get fresh state.
   useEffect(() => {
-    if (!app?.id || activeTab !== "intake") return;
+    if (!app?.id) return;
     let active = true;
     (async () => {
       try {
@@ -115,7 +138,7 @@ const LicenceProcess = () => {
       finally { if (active) setIntakeLoading(false); }
     })();
     return () => { active = false; };
-  }, [app?.id, activeTab]);
+  }, [app?.id]);
 
   const handleIntakeSave = async () => {
     if (!app?.id || intakeSaving) return;
@@ -227,25 +250,25 @@ const LicenceProcess = () => {
     "government_submission",
   ].includes(s.key) && s.status !== "completed");
 
-  const timeline = useMemo(() => {
-    const entries = [];
-    for (const s of stages) {
-      for (const t of s.tasks || []) {
-        if (t.status === "completed" && t.completedAt) {
-          entries.push({
-            title: `${ROLE_LABEL[t.role] || t.role}: ${t.title}`,
-            stage: s.title,
-            time: t.completedAt,
-            tone: "bg-emerald-500",
-          });
-        }
+  // Fetch audit trail lazily — only when the Timeline tab is first opened.
+  useEffect(() => {
+    if (!app?.id || activeTab !== "timeline" || timelineFetched) return;
+    let active = true;
+    (async () => {
+      try {
+        setTimelineLoading(true);
+        const res = await getLicenceApplicationAuditTrail(app.id);
+        if (!active) return;
+        setTimeline(res?.data?.data || []);
+        setTimelineFetched(true);
+      } catch {
+        /* keep empty state — error already logged server-side */
+      } finally {
+        if (active) setTimelineLoading(false);
       }
-    }
-    if (app?.submittedAt) {
-      entries.push({ title: "Application submitted", stage: "Submission", time: app.submittedAt, tone: "bg-secondary" });
-    }
-    return entries.sort((a, b) => new Date(b.time) - new Date(a.time));
-  }, [stages, app?.submittedAt]);
+    })();
+    return () => { active = false; };
+  }, [app?.id, activeTab, timelineFetched]);
 
   const pendingActions = useMemo(() => {
     const out = [];
@@ -271,27 +294,30 @@ const LicenceProcess = () => {
 
   if (!app) {
     return (
-      <div className="space-y-8 pb-10">
+      <div className="space-y-5 pb-6">
         <Header />
-        <div className="rounded-3xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-          <FileText className="mx-auto text-gray-300 mb-4" size={40} />
-          <h2 className="text-lg font-black text-secondary">No licence application yet</h2>
-          <p className="text-sm font-bold text-gray-500 mt-1 max-w-md mx-auto">
-            Start your sponsor licence application to begin tracking its stages, tasks and progress here.
-          </p>
-          <button
-            onClick={() => navigate("/business/apply-licence-v2")}
-            className="mt-5 inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white font-black px-6 py-3 rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-95"
-          >
-            Start application <ArrowRight size={18} />
-          </button>
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="p-5 text-center">
+            <FileText className="mx-auto text-gray-300 mb-3" size={36} />
+            <h2 className="text-sm font-black text-secondary">No licence application yet</h2>
+            <p className="text-sm font-bold text-gray-500 mt-1 max-w-md mx-auto">
+              Start your sponsor licence application to begin tracking its stages, tasks and progress here.
+            </p>
+            <button
+              onClick={() => navigate("/business/apply-licence-v2")}
+              className="mt-4 inline-flex items-center gap-1.5 bg-primary hover:bg-primary-dark text-white font-black px-3 py-1.5 rounded-lg text-xs shadow-sm transition-all active:scale-95"
+            >
+              Start application <ArrowRight size={14} />
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-5 pb-6">
       <Header
         subtitle={
           <>
@@ -307,25 +333,28 @@ const LicenceProcess = () => {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-red-50 border border-red-100 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
+          className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
         >
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-red-100 rounded-2xl shrink-0">
-              <ShieldAlert className="text-red-600" size={22} />
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg shrink-0">
+                <ShieldAlert className="text-red-600" size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-secondary">Action Required — Information Requested</h3>
+                <p className="text-xs font-bold text-gray-500 mt-0.5">
+                  Your case team has requested additional information. Review the details in the Status tab below.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-black text-secondary">Action Required — Information Requested</h3>
-              <p className="text-sm font-bold text-gray-500">
-                Your case team has requested additional information. Review the details in the Status tab below.
-              </p>
-            </div>
+            <button
+              onClick={() => setTab("status")}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 px-3 py-1.5 text-xs font-black text-white transition shadow-sm shrink-0"
+            >
+              View Request
+            </button>
           </div>
-          <button
-            onClick={() => setTab("status")}
-            className="bg-red-600 hover:bg-red-700 text-white font-black px-5 py-2.5 rounded-xl transition-all text-sm shrink-0 active:scale-95"
-          >
-            View Request
-          </button>
         </motion.div>
       )}
 
@@ -334,25 +363,28 @@ const LicenceProcess = () => {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-blue-50 border border-blue-100 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
+          className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
         >
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-100 rounded-2xl shrink-0">
-              <Info className="text-blue-600" size={22} />
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg shrink-0">
+                <Info className="text-blue-600" size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-secondary">Intake Information Required</h3>
+                <p className="text-xs font-bold text-gray-500 mt-0.5">
+                  Please complete the Information Form and upload your required documents to progress your application.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-black text-secondary">Intake Information Required</h3>
-              <p className="text-sm font-bold text-gray-500">
-                Please complete the Information Form and upload your required documents to progress your application.
-              </p>
-            </div>
+            <button
+              onClick={() => setTab("intake")}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3 py-1.5 text-xs font-black text-white transition shadow-sm shrink-0"
+            >
+              Complete Now
+            </button>
           </div>
-          <button
-            onClick={() => setTab("intake")}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-black px-5 py-2.5 rounded-xl transition-all text-sm shrink-0 active:scale-95"
-          >
-            Complete Now
-          </button>
         </motion.div>
       )}
 
@@ -360,25 +392,28 @@ const LicenceProcess = () => {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-violet-50 border border-violet-100 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
+          className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
         >
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-violet-100 rounded-2xl shrink-0">
-              <Key className="text-violet-600" size={22} />
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-violet-100 rounded-lg shrink-0">
+                <Key className="text-violet-600" size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-secondary">Government Portal — Action Pending</h3>
+                <p className="text-xs font-bold text-gray-500 mt-0.5">
+                  Your UKVI portal credentials are being prepared. Confirm receipt once you receive them from your caseworker.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-black text-secondary">Government Portal — Action Pending</h3>
-              <p className="text-sm font-bold text-gray-500">
-                Your UKVI portal credentials are being prepared. Confirm receipt once you receive them from your caseworker.
-              </p>
-            </div>
+            <button
+              onClick={() => setTab("status")}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-1.5 text-xs font-black text-white transition shadow-sm shrink-0"
+            >
+              View Credentials
+            </button>
           </div>
-          <button
-            onClick={() => setTab("status")}
-            className="bg-violet-600 hover:bg-violet-700 text-white font-black px-5 py-2.5 rounded-xl transition-all text-sm shrink-0 active:scale-95"
-          >
-            View Credentials
-          </button>
         </motion.div>
       )}
 
@@ -413,20 +448,21 @@ const LicenceProcess = () => {
 
       {/* ── Status Tab ──────────────────────────────────────────────────────── */}
       {activeTab === "status" && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Current step card */}
           {currentStage && (
-            <div className="rounded-2xl border border-gray-100 bg-white p-5 md:p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/5 border border-gray-100">
-                  <ClipboardList className="text-primary" size={26} />
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+              <div className="p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/5 border border-gray-100">
+                  <ClipboardList className="text-primary" size={22} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-black uppercase tracking-widest text-gray-400">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
                     Step {currentStage.order} of {stages.length} · {doneCount} complete
                   </p>
-                  <h2 className="text-xl font-black text-secondary tracking-tight">{currentStage.title}</h2>
-                  <p className="text-sm font-bold text-gray-500 mt-0.5">{STAGE_DESC[currentStage.key]}</p>
+                  <h2 className="text-sm font-black text-secondary tracking-tight">{currentStage.title}</h2>
+                  <p className="text-xs font-bold text-gray-500 mt-0.5">{STAGE_DESC[currentStage.key]}</p>
                 </div>
               </div>
             </div>
@@ -434,143 +470,149 @@ const LicenceProcess = () => {
 
           {/* ── Government Pipeline Panel ── */}
           {isGovPipeline && (
-            <div className="rounded-2xl border border-violet-100 bg-violet-50 p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <Landmark className="text-violet-500" size={18} />
-                <h3 className="text-sm font-black text-secondary">Government Pipeline</h3>
-                <span className={`ml-auto text-[10px] font-black px-2.5 py-1 rounded-full ${
-                  app.status === "Government Processing" ? "bg-violet-200 text-violet-700" :
-                  app.status === "Decision Pending"       ? "bg-orange-100 text-orange-700" :
-                                                            "bg-emerald-100 text-emerald-700"
-                }`}>{app.status}</span>
-              </div>
-
-              {/* ── SMS / Registration panel ── */}
-              <div className="bg-white rounded-xl p-4 border border-violet-100 space-y-3">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sponsor Management System (SMS)</p>
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+              <div className="p-5 space-y-3">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="text-emerald-500 shrink-0" size={16} />
-                  <p className="text-sm font-bold text-secondary">Your organisation has been registered on the UK Visas &amp; Immigration SMS portal.</p>
+                  <Landmark className="text-violet-500" size={16} />
+                  <h3 className="text-sm font-black text-secondary">Government Pipeline</h3>
+                  <span className={`ml-auto text-[10px] font-black px-2 py-0.5 rounded-full ${
+                    app.status === "Government Processing" ? "bg-violet-200 text-violet-700" :
+                    app.status === "Decision Pending"       ? "bg-orange-100 text-orange-700" :
+                                                              "bg-emerald-100 text-emerald-700"
+                  }`}>{app.status}</span>
                 </div>
-                {app.governmentRegistrationRef ? (
-                  <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5">
-                    <span className="text-xs font-bold text-gray-500">Government Registration Reference</span>
-                    <span className="text-xs font-black text-secondary tracking-wider">{app.governmentRegistrationRef}</span>
-                  </div>
-                ) : (
-                  <p className="text-xs font-bold text-gray-400">
-                    Your SMS registration reference will appear here once your caseworker completes the registration step.
-                  </p>
-                )}
-              </div>
 
-              {/* ── UKVI Portal Credentials Confirmation ── */}
-              {app.status === "Government Processing" && (
-                <div className="bg-white rounded-xl p-4 border border-amber-100">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-amber-50 rounded-lg shrink-0 mt-0.5">
-                      <Key className="text-amber-500" size={16} />
+                {/* ── SMS / Registration panel ── */}
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-3">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Sponsor Management System (SMS)</p>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="text-emerald-500 shrink-0" size={15} />
+                    <p className="text-xs font-bold text-secondary">Your organisation has been registered on the UK Visas &amp; Immigration SMS portal.</p>
+                  </div>
+                  {app.governmentRegistrationRef ? (
+                    <div className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-100">
+                      <span className="text-[10px] font-bold text-gray-500">Government Registration Reference</span>
+                      <span className="text-[10px] font-black text-secondary tracking-wider">{app.governmentRegistrationRef}</span>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-black text-secondary mb-1">UKVI Online Application Portal Credentials</p>
-                      <p className="text-xs font-bold text-gray-500 mb-4 leading-relaxed">
-                        Your caseworker will share UKVI portal login credentials via your registered contact details.
-                        Once you receive them, confirm below — this lets your case team know you have access and can progress to the next stage.
-                      </p>
-                      {isCredConfirmed ? (
-                        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5 text-emerald-700">
-                          <CheckCircle2 size={16} className="shrink-0" />
-                          <span className="text-xs font-black">Credentials receipt confirmed — thank you</span>
+                  ) : (
+                    <p className="text-xs font-bold text-gray-400">
+                      Your SMS registration reference will appear here once your caseworker completes the registration step.
+                    </p>
+                  )}
+                </div>
+
+                {/* ── UKVI Portal Credentials Confirmation ── */}
+                {app.status === "Government Processing" && (
+                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <div className="flex items-start gap-3">
+                      <div className="p-1.5 bg-amber-50 rounded-lg shrink-0 mt-0.5">
+                        <Key className="text-amber-500" size={14} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-black text-secondary mb-1">UKVI Online Application Portal Credentials</p>
+                        <p className="text-xs font-bold text-gray-500 mb-3 leading-relaxed">
+                          Your caseworker will share UKVI portal login credentials via your registered contact details.
+                          Once you receive them, confirm below — this lets your case team know you have access and can progress to the next stage.
+                        </p>
+                        {isCredConfirmed ? (
+                          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-700">
+                            <CheckCircle2 size={14} className="shrink-0" />
+                            <span className="text-[10px] font-black">Credentials receipt confirmed — thank you</span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={handleConfirmCredentials}
+                            disabled={credLoading}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-black text-white transition shadow-sm disabled:opacity-60 active:scale-95"
+                          >
+                            {credLoading
+                              ? <Loader2 size={13} className="animate-spin" />
+                              : <Check size={13} />}
+                            Confirm Credentials Received
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── UKVI Submission details ── */}
+                {app.governmentSubmissionRef && (
+                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-3">UKVI Application Submission</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-[10px] text-gray-400 font-bold mb-1">Submission Reference</p>
+                        <p className="text-xs font-black text-secondary">{app.governmentSubmissionRef}</p>
+                      </div>
+                      {app.governmentSubmissionDate && (
+                        <div>
+                          <p className="text-[10px] text-gray-400 font-bold mb-1">Submitted On</p>
+                          <p className="text-xs font-black text-secondary">{formatDate(app.governmentSubmissionDate)}</p>
                         </div>
-                      ) : (
-                        <button
-                          onClick={handleConfirmCredentials}
-                          disabled={credLoading}
-                          className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-black px-5 py-2.5 rounded-xl text-xs transition-all active:scale-95 shadow-md shadow-amber-100 disabled:opacity-60"
-                        >
-                          {credLoading
-                            ? <Loader2 size={14} className="animate-spin" />
-                            : <Check size={14} />}
-                          Confirm Credentials Received
-                        </button>
                       )}
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ── UKVI Submission details ── */}
-              {app.governmentSubmissionRef && (
-                <div className="bg-white rounded-xl p-4 border border-violet-100">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">UKVI Application Submission</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-bold mb-1">Submission Reference</p>
-                      <p className="text-sm font-black text-secondary">{app.governmentSubmissionRef}</p>
-                    </div>
-                    {app.governmentSubmissionDate && (
-                      <div>
-                        <p className="text-[10px] text-gray-400 font-bold mb-1">Submitted On</p>
-                        <p className="text-sm font-black text-secondary">{formatDate(app.governmentSubmissionDate)}</p>
+                    {app.status === "Decision Pending" && (
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <p className="text-xs font-bold text-orange-600">
+                          Your application has been submitted to UKVI. We are awaiting their decision — this typically takes 8–12 weeks. You will be notified when a decision is made.
+                        </p>
                       </div>
                     )}
                   </div>
-                  {app.status === "Decision Pending" && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <p className="text-xs font-bold text-orange-600">
-                        Your application has been submitted to UKVI. We are awaiting their decision — this typically takes 8–12 weeks. You will be notified when a decision is made.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 
           {/* ── Information Request Response ── */}
           {isInfoRequested && (
-            <div className="rounded-2xl border border-red-100 bg-red-50 p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="text-red-500 shrink-0" size={18} />
-                <h3 className="text-sm font-black text-red-600">Information Requested by Your Case Team</h3>
-              </div>
-
-              {app.adminNotes && (
-                <div className="bg-white rounded-xl p-4 border border-red-100">
-                  <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-2">Message from caseworker</p>
-                  <p className="text-sm font-bold text-secondary leading-relaxed">{app.adminNotes}</p>
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+              <div className="p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="text-red-500 shrink-0" size={16} />
+                  <h3 className="text-sm font-black text-red-600">Information Requested by Your Case Team</h3>
                 </div>
-              )}
 
-              {app.requestedDocuments && (
-                <div>
-                  <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-2">Requested documents / information</p>
-                  <div className="flex flex-wrap gap-2">
-                    {(Array.isArray(app.requestedDocuments)
-                      ? app.requestedDocuments
-                      : [app.requestedDocuments]
-                    ).map((doc, i) => (
-                      <span key={doc} className="bg-white border border-red-200 text-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wide">
-                        {doc}
-                      </span>
-                    ))}
+                {app.adminNotes && (
+                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <p className="text-[10px] font-black text-red-400 uppercase tracking-wider mb-2">Message from caseworker</p>
+                    <p className="text-xs font-bold text-secondary leading-relaxed">{app.adminNotes}</p>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="flex flex-wrap gap-3 pt-1">
-                <Link
-                  to="/business/licence"
-                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-black px-5 py-2.5 rounded-xl text-xs transition-all active:scale-95 shadow-md shadow-red-100"
-                >
-                  <Upload size={14} /> Update Application &amp; Upload Documents
-                </Link>
-                <Link
-                  to="/business/licence-documents"
-                  className="flex items-center gap-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 font-black px-5 py-2.5 rounded-xl text-xs transition-all"
-                >
-                  <FileText size={14} /> Manage Documents
-                </Link>
+                {app.requestedDocuments && (
+                  <div>
+                    <p className="text-[10px] font-black text-red-400 uppercase tracking-wider mb-2">Requested documents / information</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(Array.isArray(app.requestedDocuments)
+                        ? app.requestedDocuments
+                        : [app.requestedDocuments]
+                      ).map((doc, i) => (
+                        <span key={doc} className="bg-white border border-red-200 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide">
+                          {doc}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-3 pt-1">
+                  <Link
+                    to="/business/licence"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 px-3 py-1.5 text-xs font-black text-white transition shadow-sm active:scale-95"
+                  >
+                    <Upload size={13} /> Update Application &amp; Upload Documents
+                  </Link>
+                  <Link
+                    to="/business/licence-documents"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-white text-red-600 border border-red-200 hover:bg-red-50 font-black px-3 py-1.5 text-xs transition"
+                  >
+                    <FileText size={13} /> Manage Documents
+                  </Link>
+                </div>
               </div>
             </div>
           )}
@@ -587,7 +629,7 @@ const LicenceProcess = () => {
 
       {/* ── Intake Tab ──────────────────────────────────────────────────────── */}
       {activeTab === "intake" && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {intakeLoading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -596,40 +638,44 @@ const LicenceProcess = () => {
             <>
               {/* Readiness indicator */}
               {intakeData?.readiness && (
-                <div className={`rounded-2xl border p-4 flex items-start gap-3 ${
-                  intakeData.readiness.isReady
-                    ? "bg-emerald-50 border-emerald-100"
-                    : "bg-amber-50 border-amber-100"
-                }`}>
-                  {intakeData.readiness.isReady
-                    ? <CheckCircle2 className="text-emerald-500 shrink-0 mt-0.5" size={18} />
-                    : <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={18} />
-                  }
-                  <div>
-                    <p className={`text-sm font-black ${intakeData.readiness.isReady ? "text-emerald-700" : "text-amber-700"}`}>
-                      {intakeData.readiness.isReady
-                        ? "Intake complete — your case team can proceed to Government Registration."
-                        : "Intake not yet complete"}
-                    </p>
-                    {!intakeData.readiness.isReady && intakeData.readiness.reasons?.map((r, i) => (
-                      <p key={r} className="text-xs text-amber-600 mt-1">• {r}</p>
-                    ))}
+                <div className={`rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative`}>
+                  <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+                  <div className={`p-5 flex items-start gap-3 ${
+                    intakeData.readiness.isReady
+                      ? "bg-emerald-50/50"
+                      : "bg-amber-50/50"
+                  }`}>
+                    {intakeData.readiness.isReady
+                      ? <CheckCircle2 className="text-emerald-500 shrink-0 mt-0.5" size={16} />
+                      : <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={16} />
+                    }
+                    <div>
+                      <p className={`text-sm font-black ${intakeData.readiness.isReady ? "text-emerald-700" : "text-amber-700"}`}>
+                        {intakeData.readiness.isReady
+                          ? "Intake complete — your case team can proceed to Government Registration."
+                          : "Intake not yet complete"}
+                      </p>
+                      {!intakeData.readiness.isReady && intakeData.readiness.reasons?.map((r, i) => (
+                        <p key={r} className="text-xs text-amber-600 mt-1">• {r}</p>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* Information Form */}
-              <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+              <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
                 <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-black text-secondary">Sponsor Information Form</h3>
                     <p className="text-xs text-gray-500 mt-0.5">Complete all 12 fields before submitting</p>
                   </div>
                   {intakeData?.form?.isComplete && (
-                    <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">Submitted</span>
+                    <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Submitted</span>
                   )}
                 </div>
-                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
                     { key: "tradingName",                   label: "Trading Name",                         type: "text" },
                     { key: "owningLimitedCompany",          label: "Owning Limited Company",               type: "text" },
@@ -643,20 +689,20 @@ const LicenceProcess = () => {
                     { key: "numberOfCosRequired",           label: "Number of CoS Required",              type: "number" },
                   ].map(({ key, label, type }) => (
                     <div key={key}>
-                      <label className="block text-xs font-bold text-gray-600 mb-1">{label}</label>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">{label}</label>
                       <input
                         type={type}
                         value={intakeForm[key] || ""}
                         onChange={(e) => setIntakeForm((f) => ({ ...f, [key]: e.target.value }))}
                         disabled={intakeData?.form?.isComplete}
-                        className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400"
+                        className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400"
                       />
                     </div>
                   ))}
 
                   {/* Premises Address */}
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-gray-600 mb-1">Premises Address</label>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Premises Address</label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         { sub: "line1", ph: "Address Line 1" },
@@ -676,7 +722,7 @@ const LicenceProcess = () => {
                             premisesAddress: { ...(f.premisesAddress || {}), [sub]: e.target.value },
                           }))}
                           disabled={intakeData?.form?.isComplete}
-                          className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400"
+                          className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400"
                         />
                       ))}
                     </div>
@@ -684,8 +730,8 @@ const LicenceProcess = () => {
 
                   {/* Job Titles */}
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-gray-600 mb-1">
-                      Job Titles Required <span className="text-gray-400">(comma-separated)</span>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
+                      Job Titles Required <span className="text-gray-400 normal-case">(comma-separated)</span>
                     </label>
                     <input
                       type="text"
@@ -696,7 +742,7 @@ const LicenceProcess = () => {
                       }))}
                       disabled={intakeData?.form?.isComplete}
                       placeholder="e.g. Software Engineer, Product Manager"
-                      className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400"
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400"
                     />
                   </div>
                 </div>
@@ -706,17 +752,17 @@ const LicenceProcess = () => {
                     <button
                       onClick={handleIntakeSave}
                       disabled={intakeSaving}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-black rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition"
                     >
-                      <Save size={14} />
+                      <Save size={13} />
                       {intakeSaving ? "Saving…" : "Save Draft"}
                     </button>
                     <button
                       onClick={handleIntakeSubmit}
                       disabled={intakeSaving}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-black rounded-xl bg-primary text-white hover:bg-primary-dark shadow-md shadow-primary/20 disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-lg bg-primary text-white hover:bg-primary-dark shadow-sm disabled:opacity-50 transition"
                     >
-                      <Check size={14} />
+                      <Check size={13} />
                       {intakeSaving ? "Submitting…" : "Submit Form"}
                     </button>
                   </div>
@@ -724,7 +770,8 @@ const LicenceProcess = () => {
               </div>
 
               {/* Document Checklist */}
-              <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+              <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
                 <div className="px-5 py-4 border-b border-gray-100">
                   <h3 className="text-sm font-black text-secondary">Document Checklist</h3>
                   <p className="text-xs text-gray-500 mt-0.5">Upload all required documents. Your caseworker will verify each one.</p>
@@ -749,28 +796,54 @@ const LicenceProcess = () => {
 
       {/* ── Timeline Tab ─────────────────────────────────────────────────────── */}
       {activeTab === "timeline" && (
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 md:p-8 shadow-sm max-w-3xl">
-          {timeline.length > 0 ? (
-            timeline.map((e, i) => (
-              <div key={`${e.title}-${e.time}-${i}`} className="flex gap-4">
-                <div className="flex flex-col items-center w-6 shrink-0">
-                  <div className={`mt-1.5 h-3 w-3 rounded-full shrink-0 ${e.tone}`} />
-                  {i < timeline.length - 1 && <div className="w-0.5 flex-1 min-h-[20px] bg-gray-200" />}
-                </div>
-                <div className="pb-6 flex-1 min-w-0">
-                  <p className="text-sm font-black text-secondary">{e.title}</p>
-                  <p className="text-[11px] font-bold text-gray-400 mt-0.5">
-                    {e.stage} · {formatDateTime(e.time)}
-                  </p>
-                </div>
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative max-w-3xl">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-black text-secondary">Application History</h3>
+            <p className="text-[11px] font-bold text-gray-400 mt-0.5">Every status change, assignment, and action on this application.</p>
+          </div>
+          <div className="p-5">
+            {timelineLoading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="w-7 h-7 animate-spin text-primary" />
               </div>
-            ))
-          ) : (
-            <div className="text-center py-10">
-              <Clock3 className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-              <p className="text-sm font-bold text-gray-400">No activity yet.</p>
-            </div>
-          )}
+            ) : timeline.length > 0 ? (
+              timeline.map((entry, i) => {
+                const meta = ACTION_META[entry.action] || { label: entry.action, tone: "bg-gray-400", section: "Event" };
+                const actorName = entry.actor
+                  ? [entry.actor.first_name, entry.actor.last_name].filter(Boolean).join(" ") || null
+                  : null;
+                const showNotes = entry.notes && ["request_info", "reject", "approve"].includes(entry.action);
+                return (
+                  <div key={entry.id} className="flex gap-4">
+                    <div className="flex flex-col items-center w-6 shrink-0">
+                      <div className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${meta.tone}`} />
+                      {i < timeline.length - 1 && <div className="w-0.5 flex-1 min-h-[20px] bg-gray-200" />}
+                    </div>
+                    <div className="pb-5 flex-1 min-w-0">
+                      <p className="text-sm font-black text-secondary">{meta.label}</p>
+                      <p className="text-[11px] font-bold text-gray-400 mt-0.5">
+                        {meta.section}
+                        {actorName && <> · <span className="text-gray-500">{actorName}</span></>}
+                        {" · "}{formatDateTime(entry.created_at)}
+                      </p>
+                      {showNotes && (
+                        <p className="mt-1.5 text-[11px] font-bold text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 leading-relaxed">
+                          "{entry.notes}"
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-10">
+                <Clock3 className="mx-auto h-10 w-10 text-gray-300 mb-3" />
+                <p className="text-sm font-bold text-gray-400">No activity recorded yet.</p>
+                <p className="text-[11px] font-bold text-gray-300 mt-1">Events will appear here as your application progresses.</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -781,32 +854,38 @@ const LicenceProcess = () => {
             pendingActions.map((a, idx) => (
               <div
                 key={`${a.title}-${idx}`}
-                className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border border-gray-100 bg-white p-4 md:p-5 shadow-sm"
+                className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
               >
-                <span className={`h-2 w-2 rounded-full shrink-0 ${a.current ? "bg-primary" : "bg-gray-300"}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black text-secondary">
-                    {a.title}
-                    {a.current && (
-                      <span className="text-[10px] font-black text-primary border border-primary/20 bg-primary/5 rounded-full px-2 py-0.5 ml-2 uppercase">
-                        Current
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs font-bold text-gray-500 mt-0.5">{a.stage}</p>
+                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+                <div className="p-5 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <span className={`h-2 w-2 rounded-full shrink-0 ${a.current ? "bg-primary" : "bg-gray-300"}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-black text-secondary">
+                      {a.title}
+                      {a.current && (
+                        <span className="text-[10px] font-black text-primary border border-primary/20 bg-primary/5 rounded-full px-2 py-0.5 ml-2 uppercase">
+                          Current
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs font-bold text-gray-500 mt-0.5">{a.stage}</p>
+                  </div>
+                  <Link
+                    to={a.cta.to}
+                    className="shrink-0 inline-flex items-center gap-1.5 justify-center rounded-lg bg-secondary px-3 py-1.5 text-xs font-black text-white hover:bg-secondary-dark shadow-sm transition-all"
+                  >
+                    {a.cta.label} <ArrowRight size={13} />
+                  </Link>
                 </div>
-                <Link
-                  to={a.cta.to}
-                  className="shrink-0 inline-flex items-center gap-1.5 justify-center rounded-lg bg-secondary px-4 py-2.5 text-xs font-black text-white hover:bg-secondary-dark shadow-md shadow-secondary/20 transition-all"
-                >
-                  {a.cta.label} <ArrowRight size={14} />
-                </Link>
               </div>
             ))
           ) : (
-            <div className="text-center py-10 bg-white rounded-2xl border border-gray-100">
-              <CircleCheck className="mx-auto h-12 w-12 text-emerald-400 mb-3" />
-              <p className="text-sm font-bold text-gray-400">No pending actions — you&apos;re all caught up!</p>
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+              <div className="text-center p-5">
+                <CircleCheck className="mx-auto h-10 w-10 text-emerald-400 mb-3" />
+                <p className="text-sm font-bold text-gray-400">No pending actions — you&apos;re all caught up!</p>
+              </div>
             </div>
           )}
         </div>
@@ -817,11 +896,11 @@ const LicenceProcess = () => {
 
 const Header = ({ subtitle }) => (
   <div>
-    <h1 className="text-3xl font-black text-secondary tracking-tight flex items-center gap-3">
-      <LayoutDashboard className="text-primary" size={30} />
+    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+      <LayoutDashboard className="text-primary" size={26} />
       Licence Tracking
     </h1>
-    <p className="text-gray-500 font-bold text-sm mt-1">
+    <p className="text-primary font-bold text-sm mt-0.5">
       {subtitle || "Track your sponsor licence application through every stage."}
     </p>
   </div>

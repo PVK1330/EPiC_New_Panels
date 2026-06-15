@@ -297,23 +297,23 @@ const BusinessCompliance = () => {
   };
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-5 pb-6">
       <motion.div
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <LayoutDashboard className="text-primary" size={36} />
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+          <LayoutDashboard className="text-primary" size={26} />
           Compliance Dashboard
         </h1>
-        <p className="text-primary font-bold text-sm mt-1">
+        <p className="text-primary font-bold text-sm mt-0.5">
           Track your business compliance and worker visa status.
         </p>
       </motion.div>
 
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -322,99 +322,55 @@ const BusinessCompliance = () => {
           <motion.div
             key={label}
             variants={cardVariants}
-            className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm flex items-center gap-4"
+            className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm flex items-center gap-3"
           >
-            <div className={`p-3 ${bg} rounded-xl`}>
-              <Icon className={`${color} h-6 w-6`} />
+            <div className={`p-2 ${bg} rounded-lg`}>
+              <Icon className={`${color} h-5 w-5`} />
             </div>
             <div>
-              <p className="text-xs font-bold text-gray-600">{label}</p>
-              <p className="text-2xl font-black text-secondary">{value}</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">{label}</p>
+              <p className="text-xl font-black text-secondary">{value}</p>
             </div>
           </motion.div>
         ))}
       </motion.div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-4">
         <motion.div
-          className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+          className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-black text-secondary flex items-center gap-2">
-              <UserRoundCog size={24} className="text-primary" />
-              Flag by Worker
-            </h3>
-          </div>
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-black text-secondary flex items-center gap-2">
+                <UserRoundCog size={15} className="text-primary" />
+                Flag by Worker
+              </h3>
+            </div>
 
-          <div className="space-y-4">
-            {riskByWorkers.map((item) => (
-              <div
-                key={item.id}
-                className="p-4 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h4 className="text-sm font-black text-secondary">
-                      {item.name} - {item.visaType}
-                    </h4>
-                    <p className="text-xs font-bold text-gray-600 mt-1">{item.issue}</p>
-                    <p className="text-[10px] font-bold text-gray-500 mt-1">Due: {item.expiryDate}</p>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-2 ml-4">
-                    <span
-                      className={`text-[10px] font-black px-2 py-1 rounded ${getPriorityColor(item.riskLevel)}`}
-                    >
-                      {item.riskLevel}
-                    </span>
-                    <div className="flex items-center gap-1 text-[10px] font-bold">
-                      {getStatusIcon(item.status)}
-                      {item.status}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div
-          className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-black text-secondary flex items-center gap-2">
-              <Calendar size={24} className="text-primary" />
-              Upcoming Reporting Deadlines
-            </h3>
-          </div>
-
-          <div className="space-y-4">
-            {deadlines.length > 0 ? (
-              deadlines.map((item) => (
+            <div className="space-y-3">
+              {riskByWorkers.map((item) => (
                 <div
                   key={item.id}
-                  className="p-4 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition cursor-pointer"
+                  className="p-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h4 className="text-sm font-black text-secondary">{item.worker}</h4>
-                      <p className="text-xs font-bold text-gray-600 mt-1">{item.eventType}</p>
-                      <p className="text-[10px] font-bold text-gray-500 mt-1">Deadline: {item.deadline}</p>
+                      <h4 className="text-sm font-black text-secondary">
+                        {item.name} - {item.visaType}
+                      </h4>
+                      <p className="text-xs font-bold text-gray-600 mt-1">{item.issue}</p>
+                      <p className="text-[10px] font-bold text-gray-500 mt-1">Due: {item.expiryDate}</p>
                     </div>
 
-                    <div className="flex flex-col items-end gap-2 ml-4">
+                    <div className="flex flex-col items-end gap-1.5 ml-4">
                       <span
-                        className={`text-[10px] font-black px-2 py-1 rounded ${getPriorityColor(
-                          item.risk === 'high' ? 'High' : item.risk === 'medium' ? 'Medium' : 'Low'
-                        )}`}
+                        className={`text-[10px] font-black px-2 py-0.5 rounded-full ${getPriorityColor(item.riskLevel)}`}
                       >
-                        {item.daysRemaining < 0 ? 'Overdue' : `${item.daysRemaining} days left`}
+                        {item.riskLevel}
                       </span>
                       <div className="flex items-center gap-1 text-[10px] font-bold">
                         {getStatusIcon(item.status)}
@@ -423,12 +379,62 @@ const BusinessCompliance = () => {
                     </div>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-10">
-                <p className="text-sm font-bold text-gray-400 italic">No upcoming reporting deadlines.</p>
-              </div>
-            )}
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+        >
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-black text-secondary flex items-center gap-2">
+                <Calendar size={15} className="text-primary" />
+                Upcoming Reporting Deadlines
+              </h3>
+            </div>
+
+            <div className="space-y-3">
+              {deadlines.length > 0 ? (
+                deadlines.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition cursor-pointer"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h4 className="text-sm font-black text-secondary">{item.worker}</h4>
+                        <p className="text-xs font-bold text-gray-600 mt-1">{item.eventType}</p>
+                        <p className="text-[10px] font-bold text-gray-500 mt-1">Deadline: {item.deadline}</p>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1.5 ml-4">
+                        <span
+                          className={`text-[10px] font-black px-2 py-0.5 rounded-full ${getPriorityColor(
+                            item.risk === 'high' ? 'High' : item.risk === 'medium' ? 'Medium' : 'Low'
+                          )}`}
+                        >
+                          {item.daysRemaining < 0 ? 'Overdue' : `${item.daysRemaining} days left`}
+                        </span>
+                        <div className="flex items-center gap-1 text-[10px] font-bold">
+                          {getStatusIcon(item.status)}
+                          {item.status}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-10">
+                  <p className="text-sm font-bold text-gray-400 italic">No upcoming reporting deadlines.</p>
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
       </div>

@@ -140,51 +140,54 @@ const BusinessNotifications = () => {
   const unreadCount = stats.unread;
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-5 pb-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <LayoutDashboard className="text-primary" size={36} />
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+          <LayoutDashboard className="text-primary" size={26} />
           Notifications
         </h1>
-        <p className="text-primary font-bold text-sm mt-1">
+        <p className="text-primary font-bold text-sm mt-0.5">
           Stay updated with important alerts and messages.
         </p>
       </motion.div>
 
       {/* Stats Cards */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        className="grid grid-cols-1 md:grid-cols-3 gap-3"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900">
+        <motion.div variants={cardVariants} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="flex items-center gap-2.5 mb-3 text-gray-900">
             <Bell size={20} className="text-primary" />
-            <span className="font-black">Total Notifications</span>
+            <span className="text-sm font-black">Total Notifications</span>
           </div>
           <p className="text-3xl font-black text-secondary">{stats.total}</p>
         </motion.div>
 
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900">
+        <motion.div variants={cardVariants} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="flex items-center gap-2.5 mb-3 text-gray-900">
             <AlertCircle size={20} className="text-amber-500" />
-            <span className="font-black">Unread</span>
+            <span className="text-sm font-black">Unread</span>
           </div>
-          <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-sm font-black text-amber-700">
+          <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700">
             {stats.unread}
           </span>
         </motion.div>
 
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900">
+        <motion.div variants={cardVariants} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="flex items-center gap-2.5 mb-3 text-gray-900">
             <CheckCircle2 size={20} className="text-emerald-600" />
-            <span className="font-black">Read</span>
+            <span className="text-sm font-black">Read</span>
           </div>
           <p className="text-3xl font-black text-secondary">{stats.read}</p>
         </motion.div>
@@ -192,11 +195,12 @@ const BusinessNotifications = () => {
 
       {/* Filter */}
       <motion.div
-        className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+        className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm overflow-hidden relative"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
         <div className="flex items-center gap-2">
           <Filter size={18} className="text-gray-400" />
           <select
@@ -225,7 +229,7 @@ const BusinessNotifications = () => {
             <motion.div
               key={notif.id}
               variants={cardVariants}
-              className={`border rounded-xl p-4 flex items-start gap-4 transition-colors cursor-pointer ${getNotificationColor(notif.type)} ${
+              className={`border rounded-xl px-3 py-2.5 flex items-start gap-3 transition-colors cursor-pointer ${getNotificationColor(notif.type)} ${
                 !notif.read ? "border-l-4 border-l-primary" : ""
               }`}
               onClick={() => handleMarkAsRead(notif.id)}
@@ -246,7 +250,7 @@ const BusinessNotifications = () => {
                   e.stopPropagation();
                   handleDelete(notif.id);
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-red-600"
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-red-600"
               >
                 <Trash2 size={18} />
               </button>
@@ -255,9 +259,10 @@ const BusinessNotifications = () => {
         ) : (
           <motion.div
             variants={cardVariants}
-            className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm"
+            className="rounded-2xl border border-gray-200 bg-white p-5 text-center shadow-sm overflow-hidden relative"
           >
-            <Bell size={48} className="mx-auto text-gray-300 mb-4" />
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+            <Bell size={36} className="mx-auto text-gray-300 mb-3" />
             <p className="text-sm font-bold text-gray-600">No notifications at the moment</p>
           </motion.div>
         )}

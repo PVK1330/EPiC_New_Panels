@@ -11,10 +11,6 @@ const Field = ({ label, required, children }) => (
   </div>
 );
 
-function fmt(n) {
-  return typeof n === "number" ? `£${n.toLocaleString("en-GB")}` : "—";
-}
-
 const DECLARATIONS = [
   { key: "accuracyConfirmed", label: "I confirm that all the information provided in this application is accurate and complete to the best of my knowledge." },
   { key: "dutiesUnderstood", label: "I understand the duties and responsibilities of a licensed sponsor under UK immigration law." },
@@ -23,7 +19,6 @@ const DECLARATIONS = [
 
 export default function Step8Declarations({ data, onChange, onBack, onSubmit, submitting, submitErrors }) {
   const dec = data.declarations || {};
-  const fee = data.fee || {};
 
   const set = (key, val) => onChange({ declarations: { ...dec, [key]: val } });
 
@@ -34,28 +29,8 @@ export default function Step8Declarations({ data, onChange, onBack, onSubmit, su
     <div className="space-y-8">
       <div>
         <h2 className="text-xl font-black text-secondary mb-1">Declarations &amp; Submit</h2>
-        <p className="text-sm font-bold text-gray-400">Review the fee summary, make your declarations, and submit your application.</p>
+        <p className="text-sm font-bold text-gray-400">Make your declarations and submit your application.</p>
       </div>
-
-      {/* Fee Summary */}
-      {(fee.base > 0 || fee.total > 0) && (
-        <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 space-y-3">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Fee Summary</p>
-          <div className="flex justify-between text-sm font-bold text-secondary">
-            <span>Application Fee</span><span>{fmt(fee.base ?? fee.total)}</span>
-          </div>
-          {fee.iscEstimate > 0 && (
-            <div className="flex justify-between text-sm font-bold text-gray-400">
-              <span>ISC Estimate (per CoS, informational)</span><span>{fmt(fee.iscEstimate)}</span>
-            </div>
-          )}
-          <div className="pt-2 border-t border-gray-200 flex justify-between font-black text-secondary">
-            <span>Total Due on Application</span>
-            <span className="text-primary text-lg">{fmt(fee.total ?? fee.base)}</span>
-          </div>
-          <p className="text-[11px] font-bold text-gray-400">Fee is payable to the Home Office directly. Payment instructions will be provided after submission.</p>
-        </div>
-      )}
 
       {/* Declaration checkboxes */}
       <div className="space-y-4">
@@ -106,7 +81,7 @@ export default function Step8Declarations({ data, onChange, onBack, onSubmit, su
           Back
         </button>
         <button
-          onClick={() => canSubmit && onSubmit({ declarations: dec })}
+          onClick={() => !submitting && canSubmit && onSubmit({ declarations: dec })}
           disabled={!canSubmit || submitting}
           className="bg-secondary text-white font-black px-8 py-3 rounded-2xl shadow-xl shadow-secondary/20 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
         >

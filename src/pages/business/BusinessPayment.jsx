@@ -80,83 +80,87 @@ const BusinessPayment = () => {
   }
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-5 pb-6">
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <h1 className="text-4xl font-black text-secondary tracking-tight flex items-center gap-3">
-          <LayoutDashboard className="text-primary" size={36} />
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+          <LayoutDashboard className="text-primary" size={26} />
           Payments
         </h1>
-        <p className="text-primary font-bold text-sm mt-1">Case fees, licence charges, and billing status.</p>
+        <p className="text-primary font-bold text-sm mt-0.5">Case fees, licence charges, and billing status.</p>
       </motion.div>
 
-      <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-4" variants={cardVariants} initial="hidden" animate="visible">
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900"><DollarSign size={20} className="text-emerald-600" /><span className="font-black">Total Paid</span></div>
-          <p className="text-3xl font-black text-secondary">{money(totalPaid)}</p>
+      <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-3" variants={cardVariants} initial="hidden" animate="visible">
+        <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center gap-2 mb-2 text-gray-900"><DollarSign size={20} className="text-emerald-600" /><span className="font-black text-sm">Total Paid</span></div>
+          <p className="text-2xl font-black text-secondary">{money(totalPaid)}</p>
         </motion.div>
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900"><Clock size={20} className="text-amber-500" /><span className="font-black">Amount Pending</span></div>
-          <p className="text-3xl font-black text-secondary">{money(totalPending)}</p>
+        <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center gap-2 mb-2 text-gray-900"><Clock size={20} className="text-amber-500" /><span className="font-black text-sm">Amount Pending</span></div>
+          <p className="text-2xl font-black text-secondary">{money(totalPending)}</p>
         </motion.div>
-        <motion.div variants={cardVariants} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4 text-gray-900"><CreditCard size={20} className="text-primary" /><span className="font-black">Transactions</span></div>
-          <p className="text-3xl font-black text-secondary">{payments.length}</p>
+        <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center gap-2 mb-2 text-gray-900"><CreditCard size={20} className="text-primary" /><span className="font-black text-sm">Transactions</span></div>
+          <p className="text-2xl font-black text-secondary">{payments.length}</p>
         </motion.div>
       </motion.div>
 
-      <motion.div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm" variants={cardVariants} initial="hidden" animate="visible">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-            <input type="text" placeholder="Search invoice, case ref..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter size={18} className="text-gray-400" />
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none">
-              <option value="all">All Payments</option>
-              <option value="completed">Completed</option>
-              <option value="pending">Pending</option>
-              <option value="failed">Failed</option>
-            </select>
+      <motion.div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative" variants={cardVariants} initial="hidden" animate="visible">
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+        <div className="p-5">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+              <input type="text" placeholder="Search invoice, case ref..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full border border-gray-200 rounded-lg pl-10 pr-3 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter size={18} className="text-gray-400" />
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none">
+                <option value="all">All Payments</option>
+                <option value="completed">Completed</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
           </div>
         </div>
       </motion.div>
 
-      <motion.div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm" variants={cardVariants} initial="hidden" animate="visible">
+      <motion.div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative" variants={cardVariants} initial="hidden" animate="visible">
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Description</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Case Ref</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Invoice No.</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Amount</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Date</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Actions</th>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Description</th>
+                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Case Ref</th>
+                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Invoice No.</th>
+                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Amount</th>
+                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Date</th>
+                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
+                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {filteredPayments.map((payment) => (
-                <tr key={payment.id} className="hover:bg-gray-50 transition">
-                  <td className="px-4 py-4">
+                <tr key={payment.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition">
+                  <td className="px-3 py-2">
                     <p className="text-sm font-black text-secondary">{payment.description}</p>
                     <p className="text-xs font-bold text-gray-500">{payment.candidateName}</p>
                   </td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{payment.caseRef}</td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{payment.invoiceNo}</td>
-                  <td className="px-4 py-4 text-sm font-black text-secondary">{money(payment.amount)}</td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{payment.date ? formatDate(payment.date) : "N/A"}</td>
-                  <td className="px-4 py-4">
+                  <td className="px-3 py-2 text-xs font-bold text-gray-600">{payment.caseRef}</td>
+                  <td className="px-3 py-2 text-xs font-bold text-gray-600">{payment.invoiceNo}</td>
+                  <td className="px-3 py-2 text-sm font-black text-secondary">{money(payment.amount)}</td>
+                  <td className="px-3 py-2 text-xs font-bold text-gray-600">{payment.date ? formatDate(payment.date) : "N/A"}</td>
+                  <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(payment.status)}
-                      <span className={`inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full ${getStatusColor(payment.status)}`}>{payment.status}</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-black rounded-full ${getStatusColor(payment.status)}`}>{payment.status}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-3 py-2">
                     <div className="flex gap-2">
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"><Eye size={16} /></button>
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"><Download size={16} /></button>
+                      <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"><Eye size={16} /></button>
+                      <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"><Download size={16} /></button>
                     </div>
                   </td>
                 </tr>

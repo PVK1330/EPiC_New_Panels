@@ -1,12 +1,14 @@
 /**
- * Sponsor Licence application stages — 16 stages mirroring the backend service.
+ * Sponsor Licence application stages — 18 stages mirroring the backend service.
  *
- * Stages 1-8:  Pre-submission (intake, application, documents, declarations, payment)
- * Stages 9-14: Government processing pipeline (Phase 2 additions)
- * Stage 15:    Submission
- * Stage 16:    UKVI Decision & Activation
+ * Stages  1-8:   Pre-submission wizard (enquiry through payment)
+ * Stages  9-10:  Intake (sponsor information form + document collection)
+ * Stages 11-16:  Government processing pipeline (Phase 2)
+ * Stage  17:     Submission
+ * Stage  18:     UKVI Decision & Activation
  *
  * This is the single source of truth for the read-only Stages tracker.
+ * Keep in sync with LICENCE_STAGE_DEFINITIONS in licenceStageTask.service.js.
  */
 
 export const STAGE_ROLES = [
@@ -121,10 +123,37 @@ export const LICENCE_STAGES = [
       candidate: null,
     },
   },
-  // ── Government processing pipeline (9-14) ────────────────────────────────
+  // ── Intake: information form + document verification (9-10) ──────────────
+  {
+    key: "intake_information_form",
+    order: 9,
+    title: "Sponsor Information Form",
+    govSection: "Intake",
+    description: "Complete the Sponsor Information Form with trading name, premises address, named person on licence, NI number, employee counts, and CoS requirements.",
+    tasks: {
+      sponsor: "Complete the 12-field Sponsor Information Form: trading name, premises address, named person on licence, NI number, employee counts, CoS required, and more.",
+      caseworker: "Review the completed information form for accuracy and completeness before progressing to document verification.",
+      admin: "Confirm the information form has been reviewed and approved by the caseworker.",
+      candidate: null,
+    },
+  },
+  {
+    key: "intake_document_checklist",
+    order: 10,
+    title: "Document Collection & Verification",
+    govSection: "Intake",
+    description: "Upload all mandatory Home Office documents. Every item must reach Verified status before Government Registration can proceed.",
+    tasks: {
+      sponsor: "Upload all mandatory documents (Employer's Liability Insurance, Certificate of Incorporation, PAYE registration, bank statements, premises evidence, and identity documents).",
+      caseworker: "Verify each uploaded document meets the Home Office requirements. All mandatory documents must reach 'Verified' status before Government Registration can proceed.",
+      admin: "Confirm all mandatory documents have been verified and the intake stage is complete.",
+      candidate: null,
+    },
+  },
+  // ── Government processing pipeline (11-16) ───────────────────────────────
   {
     key: "sponsor_information_provision",
-    order: 9,
+    order: 11,
     title: "Sponsor Information Provision",
     govSection: "Government Prep",
     description: "Caseworker validates completeness of the sponsor's information pack before government portal entry.",
@@ -137,7 +166,7 @@ export const LICENCE_STAGES = [
   },
   {
     key: "government_sms_registration",
-    order: 10,
+    order: 12,
     title: "Government SMS Registration",
     govSection: "Government Prep",
     description: "Register the sponsor on the UKVI Sponsorship Management System (SMS) portal.",
@@ -150,7 +179,7 @@ export const LICENCE_STAGES = [
   },
   {
     key: "sponsor_portal_onboarding",
-    order: 11,
+    order: 13,
     title: "Sponsor Portal Onboarding",
     govSection: "Government Prep",
     description: "Onboard the sponsor onto the UKVI SMS portal with login credentials.",
@@ -163,7 +192,7 @@ export const LICENCE_STAGES = [
   },
   {
     key: "government_portal_credentials",
-    order: 12,
+    order: 14,
     title: "Government Portal Credentials",
     govSection: "Government Application",
     description: "Generate and securely share the UKVI online application portal credentials with the sponsor.",
@@ -176,7 +205,7 @@ export const LICENCE_STAGES = [
   },
   {
     key: "government_application_forms",
-    order: 13,
+    order: 15,
     title: "Government Application Forms",
     govSection: "Government Application",
     description: "Complete the online sponsor licence application forms on the UKVI portal.",
@@ -189,7 +218,7 @@ export const LICENCE_STAGES = [
   },
   {
     key: "government_submission",
-    order: 14,
+    order: 16,
     title: "Government Submission",
     govSection: "Government Application",
     description: "Submit the completed online application form to UKVI and record the submission reference.",
@@ -200,10 +229,10 @@ export const LICENCE_STAGES = [
       candidate: null,
     },
   },
-  // ── Post-submission outcome stages (15-16) ────────────────────────────────
+  // ── Post-submission outcome stages (17-18) ────────────────────────────────
   {
     key: "submission",
-    order: 15,
+    order: 17,
     title: "Submission",
     govSection: "Section 8",
     description: "Generate the submission sheet and submit the application to UKVI.",
@@ -216,7 +245,7 @@ export const LICENCE_STAGES = [
   },
   {
     key: "decision_activation",
-    order: 16,
+    order: 18,
     title: "UKVI Decision & Activation",
     govSection: "Outcome",
     description: "Record the UKVI decision; on approval the licence is activated and CoS can be assigned.",
@@ -232,6 +261,8 @@ export const LICENCE_STAGES = [
 /**
  * Infer per-stage completion from the serialized V2 application (read-only).
  * Returns a map of stageKey -> 'done' | 'current' | 'upcoming' | 'rejected'.
+ *
+ * Must stay in sync with deriveStageCompletion() in licenceStageTask.service.js.
  */
 export function deriveStageStatuses(app) {
   const statuses = {};
@@ -245,15 +276,15 @@ export function deriveStageStatuses(app) {
   const docs = app.appendixDocuments || [];
   const docsComplete = docs.length > 0 && docs.every((d) => d.verificationStatus === "Verified");
 
-  // Status-based sentinels for government pipeline stages.
-  const govActive  = ["Government Processing", "Decision Pending", "Approved"].includes(status);
+  // Status-based sentinels — keep these in sync with the backend signal map.
+  const govActive      = ["Government Processing", "Decision Pending", "Approved"].includes(status);
   const decisionActive = ["Decision Pending", "Approved"].includes(status);
-  // Sponsor re-submitted after info request; or the application is past Pending.
-  const infoProvided = submitted && !["Draft", "Pending"].includes(status);
+  // infoProvided: application has been received and is actively being reviewed.
+  const infoProvided   = submitted && !["Draft", "Pending"].includes(status);
 
   const complete = {
-    // Pre-submission stages (1-8)
-    enquiry_onboarding:        true, // an application existing means intake happened
+    // Pre-submission wizard (1-8)
+    enquiry_onboarding:        true,
     licence_routes:            (app.routes || []).length > 0,
     organisation_details:      !!(app.organisationInfo && (app.organisationInfo.companiesHouseNumber || app.organisationInfo.organisationType)),
     cos_requirements:          (app.cosRequirements || []).length > 0,
@@ -261,14 +292,19 @@ export function deriveStageStatuses(app) {
     key_personnel:             !!app.authorisingOfficer,
     declarations:              !!(app.declaration && app.declaration.accuracyConfirmed),
     payment:                   submitted || app.fee?.total != null,
-    // Government pipeline (9-14)
+    // Intake stages (9-10) — status-inferred, matches backend signal map.
+    // intake_information_form done once application moves to Under Review or beyond.
+    // intake_document_checklist done once government registration is triggered.
+    intake_information_form:   infoProvided,
+    intake_document_checklist: govActive,
+    // Government pipeline (11-16)
     sponsor_information_provision: infoProvided,
     government_sms_registration:   govActive,
     sponsor_portal_onboarding:     govActive,
     government_portal_credentials: govActive,
     government_application_forms:  decisionActive,
     government_submission:         decisionActive,
-    // Post-submission (15-16)
+    // Post-submission (17-18)
     submission:                submitted,
     decision_activation:       status === "Approved",
   };
@@ -298,22 +334,28 @@ export function deriveStageStatuses(app) {
 }
 
 export const SPONSOR_STAGE_ACTIONS = {
-  enquiry_onboarding:            { label: "View licence",               to: "/business/licence" },
-  licence_routes:                { label: "Open application",            to: "/business/apply-licence-v2" },
-  organisation_details:          { label: "Complete organisation details",to: "/business/apply-licence-v2" },
-  cos_requirements:              { label: "Add CoS requirements",         to: "/business/apply-licence-v2" },
-  supporting_documents:          { label: "Upload documents",             to: "/business/licence-documents" },
-  key_personnel:                 { label: "Add key personnel",            to: "/business/personnel" },
-  declarations:                  { label: "Complete declarations",        to: "/business/apply-licence-v2" },
-  payment:                       { label: "Pay licence fee",              to: "/business/payment" },
-  sponsor_information_provision: { label: "Confirm information",          to: "/business/licence" },
-  government_sms_registration:   { label: "View registration status",     to: "/business/licence" },
-  sponsor_portal_onboarding:     { label: "Access SMS portal",            to: "/business/licence" },
-  government_portal_credentials: { label: "Confirm credentials received", to: "/business/licence" },
-  government_application_forms:  { label: "View application status",      to: "/business/licence" },
-  government_submission:         { label: "View submission status",        to: "/business/licence" },
-  submission:                    { label: "Review & submit",               to: "/business/apply-licence-v2" },
-  decision_activation:           { label: "View licence & CoS",           to: "/business/cosallocation" },
+  // Pre-submission wizard
+  enquiry_onboarding:            { label: "View licence",                to: "/business/licence" },
+  licence_routes:                { label: "Open application",             to: "/business/apply-licence-v2" },
+  organisation_details:          { label: "Complete organisation details", to: "/business/apply-licence-v2" },
+  cos_requirements:              { label: "Add CoS requirements",          to: "/business/apply-licence-v2" },
+  supporting_documents:          { label: "Upload documents",              to: "/business/licence-documents" },
+  key_personnel:                 { label: "Add key personnel",             to: "/business/personnel" },
+  declarations:                  { label: "Complete declarations",         to: "/business/apply-licence-v2" },
+  payment:                       { label: "Pay licence fee",               to: "/business/payment" },
+  // Intake
+  intake_information_form:       { label: "Complete information form",     to: "/business/licence-process?tab=intake" },
+  intake_document_checklist:     { label: "Upload & verify documents",     to: "/business/licence-process?tab=intake" },
+  // Government pipeline
+  sponsor_information_provision: { label: "Confirm information",           to: "/business/licence-process" },
+  government_sms_registration:   { label: "View registration status",      to: "/business/licence-process" },
+  sponsor_portal_onboarding:     { label: "Access SMS portal",             to: "/business/licence-process" },
+  government_portal_credentials: { label: "Confirm credentials received",  to: "/business/licence-process" },
+  government_application_forms:  { label: "View application status",       to: "/business/licence-process" },
+  government_submission:         { label: "View submission status",         to: "/business/licence-process" },
+  // Outcome
+  submission:                    { label: "Review & submit",                to: "/business/apply-licence-v2" },
+  decision_activation:           { label: "View licence & CoS",            to: "/business/cosallocation" },
 };
 
 const V2_APP_ROUTE = "/business/apply-licence-v2";
@@ -322,7 +364,7 @@ export function getSponsorStageAction(stageKey, appId) {
   const action = SPONSOR_STAGE_ACTIONS[stageKey];
   if (!action) return null;
   if (appId != null && action.to === V2_APP_ROUTE) {
-    return { ...action, to: `${V2_APP_ROUTE}/${appId}` };
+    return { ...action, to: `${V2_APP_ROUTE}?draft=${appId}` };
   }
   return action;
 }
