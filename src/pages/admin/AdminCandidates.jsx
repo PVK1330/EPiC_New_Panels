@@ -40,7 +40,6 @@ import {
 import {
   createCandidate,
   toggleCandidateStatus,
-  deleteCandidate,
   getCandidateById,
   updateAdminCandidateApplication,
   exportCandidateApplicationsExcel,
@@ -274,7 +273,7 @@ export default function AdminCandidates() {
     setPage(1);
   }, [debouncedSearch, statusFilter, visaFilter, payFilter]);
 
-  const statusParam = statusFilter === "All" ? "" : statusFilter;
+  const statusParam = statusFilter === "All" ? "all" : statusFilter;
   const visaParam = visaFilter === "All" ? "" : visaFilter;
   const payParam = payFilter === "All" ? "" : payFilter;
 
@@ -750,29 +749,30 @@ export default function AdminCandidates() {
 
 
   const handleDelete = async () => {
-    setDeleteId(modal.data.id);
+    const row = modal.data;
+    if (row.status === "inactive") {
+      showToast({ message: "Account is already deactivated", variant: "success" });
+      closeModal();
+      return;
+    }
+    setDeleteId(row.id);
     try {
-      const res = await deleteCandidate(modal.data.id);
+      const res = await toggleCandidateStatus(row.id);
       showToast({
-        message: res.data?.message || "Candidate removed",
+        message: res.data?.message || "Candidate deactivated",
         variant: "success",
       });
       closeModal();
-      const nextPage =
-        candidates.length === 1 && page > 1 ? page - 1 : page;
-      if (nextPage !== page) setPage(nextPage);
-      else {
-        const r = await fetchCandidates(
-          nextPage,
-          limit,
-          debouncedSearch.trim(),
-          statusParam,
-          visaParam,
-          payParam,
-        );
-        if (!r.ok) {
-          showToast({ message: getApiError(r.error), variant: "danger" });
-        }
+      const r = await fetchCandidates(
+        page,
+        limit,
+        debouncedSearch.trim(),
+        statusParam,
+        visaParam,
+        payParam,
+      );
+      if (!r.ok) {
+        showToast({ message: getApiError(r.error), variant: "danger" });
       }
     } catch (e) {
       showToast({ message: getApiError(e), variant: "danger" });
@@ -1295,7 +1295,7 @@ export default function AdminCandidates() {
       <Modal
         open={modal.type === "delete"}
         onClose={closeModal}
-        title="Delete Candidate"
+        title="Deactivate Candidate"
         maxWidthClass="max-w-sm"
         bodyClassName="px-4 py-4 sm:px-6"
         footer={
@@ -1309,7 +1309,7 @@ export default function AdminCandidates() {
               onClick={handleDelete}
               className="rounded-xl"
             >
-              {deleteId != null ? "Deleting…" : "Delete"}
+              {deleteId != null ? "Deactivating…" : "Deactivate"}
             </Button>
           </>
         }
@@ -1319,11 +1319,11 @@ export default function AdminCandidates() {
             <FiTrash2 size={16} className="text-red-600" />
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Are you sure you want to delete{" "}
+            Are you sure you want to deactivate{" "}
             <span className="font-black text-secondary">
               {modal.data ? fullName(modal.data) : ""}
             </span>
-            ? This will deactivate the account.
+            ? The account will be set to inactive.
           </p>
         </div>
       </Modal>

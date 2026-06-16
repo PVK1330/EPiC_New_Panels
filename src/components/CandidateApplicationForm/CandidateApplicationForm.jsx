@@ -501,7 +501,7 @@ export default function CandidateApplicationForm({
   const formData = isControlled ? controlledFormData : internalForm;
   const setFormData = isControlled ? setControlledFormData : setInternalForm;
 
-  // â”€â”€ Load saved draft on mount (candidate, uncontrolled form only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  //  Load saved draft on mount (candidate, uncontrolled form only) 
   useEffect(() => {
     if (variant !== "candidate" || isControlled) return;
 
@@ -563,7 +563,7 @@ export default function CandidateApplicationForm({
             return;
           }
 
-          // Use the existing mapper: it normalises nullâ†’"", ISO datesâ†’YYYY-MM-DD
+          // Use the existing mapper: it normalises null†’"", ISO dates†’YYYY-MM-DD
           const restored = candidateRowToApplicationForm({
             first_name: app.firstName ?? "",
             last_name: app.lastName ?? "",
@@ -962,7 +962,7 @@ export default function CandidateApplicationForm({
               onClick={() => handleDraftReview(true)}
               className="rounded-xl bg-secondary px-6 py-3 text-sm font-black text-white shadow-md disabled:opacity-60"
             >
-              {draftReviewBusy ? "Savingâ€¦" : "Yes  details are correct"}
+              {draftReviewBusy ? "Saving" : "Yes  details are correct"}
             </button>
             <button
               type="button"
@@ -999,7 +999,7 @@ export default function CandidateApplicationForm({
               d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
             />
           </svg>
-          Restoring your saved progressâ€¦
+          Restoring your saved progress
         </div>
       )}
 
@@ -1929,10 +1929,10 @@ export default function CandidateApplicationForm({
                     >
                       {variant === "candidate"
                         ? applicationLoading
-                          ? "Savingâ€¦"
+                          ? "Saving"
                           : "Save draft"
                         : adminDraftSaving
-                          ? "Savingâ€¦"
+                          ? "Saving"
                           : "Save draft"}
                     </button>
                   ) : null}
@@ -2000,9 +2000,9 @@ export default function CandidateApplicationForm({
                         </svg>
                       ) : null}
                       {variant === "admin" && adminSubmitBusy
-                        ? "Savingâ€¦"
+                        ? "Saving"
                         : isSubmitting
-                          ? "Submittingâ€¦"
+                          ? "Submitting"
                           : variant === "admin"
                             ? "Save client"
                             : "Submit application"}

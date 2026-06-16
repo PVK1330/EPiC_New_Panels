@@ -543,7 +543,7 @@ const CaseworkerClients = () => {
                   <div className="space-y-4">
                     <div className="flex gap-3">
                       <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500 text-white text-[10px] font-black">
-                        â
+                        
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-bold text-gray-900">Application Submitted</p>
@@ -552,7 +552,7 @@ const CaseworkerClients = () => {
                     </div>
                     <div className="flex gap-3">
                       <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500 text-white text-[10px] font-black">
-                        â
+                        
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-bold text-gray-900">Documents Verified</p>
@@ -561,7 +561,7 @@ const CaseworkerClients = () => {
                     </div>
                     <div className="flex gap-3">
                       <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white text-[10px] font-black">
-                        â
+                        
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-bold text-gray-900">Under Review</p>

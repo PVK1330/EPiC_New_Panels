@@ -10,6 +10,7 @@ import {
   saveLicenceV2Draft,
   submitLicenceV2Application,
   deleteLicenceV2Draft,
+  syncPersonnelFromProfile,
 } from "../../services/licenceApi";
 import WizardStepBar from "../../components/licenceV2/WizardStepBar";
 import Step1Routes from "../../components/licenceV2/Step1Routes";
@@ -133,6 +134,8 @@ export default function ApplyLicenceV2() {
   const [submitting, setSubmitting] = useState(false);
   const [submitErrors, setSubmitErrors] = useState([]);
   const [deleting, setDeleting] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [personnelSyncedAt, setPersonnelSyncedAt] = useState(null);
   const submitInFlight = useRef(false);
 
   const BLOCKING_STATUSES = ["Pending", "Under Review", "Government Processing", "Decision Pending", "Information Requested"];
@@ -160,7 +163,11 @@ export default function ApplyLicenceV2() {
     try {
       const r = await createLicenceV2Draft();
       const app = r.data.data;
-      setAppId(app.id); setFormData(appToFormData(app)); setCurrentStep(app.currentStep || 1); setPhase("wizard");
+      setAppId(app.id);
+      setFormData(appToFormData(app));
+      setCurrentStep(app.currentStep || 1);
+      setPersonnelSyncedAt(localStorage.getItem(`epc_personnel_sync_${app.id}`) || null);
+      setPhase("wizard");
     } catch (err) {
       if (err?.response?.status === 409) {
         // Server blocked the new application (pending one already exists)
@@ -181,7 +188,11 @@ export default function ApplyLicenceV2() {
       const r = await getLicenceV2Application(id);
       const app = r.data.data;
       if (app.status === "Pending" || app.status === "Approved") { setPhase("submitted"); return; }
-      setAppId(app.id); setFormData(appToFormData(app)); setCurrentStep(app.currentStep || 1); setPhase("wizard");
+      setAppId(app.id);
+      setFormData(appToFormData(app));
+      setCurrentStep(app.currentStep || 1);
+      setPersonnelSyncedAt(localStorage.getItem(`epc_personnel_sync_${app.id}`) || null);
+      setPhase("wizard");
     } catch {
       showToast({ message: "Failed to load draft", variant: "danger" });
       navigate("/business/licence");
@@ -204,6 +215,24 @@ export default function ApplyLicenceV2() {
   };
 
   const merge = (patch) => setFormData((prev) => ({ ...prev, ...patch }));
+
+  const handleSyncFromProfile = async () => {
+    if (!appId || syncing) return;
+    setSyncing(true);
+    try {
+      const r = await syncPersonnelFromProfile(appId);
+      const app = r.data.data;
+      setFormData(appToFormData(app));
+      const ts = new Date().toISOString();
+      setPersonnelSyncedAt(ts);
+      localStorage.setItem(`epc_personnel_sync_${appId}`, ts);
+      showToast({ message: r.data.message || "Personnel synced from Business Profile", variant: "success" });
+    } catch (err) {
+      showToast({ message: err?.response?.data?.message || "Sync failed — check your Business Profile is complete", variant: "danger" });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const refreshAppendix = async () => {
     if (!appId) return;
@@ -271,6 +300,7 @@ export default function ApplyLicenceV2() {
   if (phase === "blocked") return <ApplicationBlocked status={blockedStatus} navigate={navigate} />;
 
   const stepProps = { data: formData, onChange: merge, onNext: handleNext, onBack: handleBack, saving };
+  const personnelProps = { onSyncFromProfile: handleSyncFromProfile, syncing, personnelSyncedAt };
 
   return (
     <div className="space-y-5 pb-6 relative max-w-3xl mx-auto">
@@ -301,9 +331,9 @@ export default function ApplyLicenceV2() {
                 {currentStep === 4 && (
                   <Step4AppendixDocuments appId={appId} data={formData} onRefresh={refreshAppendix} onNext={handleNext} onBack={handleBack} saving={saving} />
                 )}
-                {currentStep === 5 && <Step5AuthorisingOfficer {...stepProps} />}
-                {currentStep === 6 && <Step6KeyContact {...stepProps} />}
-                {currentStep === 7 && <Step7Level1Users {...stepProps} />}
+                {currentStep === 5 && <Step5AuthorisingOfficer {...stepProps} {...personnelProps} />}
+                {currentStep === 6 && <Step6KeyContact {...stepProps} {...personnelProps} />}
+                {currentStep === 7 && <Step7Level1Users {...stepProps} {...personnelProps} />}
                 {currentStep === 8 && (
                   <Step8Declarations data={formData} onChange={merge} onBack={handleBack} onSubmit={handleSubmit} submitting={submitting} submitErrors={submitErrors} />
                 )}

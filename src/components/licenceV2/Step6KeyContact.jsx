@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import ProfileSyncBanner from "./ProfileSyncBanner";
 
 const inp = "w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20";
 const Field = ({ label, required, children }) => (
@@ -10,7 +11,7 @@ const Field = ({ label, required, children }) => (
   </div>
 );
 
-export default function Step6KeyContact({ data, onChange, onNext, onBack, saving }) {
+export default function Step6KeyContact({ data, onChange, onNext, onBack, saving, onSyncFromProfile, syncing, personnelSyncedAt }) {
   const kc = data.keyContact || {};
   const ao = data.authorisingOfficer || {};
   const same = !!kc.sameAsAuthorisingOfficer;
@@ -42,6 +43,10 @@ export default function Step6KeyContact({ data, onChange, onNext, onBack, saving
         <h2 className="text-xl font-black text-secondary mb-1">Key Contact</h2>
         <p className="text-sm font-bold text-gray-400">The Key Contact is the main day-to-day liaison for the sponsor licence. They may be the same person as the Authorising Officer.</p>
       </div>
+
+      {onSyncFromProfile && (
+        <ProfileSyncBanner onSync={onSyncFromProfile} syncing={syncing} syncedAt={personnelSyncedAt} />
+      )}
 
       <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4">
         <input
