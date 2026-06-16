@@ -284,13 +284,13 @@ const Cases = () => {
     return "partial";
   };
 
-  // â”€â”€ Reassign state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  //  Reassign state 
   const [reassignCaseId, setReassignCaseId] = useState(null);
   const [reassignForm, setReassignForm] = useState(emptyReassignForm());
   const [reassignErrors, setReassignErrors] = useState({});
-  // Map: caseId â†’ { caseworker, reason, at }
+  // Map: caseId †’ { caseworker, reason, at }
   const [reassignments, setReassignments] = useState({});
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // 
 
   const handleWorkflowStageChange = useCallback(
     async (caseStage) => {
@@ -378,13 +378,13 @@ const Cases = () => {
           instructions: payload.biometricInstructions,
         });
         showToast({
-          message: "Confirmation sent â€” candidate notified by email & in-app",
+          message: "Confirmation sent candidate notified by email & in-app",
           variant: "success",
         });
       } else {
         await updatePipelineStage(caseId, "biometrics_booked", payload);
         showToast({
-          message: "Biometrics booked â€” candidate notified",
+          message: "Biometrics booked candidate notified",
           variant: "success",
         });
       }
@@ -590,16 +590,16 @@ const Cases = () => {
   const validateNewCase = () => {
     const e = {};
 
-    // â”€â”€ Required selections â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  Required selections 
     if (!newCaseForm.candidateId) e.candidateId = "Please select a candidate";
     if (!newCaseForm.businessId) e.businessId = "Please select a sponsor";
     if (!newCaseForm.visaTypeId) e.visaTypeId = "Please select a visa type";
 
-    // â”€â”€ Caseworkers: 1 or 2 required â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  Caseworkers: 1 or 2 required 
     const n = newCaseForm.assignedCaseworkerIds?.length || 0;
     if (n < 1 || n > 2) e.assignedCaseworkers = "Select 1 or 2 caseworkers";
 
-    // â”€â”€ Target submission date: required, valid, not in the past â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  Target submission date: required, valid, not in the past 
     if (!newCaseForm.targetSubmissionDate) {
       e.targetSubmissionDate = "Please choose a target date";
     } else {
@@ -613,7 +613,7 @@ const Cases = () => {
       }
     }
 
-    // â”€â”€ Financials: non-negative, total > 0, paid â‰¤ total â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  Financials: non-negative, total > 0, paid ‰¤ total 
     const total = Number(newCaseForm.totalAmount);
     const paid = Number(newCaseForm.paidAmount);
     const salary = Number(newCaseForm.salaryOffered);
@@ -742,7 +742,7 @@ const Cases = () => {
     visaFilter,
   ]);
 
-  // â”€â”€ Reassign handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  //  Reassign handlers 
   const openReassign = useCallback((c) => {
     setDetailCase(null);
     setNewCaseOpen(false);
@@ -808,7 +808,7 @@ const Cases = () => {
       });
     }
   }, [reassignCaseId, reassignForm, closeReassign, caseworkers, showToast]);
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // 
 
   // Filtering is now handled by the API, so we use cases directly
   const filtered = cases;
@@ -1050,7 +1050,7 @@ const Cases = () => {
                       const reassigned = reassignments[c.caseId];
                       return (
                         <Fragment key={c.id || c.caseId || idx}>
-                          {/* â”€â”€ Main data row â”€â”€ */}
+                          {/*  Main data row  */}
                           <tr
                             className={`hover:bg-gray-50/80 cursor-pointer transition-colors ${reassigned ? "border-b-0" : ""}`}
                             onClick={() => openDetail(c)}
@@ -1131,7 +1131,7 @@ const Cases = () => {
                                 >
                                   <MessageSquare size={14} />
                                 </button>
-                                {/* â”€â”€ Reassign button â”€â”€ */}
+                                {/*  Reassign button  */}
                                 <button
                                   type="button"
                                   onClick={() => openReassign(c)}
@@ -1148,7 +1148,7 @@ const Cases = () => {
                             </td>
                           </tr>
 
-                          {/* â”€â”€ Reassignment info banner row â”€â”€ */}
+                          {/*  Reassignment info banner row  */}
                           {reassigned && (
                             <tr
                               key={`${c.caseId}-reassigned`}
@@ -1189,7 +1189,7 @@ const Cases = () => {
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/80">
               <p className="text-xs font-bold text-gray-500 tabular-nums">
-                Showing {(pageClamped - 1) * PAGE_SIZE + 1}â€“
+                Showing {(pageClamped - 1) * PAGE_SIZE + 1}
                 {Math.min(pageClamped * PAGE_SIZE, pagination.total)} of{" "}
                 {pagination.total} cases
               </p>
@@ -1200,7 +1200,7 @@ const Cases = () => {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
                 >
-                  â†
+                  †
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                   (num) => (
@@ -1224,7 +1224,7 @@ const Cases = () => {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
                 >
-                  â†’
+                  †’
                 </button>
               </div>
             </div>
@@ -1315,7 +1315,7 @@ const Cases = () => {
 
       {/* Case Detail Modal is handled at the bottom of the file (shared with Table view) */}
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ NEW CASE MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/*  NEW CASE MODAL  */}
       <Modal
         open={newCaseOpen}
         onClose={closeNewCaseModal}
@@ -1729,7 +1729,7 @@ const Cases = () => {
         </div>
       </Modal>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ REASSIGN MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/*  REASSIGN MODAL  */}
       <Modal
         open={!!reassignCaseId}
         onClose={closeReassign}
@@ -1751,7 +1751,7 @@ const Cases = () => {
                   {reassignCase.candidate}
                 </p>
                 <p className="text-[11px] font-bold text-gray-500 mt-0.5">
-                  {reassignCase.business} Â· {reassignCase.visa}
+                  {reassignCase.business} · {reassignCase.visa}
                 </p>
               </div>
               <span
@@ -1798,7 +1798,7 @@ const Cases = () => {
                     : "border-gray-200"
                 }`}
               >
-                <option value="">Select a reasonâ€¦</option>
+                <option value="">Select a reason</option>
                 {REASSIGN_REASONS.map((r) => (
                   <option key={r} value={r}>
                     {r}
@@ -1827,7 +1827,7 @@ const Cases = () => {
                     }))
                   }
                   rows={3}
-                  placeholder="Explain why this case is being reassignedâ€¦"
+                  placeholder="Explain why this case is being reassigned"
                   className={`w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y ${
                     reassignErrors.reasonCustom
                       ? "border-red-300"
@@ -1864,7 +1864,7 @@ const Cases = () => {
         )}
       </Modal>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ CASE DETAIL MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/*  CASE DETAIL MODAL  */}
       <Modal
         open={!!detailCase}
         onClose={closeDetail}
@@ -1897,10 +1897,10 @@ const Cases = () => {
                   {reassignments[detailCase.caseId] && (
                     <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[11px] font-black text-violet-700">
                       <ArrowRightLeft size={11} />
-                      Reassigned â†’{" "}
+                      Reassigned †’{" "}
                       {reassignments[detailCase.caseId].caseworkers
                         .map((c) => c.name)
-                        .join(" Â· ")}
+                        .join(" · ")}
                     </span>
                   )}
                 </div>
@@ -2015,7 +2015,7 @@ const Cases = () => {
         )}
       </Modal>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ NEW CASE MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/*  NEW CASE MODAL  */}
       <Modal
         open={newCaseOpen}
         onClose={closeNewCaseModal}

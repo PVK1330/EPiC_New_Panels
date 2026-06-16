@@ -11,7 +11,7 @@ const panelMotion = {
 
 const CURRENCY_OPTIONS = [
   { value: "GBP", label: "GBP (£)" },
-  { value: "EUR", label: "EUR (€)" },
+  { value: "EUR", label: "EUR ()" },
   { value: "USD", label: "USD ($)" },
 ];
 

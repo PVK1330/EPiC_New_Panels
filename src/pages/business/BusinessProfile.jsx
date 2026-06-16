@@ -23,7 +23,7 @@ import {
   updateKeyPersonnel,
 } from "../../services/businessProfileApi";
 import { useToast } from "../../context/ToastContext";
-import { API_BASE_URL } from "../../utils/constants";
+import { resolveAssetUrl } from "../../utils/assetUrl";
 
 
 const BusinessProfile = () => {
@@ -353,7 +353,7 @@ const BusinessProfile = () => {
             <div className="w-24 h-24 rounded-2xl bg-gray-100 flex items-center justify-center border-4 border-white shadow-md overflow-hidden">
               {userData?.profile_pic ? (
                 <img
-                  src={userData.profile_pic}
+                  src={resolveAssetUrl(userData.profile_pic)}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
@@ -640,7 +640,7 @@ const BusinessProfile = () => {
                     </div>
                     {registrationData?.[doc.field] && (
                       <a
-                        href={`${API_BASE_URL}/${registrationData[doc.field]}`}
+                        href={resolveAssetUrl(registrationData[doc.field])}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition flex-shrink-0"

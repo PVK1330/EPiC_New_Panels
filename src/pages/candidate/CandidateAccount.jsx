@@ -39,6 +39,7 @@ import { resolveCaseStage } from "../../constants/immigrationCaseProcess";
 import { getDecisionDocuments } from "../../services/workflowApi";
 import { downloadDocument, triggerDownload } from "../../services/documentApi";
 import { formatDateLong } from "../../utils/datetime";
+import { resolveAssetUrl } from "../../utils/assetUrl";
 
 const RATING_LABELS = [
   "",
@@ -380,7 +381,10 @@ const CandidateAccount = () => {
             two_factor_enabled:
               u.two_factor_enabled ?? prev?.two_factor_enabled,
           },
-          token,
+          // No token here: this is a user-profile patch. The JWT lives in an
+          // HttpOnly cookie and `setCredentials` preserves the existing token
+          // when none is supplied. (Referencing an undefined `token` threw
+          // "token is not defined" on every account-page load.)
         }),
       );
     },
@@ -400,7 +404,7 @@ const CandidateAccount = () => {
       setCountryCode((u.country_code || "").trim() || "+44");
       setMobile((u.mobile || "").trim());
       setGender(u.gender || "");
-      setProfilePicPreview(u.profile_pic || null);
+      setProfilePicPreview(resolveAssetUrl(u.profile_pic) || null);
       setTwoFactorEnabled(!!u.two_factor_enabled);
       applyUserToStore(u);
 
@@ -536,7 +540,7 @@ const CandidateAccount = () => {
         setCountryCode((user.country_code || "").trim() || "+44");
         setMobile((user.mobile || "").trim());
         setGender(user.gender || "");
-        setProfilePicPreview(user.profile_pic || null);
+        setProfilePicPreview(resolveAssetUrl(user.profile_pic) || null);
         setProfilePicFile(null);
       }
       showToast({ message: "Profile saved." });

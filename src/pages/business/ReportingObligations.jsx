@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { getReportingObligations, updateReportingObligation } from "../../services/licenceApi";
-import { API_BASE_URL } from "../../utils/constants";
+import { resolveAssetUrl } from "../../utils/assetUrl";
 import DatePicker, { DateTimePicker } from "../../components/DatePicker";
 import { motion } from "framer-motion";
 import {
@@ -357,7 +357,7 @@ const ReportingObligations = () => {
                     <td className="px-3 py-2 text-xs font-bold text-gray-600">
                       {event.evidenceFile ? (
                         <a
-                          href={`${API_BASE_URL}/${event.evidenceFile}`}
+                          href={resolveAssetUrl(event.evidenceFile)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-primary hover:underline font-black text-xs"

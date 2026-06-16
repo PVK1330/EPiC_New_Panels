@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import ProfileSyncBanner from "./ProfileSyncBanner";
 
 const TITLES = ["Mr", "Mrs", "Miss", "Ms", "Dr", "Prof"];
 const IMMIGRATION_STATUSES = [
@@ -20,7 +21,7 @@ const Field = ({ label, required, children }) => (
   </div>
 );
 
-export default function Step5AuthorisingOfficer({ data, onChange, onNext, onBack, saving }) {
+export default function Step5AuthorisingOfficer({ data, onChange, onNext, onBack, saving, onSyncFromProfile, syncing, personnelSyncedAt }) {
   const ao = data.authorisingOfficer || {};
   const set = (key, val) => onChange({ authorisingOfficer: { ...ao, [key]: val } });
 
@@ -35,6 +36,10 @@ export default function Step5AuthorisingOfficer({ data, onChange, onNext, onBack
           The Authorising Officer is the senior person responsible for the sponsor licence. They must be a paid director, partner, or senior employee.
         </p>
       </div>
+
+      {onSyncFromProfile && (
+        <ProfileSyncBanner onSync={onSyncFromProfile} syncing={syncing} syncedAt={personnelSyncedAt} />
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <Field label="Title">

@@ -20,6 +20,7 @@ import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
 import api from "../../services/api";
 import { updateUser } from "../../store/slices/authSlice";
+import { resolveAssetUrl } from "../../utils/assetUrl";
 
 const InputField = ({
   label,
@@ -297,7 +298,7 @@ const MyAccount = () => {
                 />
               ) : user?.profile_pic ? (
                 <img
-                  src={user.profile_pic}
+                  src={resolveAssetUrl(user.profile_pic)}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />

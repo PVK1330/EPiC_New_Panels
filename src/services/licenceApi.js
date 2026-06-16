@@ -157,6 +157,8 @@ export const uploadLicenceV2AppendixDocument = (appId, docId, file) => {
 };
 export const getLicenceV2FeePreview = (data) =>
   api.post("/api/business/licence/v2/fee/preview", data);
+export const syncPersonnelFromProfile = (id) =>
+  api.post(`/api/business/licence/v2/applications/${id}/sync-from-profile`);
 
 // Business: Compliance summary
 export const getComplianceSummary = () =>

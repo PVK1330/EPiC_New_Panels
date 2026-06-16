@@ -1,4 +1,5 @@
 import { Plus, Trash2, Loader2 } from "lucide-react";
+import ProfileSyncBanner from "./ProfileSyncBanner";
 
 const EMPTY_L1 = { firstName: "", lastName: "", email: "", phone: "", jobTitle: "", isAuthorisingOfficer: false };
 const inp = "w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20";
@@ -54,7 +55,7 @@ function L1Row({ index, user, onChange, onRemove, totalRows }) {
   );
 }
 
-export default function Step7Level1Users({ data, onChange, onNext, onBack, saving }) {
+export default function Step7Level1Users({ data, onChange, onNext, onBack, saving, onSyncFromProfile, syncing, personnelSyncedAt }) {
   const users = data.level1Users?.length ? data.level1Users : [{ ...EMPTY_L1 }];
 
   const update = (i, val) => onChange({ level1Users: users.map((u, idx) => (idx === i ? val : u)) });
@@ -71,6 +72,10 @@ export default function Step7Level1Users({ data, onChange, onNext, onBack, savin
           Level 1 Users have full access to the Sponsor Management System. Add at least one. They must be paid employees or directors.
         </p>
       </div>
+
+      {onSyncFromProfile && (
+        <ProfileSyncBanner onSync={onSyncFromProfile} syncing={syncing} syncedAt={personnelSyncedAt} />
+      )}
 
       <div className="space-y-4">
         {users.map((user, i) => (

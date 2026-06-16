@@ -26,7 +26,6 @@ import {
   updateSponsor,
   toggleSponsorStatus,
   resetSponsorPassword,
-  deleteSponsor,
   exportSponsors,
   bulkImportSponsors,
 } from "../../services/sponsorApi";
@@ -127,7 +126,7 @@ export default function AdminBusinesses() {
     setPage(1);
   }, [debouncedSearch, statusFilter]);
 
-  const statusParam = statusFilter === "All" ? "" : statusFilter;
+  const statusParam = statusFilter === "All" ? "all" : statusFilter;
 
   useEffect(() => {
     let cancelled = false;
@@ -397,27 +396,28 @@ export default function AdminBusinesses() {
   };
 
   const handleDelete = async () => {
-    setDeleteId(modal.data.id);
+    const row = modal.data;
+    if (row.status === "inactive") {
+      showToast({ message: "Account is already deactivated", variant: "success" });
+      closeModal();
+      return;
+    }
+    setDeleteId(row.id);
     try {
-      const res = await deleteSponsor(modal.data.id);
+      const res = await toggleSponsorStatus(row.id);
       showToast({
-        message: res.data?.message || "Sponsor removed",
+        message: res.data?.message || "Sponsor deactivated",
         variant: "success",
       });
       closeModal();
-      const nextPage =
-        sponsors.length === 1 && page > 1 ? page - 1 : page;
-      if (nextPage !== page) setPage(nextPage);
-      else {
-        const r = await fetchSponsors(
-          nextPage,
-          limit,
-          debouncedSearch.trim(),
-          statusParam,
-        );
-        if (!r.ok) {
-          showToast({ message: getApiError(r.error), variant: "danger" });
-        }
+      const r = await fetchSponsors(
+        page,
+        limit,
+        debouncedSearch.trim(),
+        statusParam,
+      );
+      if (!r.ok) {
+        showToast({ message: getApiError(r.error), variant: "danger" });
       }
     } catch (e) {
       showToast({ message: getApiError(e), variant: "danger" });
@@ -1176,7 +1176,7 @@ export default function AdminBusinesses() {
       <Modal
         open={modal.type === "delete"}
         onClose={closeModal}
-        title="Delete Sponsor"
+        title="Deactivate Sponsor"
         maxWidthClass="max-w-sm"
         bodyClassName="px-5 py-5 sm:px-6"
         footer={
@@ -1190,7 +1190,7 @@ export default function AdminBusinesses() {
               onClick={handleDelete}
               className="rounded-xl"
             >
-              {deleteId != null ? "Deleting…" : "Delete"}
+              {deleteId != null ? "Deactivating…" : "Deactivate"}
             </Button>
           </>
         }
@@ -1200,11 +1200,11 @@ export default function AdminBusinesses() {
             <FiTrash2 size={16} className="text-red-600" />
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Are you sure you want to delete{" "}
+            Are you sure you want to deactivate{" "}
             <span className="font-black text-secondary">
               {modal.data ? fullName(modal.data) : ""}
             </span>
-            ? This will deactivate the account.
+            ? The account will be set to inactive.
           </p>
         </div>
       </Modal>

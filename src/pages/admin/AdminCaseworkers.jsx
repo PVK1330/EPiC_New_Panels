@@ -27,7 +27,6 @@ import { useToast } from "../../context/ToastContext";
 import {
   createCaseworker,
   updateCaseworker,
-  deleteCaseworker,
   exportCaseworkers,
   bulkImportCaseworkers,
   getDepartments,
@@ -179,7 +178,7 @@ export default function AdminCaseworkers() {
     setPage(1);
   }, [debouncedSearch, statusFilter, deptFilter]);
 
-  const statusParam = statusFilter === "All" ? "" : statusFilter;
+  const statusParam = statusFilter === "All" ? "all" : statusFilter;
   const deptParam = deptFilter === "All" ? "" : deptFilter;
 
   useEffect(() => {
@@ -436,28 +435,38 @@ export default function AdminCaseworkers() {
   };
 
   const handleDelete = async () => {
-    setDeleteId(modal.data.id);
+    const row = modal.data;
+    if (row.status === "inactive") {
+      showToast({ message: "Account is already deactivated", variant: "success" });
+      closeModal();
+      return;
+    }
+    setDeleteId(row.id);
     try {
-      const res = await deleteCaseworker(modal.data.id);
+      const res = await updateCaseworker(row.id, {
+        first_name: row.first_name,
+        last_name: row.last_name,
+        email: row.email,
+        country_code: row.country_code,
+        mobile: row.mobile,
+        role_id: row.role_id,
+        department: row?.caseworkerProfile?.department || "",
+        status: "inactive",
+      });
       showToast({
-        message: res.data?.message || "Caseworker removed",
+        message: res.data?.message || "Caseworker deactivated",
         variant: "success",
       });
       closeModal();
-      const nextPage =
-        caseworkers.length === 1 && page > 1 ? page - 1 : page;
-      if (nextPage !== page) setPage(nextPage);
-      else {
-        const r = await fetchCaseworkers(
-          nextPage,
-          limit,
-          debouncedSearch.trim(),
-          statusParam,
-          deptParam,
-        );
-        if (!r.ok) {
-          showToast({ message: getApiError(r.error), variant: "danger" });
-        }
+      const r = await fetchCaseworkers(
+        page,
+        limit,
+        debouncedSearch.trim(),
+        statusParam,
+        deptParam,
+      );
+      if (!r.ok) {
+        showToast({ message: getApiError(r.error), variant: "danger" });
       }
     } catch (e) {
       showToast({ message: getApiError(e), variant: "danger" });
@@ -1219,7 +1228,7 @@ export default function AdminCaseworkers() {
       <Modal
         open={modal.type === "delete"}
         onClose={closeModal}
-        title="Delete Caseworker"
+        title="Deactivate Caseworker"
         maxWidthClass="max-w-sm"
         bodyClassName="px-5 py-5 sm:px-6"
         footer={
@@ -1233,7 +1242,7 @@ export default function AdminCaseworkers() {
               onClick={handleDelete}
               className="rounded-xl"
             >
-              {deleteId != null ? "Deleting…" : "Delete"}
+              {deleteId != null ? "Deactivating…" : "Deactivate"}
             </Button>
           </>
         }
@@ -1243,11 +1252,11 @@ export default function AdminCaseworkers() {
             <FiTrash2 size={16} className="text-red-600" />
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Are you sure you want to delete{" "}
+            Are you sure you want to deactivate{" "}
             <span className="font-black text-secondary">
               {modal.data ? fullName(modal.data) : ""}
             </span>
-            ? This will deactivate the account.
+            ? The account will be set to inactive.
           </p>
         </div>
       </Modal>

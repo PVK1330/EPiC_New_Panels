@@ -199,7 +199,7 @@ export default function AdminCases() {
           page,
           limit: 50,
           search: searchQuery,
-          status: filterType === "all" ? "" : filterType,
+          status: filterType === "all" ? "" : { approved: "Approved", pending: "Pending", rejected: "Rejected", review: "Under Review" }[filterType] || filterType,
           priority: priorityFilter === "all" ? "" : priorityFilter,
           visaTypeId: visaTypeFilter === "all" ? "" : visaTypeFilter,
           sortBy: "created_at",
@@ -778,7 +778,7 @@ export default function AdminCases() {
             : filterType === "rejected"
               ? "Rejected"
               : filterType === "review"
-                ? "Review"
+                ? "Under Review"
                 : "Pending";
       if (priorityFilter !== "all") params.priority = priorityFilter;
       if (visaTypeFilter !== "all") params.visaType = visaTypeFilter;
@@ -825,7 +825,7 @@ export default function AdminCases() {
       (filterType === "approved" && c.status === "Approved") ||
       (filterType === "pending" && c.status === "Pending") ||
       (filterType === "rejected" && c.status === "Rejected") ||
-      (filterType === "review" && c.status === "Review");
+      (filterType === "review" && c.status === "Under Review");
 
     const matchesPriority =
       priorityFilter === "all" ||

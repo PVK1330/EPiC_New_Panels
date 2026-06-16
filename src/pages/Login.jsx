@@ -16,6 +16,7 @@ import {
 import { getAuthUserAndToken, getDashboardRouteForUser, resolveLoginRole } from "../utils/authResponse";
 import { API_BASE_URL } from "../utils/constants";
 import { getOrganisationSlugFromHost } from "../utils/organisationHost";
+import api from "../services/api";
 
 const VIEWS = {
   login: "login",
@@ -315,24 +316,7 @@ const Login = () => {
     }
     setResetPasswordLoading(true);
     try {
-      const headers = {
-        'Content-Type': 'application/json',
-      };
-      const orgSlug = getOrganisationSlugFromHost();
-      if (orgSlug) {
-        headers['X-Organisation-Slug'] = orgSlug;
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/user/change-password`, {
-        method: 'POST',
-        credentials: 'include',
-        headers,
-        body: JSON.stringify({ new_password: resetPasswordForm.password })
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data?.message || data?.error || "Failed to update password");
-      }
+      await api.post('/api/user/change-password', { new_password: resetPasswordForm.password });
 
       dispatch(setCredentials(pendingResetData));
       navigate(getDashboardRouteForUser(pendingResetData.user));

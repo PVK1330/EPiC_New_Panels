@@ -40,7 +40,6 @@ import {
 import {
   createCandidate,
   toggleCandidateStatus,
-  deleteCandidate,
   getCandidateById,
   updateAdminCandidateApplication,
   exportCandidateApplicationsExcel,
@@ -86,6 +85,42 @@ const VISA_CHIPS = {
   "Visitor Visa": "bg-orange-100 text-orange-700",
 };
 
+
+/**
+ * Map a stored visa value ("Skilled Worker Visa", "Indefinite Leave to Remain (ILR)")
+ * to the canonical short label used as the VISA_CHIPS / filter key ("Skilled Worker",
+ * "ILR"). Matching is normalised (lowercased, alphanumerics-only substring), mirroring
+ * the backend's visa-type filter so chips colour correctly regardless of phrasing.
+ */
+const VISA_CANONICAL_LABELS = [
+  "Skilled Worker",
+  "Student Visa",
+  "ILR",
+  "Graduate Visa",
+  "Sponsor Licence",
+  "Global Talent",
+  "Family Visa",
+  "Youth Mobility",
+  "Visitor Visa",
+];
+
+function normaliseVisa(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function canonicalVisaLabel(value) {
+  if (!value) return "—";
+  const norm = normaliseVisa(value);
+  if (!norm) return "—";
+  // "ilr" must also match "indefiniteleavetoremain".
+  const match = VISA_CANONICAL_LABELS.find((label) => {
+    const n = normaliseVisa(label);
+    return norm.includes(n) || n.includes(norm);
+  });
+  if (match) return match;
+  if (norm.includes("indefiniteleave")) return "ILR";
+  return value; // unknown — show the raw stored value
+}
 
 const ROLE_OPTIONS = [{ value: "1", label: "Candidate" }];
 
@@ -238,7 +273,7 @@ export default function AdminCandidates() {
     setPage(1);
   }, [debouncedSearch, statusFilter, visaFilter, payFilter]);
 
-  const statusParam = statusFilter === "All" ? "" : statusFilter;
+  const statusParam = statusFilter === "All" ? "all" : statusFilter;
   const visaParam = visaFilter === "All" ? "" : visaFilter;
   const payParam = payFilter === "All" ? "" : payFilter;
 
@@ -714,29 +749,30 @@ export default function AdminCandidates() {
 
 
   const handleDelete = async () => {
-    setDeleteId(modal.data.id);
+    const row = modal.data;
+    if (row.status === "inactive") {
+      showToast({ message: "Account is already deactivated", variant: "success" });
+      closeModal();
+      return;
+    }
+    setDeleteId(row.id);
     try {
-      const res = await deleteCandidate(modal.data.id);
+      const res = await toggleCandidateStatus(row.id);
       showToast({
-        message: res.data?.message || "Candidate removed",
+        message: res.data?.message || "Candidate deactivated",
         variant: "success",
       });
       closeModal();
-      const nextPage =
-        candidates.length === 1 && page > 1 ? page - 1 : page;
-      if (nextPage !== page) setPage(nextPage);
-      else {
-        const r = await fetchCandidates(
-          nextPage,
-          limit,
-          debouncedSearch.trim(),
-          statusParam,
-          visaParam,
-          payParam,
-        );
-        if (!r.ok) {
-          showToast({ message: getApiError(r.error), variant: "danger" });
-        }
+      const r = await fetchCandidates(
+        page,
+        limit,
+        debouncedSearch.trim(),
+        statusParam,
+        visaParam,
+        payParam,
+      );
+      if (!r.ok) {
+        showToast({ message: getApiError(r.error), variant: "danger" });
       }
     } catch (e) {
       showToast({ message: getApiError(e), variant: "danger" });
@@ -1049,8 +1085,10 @@ export default function AdminCandidates() {
                   const app = c.application || {};
                   const caseRecord = c.cases?.[0] || {};
                   const dob = app.dob ? formatDate(app.dob) : c.dob ? formatDate(c.dob) : '—';
-                  // visaType: prefer application field, then nested visaType name from Case
-                  const visaType = app.visaType || caseRecord.visaType?.name || '—';
+                  // visaType: prefer application field, then nested visaType name from Case.
+                  // Normalise to the canonical short label so the chip colours correctly.
+                  const visaTypeRaw = app.visaType || caseRecord.visaType?.name || '';
+                  const visaType = canonicalVisaLabel(visaTypeRaw);
                   const caseStatus = caseRecord.status || '—';
                   const visaExpiry = app.visaEndDate ? formatDate(app.visaEndDate) : '—';
                   // Compute payment status from Case amounts
@@ -1164,7 +1202,6 @@ export default function AdminCandidates() {
           const c = modal.data;
           const app = c.application || {};
           const dob = formatDate(app.dob || c.dob);
-          const visaType = app.visaType || c.cases?.[0]?.visaType || '—';
           const caseStatus = c.cases?.[0]?.status || '—';
           const paymentStatus = c.cases?.[0]?.paymentStatus || '—';
           return (
@@ -1258,7 +1295,7 @@ export default function AdminCandidates() {
       <Modal
         open={modal.type === "delete"}
         onClose={closeModal}
-        title="Delete Candidate"
+        title="Deactivate Candidate"
         maxWidthClass="max-w-sm"
         bodyClassName="px-4 py-4 sm:px-6"
         footer={
@@ -1272,7 +1309,7 @@ export default function AdminCandidates() {
               onClick={handleDelete}
               className="rounded-xl"
             >
-              {deleteId != null ? "Deleting…" : "Delete"}
+              {deleteId != null ? "Deactivating…" : "Deactivate"}
             </Button>
           </>
         }
@@ -1282,11 +1319,11 @@ export default function AdminCandidates() {
             <FiTrash2 size={16} className="text-red-600" />
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Are you sure you want to delete{" "}
+            Are you sure you want to deactivate{" "}
             <span className="font-black text-secondary">
               {modal.data ? fullName(modal.data) : ""}
             </span>
-            ? This will deactivate the account.
+            ? The account will be set to inactive.
           </p>
         </div>
       </Modal>

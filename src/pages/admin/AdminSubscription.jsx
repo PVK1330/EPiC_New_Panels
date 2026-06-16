@@ -10,7 +10,7 @@ import {
   verifySubscriptionSession,
 } from "../../services/orgBillingApi";
 
-const CURRENCY_SYMBOLS = { GBP: "£", USD: "$", EUR: "€", INR: "₹" };
+const CURRENCY_SYMBOLS = { GBP: "£", USD: "$", EUR: "", INR: "₹" };
 
 function formatPrice(amount, currency) {
   const code = String(currency || "GBP").toUpperCase();
