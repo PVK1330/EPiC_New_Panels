@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Bell, BellRing, X, ChevronDown } from 'lucide-react';
+import { Bell, BellRing } from 'lucide-react';
 import { fetchUnreadCount, fetchNotifications } from '../../store/slices/notificationSlice';
 import NotificationList from './NotificationList';
 import { getMessagingSocketUrl } from '../../utils/socketOrigin';
@@ -117,22 +117,12 @@ const NotificationDropdown = () => {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[32rem] overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-            <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Notification List */}
-          <div className="max-h-[28rem] overflow-y-auto">
-            <NotificationList showUnreadOnly={false} />
-          </div>
+        <div className="absolute right-0 mt-2 w-[22rem] sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-xl border border-gray-200 z-50 flex flex-col overflow-hidden">
+          {/* The list owns its own header (title, tabs, refresh, mark-all-read);
+              the dropdown only provides the panel chrome, a close button, and
+              the footer link so we don't render two stacked "Notifications"
+              headers. */}
+          <NotificationList showUnreadOnly={false} onClose={() => setIsOpen(false)} />
 
           {/* Footer */}
           <div className="p-3 border-t border-gray-200 bg-gray-50">
@@ -141,7 +131,7 @@ const NotificationDropdown = () => {
                 setIsOpen(false);
                 navigate(getNotificationRoute({}, user));
               }}
-              className="w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
+              className="w-full text-center text-sm text-blue-600 hover:text-blue-800 font-semibold"
             >
               View all notifications
             </button>

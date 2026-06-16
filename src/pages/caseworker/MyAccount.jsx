@@ -19,8 +19,12 @@ import Modal from "../../components/Modal";
 import TwoFactorSetup from "../../components/TwoFactorSetup";
 import TwoFactorDisable from "../../components/TwoFactorDisable";
 import api from "../../services/api";
-import { updateUser } from "../../store/slices/authSlice";
+import { updateUser, setCredentials } from "../../store/slices/authSlice";
 import { resolveAssetUrl } from "../../utils/assetUrl";
+import { useToast } from "../../context/ToastContext";
+
+// Profile avatars are capped at 2MB by the backend (MAX_FILE_SIZES.AVATAR).
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
 const InputField = ({
   label,
@@ -70,6 +74,7 @@ const InputField = ({
 const MyAccount = () => {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("profile"); // profile, password, security
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -134,6 +139,19 @@ const MyAccount = () => {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast({ variant: "danger", message: "Please select an image file." });
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      showToast({ variant: "danger", message: "Image size must be under 2MB." });
+      e.target.value = "";
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, profile_pic: file }));
   };
 
@@ -254,11 +272,19 @@ const MyAccount = () => {
         })
       );
 
+      // Clear the staged File so the avatar now renders from the saved server
+      // path (resolveAssetUrl) instead of the local object URL.
+      setFormData((prev) => ({ ...prev, profile_pic: null }));
+
       setSaved(true);
+      showToast({ message: "Profile updated successfully." });
       setTimeout(() => setSaved(false), 2500);
     } catch (error) {
       console.error("Profile update error:", error);
-      alert(error.response?.data?.message || "Failed to update profile");
+      showToast({
+        variant: "danger",
+        message: error.response?.data?.message || "Failed to update profile",
+      });
     } finally {
       setLoading(false);
     }

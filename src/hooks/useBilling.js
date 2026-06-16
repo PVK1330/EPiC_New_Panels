@@ -12,6 +12,7 @@ import {
   exportInvoicesPdf,
   exportFinancials,
   getTransactions,
+  exportTransactions,
   getTransactionById,
   getGatewayStatus,
   configureGateway,
@@ -118,6 +119,10 @@ export default function useBilling() {
     }
   }, []);
 
+  const downloadTransactions = useCallback(async (params = {}) => {
+    return exportTransactions(params);
+  }, []);
+
   const fetchTransactionById = useCallback(async (id) => {
     try {
       const res = await getTransactionById(id);
@@ -178,6 +183,7 @@ export default function useBilling() {
     transactions,
     transactionsLoading,
     fetchTransactions,
+    downloadTransactions,
     fetchTransactionById,
     gatewayStatus,
     gatewayLoading,

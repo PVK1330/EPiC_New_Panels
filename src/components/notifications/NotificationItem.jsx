@@ -7,20 +7,76 @@ import { markAsRead, removeNotification } from '../../store/slices/notificationS
 import { getNotificationRoute, getCaseworkerOpenCaseState } from '../../utils/notificationHelpers';
 import { formatDate, formatDateTime } from '../../utils/datetime';
 
+// The list row prefers `createdAt` (always populated) over `sentAt` (nullable in
+// the model) so a missing `sentAt` no longer collapses to `new Date(null)` → the
+// Unix epoch (the "01/01/1970" bug).
+const getNotificationTimestamp = (notification) =>
+  notification?.createdAt ||
+  notification?.created_at ||
+  notification?.sentAt ||
+  notification?.sent_at ||
+  null;
+
 const formatTimeAgo = (timestamp) => {
+  if (!timestamp) return '';
   const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+
   const now = new Date();
   const diffMs = now - date;
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
+  if (diffMs < 0) return formatDate(date); // future-dated → show the date, not "in -3 mins"
   if (diffMins < 1) return 'Just now';
   if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  
+
   return formatDate(date);
+};
+
+// Internal plumbing keys that should never be shown to the user as metadata.
+const HIDDEN_METADATA_KEYS = new Set([
+  'senderId', 'conversationId', 'entityId', 'applicationId', 'taskId',
+  'id', 'userId', 'recipientId', 'organisationId', 'orgId', 'priority',
+  'sendEmail', 'scheduledFor', 'nextStage',
+]);
+
+// "case_status_changed" / "caseStatusChanged" → "Case status changed".
+const prettifyLabel = (key) =>
+  String(key)
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .replace(/^./, (c) => c.toUpperCase());
+
+// "Case_status_changed" → "Case status changed" for snake_case enum values,
+// while leaving human values (names, "CAS-000004", "Approved") untouched.
+const prettifyValue = (value) => {
+  if (Array.isArray(value)) return value.map(prettifyValue).join(', ');
+  const str = String(value ?? '').trim();
+  if (!str) return '';
+  // Only de-snake values that are clearly machine enums (no spaces, has _).
+  if (/^[a-z0-9]+(_[a-z0-9]+)+$/i.test(str)) {
+    return str.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+  }
+  return str;
+};
+
+// Turn raw metadata into clean, display-ready [label, value] pairs.
+const getDisplayMetadata = (metadata) => {
+  if (!metadata || typeof metadata !== 'object') return [];
+  return Object.entries(metadata)
+    .filter(([key, value]) => {
+      if (HIDDEN_METADATA_KEYS.has(key)) return false;
+      if (value === null || value === undefined || value === '') return false;
+      if (typeof value === 'object' && !Array.isArray(value)) return false;
+      return true;
+    })
+    .map(([key, value]) => [prettifyLabel(key), prettifyValue(value)])
+    .filter(([, value]) => value !== '');
 };
 
 const NotificationItem = ({ notification }) => {
@@ -110,49 +166,56 @@ const NotificationItem = ({ notification }) => {
 
   const hasRoute = getNotificationRoute(notification, user) || getCaseworkerOpenCaseState(notification);
 
+  const timestamp = getNotificationTimestamp(notification);
+  const timeAgo = formatTimeAgo(timestamp);
+  const listMetadata = getDisplayMetadata(notification.metadata);
+
   return (
     <div
       className={`
-        relative border-l-4 p-4 mb-2 cursor-pointer transition-all duration-200
+        relative border border-gray-200 border-l-4 rounded-lg p-3 cursor-pointer transition-all duration-200
+        hover:shadow-sm hover:border-gray-300
         ${getPriorityColor(notification.priority)}
-        ${!notification.isRead ? 'shadow-sm' : 'opacity-75'}
+        ${notification.isRead ? 'opacity-80' : ''}
       `}
       onClick={handleClick}
     >
-      {!notification.isRead && (
-        <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full" />
-      )}
-
       <div className="flex items-start space-x-3">
-        <div className="flex-shrink-0 mt-1">
+        <div className="flex-shrink-0 mt-0.5">
           {getIcon(notification.type || notification.actionType)}
         </div>
 
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-semibold text-gray-900 truncate">
-            {notification.title}
+          <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+            {!notification.isRead && (
+              <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" title="Unread" />
+            )}
+            <span className="truncate">{notification.title}</span>
           </h4>
 
           <p className="text-sm text-gray-600 mt-1 line-clamp-2">
             {notification.message}
           </p>
 
-          {notification.metadata && Object.keys(notification.metadata).length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-              {Object.entries(notification.metadata).map(([key, value]) => {
-                if (['senderId', 'conversationId', 'entityId', 'applicationId', 'taskId'].includes(key)) return null;
-                return (
-                  <span key={key} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium capitalize">
-                    <span className="opacity-60">{key.replace(/([A-Z])/g, ' $1').trim()}:</span> {Array.isArray(value) ? value.join(', ') : String(value)}
-                  </span>
-                );
-              })}
+          {listMetadata.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {listMetadata.slice(0, 4).map(([label, value]) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center gap-1 text-[11px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md max-w-full"
+                >
+                  <span className="text-gray-400">{label}</span>
+                  <span className="font-medium truncate">{value}</span>
+                </span>
+              ))}
             </div>
           )}
 
-          <div className="mt-2 text-xs text-gray-400">
-            {formatTimeAgo(notification.sentAt)}
-          </div>
+          {timeAgo && (
+            <div className="mt-2 text-xs text-gray-400">
+              {timeAgo}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col space-y-2">
@@ -217,31 +280,30 @@ const NotificationItem = ({ notification }) => {
               </div>
               <p className="text-sm text-gray-600 mb-6 whitespace-pre-wrap leading-relaxed">{notification.message}</p>
               
-              {notification.metadata && Object.keys(notification.metadata).length > 0 && (
+              {listMetadata.length > 0 && (
                 <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
-                  <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Metadata</h5>
+                  <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Details</h5>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
-                    {Object.entries(notification.metadata).map(([key, value]) => {
-                      if (['senderId', 'conversationId', 'entityId', 'applicationId', 'taskId'].includes(key)) return null;
-                      return (
-                        <div key={key}>
-                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                            {key.replace(/([A-Z])/g, ' $1').trim()}
-                          </div>
-                          <div className="text-sm font-semibold text-gray-900 mt-0.5 break-words">
-                            {Array.isArray(value) ? value.join(', ') : String(value)}
-                          </div>
+                    {listMetadata.map(([label, value]) => (
+                      <div key={label}>
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          {label}
                         </div>
-                      );
-                    })}
+                        <div className="text-sm font-semibold text-gray-900 mt-0.5 break-words">
+                          {value}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
-              
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Clock className="w-3 h-3" />
-                Received: {formatDateTime(notification.createdAt || notification.sentAt)}
-              </div>
+
+              {timestamp && (
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="w-3 h-3" />
+                  Received: {formatDateTime(timestamp)}
+                </div>
+              )}
             </div>
             
             <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 cursor-default">

@@ -9,7 +9,36 @@ const Stat = ({ label, value, colorClass }) => (
   </div>
 );
 
+const INVOICE_COLUMNS = ["Invoice", "Candidate", "Amount", "Status", "Due"];
+
+const INVOICE_ROWS = [
+  ["INV-0491-003", "Priya Sharma", "£450", "Unpaid", "1 Apr 2026"],
+  ["INV-0491-002", "Ahmed Al-Rashid", "£700", "Paid", "—"],
+  ["INV-0491-001", "Carlos Mendes", "£1,350", "Paid", "—"],
+];
+
+// Quote a CSV cell: wrap in quotes and escape embedded quotes so values
+// containing commas, quotes, or newlines survive a round-trip into Excel/Sheets.
+const toCsvCell = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+const buildCsv = (columns, rows) =>
+  [columns, ...rows].map((row) => row.map(toCsvCell).join(",")).join("\r\n");
+
 const CaseworkerFinance = () => {
+  const handleExportCsv = () => {
+    // Prepend a UTF-8 BOM so Excel reads the £ symbol correctly.
+    const csv = "﻿" + buildCsv(INVOICE_COLUMNS, INVOICE_ROWS);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `invoices-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -28,6 +57,7 @@ const CaseworkerFinance = () => {
           <div className="text-sm font-black text-secondary">Recent invoices</div>
           <button
             type="button"
+            onClick={handleExportCsv}
             className="text-xs font-black text-primary hover:underline"
           >
             Export CSV
@@ -38,29 +68,18 @@ const CaseworkerFinance = () => {
           <table className="w-full border-collapse text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider text-gray-500 font-black border-b border-gray-200">
-                  Invoice
-                </th>
-                <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider text-gray-500 font-black border-b border-gray-200">
-                  Candidate
-                </th>
-                <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider text-gray-500 font-black border-b border-gray-200">
-                  Amount
-                </th>
-                <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider text-gray-500 font-black border-b border-gray-200">
-                  Status
-                </th>
-                <th className="text-left px-4 py-3 text-[11px] uppercase tracking-wider text-gray-500 font-black border-b border-gray-200">
-                  Due
-                </th>
+                {INVOICE_COLUMNS.map((col) => (
+                  <th
+                    key={col}
+                    className="text-left px-4 py-3 text-[11px] uppercase tracking-wider text-gray-500 font-black border-b border-gray-200"
+                  >
+                    {col}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {[
-                ["INV-0491-003", "Priya Sharma", "£450", "Unpaid", "1 Apr 2026"],
-                ["INV-0491-002", "Ahmed Al-Rashid", "£700", "Paid", "—"],
-                ["INV-0491-001", "Carlos Mendes", "£1,350", "Paid", "—"],
-              ].map(([inv, name, amt, status, due]) => (
+              {INVOICE_ROWS.map(([inv, name, amt, status, due]) => (
                 <tr key={inv} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs text-secondary">{inv}</td>
                   <td className="px-4 py-3 text-gray-700">{name}</td>

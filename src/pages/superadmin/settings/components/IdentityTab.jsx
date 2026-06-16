@@ -8,6 +8,7 @@ import { toast } from 'react-hot-toast';
 import Input from '../../../../components/Input';
 import Button from '../../../../components/Button';
 import usePlatformIdentity from '../../../../hooks/usePlatformIdentity';
+import { resolveAssetUrl } from '../../../../utils/assetUrl';
 
 const LOCALES = [
   { value: 'en-GB', label: 'UK (GBP)'       },
@@ -162,7 +163,12 @@ const IdentityTab = () => {
     const { logo_url, favicon_url, ...textSettings } = settings;
     const result = await saveIdentitySettings(textSettings);
     if (result.ok) toast.success('Identity settings saved');
-    else toast.error(result.error?.response?.data?.message || result.error || 'Failed to save');
+    else
+      toast.error(
+        result.error?.response?.data?.message ||
+          result.error?.message ||
+          'Failed to save',
+      );
   };
 
   if (loading) {
@@ -190,7 +196,7 @@ const IdentityTab = () => {
               </p>
               <UploadZone
                 label="App Logo"
-                currentUrl={settings.logo_url}
+                currentUrl={resolveAssetUrl(settings.logo_url)}
                 uploading={uploadingLogo}
                 accept="image/png,image/jpeg,image/webp,image/svg+xml"
                 onFile={handleLogoFile}
@@ -203,7 +209,7 @@ const IdentityTab = () => {
               </p>
               <UploadZone
                 label="Favicon"
-                currentUrl={settings.favicon_url}
+                currentUrl={resolveAssetUrl(settings.favicon_url)}
                 uploading={uploadingFavicon}
                 accept="image/png,image/x-icon,image/svg+xml,image/webp"
                 onFile={handleFaviconFile}

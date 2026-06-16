@@ -73,11 +73,11 @@ export default function SuperadminAnnouncements() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 py-6">
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3"
+        className="flex items-center gap-4"
       >
         <div className="p-3 rounded-2xl bg-primary/10 text-primary">
           <RiMegaphoneLine size={28} />

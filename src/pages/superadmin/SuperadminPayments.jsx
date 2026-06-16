@@ -49,6 +49,7 @@ const SuperadminPayments = () => {
  const [isTransactionDetailOpen, setIsTransactionDetailOpen] = useState(false);
  const [selectedTransaction, setSelectedTransaction] = useState(null);
  const [searchTerm, setSearchTerm] = useState('');
+ const [exporting, setExporting] = useState(false);
  const [gatewayConfig, setGatewayConfig] = useState({
    publishable_key: '',
    secret_key: '',
@@ -59,6 +60,7 @@ const SuperadminPayments = () => {
    transactions,
    transactionsLoading,
    fetchTransactions,
+   downloadTransactions,
    fetchTransactionById,
    gatewayStatus,
    gatewayLoading,
@@ -88,6 +90,32 @@ const SuperadminPayments = () => {
     if (activeTab === 'Refunds') return t.status === 'refunded';
     return true;
   });
+
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      // Export the same slice the operator is viewing: Refunds tab → refunded only.
+      const params = activeTab === 'Refunds' ? { status: 'refunded' } : {};
+      const res = await downloadTransactions(params);
+      const blob = new Blob([res.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `transactions_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Transactions exported');
+    } catch (e) {
+      toast.error('Failed to export transactions');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleViewTransaction = async (txn) => {
     try {
@@ -119,8 +147,8 @@ const SuperadminPayments = () => {
         title="Financial Hub"
         subtitle="Real-time transaction monitoring"
       >
-        <HeroGhostButton>
-          <RiFileDownloadLine size={16} /> Export
+        <HeroGhostButton onClick={handleExport} disabled={exporting}>
+          <RiFileDownloadLine size={16} /> {exporting ? 'Exporting…' : 'Export'}
         </HeroGhostButton>
         <HeroButton onClick={() => setIsGatewayModalOpen(true)}>
           <RiExchangeLine size={16} /> Configure

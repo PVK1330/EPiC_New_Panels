@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Bell, CheckSquare, RefreshCw, Loader2 } from 'lucide-react';
+import { Bell, CheckSquare, RefreshCw, Loader2, X } from 'lucide-react';
 import {
   fetchNotifications,
   fetchUnreadCount,
@@ -9,7 +9,12 @@ import {
 } from '../../store/slices/notificationSlice';
 import NotificationItem from './NotificationItem';
 
-const NotificationList = ({ showUnreadOnly = false }) => {
+const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
+  // `onClose` is passed when rendered inside the bell dropdown. In that mode the
+  // dropdown supplies the panel chrome (rounded card, shadow, border), so the
+  // list renders flat to avoid a double-framed look; on the full page it keeps
+  // its own card wrapper.
+  const isDropdown = typeof onClose === 'function';
   const dispatch = useDispatch();
   const {
     notifications,
@@ -72,39 +77,50 @@ const NotificationList = ({ showUnreadOnly = false }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className={isDropdown ? 'flex flex-col min-h-0 max-h-[32rem]' : 'bg-white rounded-lg shadow-sm border border-gray-200'}>
       {/* Header */}
-      <div className="border-b border-gray-200 p-4">
+      <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Bell className="w-5 h-5 text-gray-600" />
-            <h3 className="text-lg font-semibold text-gray-900">
-              Notifications
+          <div className="flex items-center space-x-2.5 min-w-0">
+            <Bell className="w-5 h-5 text-gray-600 flex-shrink-0" />
+            <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 truncate">
+              <span>Notifications</span>
               {unreadCount > 0 && (
-                <span className="ml-2 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                  {unreadCount} unread
+                <span className="px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full flex-shrink-0">
+                  {unreadCount}
                 </span>
               )}
             </h3>
           </div>
-          
-          <div className="flex items-center space-x-2">
+
+          <div className="flex items-center space-x-1 flex-shrink-0">
             <button
               onClick={handleRefresh}
               disabled={loading}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-              title="Refresh notifications"
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200/60 rounded-lg transition-colors disabled:opacity-50"
+              title="Refresh"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            
+
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
-                className="flex items-center space-x-1 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                className="flex items-center space-x-1 px-2.5 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium"
+                title="Mark all as read"
               >
                 <CheckSquare className="w-4 h-4" />
-                <span>Mark all read</span>
+                <span className="hidden sm:inline">Mark all read</span>
+              </button>
+            )}
+
+            {isDropdown && (
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200/60 rounded-lg transition-colors"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -149,7 +165,7 @@ const NotificationList = ({ showUnreadOnly = false }) => {
       )}
 
       {/* Notifications */}
-      <div className="max-h-96 overflow-y-auto">
+      <div className={isDropdown ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-96 overflow-y-auto'}>
         {filteredNotifications.length === 0 ? (
           <div className="p-8 text-center">
             <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -182,8 +198,9 @@ const NotificationList = ({ showUnreadOnly = false }) => {
         )}
       </div>
 
-      {/* Footer */}
-      {safePagination.total > 0 && (
+      {/* Footer — hidden in dropdown mode where the dropdown owns the footer
+          ("View all notifications"), so we don't stack two footers. */}
+      {!isDropdown && safePagination.total > 0 && (
         <div className="border-t border-gray-200 px-4 py-3 bg-gray-50">
           <p className="text-xs text-gray-500">
             Showing {safeNotifications.length} of {safePagination.total} notifications

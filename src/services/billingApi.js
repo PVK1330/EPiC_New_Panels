@@ -24,6 +24,9 @@ export const exportFinancials = () => api.get("/api/superadmin/financials/export
 
 export const getTransactions = (params = {}) => api.get("/api/superadmin/transactions", { params });
 
+export const exportTransactions = (params = {}) =>
+  api.get("/api/superadmin/transactions/export", { params, responseType: "blob" });
+
 export const getTransactionById = (id) => api.get(`/api/superadmin/transactions/${id}`);
 
 export const getGatewayStatus = () => api.get("/api/superadmin/gateway/status");
