@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { CreditCard, Download, Filter, Search, CheckCircle2, AlertCircle, Eye, LayoutDashboard, DollarSign, Clock, Loader2 } from "lucide-react";
+import { CreditCard, Download, Filter, Search, CheckCircle2, AlertCircle, Eye, LayoutDashboard, DollarSign, Clock, Loader2, X } from "lucide-react";
 import { getBusinessPayments } from "../../services/businessProfileApi";
 import { formatDate } from "../../utils/datetime";
+import { useToast } from "../../context/ToastContext";
 
 const money = (n) => `£${Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const BusinessPayment = () => {
+  const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [loading, setLoading] = useState(true);
   const [payments, setPayments] = useState([]);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [downloading, setDownloading] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -64,6 +68,24 @@ const BusinessPayment = () => {
 
   const getStatusIcon = (status) =>
     status === "completed" ? <CheckCircle2 size={16} className="text-emerald-600" /> : <AlertCircle size={16} className="text-amber-600" />;
+
+  const handleDownload = async (payment) => {
+    setDownloading(payment.id);
+    try {
+      const { downloadInvoiceReceiptPdf } = await import("../../services/downloadApi");
+      const res = await downloadInvoiceReceiptPdf({ paymentId: payment.id, invoiceNumber: payment.invoiceNo });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${payment.invoiceNo}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      showToast({ message: "Failed to download invoice", variant: "danger" });
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -159,8 +181,21 @@ const BusinessPayment = () => {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
-                      <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"><Eye size={16} /></button>
-                      <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"><Download size={16} /></button>
+                      <button
+                        onClick={() => setSelectedPayment(payment)}
+                        className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"
+                        title="View details"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDownload(payment)}
+                        disabled={downloading === payment.id}
+                        className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary disabled:opacity-40"
+                        title="Download PDF"
+                      >
+                        <Download size={16} className={downloading === payment.id ? "animate-pulse" : ""} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -169,6 +204,66 @@ const BusinessPayment = () => {
           </table>
         </div>
       </motion.div>
+      {/* Payment Detail Modal */}
+      {selectedPayment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="text-lg font-black text-secondary">{selectedPayment.invoiceNo}</h3>
+                <p className="text-xs font-bold text-gray-500 mt-0.5">{selectedPayment.description}</p>
+              </div>
+              <button onClick={() => setSelectedPayment(null)} className="p-1.5 hover:bg-gray-100 rounded-lg transition">
+                <X size={18} className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {[
+                ["Candidate",    selectedPayment.candidateName],
+                ["Case Ref",     selectedPayment.caseRef],
+                ["Amount",       money(selectedPayment.amount)],
+                ["Date",         selectedPayment.date ? formatDate(selectedPayment.date) : "N/A"],
+                ["Due Date",     selectedPayment.dueDate ? formatDate(selectedPayment.dueDate) : "N/A"],
+              ].map(([label, value]) => (
+                <div key={label} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                  <span className="text-xs font-black text-gray-500 uppercase tracking-wider">{label}</span>
+                  <span className="text-sm font-black text-secondary">{value}</span>
+                </div>
+              ))}
+              <div className="flex justify-between items-center py-2">
+                <span className="text-xs font-black text-gray-500 uppercase tracking-wider">Status</span>
+                <div className="flex items-center gap-1.5">
+                  {getStatusIcon(selectedPayment.status)}
+                  <span className={`px-2 py-0.5 text-[10px] font-black rounded-full ${getStatusColor(selectedPayment.status)}`}>
+                    {selectedPayment.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-5 border-t border-gray-100 mt-4">
+              <button
+                onClick={() => setSelectedPayment(null)}
+                className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl py-2.5 transition text-sm"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => { handleDownload(selectedPayment); setSelectedPayment(null); }}
+                className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl py-2.5 transition flex items-center justify-center gap-2 text-sm"
+              >
+                <Download size={14} />
+                Download PDF
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

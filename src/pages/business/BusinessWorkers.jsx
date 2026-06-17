@@ -74,7 +74,7 @@ const BusinessWorkers = () => {
       (worker.caseId || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesFilter =
-      filterStatus === "all" || worker.status.toLowerCase() === filterStatus.toLowerCase();
+      filterStatus === "all" || (worker.status || "").toLowerCase() === filterStatus.toLowerCase();
 
     return matchesSearch && matchesFilter;
   });

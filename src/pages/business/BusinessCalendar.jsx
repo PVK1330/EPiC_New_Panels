@@ -250,8 +250,8 @@ const Calendar = () => {
     const q = searchQuery.toLowerCase();
     return allEvents.filter(
       (e) =>
-        e.title.toLowerCase().includes(q) ||
-        e.description.toLowerCase().includes(q)
+        (e.title || "").toLowerCase().includes(q) ||
+        (e.description || "").toLowerCase().includes(q)
     );
   }, [allEvents, searchQuery]);
 
@@ -383,105 +383,166 @@ const Calendar = () => {
         </div>
       </div>
 
-      {/* Calendar Grid */}
+      {/* Calendar Grid — Month / Week / Day */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
         <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
-        {/* Week Days Header */}
-        <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
-          {weekDays.map((day) => (
-            <div
-              key={day}
-              className="px-3 py-2 text-center text-[10px] font-black text-gray-500 uppercase tracking-wider"
-            >
-              {day}
+
+        {viewMode === "month" && (
+          <>
+            <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+              {weekDays.map((day) => (
+                <div key={day} className="px-3 py-2 text-center text-[10px] font-black text-gray-500 uppercase tracking-wider">
+                  {day}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-
-        {/* Calendar Days */}
-        <div className="grid grid-cols-7">
-          {days.map((day, index) => {
-            const dayEvents = day ? getEventsForDay(day) : [];
-            const isToday =
-              day && day.toDateString() === today.toDateString();
-            const isPast = day && day < today && !isToday;
-            const isCurrentMonth =
-              day && day.getMonth() === currentDate.getMonth();
-
-            return (
-              <div
-                key={index}
-                onClick={() => day && !isPast && handleDayClick(day)}
-                className={`min-h-[120px] p-2 border-r border-b border-gray-100 transition-colors
-                  ${!day ? "bg-gray-50" : ""}
-                  ${day && isPast ? "bg-gray-50/60 cursor-default" : ""}
-                  ${day && !isPast ? "bg-white hover:bg-gray-50 cursor-pointer" : ""}
-                  ${isToday ? "bg-blue-50" : ""}
-                `}
-              >
-                {day && (
-                  <>
-                    {/* Day number */}
-                    <div className="flex items-center justify-between mb-1">
-                      <span
-                        className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full
-                          ${isToday ? "bg-blue-600 text-white" : ""}
-                          ${!isToday && isPast ? "text-gray-400" : ""}
-                          ${!isToday && !isPast && isCurrentMonth ? "text-gray-900" : ""}
-                          ${!isCurrentMonth && !isToday ? "text-gray-300" : ""}
-                        `}
-                      >
-                        {day.getDate()}
-                      </span>
-                      {isPast && dayEvents.length > 0 && (
-                        <CheckCircle2 size={11} className="text-green-400 flex-shrink-0" />
-                      )}
-                    </div>
-
-                    {/* Events */}
-                    <div className="space-y-1">
-                      {dayEvents.slice(0, 3).map((event) => (
-                        <div
-                          key={event.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEventClick(event);
-                          }}
-                          className={`text-xs p-1 rounded-md text-white truncate cursor-pointer transition-opacity
-                            ${event.color}
-                            ${event.completed ? "opacity-50 line-through-none" : "hover:opacity-80"}
-                          `}
-                          title={event.title}
-                        >
-                          <span className="flex items-center gap-1">
-                            {event.completed
-                              ? <CheckCircle2 size={10} className="flex-shrink-0" />
-                              : getEventIcon(event.type)
-                            }
-                            <span className={`truncate ${event.completed ? "opacity-80" : ""}`}>
-                              {event.title}
-                            </span>
+            <div className="grid grid-cols-7">
+              {days.map((day, index) => {
+                const dayEvents = day ? getEventsForDay(day) : [];
+                const isToday = day && day.toDateString() === today.toDateString();
+                const isPast = day && day < today && !isToday;
+                const isCurrentMonth = day && day.getMonth() === currentDate.getMonth();
+                return (
+                  <div
+                    key={index}
+                    onClick={() => day && !isPast && handleDayClick(day)}
+                    className={`min-h-[120px] p-2 border-r border-b border-gray-100 transition-colors
+                      ${!day ? "bg-gray-50" : ""}
+                      ${day && isPast ? "bg-gray-50/60 cursor-default" : ""}
+                      ${day && !isPast ? "bg-white hover:bg-gray-50 cursor-pointer" : ""}
+                      ${isToday ? "bg-blue-50" : ""}
+                    `}
+                  >
+                    {day && (
+                      <>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full
+                            ${isToday ? "bg-blue-600 text-white" : ""}
+                            ${!isToday && isPast ? "text-gray-400" : ""}
+                            ${!isToday && !isPast && isCurrentMonth ? "text-gray-900" : ""}
+                            ${!isCurrentMonth && !isToday ? "text-gray-300" : ""}
+                          `}>
+                            {day.getDate()}
                           </span>
+                          {isPast && dayEvents.length > 0 && <CheckCircle2 size={11} className="text-green-400 flex-shrink-0" />}
                         </div>
-                      ))}
-                      {dayEvents.length > 3 && (
-                        <div
-                          className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 pl-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDayClick(day);
-                          }}
-                        >
-                          +{dayEvents.length - 3} more
+                        <div className="space-y-1">
+                          {dayEvents.slice(0, 3).map((event) => (
+                            <div
+                              key={event.id}
+                              onClick={(e) => { e.stopPropagation(); handleEventClick(event); }}
+                              className={`text-xs p-1 rounded-md text-white truncate cursor-pointer transition-opacity ${event.color} ${event.completed ? "opacity-50" : "hover:opacity-80"}`}
+                              title={event.title}
+                            >
+                              <span className="flex items-center gap-1">
+                                {event.completed ? <CheckCircle2 size={10} className="flex-shrink-0" /> : getEventIcon(event.type)}
+                                <span className="truncate">{event.title}</span>
+                              </span>
+                            </div>
+                          ))}
+                          {dayEvents.length > 3 && (
+                            <div className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 pl-1" onClick={(e) => { e.stopPropagation(); handleDayClick(day); }}>
+                              +{dayEvents.length - 3} more
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </>
-                )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {viewMode === "week" && (() => {
+          const startOfWeek = new Date(currentDate);
+          startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+          const weekDayDates = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(startOfWeek);
+            d.setDate(startOfWeek.getDate() + i);
+            return d;
+          });
+          return (
+            <>
+              <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+                {weekDayDates.map((d) => (
+                  <div key={d.toISOString()} className="px-2 py-2 text-center">
+                    <p className="text-[10px] font-black text-gray-500 uppercase">{weekDays[d.getDay()]}</p>
+                    <p className={`text-lg font-black mt-0.5 w-8 h-8 mx-auto flex items-center justify-center rounded-full
+                      ${d.toDateString() === today.toDateString() ? "bg-blue-600 text-white" : "text-gray-800"}`}>
+                      {d.getDate()}
+                    </p>
+                  </div>
+                ))}
               </div>
-            );
-          })}
-        </div>
+              <div className="grid grid-cols-7 divide-x divide-gray-100 min-h-[320px]">
+                {weekDayDates.map((d) => {
+                  const dayEvs = getEventsForDay(d);
+                  const isToday = d.toDateString() === today.toDateString();
+                  return (
+                    <div key={d.toISOString()} className={`p-2 space-y-1 ${isToday ? "bg-blue-50/40" : ""}`}>
+                      {dayEvs.length === 0
+                        ? <p className="text-[10px] text-gray-300 text-center mt-4">—</p>
+                        : dayEvs.map((ev) => (
+                          <div
+                            key={ev.id}
+                            onClick={() => handleEventClick(ev)}
+                            className={`text-[10px] font-bold px-1.5 py-1 rounded text-white cursor-pointer truncate ${ev.color} ${ev.completed ? "opacity-50" : "hover:opacity-80"}`}
+                            title={ev.title}
+                          >
+                            {ev.title}
+                          </div>
+                        ))
+                      }
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          );
+        })()}
+
+        {viewMode === "day" && (() => {
+          const dayView = selectedDate || today;
+          const dayEvs = getEventsForDay(dayView);
+          return (
+            <div className="p-5">
+              <h3 className="text-sm font-black text-secondary mb-4">
+                {formatWithOptions(dayView, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+              </h3>
+              {dayEvs.length === 0 ? (
+                <div className="text-center py-12">
+                  <CalendarIcon size={36} className="text-gray-200 mx-auto mb-3" />
+                  <p className="text-sm font-bold text-gray-400">No events this day</p>
+                  <button
+                    onClick={() => { setShowEventModal(true); setNewEvent(prev => ({ ...prev, date: dayView.toISOString().split("T")[0], time: "09:00" })); }}
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-black text-primary hover:underline"
+                  >
+                    <Plus size={12} /> Add event
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {dayEvs.sort((a, b) => new Date(a.date) - new Date(b.date)).map((ev) => (
+                    <div
+                      key={ev.id}
+                      onClick={() => handleEventClick(ev)}
+                      className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 cursor-pointer transition"
+                    >
+                      <div className={`w-3 h-3 rounded-full flex-shrink-0 ${ev.color}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-secondary truncate">{ev.title}</p>
+                        <p className="text-xs font-bold text-gray-400">{formatTime(ev.date)} – {formatTime(ev.endDate)}</p>
+                      </div>
+                      {ev.completed && <CheckCircle2 size={14} className="text-green-400 flex-shrink-0" />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Events List — Upcoming */}

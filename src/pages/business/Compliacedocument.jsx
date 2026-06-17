@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { getComplianceDocuments } from "../../services/licenceApi";
 import useDownloads from "../../hooks/useDownloads";
+import { useToast } from "../../context/ToastContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -22,6 +23,7 @@ import {
 
 const DocumentList = () => {
   const { downloadAssetFile, busy } = useDownloads();
+  const { showToast } = useToast();
   const [filter, setFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -136,34 +138,34 @@ const DocumentList = () => {
   };
 
   const handleDownload = async (doc) => {
-    if (!doc.path) return alert("No file path available for this document.");
+    if (!doc.path) return showToast({ message: "No file available for this document.", variant: "warning" });
     const result = await downloadAssetFile(doc.path, doc.name);
     if (!result.ok) {
-      alert(result.message || "Failed to download document");
+      showToast({ message: result.message || "Failed to download document", variant: "danger" });
     }
   };
 
   const handleDelete = async (docId, source) => {
     if (source !== 'compliance') {
-      return alert("This document is linked to your profile or a licence application. Please manage it from the respective section.");
+      return showToast({ message: "This document is linked to your profile or a licence application. Manage it from the relevant section.", variant: "warning" });
     }
 
-    if (confirm("Are you sure you want to delete this compliance document?")) {
-      try {
-        const { deleteComplianceDocument } = await import("../../services/licenceApi");
-        const res = await deleteComplianceDocument(docId);
-        if (res.data.status === "success") {
-          fetchDocuments();
-        }
-      } catch (err) {
-        alert("Failed to delete document.");
+    if (!window.confirm("Are you sure you want to delete this compliance document?")) return;
+    try {
+      const { deleteComplianceDocument } = await import("../../services/licenceApi");
+      const res = await deleteComplianceDocument(docId);
+      if (res.data.status === "success") {
+        showToast({ message: "Document deleted", variant: "success" });
+        fetchDocuments();
       }
+    } catch {
+      showToast({ message: "Failed to delete document.", variant: "danger" });
     }
   };
 
   const handleUpload = async () => {
     if (!uploadName || !uploadType || !uploadFile) {
-      return alert("Please fill in all fields and select a file.");
+      return showToast({ message: "Please fill in all fields and select a file.", variant: "warning" });
     }
 
     try {
@@ -175,14 +177,15 @@ const DocumentList = () => {
       });
 
       if (res.data.status === "success") {
+        showToast({ message: "Document uploaded successfully", variant: "success" });
         setShowUploadModal(false);
         setUploadName("");
         setUploadType("");
         setUploadFile(null);
         fetchDocuments();
       }
-    } catch (err) {
-      alert("Failed to upload document.");
+    } catch {
+      showToast({ message: "Failed to upload document.", variant: "danger" });
     }
   };
 

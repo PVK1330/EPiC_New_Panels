@@ -52,7 +52,7 @@ export default function usePlatformConnectivity() {
     setLoading(true);
     setError(null);
     try {
-      const res = await getConnectivitySettings();
+      const res = await getConnectivitySettings(true);
       const s = res.data?.data?.settings;
       if (s?.smtp) setSmtp((prev) => ({ ...prev, ...s.smtp }));
       if (s?.s3)   setS3((prev)   => ({ ...prev, ...s.s3   }));
