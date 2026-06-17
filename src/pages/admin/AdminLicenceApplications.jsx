@@ -47,6 +47,7 @@ import {
 } from "../../services/licenceApi";
 import { triggerDownload } from "../../services/documentApi";
 import LicenceStages from "../../components/licence/LicenceStages";
+import LicenceWorkflowTimeline from "../../components/licence/LicenceWorkflowTimeline";
 import api from "../../services/api";
 import { getCaseworkers } from "../../services/caseWorker";
 import { useToast } from "../../context/ToastContext";
@@ -893,6 +894,11 @@ const AdminLicenceApplications = () => {
                 {/* Application stages — the communication channel shared with the sponsor. */}
                 <div className="mb-4">
                   <LicenceStages applicationId={selectedApp.id} viewerRole="admin" />
+                </div>
+
+                {/* Full cross-entity workflow timeline (licence + CoS + workers). */}
+                <div className="mb-4">
+                  <LicenceWorkflowTimeline applicationId={selectedApp.id} viewerRole="admin" />
                 </div>
 
                 <div className="mt-4">

@@ -35,6 +35,7 @@ import {
   downloadSponsorLicenceDocument,
 } from "../../services/licenceApi";
 import { triggerDownload } from "../../services/documentApi";
+import LicenceWorkflowTimeline from "../../components/licence/LicenceWorkflowTimeline";
 import { useToast } from "../../context/ToastContext";
 import { Skeleton } from "boneyard-js/react";
 import { formatDate, formatDateLong } from "../../utils/datetime";
@@ -942,6 +943,12 @@ const LicenceStatus = () => {
                       </>
                     )}
                   </div>
+
+                  {selectedApp?.id && (
+                    <div className="pt-4">
+                      <LicenceWorkflowTimeline applicationId={selectedApp.id} viewerRole="sponsor" />
+                    </div>
+                  )}
 
                   <div className="flex gap-3 pt-4">
                     {(selectedApp?.status.toLowerCase() !== 'approved' && selectedApp?.status.toLowerCase() !== 'rejected') ? (

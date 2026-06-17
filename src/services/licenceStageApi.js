@@ -21,3 +21,11 @@ export const getLicenceStages = (role, id) => api.get(`${stagesBase(role, id)}/s
 
 export const completeLicenceStageTask = (role, id, stageKey, taskRole) =>
   api.post(`${stagesBase(role, id)}/stages/${stageKey}/complete`, { role: taskRole });
+
+/**
+ * Full cross-entity workflow timeline (licence + CoS + sponsored workers) for an
+ * application. Returns { applicationId, timeline: [{ id, eventKey, event,
+ * actorRole, actorName, timestamp, status, comment }] } — chronological order.
+ */
+export const getLicenceWorkflowTimeline = (role, id) =>
+  api.get(`${stagesBase(role, id)}/workflow-timeline`);
