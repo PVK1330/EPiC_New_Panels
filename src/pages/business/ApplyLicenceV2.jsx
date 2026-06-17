@@ -28,6 +28,23 @@ const EMPTY = {
   level1Users: [], declaration: {}, fee: {},
 };
 
+/**
+ * Most recent "imported from Business Profile" timestamp across the synced
+ * records (Company, Authorising Officer, Key Contact, Level 1 Users). Sourced
+ * from the DB so it is accurate across devices/sessions (replaces localStorage).
+ */
+function deriveSyncedAt(app) {
+  if (!app) return null;
+  const stamps = [
+    app.authorisingOfficer?.lastSyncedAt,
+    app.keyContact?.lastSyncedAt,
+    app.organisationInfo?.lastSyncedAt,
+    ...(app.level1Users || []).map((u) => u?.lastSyncedAt),
+  ].filter(Boolean);
+  if (!stamps.length) return null;
+  return stamps.reduce((a, b) => (new Date(a) > new Date(b) ? a : b));
+}
+
 function appToFormData(app) {
   if (!app) return { ...EMPTY };
   return {
@@ -166,7 +183,7 @@ export default function ApplyLicenceV2() {
       setAppId(app.id);
       setFormData(appToFormData(app));
       setCurrentStep(app.currentStep || 1);
-      setPersonnelSyncedAt(localStorage.getItem(`epc_personnel_sync_${app.id}`) || null);
+      setPersonnelSyncedAt(deriveSyncedAt(app));
       setPhase("wizard");
     } catch (err) {
       if (err?.response?.status === 409) {
@@ -191,7 +208,7 @@ export default function ApplyLicenceV2() {
       setAppId(app.id);
       setFormData(appToFormData(app));
       setCurrentStep(app.currentStep || 1);
-      setPersonnelSyncedAt(localStorage.getItem(`epc_personnel_sync_${app.id}`) || null);
+      setPersonnelSyncedAt(deriveSyncedAt(app));
       setPhase("wizard");
     } catch {
       showToast({ message: "Failed to load draft", variant: "danger" });
@@ -223,10 +240,9 @@ export default function ApplyLicenceV2() {
       const r = await syncPersonnelFromProfile(appId);
       const app = r.data.data;
       setFormData(appToFormData(app));
-      const ts = new Date().toISOString();
-      setPersonnelSyncedAt(ts);
-      localStorage.setItem(`epc_personnel_sync_${appId}`, ts);
-      showToast({ message: r.data.message || "Personnel synced from Business Profile", variant: "success" });
+      // Use the server-recorded sync time (lastSyncedAt) so it matches the DB.
+      setPersonnelSyncedAt(deriveSyncedAt(app) || new Date().toISOString());
+      showToast({ message: r.data.message || "Imported from Business Profile", variant: "success" });
     } catch (err) {
       showToast({ message: err?.response?.data?.message || "Sync failed — check your Business Profile is complete", variant: "danger" });
     } finally {
@@ -326,7 +342,7 @@ export default function ApplyLicenceV2() {
               <WizardStepBar current={currentStep} />
               <div className="pt-1">
                 {currentStep === 1 && <Step1Routes {...stepProps} />}
-                {currentStep === 2 && <Step2Organisation {...stepProps} />}
+                {currentStep === 2 && <Step2Organisation {...stepProps} {...personnelProps} />}
                 {currentStep === 3 && <Step3CosRequirements {...stepProps} />}
                 {currentStep === 4 && (
                   <Step4AppendixDocuments appId={appId} data={formData} onRefresh={refreshAppendix} onNext={handleNext} onBack={handleBack} saving={saving} />

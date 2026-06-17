@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
+import ProfileSyncBanner from "./ProfileSyncBanner";
 
 const ORG_TYPES = [
   "Limited Company",
@@ -52,7 +53,7 @@ function TagInput({ values = [], onChange, placeholder }) {
   );
 }
 
-export default function Step2Organisation({ data, onChange, onNext, onBack, saving }) {
+export default function Step2Organisation({ data, onChange, onNext, onBack, saving, onSyncFromProfile, syncing, personnelSyncedAt }) {
   const org = data.organisationInfo || {};
   const set = (key, val) => onChange({ organisationInfo: { ...org, [key]: val } });
 
@@ -64,6 +65,10 @@ export default function Step2Organisation({ data, onChange, onNext, onBack, savi
         <h2 className="text-xl font-black text-secondary mb-1">Organisation Information</h2>
         <p className="text-sm font-bold text-gray-400">Tell us about your organisation's legal structure and registration details.</p>
       </div>
+
+      {onSyncFromProfile && (
+        <ProfileSyncBanner onSync={onSyncFromProfile} syncing={syncing} syncedAt={personnelSyncedAt} />
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <Field label="Organisation Type" required>
