@@ -1,15 +1,24 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
- RiBillLine,
- RiPieChartLine,
- RiWallet3Line,
- RiPulseLine,
- RiEyeLine,
- RiFileDownloadLine,
- RiSearchLine,
- RiFilter3Line,
- RiSecurePaymentLine,
+  RiBillLine,
+  RiPieChartLine,
+  RiWallet3Line,
+  RiPulseLine,
+  RiEyeLine,
+  RiFileDownloadLine,
+  RiSearchLine,
+  RiFilter3Line,
+  RiSecurePaymentLine,
+  RiBuildingLine,
+  RiCalendarLine,
+  RiCheckboxCircleLine,
+  RiTimeLine,
+  RiAlertLine,
+  RiCloseLine,
+  RiPrinterLine,
+  RiArrowRightSLine,
+  RiArrowLeftSLine,
 } from 'react-icons/ri';
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
@@ -18,320 +27,559 @@ import useBilling from '../../hooks/useBilling';
 import useDownloads from '../../hooks/useDownloads';
 import toast from 'react-hot-toast';
 import { formatDate } from '../../utils/datetime';
+import { resolveAssetUrl } from '../../utils/assetUrl';
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+
+function fmtGbp(amount) {
+  const n = parseFloat(amount || 0);
+  return `£${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function ukDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+const STATUS_META = {
+  paid:    { label: 'Paid',    icon: RiCheckboxCircleLine, bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
+  pending: { label: 'Pending', icon: RiTimeLine,           bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',   dot: 'bg-amber-500' },
+  overdue: { label: 'Overdue', icon: RiAlertLine,          bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200',     dot: 'bg-red-500' },
+  failed:  { label: 'Failed',  icon: RiAlertLine,          bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200',     dot: 'bg-red-500' },
+};
+
+function StatusBadge({ status }) {
+  const m = STATUS_META[status] || STATUS_META.pending;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${m.bg} ${m.text} ${m.border}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${m.dot}`} />
+      {m.label}
+    </span>
+  );
+}
+
+/* ── Invoice Preview Modal ───────────────────────────────────────────────── */
+
+function InvoiceModal({ invoice, onClose, onDownload, downloading }) {
+  if (!invoice) return null;
+
+  const amountNet = parseFloat(invoice.amount || 0);
+  const vatAmount = parseFloat((amountNet * 0.2).toFixed(2));
+  const totalGross = parseFloat((amountNet + vatAmount).toFixed(2));
+  const org = invoice.organisation || {};
+  const plan = invoice.subscription?.plan || {};
+  const orgLogoUrl = org.logoUrl ? resolveAssetUrl(org.logoUrl) : null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)' }}
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0, y: 10 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Modal header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                <RiBillLine size={18} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Invoice Preview</p>
+                <h3 className="text-sm font-black text-secondary">{invoice.invoice_number}</h3>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition-all">
+              <RiCloseLine size={20} />
+            </button>
+          </div>
+
+          {/* Invoice body — scrollable */}
+          <div className="overflow-y-auto flex-1 p-6">
+            {/* Invoice paper */}
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              {/* Invoice top band */}
+              <div className="h-1.5 w-full bg-gradient-to-r from-primary via-blue-400 to-indigo-500" />
+
+              <div className="p-6">
+                {/* Header: logo left, INVOICE right */}
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    {orgLogoUrl ? (
+                      <img src={orgLogoUrl} alt={org.name} className="h-12 max-w-[140px] object-contain mb-2" onError={e => { e.target.style.display='none'; }} />
+                    ) : (
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black text-lg">
+                          {(org.name || 'E')[0]}
+                        </div>
+                        <span className="font-black text-secondary text-lg">{org.name || 'Organisation'}</span>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-400">{org.primaryEmail || ''}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-black text-primary tracking-wider">INVOICE</p>
+                    <p className="text-sm font-bold text-gray-500 mt-1">{invoice.invoice_number}</p>
+                    <StatusBadge status={invoice.status} />
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="h-px w-full bg-gradient-to-r from-primary/40 to-transparent mb-6" />
+
+                {/* Supplier / Bill To / Invoice Details */}
+                <div className="grid grid-cols-3 gap-6 mb-6">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">From</p>
+                    <p className="text-sm font-bold text-secondary">EPiC HRIS Platform</p>
+                    <p className="text-xs text-gray-500">Elite PiC Ltd</p>
+                    <p className="text-xs text-gray-500">United Kingdom</p>
+                    <p className="text-xs text-gray-400 mt-1">VAT No: GB000000000</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Bill To</p>
+                    <p className="text-sm font-bold text-secondary">{org.name || '—'}</p>
+                    <p className="text-xs text-gray-500">{org.primaryEmail || '—'}</p>
+                    <p className="text-xs text-gray-500">{org.country || 'United Kingdom'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Invoice Details</p>
+                    <div className="space-y-1">
+                      {[
+                        ['Invoice No', invoice.invoice_number],
+                        ['Date', ukDate(invoice.createdAt)],
+                        ['Due', ukDate(invoice.due_at)],
+                        ['Currency', invoice.currency || 'GBP'],
+                      ].map(([k, v]) => (
+                        <div key={k} className="flex gap-2">
+                          <span className="text-xs text-gray-400 w-16 shrink-0">{k}:</span>
+                          <span className="text-xs font-bold text-secondary">{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Line items table */}
+                <div className="rounded-xl overflow-hidden border border-gray-100 mb-4">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-primary to-blue-600 text-white">
+                        <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Description</th>
+                        <th className="text-center px-3 py-3 text-[11px] font-bold uppercase tracking-wider">Period</th>
+                        <th className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">Unit Price</th>
+                        <th className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">VAT (20%)</th>
+                        <th className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="bg-blue-50/30">
+                        <td className="px-4 py-4">
+                          <p className="font-bold text-secondary text-sm">EPiC HRIS — {plan.name || 'Subscription'} Plan</p>
+                          <p className="text-xs text-gray-400 mt-0.5">Payment via {invoice.payment_method || 'N/A'}</p>
+                          {invoice.stripe_invoice_id && (
+                            <p className="text-xs text-gray-400">Gateway: {invoice.stripe_invoice_id}</p>
+                          )}
+                        </td>
+                        <td className="px-3 py-4 text-center text-xs font-semibold text-gray-600">{plan.billing_cycle || 'Monthly'}</td>
+                        <td className="px-3 py-4 text-right text-sm font-semibold text-secondary">{fmtGbp(amountNet)}</td>
+                        <td className="px-3 py-4 text-right text-sm font-semibold text-gray-500">{fmtGbp(vatAmount)}</td>
+                        <td className="px-4 py-4 text-right text-sm font-black text-primary">{fmtGbp(totalGross)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Totals */}
+                <div className="flex justify-end mb-6">
+                  <div className="w-64 rounded-xl overflow-hidden border border-gray-100">
+                    <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
+                      <span className="text-xs text-gray-500">Subtotal (ex. VAT)</span>
+                      <span className="text-sm font-semibold text-secondary">{fmtGbp(amountNet)}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
+                      <span className="text-xs text-gray-500">VAT @ 20%</span>
+                      <span className="text-sm font-semibold text-secondary">{fmtGbp(vatAmount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-3 bg-gradient-to-r from-primary to-blue-600">
+                      <span className="text-sm font-black text-white">TOTAL DUE</span>
+                      <span className="text-base font-black text-white">{fmtGbp(totalGross)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment note */}
+                <div className={`rounded-xl p-4 text-xs border ${
+                  invoice.status === 'paid'
+                    ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                    : 'bg-amber-50 border-amber-100 text-amber-700'
+                }`}>
+                  {invoice.status === 'paid'
+                    ? `✓ Payment received on ${ukDate(invoice.paid_at)}. Thank you for your business.`
+                    : `Please quote invoice reference ${invoice.invoice_number} when making payment. Due by ${ukDate(invoice.due_at)}.`
+                  }
+                </div>
+
+                {/* Footer note */}
+                <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+                  <p className="text-[10px] text-gray-300">
+                    EPiC HRIS Platform · support@elitepic.co.uk · This is a computer-generated invoice and requires no signature.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Modal footer */}
+          <div className="flex justify-between items-center px-6 py-4 border-t border-gray-100 bg-gray-50/30">
+            <p className="text-xs text-gray-400">
+              VAT invoice compliant with UK HMRC requirements
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-secondary rounded-xl hover:bg-gray-100 transition-all"
+              >
+                Close
+              </button>
+              <button
+                onClick={onDownload}
+                disabled={downloading}
+                className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-primary to-blue-600 text-white text-sm font-bold rounded-xl shadow-sm hover:shadow-md hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-wait"
+              >
+                {downloading ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <RiFileDownloadLine size={16} />
+                )}
+                Download PDF
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+/* ── Main Page ───────────────────────────────────────────────────────────── */
+
+const ITEMS_PER_PAGE = 10;
 
 const SuperadminBilling = () => {
- const [searchTerm, setSearchTerm] = useState('');
- const [currentPage, setCurrentPage] = useState(1);
- const [selectedInvoice, setSelectedInvoice] = useState(null);
- const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
 
- const {
-   invoices,
-   invoicesLoading,
-   fetchInvoices,
-   fetchInvoiceById,
-   dashboardStats,
-   statsLoading,
-   fetchDashboardStats,
- } = useBilling();
- const { exportSuperadminFinancials } = useDownloads();
+  const {
+    invoices,
+    invoicesLoading,
+    fetchInvoices,
+    fetchInvoiceById,
+    dashboardStats,
+    statsLoading,
+    fetchDashboardStats,
+  } = useBilling();
 
- useEffect(() => {
-   fetchInvoices();
-   fetchDashboardStats();
- }, [fetchInvoices, fetchDashboardStats]);
+  const { exportSuperadminFinancials, downloadSuperadminInvoicePdf, busy } = useDownloads();
 
- const stats = [
- { title: 'Monthly Recurring (MRR)', value: `£${dashboardStats?.mrr || '0'}`, icon: RiPulseLine, color: 'primary' },
- { title: 'Annual Recurring (ARR)', value: `£${dashboardStats?.arr || '0'}`, icon: RiWallet3Line, color: 'secondary' },
- { title: 'Churn Rate', value: `${dashboardStats?.churnRate || '0'}%`, icon: RiPieChartLine, color: 'amber' },
- { title: 'Active Subscriptions', value: dashboardStats?.activeSubscriptions || '0', icon: RiBillLine, color: 'green' },
- ];
+  useEffect(() => {
+    fetchInvoices();
+    fetchDashboardStats();
+  }, [fetchInvoices, fetchDashboardStats]);
 
- const filteredBilling = invoices.filter(item => 
- item.organisation?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
- item.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase())
- );
+  const stats = [
+    { title: 'Monthly Recurring', subtitle: 'MRR', value: `£${dashboardStats?.mrr || '0'}`, icon: RiPulseLine,   grad: 'from-blue-500 to-blue-600' },
+    { title: 'Annual Recurring',  subtitle: 'ARR', value: `£${dashboardStats?.arr || '0'}`, icon: RiWallet3Line, grad: 'from-indigo-500 to-indigo-600' },
+    { title: 'Churn Rate',        subtitle: '30d',  value: `${dashboardStats?.churnRate || '0'}%`, icon: RiPieChartLine, grad: 'from-amber-500 to-orange-500' },
+    { title: 'Active Subscriptions', subtitle: 'Live', value: dashboardStats?.activeSubscriptions || '0', icon: RiBillLine, grad: 'from-emerald-500 to-teal-500' },
+  ];
 
- const handleAction = async (type, invoice) => {
- if (type === 'View') {
- try {
- const res = await fetchInvoiceById(invoice.id);
- if (res.ok) {
- setSelectedInvoice(res.data);
- setIsInvoiceModalOpen(true);
- }
- } catch (e) {
- toast.error('Failed to load invoice details');
- }
- } else if (type === 'Download') {
- toast.success(`Download initiated for ${invoice.invoice_number}`);
- }
- };
+  const filteredBilling = invoices.filter(item => {
+    const matchSearch =
+      item.organisation?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = statusFilter === 'All' || item.status === statusFilter.toLowerCase();
+    return matchSearch && matchStatus;
+  });
 
- const handleGlobalAction = async (type) => {
- if (type === 'Export') {
- const result = await exportSuperadminFinancials();
- if (result.ok) {
- toast.success('Financials exported successfully');
- } else {
- toast.error(result.message || 'Failed to export financials');
- }
- }
- };
+  const totalPages = Math.max(1, Math.ceil(filteredBilling.length / ITEMS_PER_PAGE));
+  const paginatedItems = filteredBilling.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
- return (
-  <div className="space-y-4 pb-4">
-    <PageHero
-      icon={RiBillLine}
-      title="Billing & Revenue"
-      subtitle="Monitor platform monetization, subscription health, and revenue analytics."
-    >
-   <HeroButton onClick={() => handleGlobalAction('Export')}>
-     <RiFileDownloadLine size={16} /> Export Financials
-   </HeroButton>
-    </PageHero>
+  const handleView = async (invoice) => {
+    try {
+      const res = await fetchInvoiceById(invoice.id);
+      if (res.ok) setSelectedInvoice(res.data);
+      else toast.error('Failed to load invoice details');
+    } catch {
+      toast.error('Failed to load invoice details');
+    }
+  };
 
- <motion.div 
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  transition={{ staggerChildren: 0.1 }}
-  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
- >
- {statsLoading ? (
- <div className="col-span-4 text-center py-10 text-gray-400">Loading stats...</div>
- ) : (
- stats.map((stat, idx) => {
- const colorMap = {
- 'primary': { bg: 'from-blue-50 to-blue-100/50', border: 'border-blue-200/50', icon: 'from-blue-500 to-blue-600', label: 'text-blue-600', value: 'text-blue-900' },
- 'secondary': { bg: 'from-green-50 to-green-100/50', border: 'border-green-200/50', icon: 'from-green-500 to-green-600', label: 'text-green-600', value: 'text-green-900' },
- 'amber': { bg: 'from-amber-50 to-amber-100/50', border: 'border-amber-200/50', icon: 'from-amber-500 to-amber-600', label: 'text-amber-600', value: 'text-amber-900' },
- 'green': { bg: 'from-purple-50 to-purple-100/50', border: 'border-purple-200/50', icon: 'from-purple-500 to-purple-600', label: 'text-purple-600', value: 'text-purple-900' },
- };
- const colors = colorMap[stat.color] || colorMap.primary;
- 
- return (
-  <motion.div
-   key={stat.title}
-   initial={{ opacity: 0, scale: 0.95 }}
-   animate={{ opacity: 1, scale: 1 }}
-   transition={{ duration: 0.3, delay: idx * 0.05 }}
-   className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col gap-3 group hover:shadow-md transition-shadow"
-  >
- <div className="flex items-center justify-between">
- <div className={`p-2 bg-gradient-to-br ${colors.icon} bg-opacity-10 text-white rounded-lg shadow-sm`}>
- <stat.icon size={20} />
- </div>
- </div>
- <div>
- <p className="text-sm font-semibold text-gray-400 mb-1">{stat.title}</p>
- <div className="flex items-center">
-  <span className="text-2xl font-black text-secondary tracking-tight">{stat.value}</span>
- </div>
- </div>
- </motion.div>
- );
- })
- )}
- </motion.div>
+  const handleDownload = async (invoice) => {
+    const result = await downloadSuperadminInvoicePdf(invoice);
+    if (result.ok) toast.success(`Invoice ${invoice.invoice_number} downloaded`);
+    else toast.error(result.message || `Failed to download invoice ${invoice.invoice_number}`);
+  };
 
-   <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-    <div className="px-4 py-2.5 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/30">
-     <div className="flex items-center gap-3">
-      <h3 className="text-xs font-black text-secondary uppercase tracking-widest">Revenue Ledger</h3>
-      <span className="px-2 py-0.5 bg-green-500 text-white text-[9px] font-black uppercase tracking-widest rounded shadow-sm">Live</span>
-     </div>
- <div className="flex items-center gap-2">
- <div className="relative">
- <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"size={14} />
- <input
- type="text"
- placeholder="Search invoice..."
- value={searchTerm}
- onChange={(e) => setSearchTerm(e.target.value)}
- className="pl-9 pr-4 py-1.5 bg-white border border-gray-100 rounded-lg text-sm font-bold text-secondary w-full md:w-48 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-gray-300"
- />
- </div>
- <button className="p-1.5 bg-white border border-gray-100 text-gray-400 hover:text-secondary rounded-lg transition-all shadow-sm">
- <RiFilter3Line size={16} />
- </button>
- </div>
- </div>
- <div className="overflow-x-auto no-scrollbar">
-    <table className="w-full text-sm">
-     <thead className="bg-gray-50/50 text-[10px] text-gray-400 font-black border-b border-gray-100 uppercase tracking-widest">
-      <tr>
-       <th className="px-4 py-3 text-left">Invoice ID</th>
-       <th className="px-4 py-3 text-left">Organisation</th>
-       <th className="px-4 py-3 text-left">Tier</th>
-       <th className="px-4 py-3 text-center">Amount</th>
-       <th className="px-4 py-3 text-center">Renewal</th>
-       <th className="px-4 py-3 text-left">Status</th>
-       <th className="px-4 py-3 text-right">Action</th>
-      </tr>
-     </thead>
- <tbody className="divide-y divide-gray-50/50">
- {invoicesLoading ? (
- <tr>
- <td colSpan={7} className="px-4 py-10 text-center text-gray-400">Loading invoices...</td>
- </tr>
- ) : filteredBilling.length === 0 ? (
- <tr>
- <td colSpan={7} className="px-4 py-10 text-center text-gray-400">No invoices found</td>
- </tr>
- ) : (
- filteredBilling.map((item, idx) => (
- <tr key={item.invoice_number} className="hover:bg-gray-50/50 transition-colors group">
- <td className="px-4 py-3">
- <span className="text-sm font-semibold text-secondary bg-gray-50 px-2 py-0.5 rounded border border-gray-100 group-hover:text-primary transition-all">
- {item.invoice_number}
- </span>
- </td>
- <td className="px-4 py-3">
- <p className="font-bold text-secondary text-xs">{item.organisation?.name || '—'}</p>
- <span className="inline-flex items-center mt-0.5 px-2 py-0.5 rounded-full text-xs font-semibold border bg-gray-50 text-gray-600 border-gray-200">{item.payment_method || 'N/A'}</span>
- </td>
- <td className="px-4 py-3">
- <span className={`px-2 py-0.5 rounded text-sm font-bold tracking-wider border ${
- item.subscription?.plan?.name === 'Enterprise' ? 'bg-primary/5 text-primary border-primary/10' : 'bg-gray-50 text-gray-400 border-gray-100'
- }`}>
- {item.subscription?.plan?.name || '—'}
- </span>
- </td>
- <td className="px-5 py-3 text-center font-semibold text-secondary text-xs">£{item.amount}</td>
- <td className="px-5 py-3 text-center text-gray-400 font-bold text-sm">{item.due_at ? formatDate(item.due_at) : '—'}</td>
- <td className="px-4 py-3">
- <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-bold tracking-wider border ${
- item.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
- item.status === 'pending' ? 'bg-blue-50 text-blue-700 border-blue-100' :
- item.status === 'overdue' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-gray-50 text-gray-400 border-gray-100'
- }`}>
- {item.status}
- </span>
- </td>
- <td className="px-4 py-3 text-right">
- <div className="flex items-center justify-end gap-1">
- <button 
- onClick={() => handleAction('View', item)}
- className="p-1.5 text-gray-500 hover:text-secondary hover:bg-gray-100 rounded-lg transition-all"
- title="View Invoice"
- >
- <RiEyeLine size={16} />
- </button>
- <button 
- onClick={() => handleAction('Download', item)}
- className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
- title="Download PDF"
- >
- <RiFileDownloadLine size={16} />
- </button>
- </div>
- </td>
- </tr>
- ))
- )}
- </tbody>
- </table>
- </div>
+  const handleExport = async () => {
+    const result = await exportSuperadminFinancials();
+    if (result.ok) toast.success('Financials exported successfully');
+    else toast.error(result.message || 'Failed to export financials');
+  };
 
- <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
- <p className="text-sm font-bold text-gray-400">Page {currentPage} of {Math.ceil(filteredBilling.length / 10)}</p>
- <div className="flex gap-2">
- <button 
- onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
- disabled={currentPage === 1}
- className="px-3 py-1 rounded-lg text-sm font-bold bg-white border border-gray-200 text-gray-300 disabled:opacity-50"
- >
- Previous
- </button>
- <button 
- onClick={() => setCurrentPage(currentPage + 1)}
- disabled={currentPage >= Math.ceil(filteredBilling.length / 10)}
- className="px-3 py-1 rounded-lg text-sm font-bold bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50"
- >
- Next
- </button>
- </div>
- </div>
- </div>
+  return (
+    <div className="space-y-5 pb-6">
+      {/* Page hero */}
+      <PageHero
+        icon={RiBillLine}
+        title="Billing & Revenue"
+        subtitle="Monitor platform monetisation, subscription health, and revenue analytics."
+      >
+        <HeroButton onClick={handleExport}>
+          <RiFileDownloadLine size={16} /> Export Financials
+        </HeroButton>
+      </PageHero>
 
- <Modal
- isOpen={isInvoiceModalOpen}
- onClose={() => setIsInvoiceModalOpen(false)}
- title={`Invoice ${selectedInvoice?.invoice_number}`}
- subtitle="Transaction details and payment audit."
- maxWidth="max-w-md"
- footer={
- <div className="flex justify-end gap-2 w-full">
- <Button variant="secondary"onClick={() => setIsInvoiceModalOpen(false)} className="px-5 py-2 text-sm font-bold">Close</Button>
- <Button onClick={() => handleAction('Download', selectedInvoice)} className="px-6 py-2 text-sm font-bold shadow-sm">
- Download PDF
- </Button>
- </div>
- }
- >
- {selectedInvoice && (
- <div className="space-y-6 py-2">
- <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-100 p-4 mb-2">
- <div className="flex justify-between items-start mb-4">
- <div>
- <span className="text-sm font-semibold text-gray-400">{selectedInvoice.invoice_number}</span>
- <h4 className="text-sm font-semibold text-secondary mt-1">{selectedInvoice.organisation?.name}</h4>
- </div>
- <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
- selectedInvoice.status === 'paid' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'
- }`}>{selectedInvoice.status}</span>
- </div>
- <div className="flex justify-between items-end border-t border-gray-200 pt-3">
- <div>
- <p className="text-sm text-gray-500 font-bold">Tier: {selectedInvoice.subscription?.plan?.name || '—'}</p>
- <p className="text-sm text-gray-500 font-bold">{selectedInvoice.due_at ? formatDate(selectedInvoice.due_at) : '—'}</p>
- </div>
- <div className="text-right">
- <p className="text-sm font-bold text-gray-400 mb-0.5">Amount</p>
- <h4 className="text-xl font-semibold text-primary">£{selectedInvoice.amount}</h4>
- </div>
- </div>
- </div>
+      {/* Stats grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {statsLoading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-28 rounded-2xl bg-gray-100 animate-pulse" />
+            ))
+          : stats.map((stat, idx) => (
+              <motion.div
+                key={stat.title}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05, duration: 0.35 }}
+                className="relative overflow-hidden bg-white rounded-2xl border border-gray-100 shadow-sm p-5 group hover:shadow-md transition-shadow"
+              >
+                <div className={`absolute top-0 right-0 w-24 h-24 rounded-full bg-gradient-to-br ${stat.grad} opacity-5 translate-x-8 -translate-y-8 group-hover:opacity-10 transition-opacity`} />
+                <div className={`inline-flex p-2 rounded-xl bg-gradient-to-br ${stat.grad} text-white mb-3 shadow-sm`}>
+                  <stat.icon size={18} />
+                </div>
+                <p className="text-xs font-bold text-gray-400 mb-0.5">{stat.title}</p>
+                <p className="text-2xl font-black text-secondary tracking-tight">{stat.value}</p>
+                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">{stat.subtitle}</span>
+              </motion.div>
+            ))}
+      </div>
 
- <div className="space-y-4">
- <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
- <div className="flex items-center gap-3">
- <div className="p-2 bg-white rounded-lg border border-gray-100 text-secondary">
- <RiSecurePaymentLine size={18} />
- </div>
- <div>
- <p className="text-sm font-bold text-secondary">Payment Method</p>
- <p className="text-sm text-gray-400 font-bold">{selectedInvoice.payment_method || 'Standard Card'}</p>
- </div>
- </div>
- <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
- selectedInvoice.status === 'paid' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'
- }`}>{selectedInvoice.status}</span>
- </div>
+      {/* Ledger table */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+      >
+        {/* Table toolbar */}
+        <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h3 className="text-xs font-black text-secondary uppercase tracking-widest">Revenue Ledger</h3>
+            <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest rounded-full shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse" /> Live
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Search */}
+            <div className="relative">
+              <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
+              <input
+                type="text"
+                placeholder="Search invoice or org…"
+                value={searchTerm}
+                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-secondary w-48 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-gray-300"
+              />
+            </div>
+            {/* Status filter */}
+            <select
+              value={statusFilter}
+              onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="py-1.5 pl-3 pr-7 bg-white border border-gray-200 rounded-lg text-xs font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              {['All', 'Paid', 'Pending', 'Overdue', 'Failed'].map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+        </div>
 
- <div className="grid grid-cols-2 gap-4">
- <div className="p-3 border border-gray-50 rounded-xl">
- <p className="text-xs font-bold text-gray-400 mb-1">Gateway ID</p>
- <p className="text-sm font-mono font-bold text-secondary truncate">{selectedInvoice.stripe_invoice_id || 'N/A'}</p>
- </div>
- <div className="p-3 border border-gray-50 rounded-xl">
- <p className="text-xs font-bold text-gray-400 mb-1">Currency</p>
- <p className="text-sm font-bold text-secondary">{selectedInvoice.currency}</p>
- </div>
- </div>
- </div>
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50/60 text-[10px] text-gray-400 font-black uppercase tracking-widest border-b border-gray-100">
+              <tr>
+                <th className="px-5 py-3 text-left">Invoice</th>
+                <th className="px-5 py-3 text-left">Organisation</th>
+                <th className="px-5 py-3 text-left">Plan</th>
+                <th className="px-5 py-3 text-right">Net Amount</th>
+                <th className="px-5 py-3 text-right">VAT (20%)</th>
+                <th className="px-5 py-3 text-right">Total</th>
+                <th className="px-5 py-3 text-center">Due</th>
+                <th className="px-5 py-3 text-left">Status</th>
+                <th className="px-5 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {invoicesLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 9 }).map((__, j) => (
+                      <td key={j} className="px-5 py-4">
+                        <div className="h-3 bg-gray-100 rounded animate-pulse" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : paginatedItems.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-16 text-center">
+                    <RiBillLine size={32} className="mx-auto text-gray-200 mb-3" />
+                    <p className="text-sm font-bold text-gray-300">No invoices found</p>
+                  </td>
+                </tr>
+              ) : (
+                paginatedItems.map((item, idx) => {
+                  const net = parseFloat(item.amount || 0);
+                  const vat = parseFloat((net * 0.2).toFixed(2));
+                  const total = net + vat;
+                  const orgLogoUrl = item.organisation?.logoUrl ? resolveAssetUrl(item.organisation.logoUrl) : null;
 
- <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
- <p className="text-sm text-primary font-bold leading-relaxed">
- This invoice was generated automatically by the EPiC Billing Engine. All amounts are inclusive of VAT where applicable.
- </p>
- </div>
- </div>
- )}
- </Modal>
- </div>
- );
+                  return (
+                    <motion.tr
+                      key={item.invoice_number}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: idx * 0.02 }}
+                      className="hover:bg-blue-50/20 transition-colors group"
+                    >
+                      <td className="px-5 py-3.5">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100 group-hover:border-primary/20 group-hover:bg-primary/5 group-hover:text-primary transition-all">
+                          <RiBillLine size={11} />
+                          {item.invoice_number}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          {orgLogoUrl ? (
+                            <img src={orgLogoUrl} alt="" className="w-7 h-7 rounded-lg object-contain border border-gray-100 bg-gray-50" onError={e => { e.target.style.display='none'; }} />
+                          ) : (
+                            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary/20 to-indigo-100 flex items-center justify-center text-primary font-black text-xs">
+                              {(item.organisation?.name || 'O')[0]}
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-xs font-bold text-secondary leading-tight">{item.organisation?.name || '—'}</p>
+                            <p className="text-[10px] text-gray-400">{item.payment_method || ''}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                          {item.subscription?.plan?.name || '—'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-right text-xs font-semibold text-secondary">{fmtGbp(net)}</td>
+                      <td className="px-5 py-3.5 text-right text-xs font-semibold text-gray-400">{fmtGbp(vat)}</td>
+                      <td className="px-5 py-3.5 text-right text-sm font-black text-secondary">{fmtGbp(total)}</td>
+                      <td className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500">
+                        <span className="flex items-center justify-center gap-1">
+                          <RiCalendarLine size={11} className="text-gray-400" />
+                          {item.due_at ? ukDate(item.due_at) : '—'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <StatusBadge status={item.status} />
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleView(item)}
+                            title="View Invoice"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-secondary hover:bg-gray-100 transition-all"
+                          >
+                            <RiEyeLine size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDownload(item)}
+                            disabled={busy[`invoicePdf_${item.id}`]}
+                            title="Download PDF"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-wait"
+                          >
+                            {busy[`invoicePdf_${item.id}`]
+                              ? <span className="block w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                              : <RiFileDownloadLine size={15} />}
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
+          <p className="text-xs font-bold text-gray-400">
+            {filteredBilling.length === 0 ? 'No results' : `Showing ${Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredBilling.length)}–${Math.min(currentPage * ITEMS_PER_PAGE, filteredBilling.length)} of ${filteredBilling.length}`}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-secondary hover:bg-white disabled:opacity-30 transition-all"
+            >
+              <RiArrowLeftSLine size={16} />
+            </button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+              const page = i + 1;
+              return (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${currentPage === page ? 'bg-primary text-white shadow-sm' : 'border border-gray-200 text-gray-400 hover:bg-white hover:text-secondary'}`}
+                >
+                  {page}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-secondary hover:bg-white disabled:opacity-30 transition-all"
+            >
+              <RiArrowRightSLine size={16} />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Invoice preview modal */}
+      {selectedInvoice && (
+        <InvoiceModal
+          invoice={selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+          onDownload={() => handleDownload(selectedInvoice)}
+          downloading={busy[`invoicePdf_${selectedInvoice?.id}`]}
+        />
+      )}
+    </div>
+  );
 };
 
 export default SuperadminBilling;
