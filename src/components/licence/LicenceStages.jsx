@@ -1,9 +1,117 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, Circle, Loader2, XCircle, ChevronDown, Check, User, AlertCircle, ArrowRight } from "lucide-react";
+import {
+  CheckCircle2, Circle, Loader2, XCircle, ChevronDown, Check, User,
+  AlertCircle, ArrowRight, Clock, CalendarDays, UserCog, AlertTriangle,
+} from "lucide-react";
 import { LICENCE_STAGES, STAGE_ROLES, deriveStageStatuses, getSponsorStageAction } from "../../constants/licenceStages";
 import { getLicenceStages, completeLicenceStageTask } from "../../services/licenceStageApi";
 import { useToast } from "../../context/ToastContext";
+
+// ── SLA helpers ───────────────────────────────────────────────────────────────
+
+const SLA_META = {
+  green: { dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50 border-emerald-100", label: "On track" },
+  amber: { dot: "bg-amber-500",   text: "text-amber-700",   bg: "bg-amber-50 border-amber-100",     label: "Due soon" },
+  red:   { dot: "bg-red-500",     text: "text-red-700",     bg: "bg-red-50 border-red-100",         label: "Overdue"  },
+};
+
+function fmtDate(ts) {
+  if (!ts) return "—";
+  return new Date(ts).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function daysWaiting(ts) {
+  if (!ts) return null;
+  const d = Math.floor((Date.now() - new Date(ts).getTime()) / 86_400_000);
+  if (d === 0) return "Today";
+  if (d === 1) return "Yesterday";
+  return `${d} day${d !== 1 ? "s" : ""} ago`;
+}
+
+function SlaChip({ slaStatus }) {
+  if (!slaStatus) return null;
+  const m = SLA_META[slaStatus];
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black border ${m.bg} ${m.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${m.dot}`} />
+      {m.label}
+    </span>
+  );
+}
+
+const ROLE_LABEL = { sponsor: "Sponsor", caseworker: "Caseworker", admin: "Admin", candidate: "Candidate" };
+
+/**
+ * Ownership panel — shown inside each expanded stage.
+ * Sponsor sees a compact read-only row. Caseworker/Admin see the full 6-field block.
+ */
+function OwnershipPanel({ stage, viewerRole }) {
+  const { currentOwner, currentAssigneeName, waitingSince, dueDate, slaStatus, status } = stage;
+  if (status === "completed" || !currentOwner) return null;
+
+  const isSponsor = viewerRole === "sponsor";
+  const waiting = daysWaiting(waitingSince);
+
+  if (isSponsor) {
+    // Compact read-only: just who it's waiting on + SLA chip
+    return (
+      <div className="mt-2 mb-1 flex items-center gap-2 flex-wrap">
+        {currentAssigneeName && (
+          <span className="flex items-center gap-1 text-[11px] font-bold text-gray-500">
+            <User size={11} className="shrink-0" /> {currentAssigneeName}
+          </span>
+        )}
+        {waiting && (
+          <span className="flex items-center gap-1 text-[11px] font-bold text-gray-400">
+            <Clock size={11} /> Waiting {waiting}
+          </span>
+        )}
+        <SlaChip slaStatus={slaStatus} />
+      </div>
+    );
+  }
+
+  // Full panel for caseworker / admin
+  return (
+    <div className="mt-3 mb-1 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-wide text-gray-400 mb-0.5">Current Stage</p>
+        <p className="text-xs font-black text-secondary">Stage {stage.order}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-wide text-gray-400 mb-0.5">Current Owner</p>
+        <p className="text-xs font-black text-secondary">{ROLE_LABEL[currentOwner] ?? currentOwner}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-wide text-gray-400 mb-0.5">Assigned To</p>
+        <p className="text-xs font-black text-secondary flex items-center gap-1">
+          <UserCog size={11} className="shrink-0 text-gray-400" />
+          {currentAssigneeName || "Unassigned"}
+        </p>
+      </div>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-wide text-gray-400 mb-0.5">Waiting Since</p>
+        <p className="text-xs font-black text-secondary flex items-center gap-1">
+          <Clock size={11} className="shrink-0 text-gray-400" />
+          {waiting ?? "—"}
+        </p>
+      </div>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-wide text-gray-400 mb-0.5">Due Date</p>
+        <p className="text-xs font-black text-secondary flex items-center gap-1">
+          <CalendarDays size={11} className="shrink-0 text-gray-400" />
+          {fmtDate(dueDate)}
+        </p>
+      </div>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-wide text-gray-400 mb-0.5">Current Status</p>
+        <SlaChip slaStatus={slaStatus} />
+        {!slaStatus && <p className="text-xs font-black text-gray-400">—</p>}
+      </div>
+    </div>
+  );
+}
 
 const ROLE_META = Object.fromEntries(STAGE_ROLES.map((r) => [r.key, r]));
 
@@ -139,11 +247,11 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
   // Whether the viewer may complete a given role's task at this stage.
   // Candidate tasks have no self-service portal user, so only an admin can tick
   // them off on the candidate's behalf.
-  const canComplete = (task, stage) =>
+  // Note: we check task.status directly (not stage.status) so caseworker/admin
+  // review tasks remain actionable even after the stage's data signal is satisfied.
+  const canComplete = (task) =>
     interactive &&
-    stage.status !== "completed" &&
-    task.status !== "completed" &&
-    task.status !== "loading" &&
+    (task.status === "pending" || task.status === "in_progress") &&
     ((viewerRole === task.role && task.role !== "candidate") || viewerRole === "admin");
 
   return (
@@ -200,19 +308,24 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
                         In progress
                       </span>
                     )}
+                    {state !== "completed" && stage.slaStatus && (
+                      <SlaChip slaStatus={stage.slaStatus} />
+                    )}
                   </div>
                 </div>
                 <ChevronDown size={16} className={`text-gray-300 shrink-0 mt-1 transition-transform ${open ? "rotate-180" : ""}`} />
               </button>
 
               {open && (
+                <>
+                <OwnershipPanel stage={stage} viewerRole={viewerRole} />
                 <div className="mt-2 grid sm:grid-cols-2 gap-2">
                   {stage.tasks.map((task) => {
                     const meta = ROLE_META[task.role];
                     if (!meta) return null;
                     const isViewer = viewerRole && viewerRole === task.role;
                     const isDone = task.status === "completed";
-                    const showButton = canComplete(task, stage);
+                    const showButton = canComplete(task);
                     const busy = busyKey === `${stage.key}:${task.role}`;
                     // Sponsor's own incomplete task → deep-link to the page to do it.
                     const action =
@@ -235,12 +348,22 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
 
                         {interactive && (task.assigneeName || task.status || action || showButton) && (
                           <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
-                            {task.assigneeName ? (
-                              <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500 truncate">
-                                <User size={11} className="shrink-0" /> {task.assigneeName}
-                              </span>
-                            ) : <span />}
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                              {task.assigneeName && (
+                                <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500 truncate">
+                                  <User size={11} className="shrink-0" /> {task.assigneeName}
+                                </span>
+                              )}
+                              {viewerRole !== "sponsor" && task.waitingSince && (
+                                <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
+                                  <Clock size={10} className="shrink-0" /> {daysWaiting(task.waitingSince)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                              {viewerRole !== "sponsor" && task.slaStatus && !isDone && (
+                                <SlaChip slaStatus={task.slaStatus} />
+                              )}
                               {action && (
                                 <Link
                                   to={action.to}
@@ -267,6 +390,7 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
                     );
                   })}
                 </div>
+                </>
               )}
             </li>
           );

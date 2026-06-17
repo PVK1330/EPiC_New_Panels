@@ -14,14 +14,14 @@ import SecurityTab from './components/SecurityTab';
 import ModulesTab from './components/ModulesTab';
 
 // Tabs that manage their own save buttons — hide the top-level save bar for these
-const SELF_SAVING_TABS = new Set(['identity', 'connectivity', 'security']);
+const SELF_SAVING_TABS = new Set(['identity', 'connectivity', 'security', 'commerce']);
 
 const TABS = [
-  { id: 'identity',     name: 'Identity',     icon: RiPaletteLine,       desc: 'Brand & Global Info'       },
-  { id: 'commerce',     name: 'Commerce',     icon: RiBankCardLine,      desc: 'Payments & Taxation'       },
-  { id: 'connectivity', name: 'Connectivity', icon: RiServerLine,        desc: 'Mail & Cloud Storage'      },
-  { id: 'security',     name: 'Security',     icon: RiShieldFlashLine,   desc: 'Access & Governance'       },
-  { id: 'modules',      name: 'Modules',      icon: RiLayoutMasonryLine, desc: 'Sidebar Module Registry'   },
+  { id: 'identity',     name: 'Branding',     icon: RiPaletteLine,       desc: 'App Name & Logos'          },
+  { id: 'commerce',     name: 'Payments',     icon: RiBankCardLine,      desc: 'Stripe & Tax Settings'     },
+  { id: 'connectivity', name: 'Email Server', icon: RiServerLine,        desc: 'SMTP Server Config'        },
+  { id: 'security',     name: 'Security',     icon: RiShieldFlashLine,   desc: 'MFA & Session Restrictions'},
+  { id: 'modules',      name: 'Modules',      icon: RiLayoutMasonryLine, desc: 'Module Registry'           },
 ];
 
 const SuperadminSettings = () => {
@@ -38,6 +38,8 @@ const SuperadminSettings = () => {
     webhook_secret: '',
     currency: 'GBP',
     platform_fee: '0',
+    tax_rate: '',
+    tax_id: '',
   });
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeSaving, setStripeSaving] = useState(false);
@@ -64,6 +66,8 @@ const SuperadminSettings = () => {
         webhook_secret: '',
         currency: gw.currency || 'GBP',
         platform_fee: gw.platform_fee || '0',
+        tax_rate: gw.tax_rate || '',
+        tax_id:   gw.tax_id   || '',
       });
     } catch {
       setStripeStatus(null);
@@ -73,20 +77,18 @@ const SuperadminSettings = () => {
   };
 
   const handleSaveStripe = async () => {
-    if (!stripeConfig.publishable_key.trim() || !stripeConfig.secret_key.trim()) {
-      toast.error('Publishable key and secret key are required');
-      return;
-    }
     setStripeSaving(true);
     try {
       await configureGateway({
-        publishable_key: stripeConfig.publishable_key.trim(),
-        secret_key: stripeConfig.secret_key.trim(),
+        publishable_key: stripeConfig.publishable_key.trim() || undefined,
+        secret_key: stripeConfig.secret_key.trim() || undefined,
         webhook_secret: stripeConfig.webhook_secret.trim() || undefined,
         currency: stripeConfig.currency,
         platform_fee: stripeConfig.platform_fee,
+        tax_rate: stripeConfig.tax_rate,
+        tax_id: stripeConfig.tax_id,
       });
-      toast.success('Stripe configuration saved');
+      toast.success('Configuration saved successfully');
       await loadStripeConfig();
     } catch (e) {
       toast.error(e?.response?.data?.message || 'Failed to save configuration');

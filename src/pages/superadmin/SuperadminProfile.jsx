@@ -13,9 +13,9 @@ import SecurityTab from './profile/SecurityTab';
 import TwoFactorTab from './profile/TwoFactorTab';
 
 const tabs = [
-  { id: 'profile', name: 'Identity', icon: RiUser3Line, desc: 'Personal Information' },
-  { id: 'security', name: 'Security', icon: RiShieldKeyholeLine, desc: 'Password & Access' },
-  { id: '2fa', name: 'Auth', icon: RiShieldCheckLine, desc: 'Two-Factor Auth' },
+  { id: 'profile', name: 'My Profile', icon: RiUser3Line, desc: 'Name & Contact Details' },
+  { id: 'security', name: 'Password', icon: RiShieldKeyholeLine, desc: 'Change Access Password' },
+  { id: '2fa', name: 'Security (2FA)', icon: RiShieldCheckLine, desc: 'Secure Your Account' },
 ];
 
 const SuperadminProfile = () => {

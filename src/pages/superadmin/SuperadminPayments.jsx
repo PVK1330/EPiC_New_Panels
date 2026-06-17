@@ -1,101 +1,369 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import useBilling from '../../hooks/useBilling';
+import useDownloads from '../../hooks/useDownloads';
 import {
- RiMoneyPoundCircleLine,
- RiArrowUpLine,
- RiArrowDownLine,
- RiDownload2Line,
- RiFilter3Line,
- RiSearchLine,
- RiBankCardLine,
- RiExchangeLine,
- RiFileDownloadLine,
- RiShieldCheckLine,
- RiInformationLine,
- RiEyeLine,
- RiPulseLine,
- RiSecurePaymentLine,
- RiMastercardLine,
- RiVisaLine,
+  RiMoneyPoundCircleLine,
+  RiArrowUpLine,
+  RiArrowDownLine,
+  RiDownload2Line,
+  RiFilter3Line,
+  RiSearchLine,
+  RiBankCardLine,
+  RiExchangeLine,
+  RiFileDownloadLine,
+  RiShieldCheckLine,
+  RiInformationLine,
+  RiEyeLine,
+  RiPulseLine,
+  RiSecurePaymentLine,
+  RiMastercardLine,
+  RiVisaLine,
+  RiCloseLine,
+  RiCheckboxCircleLine,
+  RiTimeLine,
+  RiAlertLine,
+  RiRefundLine,
+  RiCalendarLine,
+  RiArrowLeftSLine,
+  RiArrowRightSLine,
+  RiReceiptLine,
 } from 'react-icons/ri';
 import Button from '../../components/Button';
-import Modal from '../../components/common/Modal';
 import Input from '../../components/Input';
 import PageHero, { HeroButton, HeroGhostButton } from '../../components/superadmin/PageHero';
 import { formatDate, formatDateTime } from '../../utils/datetime';
 
-const StatCard = ({ title, value, icon: Icon, color, delay }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.3 }}
-    className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all hover:shadow-md group"
-  >
-    <div className="flex items-center justify-between mb-3">
-      <div className={`p-2 rounded-lg bg-${color === 'amber' ? 'amber-50 text-amber-600 border-amber-100' : 'primary/5 text-primary border-primary/10'} border transition-all group-hover:scale-110`}>
-        <Icon size={20} />
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+
+function fmtGbp(amount) {
+  const n = parseFloat(amount || 0);
+  return `£${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function ukDateTime(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function formatRef(str) {
+  if (!str) return '—';
+  if (str.length <= 16) return str;
+  return str.slice(0, 8) + '...' + str.slice(-6);
+}
+
+const TXN_STATUS = {
+  completed:  { label: 'Completed',  icon: RiCheckboxCircleLine, bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
+  processing: { label: 'Processing', icon: RiTimeLine,           bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',    dot: 'bg-blue-500' },
+  refunded:   { label: 'Refunded',   icon: RiRefundLine,         bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',   dot: 'bg-amber-500' },
+  failed:     { label: 'Failed',     icon: RiAlertLine,          bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200',     dot: 'bg-red-500' },
+};
+
+function TxnBadge({ status }) {
+  const m = TXN_STATUS[status?.toLowerCase()] || TXN_STATUS.processing;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${m.bg} ${m.text} ${m.border}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${m.dot}`} />
+      {m.label}
+    </span>
+  );
+}
+
+/* ── Transaction Detail Modal ────────────────────────────────────────────── */
+
+function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRate = 0, taxId = null }) {
+  if (!txn) return null;
+
+  const amount = parseFloat(txn.amount || 0);
+  const taxEnabled = Number.isFinite(taxRate) && taxRate > 0;
+  const vatAmount = taxEnabled ? parseFloat((amount * (taxRate / 100)).toFixed(2)) : 0;
+  const total = amount + vatAmount;
+
+  let topBandColor = 'bg-primary';
+  if (txn.status === 'completed') topBandColor = 'bg-emerald-600';
+  else if (txn.status === 'refunded') topBandColor = 'bg-amber-500';
+  else if (txn.status === 'failed') topBandColor = 'bg-red-500';
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)' }}
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0, y: 10 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                <RiReceiptLine size={18} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Payment Receipt</p>
+                <h3 className="text-sm font-black text-secondary">{txn.reference}</h3>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition-all">
+              <RiCloseLine size={20} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="overflow-y-auto flex-1 p-6">
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              {/* Top colour band */}
+              <div className={`h-1.5 w-full ${topBandColor}`} />
+
+              <div className="p-6">
+                {/* Receipt header */}
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <p className="text-2xl font-black text-primary tracking-widest">PAYMENT RECEIPT</p>
+                    <p className="text-sm font-mono text-gray-500 mt-1">{txn.reference}</p>
+                  </div>
+                  <TxnBadge status={txn.status} />
+                </div>
+
+                <div className="h-px w-full bg-gray-200 mb-6" />
+
+                {/* From / To / Details */}
+                <div className="grid grid-cols-3 gap-5 mb-6">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">From (Supplier)</p>
+                    <p className="text-sm font-bold text-secondary">EPiC HRIS Platform</p>
+                    <p className="text-xs text-gray-500">Elite PiC Ltd</p>
+                    <p className="text-xs text-gray-500">United Kingdom</p>
+                    {taxEnabled && taxId && <p className="text-xs text-gray-400 mt-1">Tax ID: {taxId}</p>}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Recipient</p>
+                    <p className="text-sm font-bold text-secondary">{txn.organisation?.name || '—'}</p>
+                    <p className="text-xs text-gray-500">{txn.organisation?.primaryEmail || '—'}</p>
+                    <p className="text-xs text-gray-500">{txn.organisation?.country || 'United Kingdom'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Transaction Details</p>
+                    <div className="space-y-1">
+                      {[
+                        ['Reference', txn.reference || '—'],
+                        ['Date', ukDateTime(txn.createdAt)],
+                        ['Gateway', txn.gateway || 'N/A'],
+                        ['Method', txn.payment_method || 'N/A'],
+                        ['Currency', txn.currency || 'GBP'],
+                      ].map(([k, v]) => (
+                        <div key={k} className="flex gap-2">
+                          <span className="text-xs text-gray-400 w-16 shrink-0">{k}:</span>
+                          <span className="text-xs font-bold text-secondary">{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Line item table */}
+                <div className="rounded-xl overflow-hidden border border-gray-100 mb-4">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-primary text-white">
+                        <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Description</th>
+                        <th className="text-center px-3 py-3 text-[11px] font-bold uppercase tracking-wider">Gateway Ref</th>
+                        {taxEnabled && <th className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">VAT ({taxRate}%)</th>}
+                        <th className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-wider">{taxEnabled ? "Amount (ex. Tax)" : "Amount"}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="bg-blue-50/20">
+                        <td className="px-4 py-4">
+                          <p className="font-bold text-secondary text-sm">EPiC HRIS — Subscription Payment</p>
+                          {txn.invoice?.invoice_number && (
+                            <p className="text-xs text-gray-400 mt-0.5">Invoice: {txn.invoice.invoice_number}</p>
+                          )}
+                          {txn.gateway_reference && (
+                            <p className="text-xs text-gray-400">Gateway Ref: {txn.gateway_reference}</p>
+                          )}
+                        </td>
+                        <td className="px-3 py-4 text-center text-xs font-mono text-gray-500">{txn.gateway_reference || 'N/A'}</td>
+                        {taxEnabled && <td className="px-3 py-4 text-right text-sm font-semibold text-gray-500">{fmtGbp(vatAmount)}</td>}
+                        <td className="px-4 py-4 text-right text-sm font-black text-primary">{fmtGbp(taxEnabled ? amount : amount)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Totals */}
+                <div className="flex justify-end mb-6">
+                  <div className="w-60 rounded-xl overflow-hidden border border-gray-100">
+                    {taxEnabled ? (
+                      <>
+                        <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
+                          <span className="text-xs text-gray-500">Subtotal (ex. VAT)</span>
+                          <span className="text-sm font-semibold text-secondary">{fmtGbp(amount)}</span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
+                          <span className="text-xs text-gray-500">VAT @ {taxRate}%</span>
+                          <span className="text-sm font-semibold text-secondary">{fmtGbp(vatAmount)}</span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-3 bg-primary">
+                          <span className="text-sm font-black text-white">TOTAL CHARGED</span>
+                          <span className="text-base font-black text-white">{fmtGbp(total)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between items-center px-4 py-3 bg-primary">
+                        <span className="text-sm font-black text-white">TOTAL CHARGED</span>
+                        <span className="text-base font-black text-white">{fmtGbp(amount)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status note */}
+                <div className={`rounded-xl p-4 text-xs border ${txn.status === 'completed' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : txn.status === 'refunded' ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-gray-50 border-gray-100 text-gray-600'}`}>
+                  {txn.status === 'completed'
+                    ? `✓ Payment of ${fmtGbp(total)} was successfully processed on ${ukDateTime(txn.createdAt)}.`
+                    : txn.status === 'refunded'
+                    ? `This transaction was refunded. Original amount: ${fmtGbp(total)}.`
+                    : txn.failure_reason || `Transaction status: ${txn.status}.`}
+                </div>
+
+                {/* Footer note */}
+                <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+                  <p className="text-[10px] text-gray-300">
+                    EPiC HRIS Platform · support@elitepic.co.uk · This is a computer-generated receipt and requires no signature.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-between items-center px-6 py-4 border-t border-gray-100 bg-gray-50/30">
+            <p className="text-xs text-gray-400">UK HMRC-compliant VAT receipt</p>
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-secondary rounded-xl hover:bg-gray-100 transition-all"
+              >
+                Close
+              </button>
+              <button
+                onClick={onDownloadReceipt}
+                disabled={downloading}
+                className="flex items-center gap-2 px-5 py-2 bg-primary text-white text-sm font-bold rounded-xl shadow-sm hover:shadow-md hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-wait"
+              >
+                {downloading
+                  ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <RiFileDownloadLine size={16} />}
+                Download Receipt
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+/* ── Stat Card ───────────────────────────────────────────────────────────── */
+
+function StatCard({ title, value, icon: Icon, bgClass, delay }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.35 }}
+      className="relative overflow-hidden bg-white rounded-2xl border border-gray-100 shadow-sm p-5 group hover:shadow-md transition-shadow"
+    >
+      <div className={`absolute top-0 right-0 w-24 h-24 rounded-full ${bgClass} opacity-5 translate-x-8 -translate-y-8 group-hover:opacity-10 transition-opacity`} />
+      <div className={`inline-flex p-2 rounded-xl ${bgClass} text-white mb-3 shadow-sm`}>
+        <Icon size={18} />
       </div>
-    </div>
-    <p className="text-xs font-black text-gray-400 uppercase tracking-widest">{title}</p>
-    <h3 className="text-2xl font-black text-secondary mt-1 tracking-tight group-hover:text-primary transition-colors">{value}</h3>
-  </motion.div>
-);
+      <p className="text-xs font-bold text-gray-400 mb-0.5">{title}</p>
+      <p className="text-2xl font-black text-secondary tracking-tight">{value}</p>
+    </motion.div>
+  );
+}
+
+/* ── Main Page ───────────────────────────────────────────────────────────── */
+
+const ITEMS_PER_PAGE = 10;
 
 const SuperadminPayments = () => {
- const [activeTab, setActiveTab] = useState('Transactions');
- const [isGatewayModalOpen, setIsGatewayModalOpen] = useState(false);
- const [isTransactionDetailOpen, setIsTransactionDetailOpen] = useState(false);
- const [selectedTransaction, setSelectedTransaction] = useState(null);
- const [searchTerm, setSearchTerm] = useState('');
- const [exporting, setExporting] = useState(false);
- const [gatewayConfig, setGatewayConfig] = useState({
-   publishable_key: '',
-   secret_key: '',
-   webhook_secret: '',
- });
-
- const {
-   transactions,
-   transactionsLoading,
-   fetchTransactions,
-   downloadTransactions,
-   fetchTransactionById,
-   gatewayStatus,
-   gatewayLoading,
-   fetchGatewayStatus,
-   saveGatewayConfig,
-   dashboardStats,
-   statsLoading,
-   fetchDashboardStats,
- } = useBilling();
-
- useEffect(() => {
-   fetchTransactions();
-   fetchGatewayStatus();
-   fetchDashboardStats();
- }, [fetchTransactions, fetchGatewayStatus, fetchDashboardStats]);
-
- const stats = [
-    { title: 'Gross Volume', value: `£${dashboardStats?.grossVolume || '0'}`, icon: RiMoneyPoundCircleLine, color: 'primary' },
-    { title: 'Net Revenue', value: `£${dashboardStats?.netRevenue || '0'}`, icon: RiPulseLine, color: 'primary' },
-    { title: 'Success Rate', value: `${dashboardStats?.successRate || '0'}%`, icon: RiShieldCheckLine, color: 'green' },
-    { title: 'Refund Rate', value: `${dashboardStats?.refundRate || '0'}%`, icon: RiExchangeLine, color: 'amber' },
- ];
-
-  const currentData = transactions.filter(t => {
-    if (activeTab === 'Transactions') return t.status !== 'refunded';
-    if (activeTab === 'Payouts') return false;
-    if (activeTab === 'Refunds') return t.status === 'refunded';
-    return true;
+  const [activeTab, setActiveTab] = useState('Transactions');
+  const [isGatewayModalOpen, setIsGatewayModalOpen] = useState(false);
+  const [selectedTxn, setSelectedTxn] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
+  const [gatewayConfig, setGatewayConfig] = useState({
+    publishable_key: '',
+    secret_key: '',
+    webhook_secret: '',
   });
+
+  const {
+    transactions,
+    transactionsLoading,
+    fetchTransactions,
+    downloadTransactions,
+    fetchTransactionById,
+    gatewayStatus,
+    gatewayLoading,
+    fetchGatewayStatus,
+    saveGatewayConfig,
+    dashboardStats,
+    statsLoading,
+    fetchDashboardStats,
+  } = useBilling();
+
+  const { downloadTransactionReceiptPdf, busy } = useDownloads();
+
+  useEffect(() => {
+    fetchTransactions();
+    fetchGatewayStatus();
+    fetchDashboardStats();
+  }, [fetchTransactions, fetchGatewayStatus, fetchDashboardStats]);
+
+  const stats = [
+    { title: 'Gross Volume',    value: `£${dashboardStats?.grossVolume  || '0'}`, icon: RiMoneyPoundCircleLine, bgClass: 'bg-blue-600',     delay: 0 },
+    { title: 'Net Revenue',     value: `£${dashboardStats?.netRevenue   || '0'}`, icon: RiPulseLine,           bgClass: 'bg-indigo-600',  delay: 0.05 },
+    { title: 'Success Rate',    value: `${dashboardStats?.successRate   || '0'}%`, icon: RiShieldCheckLine,    bgClass: 'bg-emerald-600',   delay: 0.1 },
+    { title: 'Refund Rate',     value: `${dashboardStats?.refundRate    || '0'}%`, icon: RiExchangeLine,       bgClass: 'bg-amber-500',   delay: 0.15 },
+  ];
+
+  const filteredData = transactions
+    .filter(t => {
+      if (activeTab === 'Transactions') return t.status !== 'refunded';
+      if (activeTab === 'Refunds')      return t.status === 'refunded';
+      return false;
+    })
+    .filter(t => {
+      const matchSearch = !searchTerm ||
+        t.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.organisation?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchStatus = statusFilter === 'All' || t.status === statusFilter.toLowerCase();
+      return matchSearch && matchStatus;
+    });
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / ITEMS_PER_PAGE));
+  const pageData = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleExport = async () => {
     if (exporting) return;
     setExporting(true);
     try {
-      // Export the same slice the operator is viewing: Refunds tab → refunded only.
       const params = activeTab === 'Refunds' ? { status: 'refunded' } : {};
       const res = await downloadTransactions(params);
       const blob = new Blob([res.data], {
@@ -109,8 +377,8 @@ const SuperadminPayments = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Transactions exported');
-    } catch (e) {
+      toast.success('Transactions exported successfully');
+    } catch {
       toast.error('Failed to export transactions');
     } finally {
       setExporting(false);
@@ -120,32 +388,40 @@ const SuperadminPayments = () => {
   const handleViewTransaction = async (txn) => {
     try {
       const res = await fetchTransactionById(txn.id);
-      if (res.ok) {
-        setSelectedTransaction(res.data);
-        setIsTransactionDetailOpen(true);
-      }
-    } catch (e) {
+      if (res.ok) setSelectedTxn(res.data);
+      else toast.error('Failed to load transaction details');
+    } catch {
       toast.error('Failed to load transaction details');
+    }
+  };
+
+  const handleDownloadReceipt = async (txn) => {
+    const result = await downloadTransactionReceiptPdf(txn);
+    if (result.ok) {
+      toast.success(`Receipt for ${txn.reference} downloaded`);
+    } else {
+      toast.error(result.message || `Failed to download receipt for ${txn.reference}`);
     }
   };
 
   const handleSaveGatewayConfig = async () => {
     try {
       await saveGatewayConfig(gatewayConfig);
-      toast.success('Gateway configuration saved');
+      toast.success('Gateway configuration saved successfully');
       setIsGatewayModalOpen(false);
       fetchGatewayStatus();
-    } catch (e) {
+    } catch {
       toast.error('Failed to save gateway configuration');
     }
   };
 
   return (
-    <div className="space-y-4 pb-4">
+    <div className="space-y-5 pb-6">
+      {/* Page hero */}
       <PageHero
         icon={RiMoneyPoundCircleLine}
         title="Financial Hub"
-        subtitle="Real-time transaction monitoring"
+        subtitle="Real-time transaction monitoring, payment reconciliation, and gateway management."
       >
         <HeroGhostButton onClick={handleExport} disabled={exporting}>
           <RiFileDownloadLine size={16} /> {exporting ? 'Exporting…' : 'Export'}
@@ -155,29 +431,34 @@ const SuperadminPayments = () => {
         </HeroButton>
       </PageHero>
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        {statsLoading ? (
-          <div className="col-span-4 text-center py-10 text-gray-400">Loading stats...</div>
-        ) : (
-          stats.map((stat, idx) => (
-            <StatCard key={stat.title} {...stat} delay={idx * 0.05} />
-          ))
-        )}
+      {/* KPI stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {statsLoading
+          ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-28 rounded-2xl bg-gray-100 animate-pulse" />)
+          : stats.map(s => <StatCard key={s.title} {...s} />)
+        }
       </div>
 
+      {/* Main layout: ledger + gateway */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Payment Ledger */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-          <div className="px-4 py-2 border-b border-gray-50 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gray-50/30">
-            <div className="flex bg-white p-1 rounded-lg border border-gray-100 shadow-sm">
-              {['Transactions', 'Payouts', 'Refunds'].map((tab) => (
+        {/* Ledger */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col"
+        >
+          {/* Toolbar */}
+          <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Tabs */}
+            <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm gap-0.5">
+              {['Transactions', 'Refunds'].map(tab => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-1.5 rounded-md text-xs font-black uppercase tracking-widest transition-all ${
+                  onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
                     activeTab === tab
-                      ? 'bg-secondary text-white shadow-md'
+                      ? 'bg-secondary text-white shadow-sm'
                       : 'text-gray-400 hover:text-secondary hover:bg-gray-50'
                   }`}
                 >
@@ -185,426 +466,359 @@ const SuperadminPayments = () => {
                 </button>
               ))}
             </div>
- 
- <div className="flex items-center gap-2">
- <div className="relative">
- <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"size={14} />
- <input
- type="text"
- placeholder="Search ledger..."
- value={searchTerm}
- onChange={(e) => setSearchTerm(e.target.value)}
- className="pl-9 pr-4 py-1.5 bg-white border border-gray-100 rounded-lg text-sm font-bold text-secondary w-full md:w-48 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-gray-300"
- />
- </div>
- <button className="p-1.5 bg-white border border-gray-100 text-gray-400 hover:text-secondary rounded-lg transition-all shadow-sm">
- <RiFilter3Line size={16} />
- </button>
- </div>
- </div>
 
-          <div className="overflow-x-auto no-scrollbar flex-1">
+            {/* Search + filter */}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
+                <input
+                  type="text"
+                  placeholder="Search ledger…"
+                  value={searchTerm}
+                  onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                  className="pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-secondary w-44 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-gray-300"
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                className="py-1.5 pl-3 pr-7 bg-white border border-gray-200 rounded-lg text-xs font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                {['All', 'Completed', 'Processing', 'Failed', 'Refunded'].map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto flex-1">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50/50 text-[10px] text-gray-400 font-black border-b border-gray-100 uppercase tracking-widest">
+              <thead className="bg-gray-50/60 text-[10px] text-gray-400 font-black border-b border-gray-100 uppercase tracking-widest">
                 <tr>
-                  <th className="px-4 py-3 text-left">Reference</th>
-                  <th className="px-4 py-3 text-left">Organisation</th>
-                  <th className="px-4 py-3 text-center">Amount</th>
-                  <th className="px-4 py-3 text-left">Method</th>
-                  <th className="px-4 py-3 text-center">Status</th>
-                  <th className="px-4 py-3 text-right">Action</th>
+                  <th className="px-5 py-3 text-left">Reference</th>
+                  <th className="px-5 py-3 text-left">Organisation</th>
+                  <th className="px-5 py-3 text-right">Amount</th>
+                  <th className="px-5 py-3 text-left">Method</th>
+                  <th className="px-5 py-3 text-center">Date</th>
+                  <th className="px-5 py-3 text-left">Status</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
- <tbody className="divide-y divide-gray-50/50">
- {transactionsLoading ? (
- <tr>
- <td colSpan={6} className="px-4 py-10 text-center text-gray-400">Loading transactions...</td>
- </tr>
- ) : currentData.length === 0 ? (
- <tr>
- <td colSpan={6} className="px-4 py-10 text-center text-gray-400">No transactions found</td>
- </tr>
- ) : (
- currentData.map((tr) => (
- <tr key={tr.id} className="hover:bg-gray-50 transition-all group cursor-pointer">
- <td className="px-4 py-2.5">
- <motion.span 
- className="font-bold text-secondary text-sm bg-gray-100 px-3 py-1 rounded-lg border border-gray-200 group-hover:text-primary group-hover:bg-primary/10 transition-all cursor-pointer"
- whileHover={{ scale: 1.05 }}
- >
- {tr.reference}
- </motion.span>
- </td>
- <td className="px-4 py-2.5">
- <p className="font-bold text-secondary text-sm block leading-tight mb-1">{tr.organisation?.name || '—'}</p>
- <p className="text-sm text-gray-500 font-semibold">{formatDate(tr.createdAt)}</p>
- </td>
- <td className="px-4 py-2.5 text-center">
- <motion.span 
- className="font-semibold text-secondary text-base"
- whileHover={{ scale: 1.1 }}
- >
- £{tr.amount}
- </motion.span>
- </td>
- <td className="px-4 py-2.5">
- <motion.div 
- className="flex items-center gap-2 group-hover:scale-105 transition-all"
- whileHover={{ scale: 1.08 }}
- >
- <motion.div 
- className="w-8 h-8 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center text-secondary group-hover:border-primary group-hover:bg-primary/10"
- whileHover={{ rotate: 10 }}
- >
- <RiBankCardLine size={16} />
- </motion.div>
- <div>
- <p className="text-sm font-bold text-secondary">{tr.gateway || 'N/A'}</p>
- <p className="text-sm text-gray-600 font-semibold">{tr.payment_method || 'Card'}</p>
- </div>
- </motion.div>
- </td>
- <td className="px-4 py-2.5 text-center">
- <span 
- className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold border ${
- tr.status === 'completed' ? 'bg-green-50 text-green-700 border-green-100' :
- tr.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-100' :
- tr.status === 'refunded' ? 'bg-amber-50 text-amber-700 border-amber-100' :
- 'bg-red-50 text-red-700 border-red-100'
- }`}
- >
- {tr.status}
- </span>
- </td>
- <td className="px-4 py-2.5 text-right">
- <button
- onClick={() => handleViewTransaction(tr)}
- className="p-1.5 text-gray-400 hover:text-secondary hover:bg-gray-100 rounded-lg transition-all"
- title="View Details"
- >
- <RiEyeLine size={16} />
- </button>
- <button
- onClick={() => toast.success('Downloading receipt for ' + tr.reference)}
- className="p-1.5 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-lg transition-all"
- title="Download Receipt"
- >
- <RiDownload2Line size={16} />
- </button>
- </td>
- </tr>
- ))
- )}
- </tbody>
-
- </table>
- </div>
- 
-          <div className="px-4 py-2.5 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
-            <button className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-secondary transition-colors">&larr; Prev</button>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Page 1 of 12</p>
-            <button className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-secondary transition-colors">Next &rarr;</button>
+              <tbody className="divide-y divide-gray-50">
+                {transactionsLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i}>
+                      {Array.from({ length: 7 }).map((__, j) => (
+                        <td key={j} className="px-5 py-4">
+                          <div className="h-3 bg-gray-100 rounded animate-pulse" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : pageData.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-16 text-center">
+                      <RiReceiptLine size={32} className="mx-auto text-gray-200 mb-3" />
+                      <p className="text-sm font-bold text-gray-300">No transactions found</p>
+                    </td>
+                  </tr>
+                ) : (
+                  pageData.map((txn, idx) => (
+                    <motion.tr
+                      key={txn.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: idx * 0.02 }}
+                      className="hover:bg-blue-50/20 transition-colors group cursor-pointer"
+                    >
+                      <td className="px-5 py-3.5">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100 group-hover:border-primary/20 group-hover:bg-primary/5 group-hover:text-primary transition-all font-mono">
+                          {formatRef(txn.reference)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <p className="text-xs font-bold text-secondary leading-tight">{txn.organisation?.name || '—'}</p>
+                        <p className="text-[10px] text-gray-400">{formatDate(txn.createdAt)}</p>
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <span className="text-sm font-black text-secondary">{fmtGbp(txn.amount)}</span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-secondary">
+                            <RiBankCardLine size={13} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-secondary leading-none">{txn.gateway || 'N/A'}</p>
+                            <p className="text-[10px] text-gray-400">{txn.payment_method || 'Card'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5 text-center">
+                        <span className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-500">
+                          <RiCalendarLine size={11} className="text-gray-400" />
+                          {formatDate(txn.createdAt)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <TxnBadge status={txn.status} />
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleViewTransaction(txn)}
+                            title="View Details"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-secondary hover:bg-gray-100 transition-all"
+                          >
+                            <RiEyeLine size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDownloadReceipt(txn)}
+                            disabled={busy[`receipt_${txn.id}`]}
+                            title="Download Receipt"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-wait"
+                          >
+                            {busy[`receipt_${txn.id}`]
+                              ? <span className="block w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                              : <RiDownload2Line size={15} />}
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
- </div>
 
-        {/* Gateway Integrity Status */}
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xs font-black text-secondary uppercase tracking-widest">🔌 Gateway Status</h3>
+          {/* Pagination */}
+          <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
+            <p className="text-xs font-bold text-gray-400">
+              {filteredData.length === 0 ? 'No results' : `Showing ${Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredData.length)}–${Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} of ${filteredData.length}`}
+            </p>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-secondary hover:bg-white disabled:opacity-30 transition-all">
+                <RiArrowLeftSLine size={16} />
+              </button>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
+                <button key={p} onClick={() => setCurrentPage(p)} className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${currentPage === p ? 'bg-primary text-white shadow-sm' : 'border border-gray-200 text-gray-400 hover:bg-white hover:text-secondary'}`}>{p}</button>
+              ))}
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-secondary hover:bg-white disabled:opacity-30 transition-all">
+                <RiArrowRightSLine size={16} />
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Gateway status sidebar */}
+        <motion.div
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.25 }}
+          className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-xs font-black text-secondary uppercase tracking-widest">Gateway Status</h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">Payment infrastructure</p>
+            </div>
             <RiPulseLine className="text-primary animate-pulse" size={18} />
           </div>
 
-          <div className="space-y-3 flex-1">
-            {gatewayLoading ? (
-              <div className="text-center py-10 text-gray-400">Loading gateway status...</div>
-            ) : gatewayStatus ? (
-              <div 
-                className="p-4 bg-gray-50/50 rounded-xl border border-gray-100 group transition-all"
-              >
+          {gatewayLoading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : gatewayStatus ? (
+            <>
+              <div className="p-4 bg-gray-50/60 rounded-xl border border-gray-100 mb-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-white rounded-lg border border-gray-100 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                    <div className="w-9 h-9 bg-white rounded-xl border border-gray-100 flex items-center justify-center text-primary shadow-sm">
                       <RiSecurePaymentLine size={18} />
                     </div>
                     <div>
-                      <p className="text-sm font-black text-secondary tracking-tight">{gatewayStatus.name}</p>
+                      <p className="text-sm font-black text-secondary">{gatewayStatus.name}</p>
                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Card / ACH</p>
                     </div>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all ${
-                    gatewayStatus.status === 'Connected' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                    gatewayStatus.status === 'Connected'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-red-50 text-red-700 border-red-200'
                   }`}>
                     {gatewayStatus.status}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-[10px] font-bold text-gray-400">
+                <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 pt-3 border-t border-gray-100">
                   <span>Last Sync</span>
                   <span className="text-secondary">{gatewayStatus.lastSync ? formatDateTime(gatewayStatus.lastSync) : 'Never'}</span>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-10 text-gray-400">No gateway configured</div>
-            )}
-          </div>
-  <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden mt-3">
-    <div className={`h-full ${gatewayStatus?.status === 'Connected' ? 'bg-green-500' : 'bg-red-500'} w-full`} />
-  </div>
 
+              {/* Health bar */}
+              <div className="mb-5">
+                <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 mb-1.5">
+                  <span>Connection Health</span>
+                  <span className={gatewayStatus.status === 'Connected' ? 'text-emerald-600' : 'text-red-600'}>
+                    {gatewayStatus.status === 'Connected' ? '100%' : '0%'}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: gatewayStatus.status === 'Connected' ? '100%' : '0%' }}
+                    transition={{ delay: 0.5, duration: 0.8, ease: 'easeOut' }}
+                    className={`h-full rounded-full ${gatewayStatus.status === 'Connected' ? 'bg-emerald-500' : 'bg-red-500'}`}
+                  />
+                </div>
+              </div>
 
- <div className="mt-6 pt-5 border-t border-gray-200">
+              {/* Quick stats */}
+              <div className="grid grid-cols-2 gap-2 mb-5">
+                {[
+                  { label: 'Currency', value: gatewayStatus.currency || 'GBP' },
+                  { label: 'Platform Fee', value: `${gatewayStatus.platform_fee || '0'}%` },
+                ].map(({ label, value }) => (
+                  <div key={label} className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-center">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{label}</p>
+                    <p className="text-sm font-black text-secondary">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center py-8 text-center">
+              <RiExchangeLine size={32} className="text-gray-200 mb-3" />
+              <p className="text-sm font-bold text-gray-300">No gateway configured</p>
+              <p className="text-xs text-gray-300 mt-1">Set up Stripe to start processing</p>
+            </div>
+          )}
 
- <button 
-  onClick={() => setIsGatewayModalOpen(true)}
-  className="w-full py-2 bg-secondary text-white rounded-lg text-xs font-bold shadow-md hover:bg-secondary/90 transition-all"
- >
-   Configure Gateway
- </button>
- </div>
- </div>
- </div>
+          <button
+            onClick={() => setIsGatewayModalOpen(true)}
+            className="w-full py-2.5 bg-secondary text-white rounded-xl text-xs font-bold shadow-sm hover:opacity-90 transition-all"
+          >
+            Configure Gateway
+          </button>
+        </motion.div>
+      </div>
 
- {/* Transaction Detail Modal */}
- <Modal
- isOpen={isTransactionDetailOpen}
- onClose={() => {
- setIsTransactionDetailOpen(false);
- setSelectedTransaction(null);
- }}
- title="Transaction Details"
- subtitle="Complete transaction information and receipt"
- maxWidth="max-w-2xl"
- footer={
- <div className="flex items-center justify-between w-full">
- <motion.button
- onClick={() => {
- if (selectedTransaction) {
- alert('Downloading receipt for ' + selectedTransaction.id);
- }
- }}
- className="flex items-center gap-2 px-6 py-2.5 text-base font-bold text-primary hover:text-primary/80 hover:bg-primary/10 rounded-lg transition-all border border-primary/20 group"
- whileHover={{ scale: 1.08, y: -2 }}
- whileTap={{ scale: 0.96 }}
- >
- <RiFileDownloadLine size={18} className="group-hover:rotate-12 transition-transform"/> Download Receipt
- </motion.button>
- <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
- <Button variant="secondary"onClick={() => {
- setIsTransactionDetailOpen(false);
- setSelectedTransaction(null);
- }} className="px-6 py-2.5 text-base font-bold rounded-lg hover:shadow-md transition-all">
- Close
- </Button>
- </motion.div>
- </div>
- }
- >
- {selectedTransaction && (
- <div className="space-y-6 py-4">
- {/* Status Overview */}
- <div className={`p-4 rounded-xl border flex items-center justify-between ${
- selectedTransaction.status === 'Completed' ? 'bg-green-50 border-green-100' :
- selectedTransaction.status === 'Processing' ? 'bg-blue-50 border-blue-100' :
- 'bg-red-50 border-red-100'
- }`}>
- <div>
- <p className="text-sm font-bold text-gray-400">Transaction Status</p>
- <p className={`text-lg font-semibold ${
- selectedTransaction.status === 'Completed' ? 'text-green-700' :
- selectedTransaction.status === 'Processing' ? 'text-blue-700' :
- 'text-red-700'
- }`}>{selectedTransaction.status}</p>
- </div>
- <div className="text-right">
- <p className="text-sm font-bold text-gray-400">Amount</p>
- <p className="text-2xl font-semibold text-secondary">{selectedTransaction.amount}</p>
- </div>
- </div>
+      {/* Transaction Detail Modal */}
+      {selectedTxn && (
+        <TransactionModal
+          txn={selectedTxn}
+          onClose={() => setSelectedTxn(null)}
+          onDownloadReceipt={() => handleDownloadReceipt(selectedTxn)}
+          downloading={busy[`receipt_${selectedTxn?.id}`]}
+          taxRate={parseFloat(gatewayStatus?.tax_rate || '0')}
+          taxId={gatewayStatus?.tax_id || null}
+        />
+      )}
 
- {/* Transaction Information Grid */}
- <div className="grid grid-cols-2 gap-4">
- <motion.div 
- className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-md transition-all group"
- whileHover={{ y: -3, scale: 1.02 }}
- >
- <p className="text-sm font-bold text-gray-500 mb-2">📍 Reference ID</p>
- <p className="text-base font-semibold text-secondary">{selectedTransaction.id}</p>
- </motion.div>
- <motion.div 
- className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-md transition-all group"
- whileHover={{ y: -3, scale: 1.02 }}
- >
- <p className="text-sm font-bold text-gray-500 mb-2">🔑 Transaction ID</p>
- <p className="text-xs font-bold text-secondary font-mono truncate">{selectedTransaction.transactionId}</p>
- </motion.div>
- <motion.div 
- className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-md transition-all group"
- whileHover={{ y: -3, scale: 1.02 }}
- >
- <p className="text-sm font-bold text-gray-500 mb-2">🏢 Organisation Name</p>
- <p className="text-base font-semibold text-secondary">{selectedTransaction.org}</p>
- </motion.div>
- <motion.div 
- className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-md transition-all group"
- whileHover={{ y: -3, scale: 1.02 }}
- >
- <p className="text-sm font-bold text-gray-500 mb-2">💳 Payment Method</p>
- <p className="text-base font-semibold text-secondary">{selectedTransaction.method}</p>
- </motion.div>
- <motion.div 
- className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-md transition-all group"
- whileHover={{ y: -3, scale: 1.02 }}
- >
- <p className="text-sm font-bold text-gray-500 mb-2">🎫 Card Type</p>
- <div className="flex items-center gap-2 mt-2">
- {selectedTransaction.provider === 'Visa' ? <RiVisaLine size={22} className="text-blue-600"/> : <RiMastercardLine size={22} className="text-red-600"/>}
- <div>
- <p className="text-base font-semibold text-secondary">{selectedTransaction.provider}</p>
- <p className="text-sm text-gray-400 font-bold">•••• {selectedTransaction.cardLast4}</p>
- </div>
- </div>
- </motion.div>
- <motion.div 
- className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-md transition-all group"
- whileHover={{ y: -3, scale: 1.02 }}
- >
- <p className="text-sm font-bold text-gray-500 mb-2">⚙️ Payment Gateway</p>
- <p className="text-base font-semibold text-secondary">{selectedTransaction.method}</p>
- </motion.div>
- </div>
+      {/* Gateway Modal */}
+      <AnimatePresence>
+        {isGatewayModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)' }}
+            onClick={() => setIsGatewayModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-xl text-primary"><RiSecurePaymentLine size={18} /></div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Payment Gateway</p>
+                    <h3 className="text-sm font-black text-secondary">Stripe Configuration</h3>
+                  </div>
+                </div>
+                <button onClick={() => setIsGatewayModalOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition-all">
+                  <RiCloseLine size={20} />
+                </button>
+              </div>
 
- {/* Date & Time */}
- <div className="grid grid-cols-2 gap-4">
- <motion.div 
- className="bg-gradient-to-br from-blue-50 to-white p-5 rounded-xl border border-blue-200 hover:border-blue-300 hover:shadow-md transition-all"
- whileHover={{ y: -3, scale: 1.02 }}
- >
- <p className="text-sm font-bold text-blue-600 mb-2">📅 Date</p>
- <p className="text-base font-semibold text-secondary">{selectedTransaction.date}</p>
- </motion.div>
- <motion.div 
- className="bg-gradient-to-br from-purple-50 to-white p-5 rounded-xl border border-purple-200 hover:border-purple-300 hover:shadow-md transition-all"
- whileHover={{ y: -3, scale: 1.02 }}
- >
- <p className="text-sm font-bold text-purple-600 mb-2">⏰ Time</p>
- <p className="text-base font-semibold text-secondary">{selectedTransaction.time}</p>
- </motion.div>
- </div>
+              <div className="p-6 space-y-4">
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 flex items-center gap-3 mb-2">
+                  <div className="w-9 h-9 bg-white rounded-xl border border-gray-100 flex items-center justify-center text-primary shadow-sm">
+                    <RiSecurePaymentLine size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-secondary">Stripe API</p>
+                    <p className="text-xs text-emerald-600 font-bold">Production Environment</p>
+                  </div>
+                </div>
 
- {/* Sender & Receiver Info */}
- <div className="grid grid-cols-2 gap-4">
- <motion.div 
- className="bg-gradient-to-br from-blue-100 to-blue-50 p-5 rounded-xl border border-blue-200 hover:shadow-md transition-all"
- whileHover={{ y: -3, scale: 1.02 }}
- >
- <div className="flex items-center gap-3 mb-3">
- <motion.div 
- className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white"
- whileHover={{ rotate: 10 }}
- >
- <RiArrowDownLine size={18} />
- </motion.div>
- <p className="text-sm font-bold text-blue-700">Sender</p>
- </div>
- <p className="text-base font-semibold text-secondary">{selectedTransaction.sender}</p>
- </motion.div>
- <motion.div 
- className="bg-gradient-to-br from-green-100 to-green-50 p-5 rounded-xl border border-green-200 hover:shadow-md transition-all"
- whileHover={{ y: -3, scale: 1.02 }}
- >
- <div className="flex items-center gap-3 mb-3">
- <motion.div 
- className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white"
- whileHover={{ rotate: -10 }}
- >
- <RiArrowUpLine size={18} />
- </motion.div>
- <p className="text-sm font-bold text-green-700">Receiver</p>
- </div>
- <p className="text-base font-semibold text-secondary">{selectedTransaction.receiver}</p>
- </motion.div>
- </div>
+                <Input
+                  label="Publishable Key"
+                  value={gatewayConfig.publishable_key}
+                  onChange={e => setGatewayConfig({ ...gatewayConfig, publishable_key: e.target.value })}
+                  className="font-mono text-sm"
+                />
+                <Input
+                  label="Secret Key"
+                  type="password"
+                  value={gatewayConfig.secret_key}
+                  onChange={e => setGatewayConfig({ ...gatewayConfig, secret_key: e.target.value })}
+                  className="font-mono text-sm"
+                />
+                <Input
+                  label="Webhook Secret"
+                  type="password"
+                  value={gatewayConfig.webhook_secret}
+                  onChange={e => setGatewayConfig({ ...gatewayConfig, webhook_secret: e.target.value })}
+                  className="font-mono text-sm"
+                />
 
- {/* Notes and Remarks */}
- <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
- <p className="text-sm font-bold text-amber-600 mb-2">Notes & Remarks</p>
- <p className="text-sm text-amber-900 font-semibold leading-relaxed">{selectedTransaction.notes}</p>
- </div>
- </div>
- )}
- </Modal>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 ml-1">Currency</label>
+                    <select className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-secondary outline-none">
+                      <option>GBP (£)</option>
+                      <option>USD ($)</option>
+                    </select>
+                  </div>
+                  <Input label="Platform Fee (%)" type="number" defaultValue="2.5" />
+                </div>
 
- {/* Stripe Modal */}
- <Modal
- isOpen={isGatewayModalOpen}
- onClose={() => setIsGatewayModalOpen(false)}
- title="Stripe Configuration"
- subtitle="Secure API authentication for production payments."
- maxWidth="max-w-md"
- footer={
- <div className="flex justify-end gap-2 w-full">
- <Button variant="secondary"onClick={() => setIsGatewayModalOpen(false)} className="px-5 py-2 text-sm font-bold">Close</Button>
- <Button onClick={handleSaveGatewayConfig} className="px-6 py-2 text-sm font-bold shadow-sm">Save Changes</Button>
- </div>
- }
- >
- <div className="space-y-6 py-2">
- <div className="p-5 bg-gray-50 rounded-xl border border-gray-100">
- <div className="flex items-center justify-between mb-5">
- <div className="flex items-center gap-3">
- <div className="w-10 h-10 bg-white rounded-xl border border-gray-100 flex items-center justify-center text-primary">
- <RiSecurePaymentLine size={24} />
- </div>
- <div>
- <h4 className="text-sm font-semibold text-secondary">Stripe API</h4>
- <p className="text-sm text-green-600 font-bold">Production Environment</p>
- </div>
- </div>
- </div>
- <div className="space-y-4">
- <Input 
- label="Publishable Key"
- value={gatewayConfig.publishable_key}
- onChange={(e) => setGatewayConfig({...gatewayConfig, publishable_key: e.target.value})}
- className="font-mono text-sm"
- />
- <Input 
- label="Secret Key"
- type="password"
- value={gatewayConfig.secret_key}
- onChange={(e) => setGatewayConfig({...gatewayConfig, secret_key: e.target.value})}
- className="font-mono text-sm"
- />
- <Input 
- label="Webhook Secret"
- type="password"
- value={gatewayConfig.webhook_secret}
- onChange={(e) => setGatewayConfig({...gatewayConfig, webhook_secret: e.target.value})}
- className="font-mono text-sm"
- />
- </div>
- </div>
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
+                  <RiInformationLine size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700 font-semibold leading-relaxed">
+                    Changing these keys affects all active subscriptions. Use caution in production.
+                  </p>
+                </div>
+              </div>
 
- <div className="grid grid-cols-2 gap-4">
- <div className="space-y-1">
- <label className="text-sm font-bold text-gray-400 ml-1">Default Currency</label>
- <select className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-secondary outline-none appearance-none">
- <option>GBP (£)</option>
- <option>USD ($)</option>
- </select>
- </div>
- <Input label="Platform Fee (%)"type="number"defaultValue="2.5"/>
- </div>
-
- <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
- <RiInformationLine size={20} className="text-amber-600 shrink-0"/>
- <p className="text-sm text-amber-700 font-bold leading-relaxed">
- These keys are used for platform-level billing. Changing them will affect all active subscriptions. Use caution when updating production credentials.
- </p>
- </div>
- </div>
- </Modal>
- </div>
- );
+              <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50/30">
+                <button
+                  onClick={() => setIsGatewayModalOpen(false)}
+                  className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-secondary rounded-xl hover:bg-gray-100 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveGatewayConfig}
+                  className="px-6 py-2 bg-gradient-to-r from-primary to-blue-600 text-white text-sm font-bold rounded-xl shadow-sm hover:opacity-90 transition-all"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 };
 
 export default SuperadminPayments;

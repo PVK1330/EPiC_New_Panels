@@ -36,11 +36,24 @@ const Label = ({ children }) => (
   </label>
 );
 
-const ToggleRow = ({ label, defaultChecked }) => (
+const DEFAULT_NOTIF = {
+  emailVisaExpirations: true,
+  emailComplianceUpdates: true,
+  emailPaymentReminders: true,
+  smsUrgentAlerts: false,
+  pushSystemUpdates: false,
+};
+
+const ToggleRow = ({ label, checked, onChange }) => (
   <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-100">
     <span className="text-sm font-bold text-gray-700">{label}</span>
     <label className="relative inline-flex items-center cursor-pointer">
-      <input type="checkbox" defaultChecked={defaultChecked} className="sr-only peer" />
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="sr-only peer"
+      />
       <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary" />
     </label>
   </div>
@@ -55,8 +68,10 @@ const BusinessSettings = () => {
   const [twoFactorMode, setTwoFactorMode] = useState("setup");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingNotif, setSavingNotif] = useState(false);
 
   const [profileData, setProfileData] = useState({ user: {}, profile: {} });
+  const [notifPrefs, setNotifPrefs] = useState(DEFAULT_NOTIF);
   const [passwordForm, setPasswordForm] = useState({
     current_password: "",
     new_password: "",
@@ -64,10 +79,10 @@ const BusinessSettings = () => {
   });
 
   const tabs = [
-    { id: "account", label: "Account", icon: User },
+    { id: "account",       label: "Account",       icon: User },
     { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "security", label: "Security", icon: Shield },
-    { id: "company", label: "Company", icon: Building2 },
+    { id: "security",      label: "Security",       icon: Shield },
+    { id: "company",       label: "Company",        icon: Building2 },
   ];
 
   useEffect(() => {
@@ -75,7 +90,18 @@ const BusinessSettings = () => {
       try {
         setLoading(true);
         const res = await getBusinessProfile();
-        if (res.data.status === "success") setProfileData(res.data.data);
+        if (res.data.status === "success") {
+          const data = res.data.data;
+          setProfileData(data);
+          // Load 2FA status from profile response if available
+          if (data.user?.twoFactorEnabled != null) {
+            setTwoFactorEnabled(!!data.user.twoFactorEnabled);
+          }
+          // Load notification prefs if persisted on the profile
+          if (data.profile?.notificationPreferences) {
+            setNotifPrefs({ ...DEFAULT_NOTIF, ...data.profile.notificationPreferences });
+          }
+        }
       } catch {
         showToast({ message: "Failed to load profile data", variant: "danger" });
       } finally {
@@ -113,6 +139,25 @@ const BusinessSettings = () => {
     }
   };
 
+  const handleSaveNotifications = async () => {
+    try {
+      setSavingNotif(true);
+      await updateBusinessProfile({
+        ...profileData.user,
+        ...profileData.profile,
+        notificationPreferences: notifPrefs,
+      });
+      showToast({ message: "Notification preferences saved!", variant: "success" });
+    } catch (err) {
+      showToast({
+        message: err.response?.data?.message || "Failed to save notification preferences",
+        variant: "danger",
+      });
+    } finally {
+      setSavingNotif(false);
+    }
+  };
+
   const handlePasswordChange = async () => {
     if (passwordForm.new_password !== passwordForm.confirm_password) {
       return showToast({ message: "Passwords do not match", variant: "warning" });
@@ -136,6 +181,14 @@ const BusinessSettings = () => {
       setSaving(false);
     }
   };
+
+  const NOTIF_ROWS = [
+    { key: "emailVisaExpirations",    label: "Email — visa expirations" },
+    { key: "emailComplianceUpdates",  label: "Email — compliance updates" },
+    { key: "emailPaymentReminders",   label: "Email — payment reminders" },
+    { key: "smsUrgentAlerts",         label: "SMS — urgent alerts" },
+    { key: "pushSystemUpdates",       label: "Push — system updates" },
+  ];
 
   return (
     <div className="space-y-6 pb-6">
@@ -192,7 +245,6 @@ const BusinessSettings = () => {
             initial="hidden"
             animate="visible"
           >
-            {/* Top colour accent */}
             <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
 
             <div className="p-5">
@@ -257,7 +309,12 @@ const BusinessSettings = () => {
 
                   <div>
                     <Label>Timezone</Label>
-                    <select defaultValue="UTC+0" className={inputCls}>
+                    <select
+                      name="timezone"
+                      value={profileData.profile?.timezone || "UTC+0"}
+                      onChange={(e) => handleInputChange(e, "profile")}
+                      className={inputCls}
+                    >
                       <option value="UTC+0">UTC+0 — London</option>
                       <option value="UTC+1">UTC+1 — Central European</option>
                       <option value="UTC-5">UTC-5 — Eastern Time</option>
@@ -291,15 +348,31 @@ const BusinessSettings = () => {
                   </h2>
 
                   <div className="space-y-2">
-                    {[
-                      { label: "Email — visa expirations", on: true },
-                      { label: "Email — compliance updates", on: true },
-                      { label: "Email — payment reminders", on: true },
-                      { label: "SMS — urgent alerts", on: false },
-                      { label: "Push — system updates", on: false },
-                    ].map((item) => (
-                      <ToggleRow key={item.label} label={item.label} defaultChecked={item.on} />
+                    {NOTIF_ROWS.map((item) => (
+                      <ToggleRow
+                        key={item.key}
+                        label={item.label}
+                        checked={notifPrefs[item.key]}
+                        onChange={(e) =>
+                          setNotifPrefs((prev) => ({ ...prev, [item.key]: e.target.checked }))
+                        }
+                      />
                     ))}
+                  </div>
+
+                  <div className="flex justify-end pt-2 border-t border-gray-100">
+                    <button
+                      onClick={handleSaveNotifications}
+                      disabled={savingNotif}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-black text-white transition hover:bg-primary-dark disabled:opacity-50 shadow-sm"
+                    >
+                      {savingNotif ? (
+                        <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Save size={13} />
+                      )}
+                      {savingNotif ? "Saving…" : "Save Preferences"}
+                    </button>
                   </div>
                 </div>
               )}
@@ -433,7 +506,8 @@ const BusinessSettings = () => {
                       <input
                         type="text"
                         name="vatNumber"
-                        defaultValue="GB123456789"
+                        value={profileData.profile?.vatNumber || ""}
+                        onChange={(e) => handleInputChange(e, "profile")}
                         className={inputCls}
                         placeholder="GB123456789"
                       />

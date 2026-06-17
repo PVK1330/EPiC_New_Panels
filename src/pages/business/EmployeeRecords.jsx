@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getEmployeeRecords } from "../../services/licenceApi";
 import { motion } from "framer-motion";
+import { useToast } from "../../context/ToastContext";
 import {
   LayoutDashboard,
   Users,
@@ -17,11 +19,12 @@ import {
 } from "lucide-react";
 
 const EmployeeRecords = () => {
+  const navigate = useNavigate();
+  const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [showModal, setShowModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-
   const [employees, setEmployees] = useState([]);
 
   useEffect(() => {
@@ -31,14 +34,14 @@ const EmployeeRecords = () => {
         setEmployees(
           workers.map((w) => ({
             id: w.id ?? w.candidateId,
-            name: `${w.candidate?.first_name || ""} ${w.candidate?.last_name || ""}`.trim() || "Worker",
-            email: w.candidate?.email || "",
-            phone: w.candidate?.mobile || "",
-            jobTitle: w.jobTitle || "",
+            name: w.name || `${w.candidate?.first_name || ""} ${w.candidate?.last_name || ""}`.trim() || "Worker",
+            email: w.email || w.candidate?.email || "",
+            phone: w.phone || w.candidate?.mobile || "",
+            jobTitle: w.role || w.jobTitle || "",
             visaType: w.visaType || "-",
             nationality: w.nationality || "-",
-            niNumber: "-",
-            startDate: w.startDate || (w.created_at ? String(w.created_at).slice(0, 10) : "-"),
+            niNumber: w.niNumber || "-",
+            startDate: w.startDate ? String(w.startDate).slice(0, 10) : "-",
             status: w.status || "—",
             documents: w.documents || {
               passport: "risk",
@@ -102,6 +105,14 @@ const EmployeeRecords = () => {
   const handleViewEmployee = (employee) => {
     setSelectedEmployee(employee);
     setShowModal(true);
+  };
+
+  const handleDownloadEmployee = (employee) => {
+    showToast({ message: `Downloading records for ${employee.name}…`, variant: "info" });
+  };
+
+  const handleDownloadAll = () => {
+    showToast({ message: "Downloading all documents for " + selectedEmployee?.name + "…", variant: "info" });
   };
 
   return (
@@ -184,6 +195,7 @@ const EmployeeRecords = () => {
             </select>
           </div>
           <button
+            onClick={() => navigate("/business/personnel")}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white transition hover:bg-primary-dark"
           >
             <Plus size={16} />
@@ -199,79 +211,92 @@ const EmployeeRecords = () => {
         initial="hidden"
         animate="visible"
       >
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Employee</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Nationality</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Visa Type</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">NI Number</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Contact</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Start Date</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Documents</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredEmployees.map((employee) => (
-                <tr key={employee.id} className="hover:bg-gray-50 transition">
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-black text-primary">
-                          {employee.name.charAt(0)}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-secondary">{employee.name}</p>
-                        <p className="text-[10px] font-bold text-gray-500">{employee.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{employee.nationality}</td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{employee.visaType}</td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{employee.niNumber}</td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{employee.phone}</td>
-                  <td className="px-4 py-4 text-xs font-bold text-gray-600">{employee.startDate}</td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full ${employee.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                      {employee.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex gap-1">
-                      {Object.entries(employee.documents).map(([doc, status]) => (
-                        <span
-                          key={doc}
-                          className={`inline-flex items-center gap-1 px-2 py-1 text-[9px] font-black rounded ${getDocStatusStyle(status)}`}
-                          title={doc}
-                        >
-                          {getDocStatusIcon(status)}
-                          {doc.charAt(0).toUpperCase()}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleViewEmployee(employee)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"
-                      >
-                        <Eye size={16} />
-                      </button>
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary">
-                        <Download size={16} />
-                      </button>
-                    </div>
-                  </td>
+        {filteredEmployees.length === 0 ? (
+          <div className="py-16 text-center">
+            <Users size={40} className="text-gray-300 mx-auto mb-3" />
+            <p className="text-sm font-black text-gray-400">No employee records found</p>
+            <p className="text-xs font-bold text-gray-400 mt-1">Add your first employee to get started</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Employee</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Nationality</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Visa Type</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">NI Number</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Contact</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Start Date</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Status</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Documents</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-gray-500">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredEmployees.map((employee) => (
+                  <tr key={employee.id} className="hover:bg-gray-50 transition">
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-black text-primary">
+                            {employee.name.charAt(0)}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-secondary">{employee.name}</p>
+                          <p className="text-[10px] font-bold text-gray-500">{employee.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-xs font-bold text-gray-600">{employee.nationality}</td>
+                    <td className="px-4 py-4 text-xs font-bold text-gray-600">{employee.visaType}</td>
+                    <td className="px-4 py-4 text-xs font-bold text-gray-600">{employee.niNumber}</td>
+                    <td className="px-4 py-4 text-xs font-bold text-gray-600">{employee.phone}</td>
+                    <td className="px-4 py-4 text-xs font-bold text-gray-600">{employee.startDate}</td>
+                    <td className="px-4 py-4">
+                      <span className={`inline-flex items-center px-3 py-1 text-[10px] font-black rounded-full ${employee.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                        {employee.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex gap-1">
+                        {Object.entries(employee.documents).map(([doc, status]) => (
+                          <span
+                            key={doc}
+                            className={`inline-flex items-center gap-1 px-2 py-1 text-[9px] font-black rounded ${getDocStatusStyle(status)}`}
+                            title={doc}
+                          >
+                            {getDocStatusIcon(status)}
+                            {doc.charAt(0).toUpperCase()}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleViewEmployee(employee)}
+                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"
+                          title="View details"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadEmployee(employee)}
+                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"
+                          title="Download records"
+                        >
+                          <Download size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </motion.div>
 
       {/* Employee Details Modal */}
@@ -374,7 +399,11 @@ const EmployeeRecords = () => {
                 >
                   Close
                 </button>
-                <button className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition">
+                <button
+                  onClick={handleDownloadAll}
+                  className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition flex items-center justify-center gap-2"
+                >
+                  <Download size={16} />
                   Download All Documents
                 </button>
               </div>

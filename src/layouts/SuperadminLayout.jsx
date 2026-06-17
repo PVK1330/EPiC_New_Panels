@@ -34,6 +34,10 @@ const SuperadminLayout = () => {
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
   const faviconUrl = useSelector(selectFaviconUrl);
+  const fullName = user?.first_name 
+    ? `${user?.first_name} ${user?.last_name || ''}`.trim() 
+    : user?.name || user?.email?.split('@')[0] || "User";
+  const profilePicUrl = user?.profile_pic || user?.avatar_url ? resolveAssetUrl(user?.profile_pic || user?.avatar_url) : null;
 
   // Load platform branding once on mount so the sidebar logo + browser favicon
   // reflect the uploaded assets everywhere — not only after visiting Settings.
@@ -116,7 +120,7 @@ const SuperadminLayout = () => {
               <RiMenuLine size={20} />
             </button>
 
-            <nav className="flex items-center text-sm text-gray-500 overflow-hidden">
+            <nav className="flex items-center text-sm text-slate-600 overflow-hidden">
               <Link
                 to="/superadmin/dashboard"
                 className="hover:text-primary transition-colors flex items-center shrink-0"
@@ -134,7 +138,7 @@ const SuperadminLayout = () => {
 
                 return (
                   <div key={to} className="flex items-center shrink-0">
-                    <RiArrowRightSLine size={14} className="mx-1.5 text-gray-300" />
+                    <RiArrowRightSLine size={14} className="mx-1.5 text-slate-400" />
                     {last ? (
                       <span className="text-secondary font-semibold truncate max-w-[120px] md:max-w-[200px]">
                         {name}
@@ -159,7 +163,7 @@ const SuperadminLayout = () => {
             className="flex items-center gap-3 ml-4 shrink-0"
           >
             {/* Global Search */}
-            <div className="hidden sm:flex items-center px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-gray-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/10 focus-within:border-primary transition-all">
+            <div className="hidden sm:flex items-center px-3 py-1.5 bg-gray-50 border border-gray-150 rounded-lg text-slate-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/10 focus-within:border-primary transition-all">
               <RiSearchLine size={16} />
               <input 
                 type="text" 
@@ -178,14 +182,18 @@ const SuperadminLayout = () => {
                 className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-all ${profileOpen ? "bg-gray-100" : "hover:bg-gray-50"
                   }`}
               >
-                <div className="w-8 h-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
-                  {user?.name?.charAt(0) || "S"}
+                <div className="w-8 h-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-black text-xs shrink-0 shadow-sm overflow-hidden">
+                  {profilePicUrl ? (
+                    <img src={profilePicUrl} alt={fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    fullName.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div className="text-left hidden sm:block">
                   <p className="text-xs font-semibold text-secondary leading-none">
-                    {user?.name || "Super Admin"}
+                    {fullName}
                   </p>
-                  <p className="text-[10px] text-gray-400 mt-1 font-bold">
+                  <p className="text-[10px] text-slate-500 mt-1 font-bold">
                     Platform Owner
                   </p>
                 </div>
@@ -198,18 +206,18 @@ const SuperadminLayout = () => {
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden py-1 z-50 origin-top-right"
+                    className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden py-1 z-50 origin-top-right"
                   >
                     <div className="px-4 py-3 border-b border-gray-100 mb-1">
-                      <p className="text-sm font-semibold text-secondary">{user?.name || "Super Admin"}</p>
-                      <p className="text-xs text-gray-400 truncate mt-0.5">
+                      <p className="text-sm font-semibold text-secondary">{fullName}</p>
+                      <p className="text-xs text-slate-500 truncate mt-0.5">
                         {user?.email || "super@epic.com"}
                       </p>
                     </div>
                     <Link
                       to="/superadmin/profile"
                       onClick={() => setProfileOpen(false)}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-gray-50 hover:text-primary transition-colors text-left"
                     >
                       <RiUserLine size={16} />
                       My Profile

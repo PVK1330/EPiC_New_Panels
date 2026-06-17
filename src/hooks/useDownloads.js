@@ -36,6 +36,8 @@ import { fetchPlatformAuditLogsExport } from "../services/superadminAudit.servic
 import {
   exportFinancials,
   exportInvoicesPdf,
+  downloadInvoicePdf as fetchInvoicePdf,
+  downloadTransactionReceipt as fetchTransactionReceipt,
 } from "../services/billingApi";
 
 function triggerBlobDownload(blob, filename) {
@@ -435,6 +437,32 @@ export default function useDownloads() {
     [wrapAxiosBlob],
   );
 
+  const downloadSuperadminInvoicePdf = useCallback(
+    (invoice) => {
+      const invoiceNumber = invoice?.invoice_number || `invoice_${invoice?.id}`;
+      const safeFilename = `invoice_${invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
+      return wrapAxiosBlob(
+        `invoicePdf_${invoice?.id}`,
+        () => fetchInvoicePdf(invoice?.id),
+        safeFilename,
+      );
+    },
+    [wrapAxiosBlob],
+  );
+
+  const downloadTransactionReceiptPdf = useCallback(
+    (transaction) => {
+      const ref = transaction?.reference || `TXN_${transaction?.id}`;
+      const safeFilename = `Receipt_${ref.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
+      return wrapAxiosBlob(
+        `receipt_${transaction?.id}`,
+        () => fetchTransactionReceipt(transaction?.id),
+        safeFilename,
+      );
+    },
+    [wrapAxiosBlob],
+  );
+
   const downloadCosSummaryExcel = useCallback(
     () => wrapBlobPair("cosSummaryExcel", fetchCosSummaryExcel),
     [wrapBlobPair],
@@ -479,6 +507,8 @@ export default function useDownloads() {
     exportPlatformAuditLogs,
     exportSuperadminFinancials,
     exportSuperadminInvoicesPdf,
+    downloadSuperadminInvoicePdf,
+    downloadTransactionReceiptPdf,
     downloadCosSummaryExcel,
     downloadCosRequestsExcel,
   };

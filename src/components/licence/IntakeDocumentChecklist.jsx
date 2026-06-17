@@ -13,7 +13,7 @@
 import React, { useState, useRef } from "react";
 import {
   CheckCircle2, XCircle, AlertCircle, Clock, Upload,
-  FileText, ChevronDown, ChevronUp, RefreshCw,
+  FileText, ChevronDown, ChevronUp, RefreshCw, Link2,
 } from "lucide-react";
 import {
   uploadIntakeDocument,
@@ -39,6 +39,20 @@ function StatusBadge({ status }) {
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${m.bg} ${m.text}`}>
       <m.Icon className="w-3 h-3" />
       {m.label}
+    </span>
+  );
+}
+
+// Source badge — shown when a file was auto-carried over from the licence application.
+function SourceBadge({ source }) {
+  if (source !== "imported_from_application") return null;
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700"
+      title="This file was carried over from your licence application — replace it if you have a newer version."
+    >
+      <Link2 className="w-3 h-3" />
+      Imported from Licence Application
     </span>
   );
 }
@@ -188,7 +202,9 @@ function SponsorUploadPanel({ doc, applicationId, onRefresh }) {
     }
   }
 
-  const canUpload  = ["pending", "rejected", "information_required"].includes(doc.status);
+  // "uploaded" is included so an imported (or previously uploaded) file can be
+  // replaced directly without removing it first.
+  const canUpload  = ["pending", "uploaded", "rejected", "information_required"].includes(doc.status);
   const canRemove  = ["uploaded"].includes(doc.status);
 
   return (
@@ -201,6 +217,11 @@ function SponsorUploadPanel({ doc, applicationId, onRefresh }) {
       {doc.caseworkerNotes && doc.status === "information_required" && (
         <p className="text-xs text-amber-700 mb-1">
           <span className="font-semibold">Note:</span> {doc.caseworkerNotes}
+        </p>
+      )}
+      {doc.source === "imported_from_application" && (
+        <p className="text-xs text-violet-700 mb-1">
+          Carried over from your licence application. Upload a new file only if you have a more recent version.
         </p>
       )}
       {error && <p className="text-xs text-red-600 mb-1">{error}</p>}
@@ -252,6 +273,7 @@ function DocumentRow({ doc, applicationId, viewerRole, onRefresh }) {
             {!doc.isRequired && (
               <span className="text-xs text-gray-400 italic">Conditional — not currently required</span>
             )}
+            <div className="mt-1"><SourceBadge source={doc.source} /></div>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">

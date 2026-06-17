@@ -47,6 +47,7 @@ export const getLicenceDocuments = () => api.get("/api/business/licence/document
 // Admin side
 export const getAllLicenceApplications = (params = {}) => api.get("/api/admin/licence/all", { params });
 export const updateLicenceApplicationStatus = (id, data) => api.patch(`/api/admin/licence/update-status/${id}`, data);
+export const grantLicence = (id, data) => api.post(`/api/admin/licence/${id}/grant`, data);
 export const getAdminLicenceApplicationDetails = (id) => api.get(`/api/admin/licence/details/${id}`);
 export const requestLicenceInfo = (id, data) => api.patch(`/api/admin/licence/request-info/${id}`, data);
 export const assignLicenceCaseworker = (id, data) => api.post(`/api/admin/licence/assign-caseworker/${id}`, data);

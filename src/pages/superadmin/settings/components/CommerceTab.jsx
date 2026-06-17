@@ -132,25 +132,23 @@ const CommerceTab = ({
             <p className="text-[10px] text-gray-400 ml-1">Percentage charged on top of subscription price</p>
           </div>
         </div>
-
-        <div className="flex justify-end pt-2">
-          <Button
-            onClick={handleSaveStripe}
-            disabled={stripeSaving}
-            className="px-8 py-2.5 text-sm font-black shadow-lg shadow-primary/20"
-          >
-            <RiSaveLine size={16} className="inline mr-2" />
-            {stripeSaving ? 'Saving...' : 'Save Stripe Config'}
-          </Button>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="p-5 bg-white rounded-xl border border-gray-100 shadow-sm space-y-4">
           <h4 className="text-xs font-black text-secondary uppercase tracking-widest">Taxation</h4>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Default Rate (%)" type="number" defaultValue="20" />
-            <Input label="Tax ID" defaultValue="GB 123 456 789" />
+            <Input
+              label="Default Rate (%)"
+              type="number"
+              value={stripeConfig.tax_rate || ''}
+              onChange={(e) => setStripeConfig((p) => ({ ...p, tax_rate: e.target.value }))}
+            />
+            <Input
+              label="Tax ID"
+              value={stripeConfig.tax_id || ''}
+              onChange={(e) => setStripeConfig((p) => ({ ...p, tax_id: e.target.value }))}
+            />
           </div>
         </div>
         <div className="p-5 bg-secondary text-white rounded-xl shadow-lg relative overflow-hidden flex flex-col justify-center">
@@ -160,6 +158,17 @@ const CommerceTab = ({
             Automatic invoicing and tax records are enabled across all subscriptions.
           </p>
         </div>
+      </div>
+
+      <div className="flex justify-end pt-2">
+        <Button
+          onClick={handleSaveStripe}
+          disabled={stripeSaving}
+          className="px-8 py-2.5 text-sm font-black shadow-lg shadow-primary/20"
+        >
+          <RiSaveLine size={16} className="inline mr-2" />
+          {stripeSaving ? 'Saving...' : 'Save Payment Settings'}
+        </Button>
       </div>
     </div>
   );

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import LicenceStages from "../../components/licence/LicenceStages";
 import IntakeDocumentChecklist from "../../components/licence/IntakeDocumentChecklist";
+import LicenceWorkflowTimeline from "../../components/licence/LicenceWorkflowTimeline";
 import { listLicenceV2Applications, getLicenceV2Application, getLicenceApplicationAuditTrail } from "../../services/licenceV2Api";
 import { getLicenceStages } from "../../services/licenceStageApi";
 import {
@@ -796,7 +797,9 @@ const LicenceProcess = () => {
 
       {/* ── Timeline Tab ─────────────────────────────────────────────────────── */}
       {activeTab === "timeline" && (
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative max-w-3xl">
+        <div className="space-y-5 max-w-3xl">
+        <LicenceWorkflowTimeline applicationId={app.id} viewerRole="sponsor" />
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
           <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
           <div className="px-5 py-4 border-b border-gray-100">
             <h3 className="text-sm font-black text-secondary">Application History</h3>
@@ -844,6 +847,7 @@ const LicenceProcess = () => {
               </div>
             )}
           </div>
+        </div>
         </div>
       )}
 

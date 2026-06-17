@@ -193,101 +193,205 @@ export default function CosReviewQueue({
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-sm overflow-x-auto">
-        <table className="w-full text-left min-w-0">
-          <thead>
-            <tr className="bg-gray-50/50 border-b border-gray-50">
-              {["Sponsor", "Visa Type", "Requested", "Approved", "Status", "Requested Date", "Reviewer", "Actions"].map((h) => (
-                <th key={h} className={`px-6 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 ${h === "Actions" ? "text-right" : ""}`}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {loading ? (
-              [...Array(4)].map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  <td colSpan={8} className="px-6 py-6 h-16 bg-gray-50/20"></td>
+      {/* Table & Cards List */}
+      {loading ? (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="animate-pulse bg-white rounded-2xl border border-gray-100 p-6 h-24"></div>
+          ))}
+        </div>
+      ) : filtered.length > 0 ? (
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+            <table className="w-full text-left table-auto">
+              <thead>
+                <tr className="bg-gray-50/75 border-b border-gray-100">
+                  {["Sponsor", "Visa Type", "Requested / Approved", "Status", "Requested Date", "Reviewer", "Actions"].map((h) => (
+                    <th key={h} className={`px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400 ${h === "Actions" ? "text-right" : ""}`}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ))
-            ) : filtered.length > 0 ? (
-              filtered.map((r) => {
-                const canReview = REVIEWABLE.includes(r.status);
-                return (
-                  <tr key={r.id} className="hover:bg-gray-50/30 transition-colors">
-                    <td className="px-6 py-5">
-                      <p className="text-sm font-black text-secondary">{fullName(r.sponsor) || `Sponsor #${r.sponsorId}`}</p>
-                      <p className="text-xs font-bold text-gray-400 mt-0.5">{r.sponsor?.email}</p>
-                    </td>
-                    <td className="px-6 py-5 text-sm font-bold text-secondary">{r.visaType || "—"}</td>
-                    <td className="px-6 py-5 text-sm font-black text-primary">{r.requestedAmount}</td>
-                    <td className="px-6 py-5 text-sm font-black text-emerald-600">
-                      {r.approvedAmount != null ? r.approvedAmount : "—"}
-                    </td>
-                    <td className="px-6 py-5"><CosStatusBadge status={r.status} /></td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-500">
-                      {r.created_at ? formatDateLong(r.created_at, { month: "short" }) : "—"}
-                    </td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-500">{fullName(r.reviewer) || "—"}</td>
-                    <td className="px-6 py-5 text-right">
-                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                        <button
-                          onClick={() => setHistoryRequest(r)}
-                          className="p-2 bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 transition-all"
-                          title="View history"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        {showAssign && canReview && (
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((r) => {
+                  const canReview = REVIEWABLE.includes(r.status);
+                  return (
+                    <tr key={r.id} className="hover:bg-gray-50/50 transition-colors group">
+                      <td className="px-6 py-4">
+                        <p className="text-sm font-black text-secondary group-hover:text-primary transition-colors">
+                          {fullName(r.sponsor) || `Sponsor #${r.sponsorId}`}
+                        </p>
+                        <p className="text-xs font-bold text-gray-400 mt-0.5">{r.sponsor?.email}</p>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-secondary">{r.visaType || "—"}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-primary" title="Requested">
+                            {r.requestedAmount} Req
+                          </span>
+                          <span className="text-xs text-gray-300">/</span>
+                          <span className="text-sm font-black text-emerald-600" title="Approved">
+                            {r.approvedAmount != null ? `${r.approvedAmount} Alloc` : "—"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <CosStatusBadge status={r.status} />
+                      </td>
+                      <td className="px-6 py-4 text-xs font-bold text-gray-500">
+                        {r.created_at ? formatDateLong(r.created_at, { month: "short" }) : "—"}
+                      </td>
+                      <td className="px-6 py-4 text-xs font-bold text-gray-500">
+                        {fullName(r.reviewer) || <span className="text-gray-300 italic">Unreviewed</span>}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => setAssign({ open: true, request: r, ids: r.assignedCaseworkerIds || [] })}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all text-[9px] font-black uppercase"
+                            onClick={() => setHistoryRequest(r)}
+                            className="p-2 bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-primary rounded-xl transition-all border border-gray-100"
+                            title="View history"
                           >
-                            <UserPlus size={14} /> Assign
+                            <Eye size={16} />
+                          </button>
+                          {showAssign && canReview && (
+                            <button
+                              onClick={() => setAssign({ open: true, request: r, ids: r.assignedCaseworkerIds || [] })}
+                              className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-xl transition-all text-[10px] font-black uppercase border border-blue-100"
+                              title="Assign caseworker"
+                            >
+                              <UserPlus size={14} /> Assign
+                            </button>
+                          )}
+                          {canReview && (
+                            <div className="flex items-center gap-1">
+                              {requestInfoRequest && (
+                                <button
+                                  onClick={() => setReview({ open: true, request: r, action: "requestInfo" })}
+                                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-xl transition-all text-[10px] font-black uppercase border border-blue-100"
+                                >
+                                  <MessageSquare size={14} /> Info
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setReview({ open: true, request: r, action: "approve" })}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-xl transition-all text-[10px] font-black uppercase border border-emerald-100"
+                              >
+                                <Check size={14} /> Approve
+                              </button>
+                              <button
+                                onClick={() => setReview({ open: true, request: r, action: "reject" })}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-xl transition-all text-[10px] font-black uppercase border border-red-100"
+                              >
+                                <X size={14} /> Reject
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="block md:hidden space-y-4">
+            {filtered.map((r) => {
+              const canReview = REVIEWABLE.includes(r.status);
+              return (
+                <div key={r.id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-base font-black text-secondary">
+                        {fullName(r.sponsor) || `Sponsor #${r.sponsorId}`}
+                      </h3>
+                      <p className="text-xs font-bold text-gray-400 mt-0.5">{r.sponsor?.email}</p>
+                    </div>
+                    <CosStatusBadge status={r.status} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 py-3 border-y border-gray-50 text-xs">
+                    <div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Visa Type</p>
+                      <p className="font-bold text-secondary mt-0.5">{r.visaType || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Allocation</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 font-black">
+                        <span className="text-primary">{r.requestedAmount} Req</span>
+                        <span className="text-gray-300">/</span>
+                        <span className="text-emerald-600">{r.approvedAmount != null ? `${r.approvedAmount} Alloc` : "—"}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Requested At</p>
+                      <p className="font-bold text-secondary mt-0.5">
+                        {r.created_at ? formatDateLong(r.created_at, { month: "short" }) : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Reviewer</p>
+                      <p className="font-bold text-secondary mt-0.5">
+                        {fullName(r.reviewer) || <span className="text-gray-300 italic">Unreviewed</span>}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      onClick={() => setHistoryRequest(r)}
+                      className="p-2.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-xl transition-all border border-gray-100"
+                      title="View history"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    {showAssign && canReview && (
+                      <button
+                        onClick={() => setAssign({ open: true, request: r, ids: r.assignedCaseworkerIds || [] })}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-xl transition-all text-[10px] font-black uppercase border border-blue-100"
+                      >
+                        <UserPlus size={14} /> Assign
+                      </button>
+                    )}
+                    {canReview && (
+                      <div className="flex items-center gap-1.5">
+                        {requestInfoRequest && (
+                          <button
+                            onClick={() => setReview({ open: true, request: r, action: "requestInfo" })}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-xl transition-all text-[10px] font-black uppercase border border-blue-100"
+                          >
+                            <MessageSquare size={14} /> Info
                           </button>
                         )}
-                        {canReview && (
-                          <>
-                            {requestInfoRequest && (
-                              <button
-                                onClick={() => setReview({ open: true, request: r, action: "requestInfo" })}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all text-[9px] font-black uppercase"
-                              >
-                                <MessageSquare size={14} /> Info
-                              </button>
-                            )}
-                            <button
-                              onClick={() => setReview({ open: true, request: r, action: "approve" })}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all text-[9px] font-black uppercase"
-                            >
-                              <Check size={14} /> Approve
-                            </button>
-                            <button
-                              onClick={() => setReview({ open: true, request: r, action: "reject" })}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all text-[9px] font-black uppercase"
-                            >
-                              <X size={14} /> Reject
-                            </button>
-                          </>
-                        )}
+                        <button
+                          onClick={() => setReview({ open: true, request: r, action: "approve" })}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-xl transition-all text-[10px] font-black uppercase border border-emerald-100"
+                        >
+                          <Check size={14} /> Approve
+                        </button>
+                        <button
+                          onClick={() => setReview({ open: true, request: r, action: "reject" })}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-xl transition-all text-[10px] font-black uppercase border border-red-100"
+                        >
+                          <X size={14} /> Reject
+                        </button>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={8} className="px-6 py-12 text-center">
-                  <AlertCircle className="mx-auto text-gray-200 mb-4" size={48} />
-                  <p className="text-sm font-bold text-gray-400">No CoS requests found.</p>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center shadow-sm">
+          <AlertCircle className="mx-auto text-gray-200 mb-4" size={48} />
+          <p className="text-sm font-bold text-gray-400">No CoS requests found.</p>
+        </div>
+      )}
 
       {/* Review modal (approve / reject) */}
       <CosReviewModal

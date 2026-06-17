@@ -70,8 +70,8 @@ export const proposeCclFees = (caseId, body) =>
 export const reviewCclFees = (caseId, body) =>
   api.patch(`/api/workflow/cases/${caseId}/ccl/fee-review`, body).then(unwrap);
 
-export const getPendingCclFeeApprovals = () =>
-  api.get("/api/workflow/ccl/pending-approvals").then(unwrap);
+export const getPendingCclFeeApprovals = (params) =>
+  api.get("/api/workflow/ccl/pending-approvals", { params }).then(unwrap);
 
 export const recordVisaPortalSubmission = (caseId, body) =>
   api.post(`/api/workflow/cases/${caseId}/visa-portal-submit`, body).then(unwrap);
