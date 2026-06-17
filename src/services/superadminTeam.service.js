@@ -8,6 +8,8 @@ export const inviteTeamMember = (body) => api.post("/api/superadmin/team", body)
 
 export const updateTeamMember = (id, body) => api.patch(`/api/superadmin/team/${id}`, body);
 
+export const deleteTeamMember = (id) => api.delete(`/api/superadmin/team/${id}`);
+
 export const fetchPlatformRoles = () => api.get("/api/superadmin/platform-roles");
 
 export const createPlatformRole = (body) => api.post("/api/superadmin/platform-roles", body);

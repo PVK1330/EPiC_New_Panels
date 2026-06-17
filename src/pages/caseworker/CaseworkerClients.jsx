@@ -1,9 +1,9 @@
 import { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Eye, X, FileText, Briefcase, Phone, Mail, Calendar, MapPin, User, Building, Check, AlertCircle, Clock } from "lucide-react";
+import { Eye, X, FileText, Briefcase, Phone, Mail, Calendar, MapPin, User, Building, Check, AlertCircle, Clock, Download, Loader2 } from "lucide-react";
 import api from "../../services/api";
-import { getCaseworkerCases } from "../../services/caseApi";
-import { formatDate } from "../../utils/datetime";
+import { getCaseworkerCases, getCaseworkerCaseDetails, downloadDocument } from "../../services/caseApi";
+import { formatDate, formatDateTime } from "../../utils/datetime";
 
 const TABS = [
   // { id: "candidates", label: "Candidate Profiles", path: "/caseworker/people/candidates" },
@@ -148,6 +148,10 @@ const CaseworkerClients = () => {
   const [loading, setLoading] = useState(false);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [selectedSponsor, setSelectedSponsor] = useState(null);
+  // Full case detail (documents / timeline / communications) for the open candidate.
+  const [candidateDetails, setCandidateDetails] = useState(null);
+  const [loadingCandidateDetails, setLoadingCandidateDetails] = useState(false);
+  const [downloadingDocId, setDownloadingDocId] = useState(null);
 
   const activeTab = useMemo(() => {
     return location.pathname.includes("/people/sponsors") ? "sponsors" : "candidates";
@@ -158,6 +162,7 @@ const CaseworkerClients = () => {
     // Reset tabs when opening modal
     if (type === 'candidate') {
       setCandidateActiveTab("overview");
+      fetchCandidateDetails(data);
     } else if (type === 'sponsor') {
       setSponsorActiveTab("overview");
     }
@@ -166,6 +171,69 @@ const CaseworkerClients = () => {
   const closeViewModal = () => {
     setViewModal({ type: null, data: null });
     setSelectedSponsor(null);
+    setCandidateDetails(null);
+  };
+
+  // Pull the full case record (documents, timeline, communications, notes) for
+  // the selected candidate's primary case so the modal tabs show real data.
+  const fetchCandidateDetails = async (candidate) => {
+    const caseRef = candidate?.primaryCase?.caseId || candidate?.primaryCase?.id;
+    if (!caseRef) {
+      setCandidateDetails(null);
+      return;
+    }
+    try {
+      setLoadingCandidateDetails(true);
+      setCandidateDetails(null);
+      const response = await getCaseworkerCaseDetails(caseRef);
+      setCandidateDetails(response?.data?.data || null);
+    } catch (error) {
+      console.error("Error fetching candidate case details:", error);
+      setCandidateDetails(null);
+    } finally {
+      setLoadingCandidateDetails(false);
+    }
+  };
+
+  const handleDocumentDownload = async (doc) => {
+    if (!doc?.id) return;
+    try {
+      setDownloadingDocId(doc.id);
+      const response = await downloadDocument(doc.id);
+      const blob = new Blob([response.data], {
+        type: doc.mimeType || response.headers?.["content-type"] || "application/octet-stream",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = doc.userFileName || doc.documentName || `document-${doc.id}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading document:", error);
+    } finally {
+      setDownloadingDocId(null);
+    }
+  };
+
+  // Map a document status enum to a small pill style + label.
+  const docStatusPill = (status) => {
+    switch (status) {
+      case "approved":
+        return { label: "Approved", className: "bg-green-100 text-green-700" };
+      case "rejected":
+        return { label: "Rejected", className: "bg-red-100 text-red-700" };
+      case "under_review":
+        return { label: "Under Review", className: "bg-amber-100 text-amber-700" };
+      case "uploaded":
+        return { label: "Uploaded", className: "bg-blue-100 text-blue-700" };
+      case "missing":
+        return { label: "Missing", className: "bg-gray-100 text-gray-600" };
+      default:
+        return { label: status || "—", className: "bg-gray-100 text-gray-600" };
+    }
   };
 
   useEffect(() => {
@@ -418,14 +486,14 @@ const CaseworkerClients = () => {
                           <Mail size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">Email</p>
-                            <p className="text-sm font-bold text-gray-900">{viewModal.data.email || "N/A"}</p>
+                            <p className="text-sm font-bold text-gray-900">{candidateDetails?.candidate?.email || viewModal.data.email || "N/A"}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <Phone size={16} className="text-gray-400" />
                           <div>
                             <p className="text-xs text-gray-500">Phone</p>
-                            <p className="text-sm font-bold text-gray-900">{viewModal.data.phone || "N/A"}</p>
+                            <p className="text-sm font-bold text-gray-900">{candidateDetails?.candidate?.mobile || viewModal.data.phone || "N/A"}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -484,115 +552,168 @@ const CaseworkerClients = () => {
               )}
 
               {candidateActiveTab === "documents" && (
-                <div className="space-y-6">
-                  <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Required Documents</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Check size={16} className="text-green-500" />
-                        <div>
-                          <p className="text-sm font-medium">Passport Copy</p>
-                          <p className="text-xs text-gray-500">Uploaded on 15 March 2024</p>
-                        </div>
-                      </div>
-                      <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
-                        View
-                      </button>
+                <div className="space-y-4">
+                  <h4 className="text-sm font-black text-secondary uppercase tracking-wide">Documents</h4>
+                  {loadingCandidateDetails ? (
+                    <div className="flex items-center justify-center py-10 text-gray-400">
+                      <Loader2 size={20} className="animate-spin" />
                     </div>
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Check size={16} className="text-green-500" />
-                        <div>
-                          <p className="text-sm font-medium">English Language Certificate</p>
-                          <p className="text-xs text-gray-500">Uploaded on 18 March 2024</p>
-                        </div>
-                      </div>
-                      <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
-                        View
-                      </button>
+                  ) : (candidateDetails?.documents?.list?.length || 0) === 0 ? (
+                    <div className="text-sm text-gray-500 py-8 text-center">No documents uploaded for this case.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {candidateDetails.documents.list.map((doc) => {
+                        const pill = docStatusPill(doc.status);
+                        const isUploaded = doc.status && doc.status !== "missing";
+                        return (
+                          <div key={doc.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3 min-w-0">
+                              {doc.status === "approved" ? (
+                                <Check size={16} className="text-green-500 flex-shrink-0" />
+                              ) : doc.status === "rejected" ? (
+                                <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
+                              ) : doc.status === "missing" ? (
+                                <AlertCircle size={16} className="text-amber-500 flex-shrink-0" />
+                              ) : (
+                                <FileText size={16} className="text-gray-400 flex-shrink-0" />
+                              )}
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {doc.userFileName || doc.documentName || doc.documentType || "Document"}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {doc.documentType ? `${doc.documentType} · ` : ""}
+                                  {doc.uploadedAt ? `Uploaded ${formatDate(doc.uploadedAt)}` : "Not uploaded"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${pill.className}`}>
+                                {pill.label}
+                              </span>
+                              {isUploaded && (
+                                <button
+                                  onClick={() => handleDocumentDownload(doc)}
+                                  disabled={downloadingDocId === doc.id}
+                                  className="inline-flex items-center gap-1 px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50"
+                                >
+                                  {downloadingDocId === doc.id ? (
+                                    <Loader2 size={12} className="animate-spin" />
+                                  ) : (
+                                    <Download size={12} />
+                                  )}
+                                  Download
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <AlertCircle size={16} className="text-amber-500" />
-                        <div>
-                          <p className="text-sm font-medium">Bank Statements</p>
-                          <p className="text-xs text-gray-500">Pending upload</p>
-                        </div>
-                      </div>
-                      <span className="px-3 py-1 text-xs text-amber-600 font-medium">Pending</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Check size={16} className="text-green-500" />
-                        <div>
-                          <p className="text-sm font-medium">Academic Transcripts</p>
-                          <p className="text-xs text-gray-500">Uploaded on 20 March 2024</p>
-                        </div>
-                      </div>
-                      <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
-                        View
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
 
               {candidateActiveTab === "timeline" && (
-                <div className="space-y-6">
-                  <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Case Timeline</h4>
-                  <div className="space-y-4">
-                    <div className="flex gap-3">
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500 text-white text-[10px] font-black">
-                        
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-gray-900">Application Submitted</p>
-                        <p className="text-xs text-gray-500">15 March 2024 · Application processed and submitted to UKVI</p>
-                      </div>
+                <div className="space-y-4">
+                  <h4 className="text-sm font-black text-secondary uppercase tracking-wide">Case Timeline</h4>
+                  {loadingCandidateDetails ? (
+                    <div className="flex items-center justify-center py-10 text-gray-400">
+                      <Loader2 size={20} className="animate-spin" />
                     </div>
-                    <div className="flex gap-3">
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500 text-white text-[10px] font-black">
-                        
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-gray-900">Documents Verified</p>
-                        <p className="text-xs text-gray-500">18 March 2024 · All required documents verified and approved</p>
-                      </div>
+                  ) : (candidateDetails?.timeline?.length || 0) === 0 ? (
+                    <div className="text-sm text-gray-500 py-8 text-center">No timeline activity recorded yet.</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {candidateDetails.timeline.map((event) => {
+                        const performer = event.performer
+                          ? `${event.performer.first_name || ""} ${event.performer.last_name || ""}`.trim()
+                          : event.isSystemAction
+                            ? "System"
+                            : "";
+                        const title = (event.actionType || "update")
+                          .replace(/_/g, " ")
+                          .replace(/^./, (c) => c.toUpperCase());
+                        return (
+                          <div key={event.id} className="flex gap-3">
+                            <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full mt-0.5 ${event.isSystemAction ? "bg-blue-500" : "bg-green-500"}`}>
+                              <Clock size={12} className="text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-gray-900">{title}</p>
+                              {event.description && (
+                                <p className="text-sm text-gray-600">{event.description}</p>
+                              )}
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {event.actionDate ? formatDateTime(event.actionDate) : ""}
+                                {performer ? ` · ${performer}` : ""}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="flex gap-3">
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white text-[10px] font-black">
-                        
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-gray-900">Under Review</p>
-                        <p className="text-xs text-gray-500">22 March 2024 · Currently under review by UKVI</p>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
 
               {candidateActiveTab === "communications" && (
-                <div className="space-y-6">
-                  <h4 className="text-sm font-black text-secondary uppercase tracking-wide mb-3">Communication History</h4>
-                  <div className="space-y-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-gray-500">15 March 2024</span>
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold">Email</span>
-                      </div>
-                      <p className="text-sm font-bold text-gray-900 mb-1">Application Confirmation</p>
-                      <p className="text-xs text-gray-600">Your visa application has been successfully submitted. We'll notify you of any updates.</p>
+                <div className="space-y-4">
+                  <h4 className="text-sm font-black text-secondary uppercase tracking-wide">Communication History</h4>
+                  {loadingCandidateDetails ? (
+                    <div className="flex items-center justify-center py-10 text-gray-400">
+                      <Loader2 size={20} className="animate-spin" />
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-gray-500">18 March 2024</span>
-                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">Phone</span>
+                  ) : (() => {
+                    // Merge logged communications and case notes into one date-sorted
+                    // history so the tab is useful even when only one source exists.
+                    const comms = (candidateDetails?.communications || []).map((c) => ({
+                      id: `comm-${c.id}`,
+                      date: c.sentDate || c.created_at,
+                      channel: (c.messageType || "note").replace(/_/g, " "),
+                      title: c.subject || (c.direction === "inbound" ? "Inbound message" : "Outbound message"),
+                      body: c.message,
+                    }));
+                    const notes = (candidateDetails?.notes || []).map((n) => ({
+                      id: `note-${n.id}`,
+                      date: n.created_at,
+                      channel: "note",
+                      title: n.title || (n.author ? `Note by ${n.author.first_name || ""} ${n.author.last_name || ""}`.trim() : "Case note"),
+                      body: n.content,
+                    }));
+                    const history = [...comms, ...notes].sort(
+                      (a, b) => new Date(b.date || 0) - new Date(a.date || 0),
+                    );
+
+                    if (history.length === 0) {
+                      return <div className="text-sm text-gray-500 py-8 text-center">No communications or notes recorded yet.</div>;
+                    }
+
+                    const channelClass = (channel) => {
+                      const c = channel.toLowerCase();
+                      if (c.includes("email")) return "bg-blue-100 text-blue-700";
+                      if (c.includes("phone")) return "bg-green-100 text-green-700";
+                      if (c.includes("sms")) return "bg-purple-100 text-purple-700";
+                      return "bg-gray-100 text-gray-700";
+                    };
+
+                    return (
+                      <div className="space-y-4">
+                        {history.map((item) => (
+                          <div key={item.id} className="bg-gray-50 p-4 rounded-lg">
+                            <div className="flex items-center justify-between mb-2 gap-2">
+                              <span className="text-xs text-gray-500">{item.date ? formatDateTime(item.date) : ""}</span>
+                              <span className={`px-2 py-1 rounded text-xs font-semibold capitalize ${channelClass(item.channel)}`}>
+                                {item.channel}
+                              </span>
+                            </div>
+                            {item.title && <p className="text-sm font-bold text-gray-900 mb-1">{item.title}</p>}
+                            {item.body && <p className="text-xs text-gray-600 whitespace-pre-wrap">{item.body}</p>}
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-sm font-bold text-gray-900 mb-1">Document Follow-up</p>
-                      <p className="text-xs text-gray-600">Called to confirm receipt of additional documents.</p>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

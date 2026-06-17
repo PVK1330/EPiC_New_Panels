@@ -136,8 +136,10 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
   const platformName = useSelector(selectPlatformName);
   const logoUrl      = useSelector(selectLogoUrl);
 
-  // Use the uploaded logo if available, otherwise fall back to the bundled asset
-  const logoSrc = logoUrl || eliteLogo;
+  // Use the uploaded logo if available, otherwise fall back to the bundled asset.
+  // logoUrl from Redux is a relative API path (api/public/images/...), so it must
+  // be resolved to an absolute backend URL before use as an <img> src.
+  const logoSrc = resolveAssetUrl(logoUrl) || eliteLogo;
 
   // Module access hook — must be at component top level, not inside nested functions
   const { canAccess } = useModuleAccess();

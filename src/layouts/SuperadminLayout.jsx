@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { performLogout } from "../utils/performLogout";
 import SuperadminSidebar from "../components/superadmin/SuperadminSidebar";
 import PlatformNotificationDropdown from "../components/superadmin/PlatformNotificationDropdown";
+import { getIdentitySettings } from "../services/platformSettingsApi";
+import { setBranding, selectFaviconUrl } from "../store/slices/platformBrandingSlice";
+import { resolveAssetUrl } from "../utils/assetUrl";
 import {
   RiMenuLine,
   RiHome5Line,
@@ -30,6 +33,43 @@ const SuperadminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
+  const faviconUrl = useSelector(selectFaviconUrl);
+
+  // Load platform branding once on mount so the sidebar logo + browser favicon
+  // reflect the uploaded assets everywhere — not only after visiting Settings.
+  useEffect(() => {
+    let cancelled = false;
+    getIdentitySettings()
+      .then((res) => {
+        const s = res.data?.data?.settings;
+        if (s && !cancelled) {
+          dispatch(
+            setBranding({
+              platform_name: s.platform_name,
+              logo_url: s.logo_url ?? null,
+              favicon_url: s.favicon_url ?? null,
+            }),
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch]);
+
+  // Apply the uploaded favicon to the document <link rel="icon"> at runtime.
+  useEffect(() => {
+    const href = resolveAssetUrl(faviconUrl);
+    if (!href) return;
+    let link = document.querySelector('link[rel~="icon"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = href;
+  }, [faviconUrl]);
 
   // Inactivity auto-logout is handled app-wide by <SessionTimeout> in App.jsx
   // (single source of truth — BUG-010). The previous superadmin-only useIdleTimer
