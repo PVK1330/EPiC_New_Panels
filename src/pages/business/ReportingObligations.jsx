@@ -105,8 +105,8 @@ const ReportingObligations = () => {
 
   const filteredEvents = events.filter((event) => {
     const matchesSearch =
-      event.worker.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.eventType.toLowerCase().includes(searchQuery.toLowerCase());
+      (event.worker || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (event.eventType || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter =
       filterType === "all" ||
       (filterType === "reported" && event.status === "Reported") ||

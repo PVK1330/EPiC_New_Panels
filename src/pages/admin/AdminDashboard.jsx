@@ -308,12 +308,6 @@ export default function AdminDashboard() {
     <div ref={dashboardRef} className="pb-5 p-4 max-w-[1600px] mx-auto">
       <Skeleton name="admin-dashboard" loading={loading} animate="shimmer">
         <div className="space-y-4">
-          {usingDemoData && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 font-medium">
-              Showing sample dashboard data — live stats will appear when the
-              API is available.
-            </div>
-          )}
           {/* Slim Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-gray-100 mb-4">
             <div>
