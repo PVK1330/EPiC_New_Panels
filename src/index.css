@@ -192,7 +192,9 @@ button{
   #candidate-application-print,
   #candidate-application-print *,
   .candidate-application-print-root,
-  .candidate-application-print-root * {
+  .candidate-application-print-root *,
+  .print-dashboard,
+  .print-dashboard * {
     visibility: visible;
   }
   #candidate-application-print,
@@ -201,6 +203,20 @@ button{
     left: 0;
     top: 0;
     width: 100%;
+  }
+  .print-dashboard {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+  }
+  /* Hide export & refresh buttons during print */
+  .print-dashboard .flex.items-center.gap-2 {
+    display: none !important;
   }
   /* The print root lives inside a Modal whose card + body use
      `max-h-…` + `overflow-hidden/overflow-y-auto`. Those clipping ancestors cut

@@ -135,7 +135,7 @@ const PlatformNotificationDropdown = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-96 bg-white rounded-xl border border-gray-100 shadow-xl z-50 origin-top-right overflow-hidden"
+            className="fixed sm:absolute top-16 sm:top-auto left-4 right-4 sm:left-auto sm:right-0 mt-2 sm:w-96 w-auto bg-white rounded-xl border border-gray-100 shadow-xl z-50 origin-top-right overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">

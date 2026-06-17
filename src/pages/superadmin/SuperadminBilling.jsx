@@ -28,6 +28,7 @@ import useDownloads from '../../hooks/useDownloads';
 import toast from 'react-hot-toast';
 import { formatDate } from '../../utils/datetime';
 import { resolveAssetUrl } from '../../utils/assetUrl';
+import { getGatewayStatus } from '../../services/billingApi';
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
@@ -60,11 +61,12 @@ function StatusBadge({ status }) {
 
 /* ── Invoice Preview Modal ───────────────────────────────────────────────── */
 
-function InvoiceModal({ invoice, onClose, onDownload, downloading }) {
+function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, taxId = null }) {
   if (!invoice) return null;
 
   const amountNet = parseFloat(invoice.amount || 0);
-  const vatAmount = parseFloat((amountNet * 0.2).toFixed(2));
+  const taxEnabled = Number.isFinite(taxRate) && taxRate > 0;
+  const vatAmount = taxEnabled ? parseFloat((amountNet * (taxRate / 100)).toFixed(2)) : 0;
   const totalGross = parseFloat((amountNet + vatAmount).toFixed(2));
   const org = invoice.organisation || {};
   const plan = invoice.subscription?.plan || {};
@@ -109,7 +111,7 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading }) {
             {/* Invoice paper */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
               {/* Invoice top band */}
-              <div className="h-1.5 w-full bg-gradient-to-r from-primary via-blue-400 to-indigo-500" />
+              <div className="h-1.5 w-full bg-primary" />
 
               <div className="p-6">
                 {/* Header: logo left, INVOICE right */}
@@ -135,7 +137,7 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading }) {
                 </div>
 
                 {/* Divider */}
-                <div className="h-px w-full bg-gradient-to-r from-primary/40 to-transparent mb-6" />
+                <div className="h-px w-full bg-gray-200 mb-6" />
 
                 {/* Supplier / Bill To / Invoice Details */}
                 <div className="grid grid-cols-3 gap-6 mb-6">
@@ -144,7 +146,7 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading }) {
                     <p className="text-sm font-bold text-secondary">EPiC HRIS Platform</p>
                     <p className="text-xs text-gray-500">Elite PiC Ltd</p>
                     <p className="text-xs text-gray-500">United Kingdom</p>
-                    <p className="text-xs text-gray-400 mt-1">VAT No: GB000000000</p>
+                    {taxEnabled && taxId && <p className="text-xs text-gray-400 mt-1">Tax ID: {taxId}</p>}
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Bill To</p>
@@ -174,12 +176,12 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading }) {
                 <div className="rounded-xl overflow-hidden border border-gray-100 mb-4">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-gradient-to-r from-primary to-blue-600 text-white">
+                      <tr className="bg-primary text-white">
                         <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Description</th>
                         <th className="text-center px-3 py-3 text-[11px] font-bold uppercase tracking-wider">Period</th>
-                        <th className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">Unit Price</th>
-                        <th className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">VAT (20%)</th>
-                        <th className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Total</th>
+                        <th className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">{taxEnabled ? "Unit Price" : "Amount"}</th>
+                        {taxEnabled && <th className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">VAT ({taxRate}%)</th>}
+                        {taxEnabled && <th className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Total</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -193,8 +195,8 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading }) {
                         </td>
                         <td className="px-3 py-4 text-center text-xs font-semibold text-gray-600">{plan.billing_cycle || 'Monthly'}</td>
                         <td className="px-3 py-4 text-right text-sm font-semibold text-secondary">{fmtGbp(amountNet)}</td>
-                        <td className="px-3 py-4 text-right text-sm font-semibold text-gray-500">{fmtGbp(vatAmount)}</td>
-                        <td className="px-4 py-4 text-right text-sm font-black text-primary">{fmtGbp(totalGross)}</td>
+                        {taxEnabled && <td className="px-3 py-4 text-right text-sm font-semibold text-gray-500">{fmtGbp(vatAmount)}</td>}
+                        {taxEnabled && <td className="px-4 py-4 text-right text-sm font-black text-primary">{fmtGbp(totalGross)}</td>}
                       </tr>
                     </tbody>
                   </table>
@@ -203,18 +205,27 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading }) {
                 {/* Totals */}
                 <div className="flex justify-end mb-6">
                   <div className="w-64 rounded-xl overflow-hidden border border-gray-100">
-                    <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
-                      <span className="text-xs text-gray-500">Subtotal (ex. VAT)</span>
-                      <span className="text-sm font-semibold text-secondary">{fmtGbp(amountNet)}</span>
-                    </div>
-                    <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
-                      <span className="text-xs text-gray-500">VAT @ 20%</span>
-                      <span className="text-sm font-semibold text-secondary">{fmtGbp(vatAmount)}</span>
-                    </div>
-                    <div className="flex justify-between items-center px-4 py-3 bg-gradient-to-r from-primary to-blue-600">
-                      <span className="text-sm font-black text-white">TOTAL DUE</span>
-                      <span className="text-base font-black text-white">{fmtGbp(totalGross)}</span>
-                    </div>
+                    {taxEnabled ? (
+                      <>
+                        <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
+                          <span className="text-xs text-gray-500">Subtotal (ex. VAT)</span>
+                          <span className="text-sm font-semibold text-secondary">{fmtGbp(amountNet)}</span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
+                          <span className="text-xs text-gray-500">VAT @ {taxRate}%</span>
+                          <span className="text-sm font-semibold text-secondary">{fmtGbp(vatAmount)}</span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-3 bg-primary">
+                          <span className="text-sm font-black text-white">TOTAL DUE</span>
+                          <span className="text-base font-black text-white">{fmtGbp(totalGross)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between items-center px-4 py-3 bg-primary">
+                        <span className="text-sm font-black text-white">TOTAL DUE</span>
+                        <span className="text-base font-black text-white">{fmtGbp(amountNet)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -255,7 +266,7 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading }) {
               <button
                 onClick={onDownload}
                 disabled={downloading}
-                className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-primary to-blue-600 text-white text-sm font-bold rounded-xl shadow-sm hover:shadow-md hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-wait"
+                className="flex items-center gap-2 px-5 py-2 bg-primary text-white text-sm font-bold rounded-xl shadow-sm hover:shadow-md hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-wait"
               >
                 {downloading ? (
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -281,6 +292,8 @@ const SuperadminBilling = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [taxRate, setTaxRate] = useState(0);
+  const [taxId, setTaxId] = useState(null);
 
   const {
     invoices,
@@ -297,13 +310,19 @@ const SuperadminBilling = () => {
   useEffect(() => {
     fetchInvoices();
     fetchDashboardStats();
+    getGatewayStatus().then(res => {
+      const gw = res.data?.data?.gateway || {};
+      const rate = parseFloat(gw.tax_rate || '0');
+      setTaxRate(Number.isFinite(rate) && rate > 0 ? rate : 0);
+      setTaxId(gw.tax_id || null);
+    }).catch(() => {});
   }, [fetchInvoices, fetchDashboardStats]);
 
   const stats = [
-    { title: 'Monthly Recurring', subtitle: 'MRR', value: `£${dashboardStats?.mrr || '0'}`, icon: RiPulseLine,   grad: 'from-blue-500 to-blue-600' },
-    { title: 'Annual Recurring',  subtitle: 'ARR', value: `£${dashboardStats?.arr || '0'}`, icon: RiWallet3Line, grad: 'from-indigo-500 to-indigo-600' },
-    { title: 'Churn Rate',        subtitle: '30d',  value: `${dashboardStats?.churnRate || '0'}%`, icon: RiPieChartLine, grad: 'from-amber-500 to-orange-500' },
-    { title: 'Active Subscriptions', subtitle: 'Live', value: dashboardStats?.activeSubscriptions || '0', icon: RiBillLine, grad: 'from-emerald-500 to-teal-500' },
+    { title: 'Monthly Recurring', subtitle: 'MRR', value: `£${dashboardStats?.mrr || '0'}`, icon: RiPulseLine,   bgClass: 'bg-blue-600' },
+    { title: 'Annual Recurring',  subtitle: 'ARR', value: `£${dashboardStats?.arr || '0'}`, icon: RiWallet3Line, bgClass: 'bg-indigo-600' },
+    { title: 'Churn Rate',        subtitle: '30d',  value: `${dashboardStats?.churnRate || '0'}%`, icon: RiPieChartLine, bgClass: 'bg-amber-500' },
+    { title: 'Active Subscriptions', subtitle: 'Live', value: dashboardStats?.activeSubscriptions || '0', icon: RiBillLine, bgClass: 'bg-emerald-600' },
   ];
 
   const filteredBilling = invoices.filter(item => {
@@ -366,8 +385,8 @@ const SuperadminBilling = () => {
                 transition={{ delay: idx * 0.05, duration: 0.35 }}
                 className="relative overflow-hidden bg-white rounded-2xl border border-gray-100 shadow-sm p-5 group hover:shadow-md transition-shadow"
               >
-                <div className={`absolute top-0 right-0 w-24 h-24 rounded-full bg-gradient-to-br ${stat.grad} opacity-5 translate-x-8 -translate-y-8 group-hover:opacity-10 transition-opacity`} />
-                <div className={`inline-flex p-2 rounded-xl bg-gradient-to-br ${stat.grad} text-white mb-3 shadow-sm`}>
+                <div className={`absolute top-0 right-0 w-24 h-24 rounded-full ${stat.bgClass} opacity-5 translate-x-8 -translate-y-8 group-hover:opacity-10 transition-opacity`} />
+                <div className={`inline-flex p-2 rounded-xl ${stat.bgClass} text-white mb-3 shadow-sm`}>
                   <stat.icon size={18} />
                 </div>
                 <p className="text-xs font-bold text-gray-400 mb-0.5">{stat.title}</p>
@@ -425,9 +444,9 @@ const SuperadminBilling = () => {
                 <th className="px-5 py-3 text-left">Invoice</th>
                 <th className="px-5 py-3 text-left">Organisation</th>
                 <th className="px-5 py-3 text-left">Plan</th>
-                <th className="px-5 py-3 text-right">Net Amount</th>
-                <th className="px-5 py-3 text-right">VAT (20%)</th>
-                <th className="px-5 py-3 text-right">Total</th>
+                {taxRate > 0 && <th className="px-5 py-3 text-right">Net Amount</th>}
+                {taxRate > 0 && <th className="px-5 py-3 text-right">VAT ({taxRate}%)</th>}
+                <th className="px-5 py-3 text-right">{taxRate > 0 ? "Total" : "Amount"}</th>
                 <th className="px-5 py-3 text-center">Due</th>
                 <th className="px-5 py-3 text-left">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
@@ -437,7 +456,7 @@ const SuperadminBilling = () => {
               {invoicesLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
-                    {Array.from({ length: 9 }).map((__, j) => (
+                    {Array.from({ length: taxRate > 0 ? 9 : 7 }).map((__, j) => (
                       <td key={j} className="px-5 py-4">
                         <div className="h-3 bg-gray-100 rounded animate-pulse" />
                       </td>
@@ -446,7 +465,7 @@ const SuperadminBilling = () => {
                 ))
               ) : paginatedItems.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center">
+                  <td colSpan={taxRate > 0 ? 9 : 7} className="py-16 text-center">
                     <RiBillLine size={32} className="mx-auto text-gray-200 mb-3" />
                     <p className="text-sm font-bold text-gray-300">No invoices found</p>
                   </td>
@@ -454,7 +473,7 @@ const SuperadminBilling = () => {
               ) : (
                 paginatedItems.map((item, idx) => {
                   const net = parseFloat(item.amount || 0);
-                  const vat = parseFloat((net * 0.2).toFixed(2));
+                  const vat = taxRate > 0 ? parseFloat((net * (taxRate / 100)).toFixed(2)) : 0;
                   const total = net + vat;
                   const orgLogoUrl = item.organisation?.logoUrl ? resolveAssetUrl(item.organisation.logoUrl) : null;
 
@@ -477,7 +496,7 @@ const SuperadminBilling = () => {
                           {orgLogoUrl ? (
                             <img src={orgLogoUrl} alt="" className="w-7 h-7 rounded-lg object-contain border border-gray-100 bg-gray-50" onError={e => { e.target.style.display='none'; }} />
                           ) : (
-                            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary/20 to-indigo-100 flex items-center justify-center text-primary font-black text-xs">
+                            <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-primary font-black text-xs">
                               {(item.organisation?.name || 'O')[0]}
                             </div>
                           )}
@@ -492,9 +511,9 @@ const SuperadminBilling = () => {
                           {item.subscription?.plan?.name || '—'}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-right text-xs font-semibold text-secondary">{fmtGbp(net)}</td>
-                      <td className="px-5 py-3.5 text-right text-xs font-semibold text-gray-400">{fmtGbp(vat)}</td>
-                      <td className="px-5 py-3.5 text-right text-sm font-black text-secondary">{fmtGbp(total)}</td>
+                      {taxRate > 0 && <td className="px-5 py-3.5 text-right text-xs font-semibold text-secondary">{fmtGbp(net)}</td>}
+                      {taxRate > 0 && <td className="px-5 py-3.5 text-right text-xs font-semibold text-gray-400">{fmtGbp(vat)}</td>}
+                      <td className="px-5 py-3.5 text-right text-sm font-black text-secondary">{taxRate > 0 ? fmtGbp(total) : fmtGbp(net)}</td>
                       <td className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500">
                         <span className="flex items-center justify-center gap-1">
                           <RiCalendarLine size={11} className="text-gray-400" />
@@ -576,6 +595,8 @@ const SuperadminBilling = () => {
           onClose={() => setSelectedInvoice(null)}
           onDownload={() => handleDownload(selectedInvoice)}
           downloading={busy[`invoicePdf_${selectedInvoice?.id}`]}
+          taxRate={taxRate}
+          taxId={taxId}
         />
       )}
     </div>

@@ -18,7 +18,11 @@ export const getInvoiceById = (id) => api.get(`/api/superadmin/invoices/${id}`);
 
 export const updateInvoiceStatus = (id, data) => api.patch(`/api/superadmin/invoices/${id}/status`, data);
 
+export const downloadInvoicePdf = (id) =>
+  api.get(`/api/superadmin/invoices/${id}/download`, { responseType: "blob" });
+
 export const exportInvoicesPdf = () => api.get("/api/superadmin/invoices/export/pdf", { responseType: "blob" });
+
 
 export const exportFinancials = () => api.get("/api/superadmin/financials/export", { responseType: "blob" });
 
@@ -28,6 +32,9 @@ export const exportTransactions = (params = {}) =>
   api.get("/api/superadmin/transactions/export", { params, responseType: "blob" });
 
 export const getTransactionById = (id) => api.get(`/api/superadmin/transactions/${id}`);
+
+export const downloadTransactionReceipt = (id) =>
+  api.get(`/api/superadmin/transactions/${id}/receipt`, { responseType: "blob" });
 
 export const getGatewayStatus = () => api.get("/api/superadmin/gateway/status");
 
