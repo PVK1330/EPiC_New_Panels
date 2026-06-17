@@ -247,11 +247,11 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
   // Whether the viewer may complete a given role's task at this stage.
   // Candidate tasks have no self-service portal user, so only an admin can tick
   // them off on the candidate's behalf.
-  const canComplete = (task, stage) =>
+  // Note: we check task.status directly (not stage.status) so caseworker/admin
+  // review tasks remain actionable even after the stage's data signal is satisfied.
+  const canComplete = (task) =>
     interactive &&
-    stage.status !== "completed" &&
-    task.status !== "completed" &&
-    task.status !== "loading" &&
+    (task.status === "pending" || task.status === "in_progress") &&
     ((viewerRole === task.role && task.role !== "candidate") || viewerRole === "admin");
 
   return (
@@ -325,7 +325,7 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
                     if (!meta) return null;
                     const isViewer = viewerRole && viewerRole === task.role;
                     const isDone = task.status === "completed";
-                    const showButton = canComplete(task, stage);
+                    const showButton = canComplete(task);
                     const busy = busyKey === `${stage.key}:${task.role}`;
                     // Sponsor's own incomplete task → deep-link to the page to do it.
                     const action =

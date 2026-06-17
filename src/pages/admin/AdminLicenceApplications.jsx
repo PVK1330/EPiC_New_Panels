@@ -38,6 +38,7 @@ import {
 import {
   getAllLicenceApplications,
   updateLicenceApplicationStatus,
+  grantLicence,
   requestLicenceInfo,
   assignLicenceCaseworker,
   deleteLicenceApplicationByAdmin,
@@ -78,6 +79,7 @@ const AdminLicenceApplications = () => {
   const [showPwd, setShowPwd] = useState(false);
   const [credLoading, setCredLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
+  const [grantForm, setGrantForm] = useState({ expiryDate: "", cosAllocation: "" });
 
   const fetchApplications = async () => {
     try {
@@ -119,6 +121,9 @@ const AdminLicenceApplications = () => {
       setCredForm({ ukviPortalUserId: "", ukviPortalPassword: "", smsPortalUsername: "" });
       setShowPwd(false);
     }
+    if (type === "Approved") {
+      setGrantForm({ expiryDate: "", cosAllocation: "" });
+    }
     setShowActionModal(true);
   };
 
@@ -132,6 +137,7 @@ const AdminLicenceApplications = () => {
     setSelectedCaseworkerIds([]);
     setCredForm({ ukviPortalUserId: "", ukviPortalPassword: "", smsPortalUsername: "" });
     setShowPwd(false);
+    setGrantForm({ expiryDate: "", cosAllocation: "" });
     setSelectedApp(null);
   };
 
@@ -152,12 +158,19 @@ const AdminLicenceApplications = () => {
           requestedDocuments: docs
         });
         showToast({ message: "Information request sent to business", variant: "success" });
+      } else if (actionType === 'Approved') {
+        await grantLicence(selectedApp?.id, {
+          notes: adminNotes || undefined,
+          ...(grantForm.expiryDate    && { expiryDate:    grantForm.expiryDate }),
+          ...(grantForm.cosAllocation && { cosAllocation: Number(grantForm.cosAllocation) }),
+        });
+        showToast({ message: "Licence granted — sponsor account is now active", variant: "success" });
       } else {
         await updateLicenceApplicationStatus(selectedApp?.id, {
           status: actionType,
           adminNotes: adminNotes
         });
-        const verb = actionType === 'Approved' ? 'approved' : actionType === 'Rejected' ? 'rejected' : 'updated';
+        const verb = actionType === 'Rejected' ? 'rejected' : 'updated';
         showToast({ message: `Application ${verb} successfully`, variant: "success" });
       }
 
@@ -439,86 +452,92 @@ const AdminLicenceApplications = () => {
       </div>
 
       {/* Applications List */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto shadow-sm">
-        <table className="w-full text-left min-w-[700px]">
-          <thead>
-            <tr className="bg-gray-50/50 border-b border-gray-50">
-              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Company / Type</th>
-              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Contact</th>
-              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Requested At</th>
-              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Status</th>
-              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Assigned To</th>
-              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {loading ? (
-              [...Array(5)].map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  <td colSpan={6} className="px-8 py-6 h-20 bg-gray-50/20"></td>
+      {loading ? (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="animate-pulse bg-white rounded-2xl border border-gray-100 p-6 h-24"></div>
+          ))}
+        </div>
+      ) : filteredApps.length > 0 ? (
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+            <table className="w-full text-left table-auto">
+              <thead>
+                <tr className="bg-gray-50/75 border-b border-gray-100">
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400">Company / Type</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400">Contact</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400">Requested At</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400">Status</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400">Assigned To</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400 text-right">Actions</th>
                 </tr>
-              ))
-            ) : filteredApps.length > 0 ? (
-              filteredApps.map((app) => (
-                <tr key={app.id} className="hover:bg-gray-50/30 transition-colors">
-                  <td className="px-4 py-4">
-                    <div>
-                      <p className="text-sm font-black text-secondary">{app.companyName}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded ${app.type === 'Renewal' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
-                          {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type}
-                        </span>
-                        {app.cosAllocation && (
-                          <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded">
-                            Alloc: {app.cosAllocation}
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredApps.map((app) => (
+                  <tr key={app.id} className="hover:bg-gray-50/50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="text-sm font-black text-secondary group-hover:text-primary transition-colors">{app.companyName}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${app.type === 'Renewal' ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-blue-50 text-blue-600 border border-blue-200/50'}`}>
+                            {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type}
                           </span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <p className="text-sm font-black text-secondary">{app.contactName}</p>
-                    <p className="text-xs font-bold text-gray-400 mt-0.5">{app.contactEmail}</p>
-                  </td>
-                  <td className="px-4 py-4">
-                    <p className="text-sm font-black text-secondary">
-                      {formatDateLong(app.createdAt, { month: 'short' })}
-                    </p>
-                    <p className="text-xs font-bold text-gray-400 mt-0.5">
-                      {formatTime(app.createdAt)}
-                    </p>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black ${getStatusColor(app.status)}`}>
-                      {app.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    {(() => {
-                      const assigned = getAssignedCaseworkers(app);
-                      if (assigned.length === 0) {
-                        return <span className="text-[10px] font-bold text-gray-300 italic">Unassigned</span>;
-                      }
-                      return (
-                        <div className="flex items-center gap-2" title={assigned.map((c) => c.name).join(", ")}>
-                          <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center text-[10px] font-black text-primary shrink-0">
-                            {getInitials(assigned[0].name)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-black text-secondary truncate max-w-[140px]">{assigned[0].name}</p>
-                            {assigned.length > 1 && (
-                              <p className="text-[10px] font-bold text-gray-400">+{assigned.length - 1} more</p>
-                            )}
-                          </div>
+                          {app.cosAllocation && (
+                            <span className="text-[10px] font-black text-primary bg-primary/5 border border-primary/10 px-2 py-0.5 rounded-full">
+                              Alloc: {app.cosAllocation}
+                            </span>
+                          )}
                         </div>
-                      );
-                    })()}
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                      <div className="flex items-center justify-end gap-1.5 flex-wrap max-w-[400px]">
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-black text-secondary">{app.contactName}</p>
+                      <p className="text-xs font-bold text-gray-400 mt-0.5 flex items-center gap-1">
+                        <Mail size={12} className="text-gray-300" />
+                        {app.contactEmail}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-black text-secondary">
+                        {formatDateLong(app.createdAt, { month: 'short' })}
+                      </p>
+                      <p className="text-xs font-bold text-gray-400 mt-0.5">
+                        {formatTime(app.createdAt)}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black border ${getStatusColor(app.status)}`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
+                        {app.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {(() => {
+                        const assigned = getAssignedCaseworkers(app);
+                        if (assigned.length === 0) {
+                          return <span className="text-xs font-bold text-gray-300 italic">Unassigned</span>;
+                        }
+                        return (
+                          <div className="flex items-center gap-2" title={assigned.map((c) => c.name).join(", ")}>
+                            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-[10px] font-black text-primary shrink-0 border border-primary/20">
+                              {getInitials(assigned[0].name)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-black text-secondary truncate max-w-[140px]">{assigned[0].name}</p>
+                              {assigned.length > 1 && (
+                                <p className="text-[10px] font-bold text-gray-400">+{assigned.length - 1} more</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => setSelectedApp(app)}
-                          className="p-2 bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 transition-all"
+                          className="p-2 bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-primary rounded-xl transition-all border border-gray-100"
                           title="View Details"
                         >
                           <Eye size={16} />
@@ -527,10 +546,10 @@ const AdminLicenceApplications = () => {
                         {app.applicationVersion === 2 && (
                           <button
                             onClick={() => navigate(`/admin/licence/v2/${app.id}`)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all text-[9px] font-black uppercase"
+                            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white rounded-xl transition-all text-[10px] font-black uppercase border border-indigo-100"
                             title="View the full 8-step application"
                           >
-                            <FileText size={14} /> Full Application
+                            <FileText size={14} /> Full App
                           </button>
                         )}
 
@@ -549,7 +568,7 @@ const AdminLicenceApplications = () => {
                             });
                             setShowEditModal(true); 
                           }}
-                          className="p-2 bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 transition-all"
+                          className="p-2 bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-primary rounded-xl transition-all border border-gray-100"
                           title="Edit"
                         >
                           <Pencil size={16} />
@@ -557,26 +576,133 @@ const AdminLicenceApplications = () => {
 
                         <button
                           onClick={() => setDeleteTarget(app)}
-                          className="p-2 bg-red-50 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                          className="p-2 bg-red-50 hover:bg-red-500 text-red-400 hover:text-white rounded-xl transition-all border border-red-100"
                           title="Delete"
                         >
                           <Trash2 size={16} />
                         </button>
                       </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center">
-                  <AlertCircle className="mx-auto text-gray-200 mb-4" size={48} />
-                  <p className="text-sm font-bold text-gray-400">No applications found matching your criteria.</p>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="block md:hidden space-y-4">
+            {filteredApps.map((app) => (
+              <div key={app.id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-black text-secondary">{app.companyName}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${app.type === 'Renewal' ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-blue-50 text-blue-600 border border-blue-200/50'}`}>
+                        {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type}
+                      </span>
+                      {app.cosAllocation && (
+                        <span className="text-[10px] font-black text-primary bg-primary/5 border border-primary/10 px-2 py-0.5 rounded-full">
+                          Alloc: {app.cosAllocation}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${getStatusColor(app.status)} shrink-0`}>
+                    {app.status}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 py-3 border-y border-gray-50 text-xs">
+                  <div>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Contact</p>
+                    <p className="font-bold text-secondary mt-0.5">{app.contactName}</p>
+                    <p className="text-gray-400 truncate mt-0.5">{app.contactEmail}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Requested At</p>
+                    <p className="font-bold text-secondary mt-0.5">{formatDateLong(app.createdAt, { month: 'short' })}</p>
+                    <p className="text-gray-400 mt-0.5">{formatTime(app.createdAt)}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-1">Assigned Caseworker</p>
+                    {(() => {
+                      const assigned = getAssignedCaseworkers(app);
+                      if (assigned.length === 0) {
+                        return <span className="text-xs font-bold text-gray-300 italic">Unassigned</span>;
+                      }
+                      return (
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center text-[9px] font-black text-primary shrink-0 border border-primary/20">
+                            {getInitials(assigned[0].name)}
+                          </div>
+                          <p className="text-xs font-black text-secondary truncate max-w-[120px]">{assigned[0].name}</p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setSelectedApp(app)}
+                      className="p-2.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-xl transition-all border border-gray-100"
+                      title="View Details"
+                    >
+                      <Eye size={16} />
+                    </button>
+
+                    {app.applicationVersion === 2 && (
+                      <button
+                        onClick={() => navigate(`/admin/licence/v2/${app.id}`)}
+                        className="p-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition-all border border-indigo-100"
+                        title="View the full 8-step application"
+                      >
+                        <FileText size={16} />
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => { 
+                        setSelectedApp(app); 
+                        setEditData({
+                          companyName: app.companyName,
+                          registrationNumber: app.registrationNumber,
+                          industry: app.industry,
+                          licenceType: app.licenceType,
+                          cosAllocation: app.cosAllocation,
+                          contactName: app.contactName,
+                          contactEmail: app.contactEmail,
+                          contactPhone: app.contactPhone,
+                        });
+                        setShowEditModal(true); 
+                      }}
+                      className="p-2.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-xl transition-all border border-gray-100"
+                      title="Edit"
+                    >
+                      <Pencil size={16} />
+                    </button>
+
+                    <button
+                      onClick={() => setDeleteTarget(app)}
+                      className="p-2.5 bg-red-50 hover:bg-red-500 text-red-400 hover:text-white rounded-xl transition-all border border-red-100"
+                      title="Delete"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center shadow-sm">
+          <AlertCircle className="mx-auto text-gray-200 mb-4" size={48} />
+          <p className="text-sm font-bold text-gray-400">No applications found matching your criteria.</p>
+        </div>
+      )}
 
       {/* Details Modal */}
       <AnimatePresence>
@@ -948,7 +1074,7 @@ const AdminLicenceApplications = () => {
                     <div className="flex gap-3">
                       <button
                         onClick={() => openAction(selectedApp, "Approved")}
-                        disabled={selectedApp.status === 'Approved'}
+                        disabled={selectedApp.status === 'Licence Granted'}
                         className="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <Check size={18} /> Approve
@@ -1185,6 +1311,35 @@ const AdminLicenceApplications = () => {
                           value={requestedDocs}
                           onChange={(e) => setRequestedDocs(e.target.value)}
                         />
+                      </div>
+                    )}
+
+                    {actionType === 'Approved' && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                            Licence Expiry <span className="font-bold normal-case text-gray-300">(optional)</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={grantForm.expiryDate}
+                            onChange={(e) => setGrantForm((g) => ({ ...g, expiryDate: e.target.value }))}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                            CoS Allocation <span className="font-bold normal-case text-gray-300">(optional)</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={grantForm.cosAllocation}
+                            onChange={(e) => setGrantForm((g) => ({ ...g, cosAllocation: e.target.value }))}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none"
+                            placeholder="e.g. 10"
+                          />
+                        </div>
                       </div>
                     )}
 

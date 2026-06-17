@@ -1,16 +1,19 @@
-import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { LayoutDashboard, FileText, DollarSign, Search, Filter, Download, Eye, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { LayoutDashboard, FileText, DollarSign, Search, Filter, Download, Eye, CheckCircle2, Clock, AlertCircle, X } from "lucide-react";
 import { getBusinessPayments } from "../../services/businessProfileApi";
-import { useEffect } from "react";
 import { formatDate } from "../../utils/datetime";
+import { useToast } from "../../context/ToastContext";
 
 const money = (n) => `£${Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const Invoices = () => {
+  const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [invoices, setInvoices] = useState([]);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [downloading, setDownloading] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -27,6 +30,7 @@ const Invoices = () => {
           dueDate: p.dueDate ? formatDate(p.dueDate) : "N/A",
           paidDate: p.paymentDate ? formatDate(p.paymentDate) : "N/A",
           paymentMethod: p.paymentMethod || "N/A",
+          transactionId: p.transactionId || p.reference || null,
         }))
       );
     };
@@ -40,23 +44,17 @@ const Invoices = () => {
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case "Paid":
-        return "bg-emerald-100 text-emerald-700";
-      case "Pending":
-        return "bg-amber-100 text-amber-700";
-      default:
-        return "bg-red-100 text-red-700";
+      case "Paid":    return "bg-emerald-100 text-emerald-700";
+      case "Pending": return "bg-amber-100 text-amber-700";
+      default:        return "bg-red-100 text-red-700";
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "Paid":
-        return <CheckCircle2 size={16} className="text-emerald-600" />;
-      case "Pending":
-        return <Clock size={16} className="text-amber-600" />;
-      default:
-        return <AlertCircle size={16} className="text-red-600" />;
+      case "Paid":    return <CheckCircle2 size={16} className="text-emerald-600" />;
+      case "Pending": return <Clock size={16} className="text-amber-600" />;
+      default:        return <AlertCircle size={16} className="text-red-600" />;
     }
   };
 
@@ -75,9 +73,27 @@ const Invoices = () => {
     [invoices, searchQuery, filterType]
   );
 
-  const totalAmount = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const paidAmount = invoices.filter((i) => i.status === "Paid").reduce((sum, inv) => sum + inv.amount, 0);
+  const totalAmount   = invoices.reduce((sum, inv) => sum + inv.amount, 0);
+  const paidAmount    = invoices.filter((i) => i.status === "Paid").reduce((sum, inv) => sum + inv.amount, 0);
   const pendingAmount = invoices.filter((i) => i.status !== "Paid").reduce((sum, inv) => sum + inv.amount, 0);
+
+  const handleDownload = async (invoice) => {
+    setDownloading(invoice.id);
+    try {
+      const { downloadInvoiceReceiptPdf } = await import("../../services/downloadApi");
+      const res = await downloadInvoiceReceiptPdf({ paymentId: invoice.id, invoiceNumber: invoice.invoiceId });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${invoice.invoiceId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      showToast({ message: "Failed to download invoice", variant: "danger" });
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   return (
     <div className="space-y-5 pb-6">
@@ -133,45 +149,135 @@ const Invoices = () => {
 
       <motion.div className="rounded-2xl border border-gray-200 bg-white shadow-sm relative overflow-hidden" variants={cardVariants} initial="hidden" animate="visible">
         <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Invoice ID</th>
-                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Case Ref</th>
-                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Case</th>
-                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Amount</th>
-                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Due Date</th>
-                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
-                <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredInvoices.map((invoice) => (
-                <tr key={invoice.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition">
-                  <td className="px-3 py-2 text-sm font-black text-secondary">{invoice.invoiceId}</td>
-                  <td className="px-3 py-2 text-xs font-bold text-gray-600">{invoice.caseRef}</td>
-                  <td className="px-3 py-2 text-xs font-bold text-gray-600">{invoice.case}</td>
-                  <td className="px-3 py-2 text-sm font-black text-secondary">{money(invoice.amount)}</td>
-                  <td className="px-3 py-2 text-xs font-bold text-gray-600">{invoice.dueDate}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-1.5">
-                      {getStatusIcon(invoice.status)}
-                      <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-black rounded-full ${getStatusStyle(invoice.status)}`}>{invoice.status}</span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex gap-1.5">
-                      <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"><Eye size={14} /></button>
-                      <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"><Download size={14} /></button>
-                    </div>
-                  </td>
+        {filteredInvoices.length === 0 ? (
+          <div className="py-16 text-center">
+            <FileText size={40} className="text-gray-300 mx-auto mb-3" />
+            <p className="text-sm font-black text-gray-400">No invoices found</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Invoice ID</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Case Ref</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Description</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Amount</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Due Date</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredInvoices.map((invoice) => (
+                  <tr key={invoice.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition">
+                    <td className="px-3 py-2 text-sm font-black text-secondary">{invoice.invoiceId}</td>
+                    <td className="px-3 py-2 text-xs font-bold text-gray-600">{invoice.caseRef}</td>
+                    <td className="px-3 py-2 text-xs font-bold text-gray-600">{invoice.case}</td>
+                    <td className="px-3 py-2 text-sm font-black text-secondary">{money(invoice.amount)}</td>
+                    <td className="px-3 py-2 text-xs font-bold text-gray-600">{invoice.dueDate}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-1.5">
+                        {getStatusIcon(invoice.status)}
+                        <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-black rounded-full ${getStatusStyle(invoice.status)}`}>{invoice.status}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => setSelectedInvoice(invoice)}
+                          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"
+                          title="View invoice"
+                        >
+                          <Eye size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDownload(invoice)}
+                          disabled={downloading === invoice.id}
+                          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary disabled:opacity-40"
+                          title="Download PDF"
+                        >
+                          <Download size={14} className={downloading === invoice.id ? "animate-pulse" : ""} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </motion.div>
+
+      {/* Invoice Detail Modal */}
+      <AnimatePresence>
+        {selectedInvoice && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+            >
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-lg font-black text-secondary">{selectedInvoice.invoiceId}</h3>
+                  <p className="text-xs font-bold text-gray-500 mt-0.5">{selectedInvoice.case}</p>
+                </div>
+                <button onClick={() => setSelectedInvoice(null)} className="p-1.5 hover:bg-gray-100 rounded-lg transition">
+                  <X size={18} className="text-gray-500" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  ["Case Reference", selectedInvoice.caseRef],
+                  ["Amount",         money(selectedInvoice.amount)],
+                  ["Due Date",       selectedInvoice.dueDate],
+                  ["Paid Date",      selectedInvoice.paidDate],
+                  ["Payment Method", selectedInvoice.paymentMethod],
+                  ...(selectedInvoice.transactionId ? [["Transaction ID", selectedInvoice.transactionId]] : []),
+                ].map(([label, value]) => (
+                  <div key={label} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                    <span className="text-xs font-black text-gray-500 uppercase tracking-wider">{label}</span>
+                    <span className="text-sm font-black text-secondary">{value}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-xs font-black text-gray-500 uppercase tracking-wider">Status</span>
+                  <div className="flex items-center gap-1.5">
+                    {getStatusIcon(selectedInvoice.status)}
+                    <span className={`px-2 py-0.5 text-[10px] font-black rounded-full ${getStatusStyle(selectedInvoice.status)}`}>
+                      {selectedInvoice.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-5 border-t border-gray-100 mt-4">
+                <button
+                  onClick={() => setSelectedInvoice(null)}
+                  className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 font-black rounded-xl py-2.5 transition text-sm"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => { handleDownload(selectedInvoice); setSelectedInvoice(null); }}
+                  className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl py-2.5 transition flex items-center justify-center gap-2 text-sm"
+                >
+                  <Download size={14} />
+                  Download PDF
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
