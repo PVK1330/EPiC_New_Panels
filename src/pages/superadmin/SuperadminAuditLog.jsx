@@ -143,12 +143,12 @@ const SuperadminAuditLog = () => {
             <table className="w-full">
               <thead className="bg-gray-50/50 text-[10px] text-gray-400 font-black border-b border-gray-100 uppercase tracking-widest">
                 <tr>
-                  <th className="px-4 py-3 text-left">Activity</th>
-                  <th className="px-4 py-3 text-left">Category</th>
-                  <th className="px-4 py-3 text-left">Initiator</th>
-                  <th className="px-4 py-3 text-left">Organisation</th>
-                  <th className="px-4 py-3 text-left">Timestamp</th>
-                  <th className="px-4 py-3 text-center">Status</th>
+                  <th scope="col" className="px-4 py-3 text-left">Activity</th>
+                  <th scope="col" className="px-4 py-3 text-left">Category</th>
+                  <th scope="col" className="px-4 py-3 text-left">Initiator</th>
+                  <th scope="col" className="px-4 py-3 text-left">Organisation</th>
+                  <th scope="col" className="px-4 py-3 text-left">Timestamp</th>
+                  <th scope="col" className="px-4 py-3 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">

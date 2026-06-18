@@ -25,3 +25,14 @@ export const getLicenceApplicationAuditTrail = (id) => api.get(`${BASE}/applicat
 // Reviewer (read-only) detail.
 export const getAdminLicenceV2 = (id) => api.get(`/api/admin/licence/v2/${id}`);
 export const getCaseworkerLicenceV2 = (id) => api.get(`/api/caseworker/licence/v2/${id}`);
+
+export const verifyAppendixDocument = (role, id, documentId, notes = "") => {
+  const base = role === "admin" ? "/api/admin/licence" : "/api/caseworker/licence";
+  return api.patch(`${base}/${id}/appendix-documents/${documentId}/verify`, { notes });
+};
+
+export const rejectAppendixDocument = (role, id, documentId, reason) => {
+  const base = role === "admin" ? "/api/admin/licence" : "/api/caseworker/licence";
+  return api.patch(`${base}/${id}/appendix-documents/${documentId}/reject`, { reason });
+};
+

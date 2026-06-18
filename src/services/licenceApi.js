@@ -66,6 +66,21 @@ export const completeGovRegistration = (id, data) => api.post(`/api/caseworker/l
 export const requestGovCredentials = (id) => api.post(`/api/caseworker/licence/${id}/request-government-credentials`);
 export const recordGovSubmission = (id, data) => api.post(`/api/caseworker/licence/${id}/government-submission`, data);
 
+// Dispatch documents (admin/caseworker → sponsor)
+export const dispatchDocumentToSponsor = (id, formData) =>
+  api.post(`/api/admin/licence/${id}/dispatch-document`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+export const dispatchDocumentToCaseworker = (id, formData) =>
+  api.post(`/api/caseworker/licence/${id}/dispatch-document`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+export const getAdminDispatchedDocuments = (id) => api.get(`/api/admin/licence/${id}/dispatch-documents`);
+export const getCaseworkerDispatchedDocuments = (id) => api.get(`/api/caseworker/licence/${id}/dispatch-documents`);
+
+// Sponsor: view documents sent by caseworker/admin
+export const getSponsorDispatchedDocuments = (id) => api.get(`/api/business/licence/${id}/dispatch-documents`);
+
 // Admin: stream a licence application's uploaded document (preview or download).
 // Files are no longer served statically — they must come through this authenticated
 // endpoint as a blob. Pass { download: true } to force a download disposition.

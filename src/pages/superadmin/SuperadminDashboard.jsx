@@ -22,6 +22,8 @@ import { fetchDashboardStats } from "../../services/superadminDashboard.service"
 import { fetchPlatformNotifications } from "../../services/superadminNotification.service";
 import { formatDateLong } from "../../utils/datetime";
 import toast from "react-hot-toast";
+import { formatCurrency } from "../../utils/currencyFormatter";
+import usePlatformCurrency from "../../hooks/usePlatformCurrency";
 
 const PLAN_COLORS = [
   "bg-primary",
@@ -39,12 +41,7 @@ const STATUS_BADGE = {
   suspended: "bg-rose-50 text-rose-700 border-rose-100/85",
 };
 
-function formatCurrency(value) {
-  const n = Number(value) || 0;
-  if (n >= 1000000) return `£${(n / 1000000).toFixed(1)}M`;
-  if (n >= 1000) return `£${(n / 1000).toFixed(1)}k`;
-  return `£${n.toFixed(2)}`;
-}
+// formatCurrency is imported from utils/currencyFormatter — accepts (amount, currencyCode)
 
 function formatNumber(value) {
   const n = Number(value) || 0;
@@ -101,6 +98,7 @@ function timeAgo(dateStr) {
 
 const SuperadminDashboard = () => {
   const navigate = useNavigate();
+  const currency = usePlatformCurrency();
   const [stats, setStats] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -184,8 +182,8 @@ const SuperadminDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Monthly Revenue"
-            value={formatCurrency(revenue.mrr)}
-            subtitle={`ARR equivalent: ${formatCurrency(revenue.arr)}`}
+            value={formatCurrency(revenue.mrr, currency)}
+            subtitle={`ARR equivalent: ${formatCurrency(revenue.arr, currency)}`}
             icon={RiMoneyPoundCircleLine}
             color="bg-primary/5 text-primary border-primary/10"
             delay={0}
@@ -223,7 +221,7 @@ const SuperadminDashboard = () => {
           <MiniStat label="Active Orgs" value={orgs.active || 0} icon={RiCheckboxCircleLine} iconColor="text-emerald-500" />
           <MiniStat label="Trial Orgs" value={orgs.trial || 0} icon={RiTimeLine} iconColor="text-amber-500" />
           <MiniStat label="Suspended" value={orgs.suspended || 0} icon={RiCloseCircleLine} iconColor="text-rose-500" />
-          <MiniStat label="Gross Volume" value={formatCurrency(revenue.grossVolume)} icon={RiExchangeLine} iconColor="text-primary" />
+          <MiniStat label="Gross Volume" value={formatCurrency(revenue.grossVolume, currency)} icon={RiExchangeLine} iconColor="text-primary" />
           <MiniStat label="Pending Invoices" value={invoices.pending || 0} icon={RiAlertLine} iconColor="text-amber-500" />
           <MiniStat label="Overdue Invoices" value={invoices.overdue || 0} icon={RiCloseCircleLine} iconColor="text-rose-500" />
         </div>
@@ -240,7 +238,7 @@ const SuperadminDashboard = () => {
                 <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wide mt-1">Monthly platform revenue volume</p>
               </div>
               <div className="text-right">
-                <p className="text-xl font-black text-secondary">{formatCurrency(revenue.netRevenue)}</p>
+                <p className="text-xl font-black text-secondary">{formatCurrency(revenue.netRevenue, currency)}</p>
                 <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Net volume this month</p>
               </div>
             </div>
@@ -264,7 +262,7 @@ const SuperadminDashboard = () => {
                         className="w-full rounded-t-lg bg-gradient-to-t from-primary/10 to-primary/25 group-hover:from-primary group-hover:to-primary/80 transition-all cursor-pointer relative max-w-[32px] mx-auto shadow-inner group-hover:shadow-[0_0_12px_rgba(99,102,241,0.25)]"
                       >
                         <div className="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-secondary text-white text-[10px] font-black py-1.5 px-2.5 rounded-lg shadow-lg pointer-events-none whitespace-nowrap z-10 transition-opacity border border-gray-700/10">
-                          {formatCurrency(m.amount)}
+                          {formatCurrency(m.amount, currency)}
                         </div>
                       </motion.div>
                     </div>
@@ -460,8 +458,8 @@ const SuperadminDashboard = () => {
             </div>
             <div className="p-5 flex-1 flex flex-col justify-between gap-4">
               <div className="space-y-3">
-                <SummaryRow label="Gross Volume" value={formatCurrency(revenue.grossVolume)} />
-                <SummaryRow label="Net Revenue (97%)" value={formatCurrency(revenue.netRevenue)} />
+                <SummaryRow label="Gross Volume" value={formatCurrency(revenue.grossVolume, currency)} />
+                <SummaryRow label="Net Revenue (97%)" value={formatCurrency(revenue.netRevenue, currency)} />
                 <SummaryRow label="Transactions" value={txns.total || 0} />
                 <SummaryRow label="Success Rate" value={`${txns.successRate || 0}%`} />
                 <SummaryRow label="Refund Rate" value={`${txns.refundRate || 0}%`} />

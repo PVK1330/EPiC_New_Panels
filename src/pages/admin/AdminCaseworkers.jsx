@@ -325,13 +325,6 @@ export default function AdminCaseworkers() {
     if (!createForm.mobile.trim()) errs.mobile = "Mobile is required";
     else if (!isValidPhone(createForm.country_code, createForm.mobile))
       errs.mobile = "Enter a valid phone number for the selected country";
-    if (!createForm.password) errs.password = "Password is required";
-    else if (createForm.password.length < 8)
-      errs.password = "Password must be at least 8 characters";
-    if (!createForm.confirm_password)
-      errs.confirm_password = "Please confirm password";
-    else if (createForm.password !== createForm.confirm_password)
-      errs.confirm_password = "Passwords do not match";
     return errs;
   };
 
@@ -358,6 +351,13 @@ export default function AdminCaseworkers() {
     }
     setSaving(true);
     try {
+      // Generate a secure random password
+      const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^*";
+      let generatedPassword = "";
+      for (let i = 0; i < 12; i++) {
+        generatedPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+
       const res = await createCaseworker({
         first_name: createForm.first_name.trim(),
         last_name: createForm.last_name.trim(),
@@ -366,11 +366,11 @@ export default function AdminCaseworkers() {
         mobile: createForm.mobile.trim(),
         role_id: Number(createForm.role_id),
         department: createForm.department,
-        password: createForm.password,
-        confirm_password: createForm.confirm_password,
+        password: generatedPassword,
+        confirm_password: generatedPassword,
       });
       showToast({
-        message: res.data?.message || "Caseworker created successfully",
+        message: `Caseworker created successfully. Temporary Password: ${generatedPassword}`,
         variant: "success",
       });
       closeModal();
@@ -893,24 +893,6 @@ export default function AdminCaseworkers() {
               onChange={handleCreateChange}
               options={departments}
               required
-            />
-            <Input
-              label="Password"
-              name="password"
-              type="password"
-              value={createForm.password}
-              onChange={handleCreateChange}
-              required
-              error={errors.password}
-            />
-            <Input
-              label="Confirm Password"
-              name="confirm_password"
-              type="password"
-              value={createForm.confirm_password}
-              onChange={handleCreateChange}
-              required
-              error={errors.confirm_password}
             />
           </div>
         )}

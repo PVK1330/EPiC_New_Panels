@@ -20,6 +20,7 @@ function extractError(e) {
 export default function useSuperadminProfile() {
   const dispatch = useDispatch();
   const authUser = useSelector((state) => state.auth.user);
+  const currentAllowedModules = useSelector((state) => state.auth.allowedModules);
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -55,7 +56,7 @@ export default function useSuperadminProfile() {
         setProfile(updated);
         dispatch(setCredentials({
           user: { ...authUser, ...updated },
-          allowedModules: JSON.parse(localStorage.getItem('epic_allowed_modules') || '[]'),
+          allowedModules: currentAllowedModules,
         }));
       }
       return { ok: true };
@@ -65,7 +66,7 @@ export default function useSuperadminProfile() {
     } finally {
       setSaving(false);
     }
-  }, [authUser, dispatch]);
+  }, [authUser, currentAllowedModules, dispatch]);
 
   const uploadAvatar = useCallback(async (file) => {
     setUploadingAvatar(true);
@@ -77,7 +78,7 @@ export default function useSuperadminProfile() {
         setProfile((prev) => prev ? { ...prev, profile_pic: profilePic } : prev);
         dispatch(setCredentials({
           user: { ...authUser, profile_pic: profilePic },
-          allowedModules: JSON.parse(localStorage.getItem('epic_allowed_modules') || '[]'),
+          allowedModules: currentAllowedModules,
         }));
       }
       return { ok: true, profile_pic: profilePic };
@@ -87,7 +88,7 @@ export default function useSuperadminProfile() {
     } finally {
       setUploadingAvatar(false);
     }
-  }, [authUser, dispatch]);
+  }, [authUser, currentAllowedModules, dispatch]);
 
   const changePassword = useCallback(async ({ currentPassword, newPassword }) => {
     setChangingPassword(true);

@@ -29,7 +29,6 @@ export const LICENCE_STAGES = [
       sponsor: "Submit a sponsor licence enquiry with basic business details.",
       caseworker: "Acknowledge the assignment and schedule an introductory call.",
       admin: "Triage the enquiry, open the application, and assign a caseworker.",
-      candidate: "Register interest as a prospective sponsored worker.",
     },
   },
   {
@@ -42,7 +41,6 @@ export const LICENCE_STAGES = [
       sponsor: "Select the route(s) and declare any existing sponsor licence number (SLN).",
       caseworker: "Advise on the correct route and confirm eligibility.",
       admin: "Verify the selected routes are recorded against the application.",
-      candidate: "Confirm the role and route they would be sponsored under.",
     },
   },
   {
@@ -55,7 +53,6 @@ export const LICENCE_STAGES = [
       sponsor: "Provide organisation details, trading names, Companies House number and HMRC/PAYE references.",
       caseworker: "Verify the details against Companies House and HMRC records.",
       admin: "QA the captured organisation profile for completeness.",
-      candidate: null,
     },
   },
   {
@@ -68,7 +65,6 @@ export const LICENCE_STAGES = [
       sponsor: "State the number of CoS required and provide detailed justification.",
       caseworker: "Validate the SOC code, salary threshold and genuine vacancy.",
       admin: "Approve the requested CoS allocation.",
-      candidate: "Provide role/salary details and current immigration status (e.g. Graduate Route expiry).",
     },
   },
   {
@@ -81,7 +77,6 @@ export const LICENCE_STAGES = [
       sponsor: "Upload the required Appendix A documents.",
       caseworker: "Review each document and request any missing evidence.",
       admin: "Sign off the document pack as complete.",
-      candidate: "Provide personal documents (passport, current visa / BRP).",
     },
   },
   {
@@ -94,7 +89,6 @@ export const LICENCE_STAGES = [
       sponsor: "Nominate the Authorising Officer, Key Contact and Level 1 User; declare any convictions.",
       caseworker: "Verify personnel are UK-based, hold an NI number and have a clean record.",
       admin: "Approve the key personnel appointments.",
-      candidate: null,
     },
   },
   {
@@ -107,7 +101,6 @@ export const LICENCE_STAGES = [
       sponsor: "Confirm the application is true and authorise the representative.",
       caseworker: "Complete the representative / OISC declaration.",
       admin: "Counter-sign and approve the declarations.",
-      candidate: null,
     },
   },
   {
@@ -120,7 +113,6 @@ export const LICENCE_STAGES = [
       sponsor: "Pay the licence fee based on the sponsor size.",
       caseworker: "Verify the payment has cleared before submission.",
       admin: "Record the payment and issue a receipt.",
-      candidate: null,
     },
   },
   // ── Intake: information form + document verification (9-10) ──────────────
@@ -134,7 +126,6 @@ export const LICENCE_STAGES = [
       sponsor: "Complete the 12-field Sponsor Information Form: trading name, premises address, named person on licence, NI number, employee counts, CoS required, and more.",
       caseworker: "Review the completed information form for accuracy and completeness before progressing to document verification.",
       admin: "Confirm the information form has been reviewed and approved by the caseworker.",
-      candidate: null,
     },
   },
   {
@@ -147,7 +138,6 @@ export const LICENCE_STAGES = [
       sponsor: "Upload all mandatory documents (Employer's Liability Insurance, Certificate of Incorporation, PAYE registration, bank statements, premises evidence, and identity documents).",
       caseworker: "Verify each uploaded document meets the Home Office requirements. All mandatory documents must reach 'Verified' status before Government Registration can proceed.",
       admin: "Confirm all mandatory documents have been verified and the intake stage is complete.",
-      candidate: null,
     },
   },
   // ── Government processing pipeline (11-16) ───────────────────────────────
@@ -161,7 +151,6 @@ export const LICENCE_STAGES = [
       sponsor: "Confirm all organisational details, personnel, and documents are accurate and up-to-date before portal submission.",
       caseworker: "Validate completeness of the sponsor's information pack and confirm readiness for government portal entry.",
       admin: "Authorise the information pack for government portal submission.",
-      candidate: null,
     },
   },
   {
@@ -174,7 +163,6 @@ export const LICENCE_STAGES = [
       sponsor: "Await confirmation that your organisation has been registered on the UKVI Sponsorship Management System (SMS).",
       caseworker: "Register the sponsor organisation on the SMS portal and obtain the SMS portal username and registration reference.",
       admin: "Verify the SMS registration details and record the reference number.",
-      candidate: null,
     },
   },
   {
@@ -187,7 +175,6 @@ export const LICENCE_STAGES = [
       sponsor: "Log in to the UKVI Sponsor Management System using the credentials provided and confirm access.",
       caseworker: "Guide the sponsor through the SMS portal login and confirm the sponsor can access their account.",
       admin: "Record that the sponsor has been successfully onboarded to the SMS portal.",
-      candidate: null,
     },
   },
   {
@@ -200,7 +187,6 @@ export const LICENCE_STAGES = [
       sponsor: "Receive and confirm receipt of the UKVI online application portal credentials.",
       caseworker: "Generate the UKVI online application portal user ID and password; share securely with the sponsor.",
       admin: "Confirm credentials have been generated and securely transmitted.",
-      candidate: null,
     },
   },
   {
@@ -213,7 +199,6 @@ export const LICENCE_STAGES = [
       sponsor: "Log in to the UKVI portal and complete the online sponsor licence application forms.",
       caseworker: "Review and verify all form entries with the sponsor; ensure declarations and supporting data are correctly entered.",
       admin: "Carry out a final QA check of the completed government application forms before submission.",
-      candidate: null,
     },
   },
   {
@@ -226,7 +211,6 @@ export const LICENCE_STAGES = [
       sponsor: "Confirm submission of the online application to UKVI and note the government submission reference number.",
       caseworker: "Submit the completed online application form to UKVI and record the submission reference and date.",
       admin: "Record the government submission reference, date, and fee payment confirmation.",
-      candidate: null,
     },
   },
   // ── Post-submission outcome stages (17-18) ────────────────────────────────
@@ -240,7 +224,6 @@ export const LICENCE_STAGES = [
       sponsor: "Acknowledge that the application has been submitted.",
       caseworker: "Generate the submission sheet and submit to UKVI.",
       admin: "Carry out a final review and authorise submission.",
-      candidate: "Be notified that the application has been submitted.",
     },
   },
   {
@@ -253,7 +236,6 @@ export const LICENCE_STAGES = [
       sponsor: "Receive the licence and begin assigning Certificates of Sponsorship.",
       caseworker: "Coordinate any UKVI requests for further information.",
       admin: "Record the decision and activate the licence (SLN, issue/expiry dates).",
-      candidate: "Receive a CoS and proceed to the visa application.",
     },
   },
 ];

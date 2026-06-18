@@ -11,3 +11,9 @@ export const markPlatformNotificationRead = (id) =>
 
 export const markAllPlatformNotificationsRead = () =>
   api.post("/api/superadmin/notifications/mark-all-read");
+
+export const getNotificationPreferences = () =>
+  api.get("/api/superadmin/notification-preferences");
+
+export const updateNotificationPreferences = (preferences) =>
+  api.put("/api/superadmin/notification-preferences", preferences);

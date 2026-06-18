@@ -14,6 +14,7 @@ const Input = ({
   options,
   rows,
   readOnly = false,
+  disabled = false,
   min,
   max,
   step,
@@ -23,8 +24,9 @@ const Input = ({
   const isPasswordType = type === "password";
   const inputType = isPasswordType ? (showPassword ? "text" : "password") : type;
 
+  const isReadOnly = readOnly || disabled;
   const fieldCls = `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-400 ${
-    readOnly ? "bg-slate-50 cursor-not-allowed text-slate-500" : "bg-white"
+    isReadOnly ? "bg-slate-50 cursor-not-allowed text-slate-500" : "bg-white"
   } ${error ? "border-red-500" : "border-slate-200"} ${isPasswordType ? "pr-10" : ""}`;
 
   return (
@@ -43,6 +45,7 @@ const Input = ({
           value={value}
           onChange={onChange}
           required={required}
+          disabled={disabled}
           className={fieldCls}
         >
           {options.map((opt) => (
@@ -60,6 +63,8 @@ const Input = ({
           placeholder={placeholder}
           required={required}
           rows={rows}
+          disabled={disabled}
+          readOnly={isReadOnly}
           className={`${fieldCls} resize-y min-h-[80px]`}
         />
       ) : (
@@ -72,7 +77,8 @@ const Input = ({
             onChange={onChange}
             placeholder={placeholder}
             required={required}
-            readOnly={readOnly}
+            readOnly={isReadOnly}
+            disabled={disabled}
             min={min}
             max={max}
             step={step}

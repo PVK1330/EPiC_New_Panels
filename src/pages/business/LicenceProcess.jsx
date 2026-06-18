@@ -25,13 +25,14 @@ import LicenceStages from "../../components/licence/LicenceStages";
 import IntakeDocumentChecklist from "../../components/licence/IntakeDocumentChecklist";
 import LicenceWorkflowTimeline from "../../components/licence/LicenceWorkflowTimeline";
 import { listLicenceV2Applications, getLicenceV2Application, getLicenceApplicationAuditTrail } from "../../services/licenceV2Api";
-import { getLicenceStages } from "../../services/licenceStageApi";
+import { getLicenceStages, completeLicenceStageTask } from "../../services/licenceStageApi";
 import {
   confirmSponsorGovCredentials,
   getSponsorIntakeSummary,
   updateSponsorIntakeForm,
   submitSponsorIntakeForm as submitIntakeFormApi,
   getMyLicenceApplications,
+  getSponsorDispatchedDocuments,
 } from "../../services/licenceApi";
 import { LICENCE_STAGES, STAGE_ROLES, getSponsorStageAction } from "../../constants/licenceStages";
 import { formatDate, formatDateTime } from "../../utils/datetime";
@@ -81,9 +82,12 @@ const LicenceProcess = () => {
   const [intakeLoading, setIntakeLoading] = useState(false);
   const [intakeForm, setIntakeForm] = useState({});
   const [intakeSaving, setIntakeSaving] = useState(false);
+  const [completingStage, setCompletingStage] = useState(false);
   const [timeline, setTimeline] = useState([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [timelineFetched, setTimelineFetched] = useState(false);
+  const [dispatchDocs, setDispatchDocs] = useState([]);
+  const [dispatchDocsLoading, setDispatchDocsLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -107,8 +111,18 @@ const LicenceProcess = () => {
           getLicenceStages("sponsor", latest.id).catch(() => null),
         ]);
         if (!active) return;
-        setApp(full?.data?.data || latest);
+        const appData = full?.data?.data || latest;
+        setApp(appData);
         setStagesData(stages?.data?.data || null);
+
+        // Load dispatched documents from caseworker/admin.
+        if (appData?.id) {
+          setDispatchDocsLoading(true);
+          getSponsorDispatchedDocuments(appData.id)
+            .then((r) => { if (active) setDispatchDocs(r?.data?.data || []); })
+            .catch(() => {})
+            .finally(() => { if (active) setDispatchDocsLoading(false); });
+        }
       } catch {
         /* falls through to empty state */
       } finally {
@@ -206,6 +220,27 @@ const LicenceProcess = () => {
       showToast({ message: err?.response?.data?.message || "Failed to confirm — please try again.", variant: "danger" });
     } finally {
       setCredLoading(false);
+    }
+  };
+
+  const isIntakeDocStageTaskComplete = useMemo(() => {
+    const stage = (stagesData?.stages || []).find((s) => s.key === "intake_document_checklist");
+    if (!stage) return false;
+    const task = (stage.tasks || []).find((t) => t.role === "sponsor");
+    return task?.status === "completed";
+  }, [stagesData]);
+
+  const handleCompleteIntakeDocStage = async () => {
+    if (!app?.id || completingStage) return;
+    try {
+      setCompletingStage(true);
+      const res = await completeLicenceStageTask("sponsor", app.id, "intake_document_checklist", "sponsor");
+      setStagesData(res.data?.data || null);
+      showToast({ message: "Intake document stage task marked complete.", variant: "success" });
+    } catch (err) {
+      showToast({ message: err?.response?.data?.message || "Failed to mark stage complete.", variant: "danger" });
+    } finally {
+      setCompletingStage(false);
     }
   };
 
@@ -650,15 +685,27 @@ const LicenceProcess = () => {
                       ? <CheckCircle2 className="text-emerald-500 shrink-0 mt-0.5" size={16} />
                       : <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={16} />
                     }
-                    <div>
+                    <div className="flex-1">
                       <p className={`text-sm font-black ${intakeData.readiness.isReady ? "text-emerald-700" : "text-amber-700"}`}>
                         {intakeData.readiness.isReady
-                          ? "Intake complete — your case team can proceed to Government Registration."
+                          ? isIntakeDocStageTaskComplete
+                            ? "Intake complete — document stage marked complete. Awaiting government registration."
+                            : "Intake complete — your case team can proceed to Government Registration."
                           : "Intake not yet complete"}
                       </p>
                       {!intakeData.readiness.isReady && intakeData.readiness.reasons?.map((r, i) => (
                         <p key={r} className="text-xs text-amber-600 mt-1">• {r}</p>
                       ))}
+                      {intakeData.readiness.isReady && !isIntakeDocStageTaskComplete && (
+                        <button
+                          onClick={handleCompleteIntakeDocStage}
+                          disabled={completingStage}
+                          className="mt-3 inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-3 py-1.5 rounded-lg text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          {completingStage ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                          Mark Stage Complete
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -792,6 +839,48 @@ const LicenceProcess = () => {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* ── Documents from Caseworker (shown on status tab) ────────────────── */}
+      {activeTab === "status" && (dispatchDocsLoading || dispatchDocs.length > 0) && (
+        <div className="rounded-2xl border border-teal-100 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-teal-50 flex items-center gap-3">
+            <FileText size={16} className="text-teal-600 shrink-0" />
+            <div>
+              <h3 className="text-sm font-black text-secondary">Documents from Your Caseworker</h3>
+              <p className="text-[11px] font-bold text-gray-400 mt-0.5">Files sent to you by your caseworker or administrator.</p>
+            </div>
+          </div>
+          <div className="p-5">
+            {dispatchDocsLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-6 h-6 animate-spin text-teal-500" />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {dispatchDocs.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-3 bg-teal-50 rounded-xl border border-teal-100 gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-secondary truncate">{doc.documentName}</p>
+                      <p className="text-[10px] text-gray-400 font-bold mt-0.5">
+                        {doc.senderName} · {new Date(doc.sentAt).toLocaleDateString("en-GB")}
+                        {doc.downloadedAt ? " · Downloaded" : " · New"}
+                      </p>
+                      {doc.message && <p className="text-xs text-gray-500 mt-1 italic">"{doc.message}"</p>}
+                    </div>
+                    <a
+                      href={`/api/business/licence/${app?.id}/dispatch-documents/${doc.id}/download`}
+                      download
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white text-xs font-black rounded-lg hover:bg-teal-700 transition-all active:scale-95"
+                    >
+                      <ArrowRight size={12} /> Download
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
