@@ -81,6 +81,13 @@ export const getCaseworkerDispatchedDocuments = (id) => api.get(`/api/caseworker
 // Sponsor: view documents sent by caseworker/admin
 export const getSponsorDispatchedDocuments = (id) => api.get(`/api/business/licence/${id}/dispatch-documents`);
 
+// Sponsor: download a dispatched document (blob). Routed through `api` so the CSRF
+// token and org-slug headers are attached — a plain <a href> would bypass them.
+export const downloadSponsorDispatchedDocument = (id, docId) =>
+  api.get(`/api/business/licence/${id}/dispatch-documents/${docId}/download`, {
+    responseType: "blob",
+  });
+
 // Admin: stream a licence application's uploaded document (preview or download).
 // Files are no longer served statically — they must come through this authenticated
 // endpoint as a blob. Pass { download: true } to force a download disposition.

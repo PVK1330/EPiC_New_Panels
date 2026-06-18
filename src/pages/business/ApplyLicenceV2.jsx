@@ -276,7 +276,25 @@ export default function ApplyLicenceV2() {
   };
 
   const handleNext = (patch) => saveStep(patch, currentStep + 1);
-  const handleBack = () => { setCurrentStep((s) => Math.max(1, s - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+  // BUG-092: persist the current step's data when navigating backwards. Previously
+  // handleBack only changed the step, so edits made on the current step were lost
+  // if the user went Back (and gone entirely if the browser was then closed). Save
+  // the draft-schema slice of the live formData before moving to the previous step.
+  const handleBack = () => {
+    if (currentStep <= 1) return;
+    const patch = {
+      routes: formData.routes,
+      sponsorSize: formData.sponsorSize || undefined,
+      organisationInfo: formData.organisationInfo,
+      cosRequirements: formData.cosRequirements,
+      authorisingOfficer: formData.authorisingOfficer,
+      keyContact: formData.keyContact,
+      level1Users: formData.level1Users,
+      declaration: formData.declaration,
+    };
+    saveStep(patch, currentStep - 1);
+  };
 
   const handleSubmit = async (patch) => {
     if (submitInFlight.current) return;
