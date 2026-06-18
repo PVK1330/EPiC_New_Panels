@@ -513,11 +513,11 @@ const SuperadminTeam = () => {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50/50 text-[10px] text-gray-400 font-black border-b border-gray-100 uppercase tracking-widest">
                   <tr>
-                    <th className="px-4 py-3 text-left">Member Profile</th>
-                    <th className="px-4 py-3 text-left">Primary Role</th>
-                    <th className="px-4 py-3 text-center">Access Level</th>
-                    <th className="px-4 py-3 text-left">Activity</th>
-                    <th className="px-4 py-3 text-right">Action</th>
+                    <th scope="col" className="px-4 py-3 text-left">Member Profile</th>
+                    <th scope="col" className="px-4 py-3 text-left">Primary Role</th>
+                    <th scope="col" className="px-4 py-3 text-center">Access Level</th>
+                    <th scope="col" className="px-4 py-3 text-left">Activity</th>
+                    <th scope="col" className="px-4 py-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -647,9 +647,10 @@ const SuperadminTeam = () => {
                               <button
                                 onClick={() => handleEditMember(member)}
                                 title="Edit member"
+                                aria-label="Edit member"
                                 className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
                               >
-                                <RiEditLine size={16} />
+                                <RiEditLine size={16} aria-hidden="true" />
                               </button>
                               {member.status === "Active" ? (
                                 <button
@@ -674,9 +675,10 @@ const SuperadminTeam = () => {
                                 <button
                                   onClick={() => handleDeleteMember(member)}
                                   title="Delete member"
+                                  aria-label="Delete member"
                                   className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                 >
-                                  <RiDeleteBinLine size={16} />
+                                  <RiDeleteBinLine size={16} aria-hidden="true" />
                                 </button>
                               )}
                             </div>
@@ -1098,6 +1100,7 @@ const SuperadminTeam = () => {
             <motion.div className="grid grid-cols-2 gap-3">
               <Input
                 label="First name"
+                name="first_name"
                 value={inviteForm.first_name}
                 onChange={(e) =>
                   setInviteForm((p) => ({ ...p, first_name: e.target.value }))
@@ -1105,6 +1108,7 @@ const SuperadminTeam = () => {
               />
               <Input
                 label="Last name"
+                name="last_name"
                 value={inviteForm.last_name}
                 onChange={(e) =>
                   setInviteForm((p) => ({ ...p, last_name: e.target.value }))
@@ -1113,6 +1117,7 @@ const SuperadminTeam = () => {
             </motion.div>
             <Input
               label="Work Email"
+              name="email"
               type="email"
               value={inviteForm.email}
               onChange={(e) =>

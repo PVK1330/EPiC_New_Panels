@@ -45,6 +45,7 @@ import {
   downloadAdminLicenceDocument,
   generateLicenceCredentials,
   resendLicenceCredentials,
+  dispatchDocumentToSponsor,
 } from "../../services/licenceApi";
 import { triggerDownload } from "../../services/documentApi";
 import LicenceStages from "../../components/licence/LicenceStages";
@@ -80,6 +81,10 @@ const AdminLicenceApplications = () => {
   const [credLoading, setCredLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [grantForm, setGrantForm] = useState({ expiryDate: "", cosAllocation: "" });
+  const [showDispatch, setShowDispatch] = useState(false);
+  const [dispatchForm, setDispatchForm] = useState({ documentType: "supporting_document", documentName: "", message: "" });
+  const [dispatchFile, setDispatchFile] = useState(null);
+  const [dispatchLoading, setDispatchLoading] = useState(false);
 
   const fetchApplications = async () => {
     try {
@@ -177,7 +182,11 @@ const AdminLicenceApplications = () => {
       closeActionModal();
       fetchApplications();
     } catch (err) {
-      const message = err?.response?.data?.message || "Action failed. Please try again.";
+      const message =
+        err?.response?.data?.message ||
+        (err?.code === "ECONNABORTED" ? "Request timed out. Please try again." : null) ||
+        err?.message ||
+        "Action failed. Please try again.";
       showToast({ message, variant: "danger" });
     } finally {
       setActionLoading(false);
@@ -301,6 +310,32 @@ const AdminLicenceApplications = () => {
       showToast({ message, variant: "danger" });
     } finally {
       setResendLoading(false);
+    }
+  };
+
+  const handleDispatchDocument = async () => {
+    if (dispatchLoading || !selectedApp) return;
+    if (!dispatchFile) {
+      showToast({ message: "Please select a file to send", variant: "warning" });
+      return;
+    }
+    try {
+      setDispatchLoading(true);
+      const fd = new FormData();
+      fd.append("document", dispatchFile);
+      fd.append("documentType", dispatchForm.documentType);
+      fd.append("documentName", dispatchForm.documentName || dispatchFile.name);
+      if (dispatchForm.message) fd.append("message", dispatchForm.message);
+      await dispatchDocumentToSponsor(selectedApp.id, fd);
+      showToast({ message: "Document sent to sponsor successfully", variant: "success" });
+      setShowDispatch(false);
+      setDispatchFile(null);
+      setDispatchForm({ documentType: "supporting_document", documentName: "", message: "" });
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || "Failed to send document";
+      showToast({ message, variant: "danger" });
+    } finally {
+      setDispatchLoading(false);
     }
   };
 
@@ -931,14 +966,14 @@ const AdminLicenceApplications = () => {
                   const noAssignment = !selectedApp.assignedcaseworkerId ||
                     (Array.isArray(selectedApp.assignedcaseworkerId) && selectedApp.assignedcaseworkerId.length === 0);
                   const tasks = [
-                    ...(noAssignment ? [{
+                    {
                       key: "assign",
-                      label: "Assign a caseworker to this application",
+                      label: noAssignment ? "Assign a caseworker to this application" : "Re-assign caseworker for this application",
                       icon: UserPlus,
                       urgency: "amber",
                       actionType: "Assign",
-                      cta: "Assign",
-                    }] : []),
+                      cta: noAssignment ? "Assign" : "Re-assign",
+                    },
                     ...(selectedApp.status === "Government Processing" && !selectedApp.governmentTracking?.credentialsGeneratedAt ? [{
                       key: "credentials",
                       label: "Generate UKVI portal credentials for the sponsor",
@@ -1071,10 +1106,69 @@ const AdminLicenceApplications = () => {
                         Resend Credentials to Sponsor
                       </button>
                     )}
+
+                    {/* Send Document to Sponsor */}
+                    <button
+                      onClick={() => setShowDispatch((v) => !v)}
+                      className="w-full bg-teal-50 text-teal-700 hover:bg-teal-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2"
+                    >
+                      <FileText size={18} /> Send Document to Sponsor
+                    </button>
+                    {showDispatch && (
+                      <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 space-y-3">
+                        <p className="text-[10px] font-black uppercase text-teal-500 tracking-widest">Send Document</p>
+                        <select
+                          value={dispatchForm.documentType}
+                          onChange={(e) => setDispatchForm((f) => ({ ...f, documentType: e.target.value }))}
+                          className="w-full bg-white border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none"
+                        >
+                          <option value="declaration_form">Declaration Form</option>
+                          <option value="credentials">Credentials Document</option>
+                          <option value="sponsor_licence">Sponsor Licence</option>
+                          <option value="supporting_document">Supporting Document</option>
+                          <option value="other">Other</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Document name (optional)"
+                          value={dispatchForm.documentName}
+                          onChange={(e) => setDispatchForm((f) => ({ ...f, documentName: e.target.value }))}
+                          className="w-full bg-white border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none"
+                        />
+                        <textarea
+                          placeholder="Message to sponsor (optional)"
+                          value={dispatchForm.message}
+                          onChange={(e) => setDispatchForm((f) => ({ ...f, message: e.target.value }))}
+                          rows={2}
+                          className="w-full bg-white border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none resize-none"
+                        />
+                        <label className="flex items-center gap-3 cursor-pointer bg-white border border-dashed border-teal-300 rounded-xl p-3 hover:bg-teal-50 transition-all">
+                          <Upload size={18} className="text-teal-500 shrink-0" />
+                          <span className="text-sm font-black text-teal-700 truncate">
+                            {dispatchFile ? dispatchFile.name : "Choose file…"}
+                          </span>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                            onChange={(e) => setDispatchFile(e.target.files[0] || null)}
+                          />
+                        </label>
+                        <button
+                          onClick={handleDispatchDocument}
+                          disabled={dispatchLoading || !dispatchFile}
+                          className="w-full bg-teal-600 text-white font-black rounded-xl py-3 flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-teal-700 transition-all active:scale-95"
+                        >
+                          {dispatchLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                          {dispatchLoading ? "Sending…" : "Send to Sponsor"}
+                        </button>
+                      </div>
+                    )}
+
                     <div className="flex gap-3">
                       <button
                         onClick={() => openAction(selectedApp, "Approved")}
-                        disabled={selectedApp.status === 'Licence Granted'}
+                        disabled={selectedApp.status !== 'Decision Pending'}
                         className="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <Check size={18} /> Approve

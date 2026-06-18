@@ -17,6 +17,8 @@ import {
 } from '../../utils/organisationHost';
 import { COUNTRIES, isValidPhone } from '../../utils/countries';
 import { fetchPlans } from '../../services/superadminPlan.service';
+import { formatCurrencyExact } from '../../utils/currencyFormatter';
+import usePlatformCurrency from '../../hooks/usePlatformCurrency';
 
 const SORTED_COUNTRIES = [...COUNTRIES].sort((a, b) =>
   a.name.localeCompare(b.name),
@@ -36,6 +38,7 @@ const initialForm = () => ({
 });
 
 const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
+  const currency = usePlatformCurrency();
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState(initialForm);
   const [slugTouched, setSlugTouched] = useState(false);
@@ -232,7 +235,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
                 {!plansLoading && plans.length === 0 && <option value="">No active plans found</option>}
                 {!plansLoading && plans.map((p) => (
                   <option key={p.id} value={String(p.id)}>
-                    {p.name} — £{Number(p.price).toFixed(0)}/{p.billing_cycle === 'monthly' ? 'mo' : 'yr'}
+                    {p.name} — {formatCurrencyExact(p.price, currency)}/{p.billing_cycle === 'monthly' ? 'mo' : 'yr'}
                   </option>
                 ))}
               </select>

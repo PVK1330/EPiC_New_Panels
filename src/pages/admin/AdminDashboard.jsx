@@ -40,12 +40,6 @@ import {
   getNotifications,
   markNotificationAsRead,
 } from "../../services/notificationApi";
-import {
-  MOCK_DASHBOARD_STATS,
-  MOCK_RECENT_CASES,
-  MOCK_RECENT_ACTIVITIES,
-  MOCK_RECENT_MESSAGES,
-} from "../../data/adminDashboardMock";
 import { formatDate, formatDateLong, formatDateTime } from "../../utils/datetime";
 
 const today = formatDateLong(new Date(), { month: "long" });
@@ -59,20 +53,11 @@ export default function AdminDashboard() {
   const [recentMessages, setRecentMessages] = useState([]);
   const [dashboardFilter, setDashboardFilter] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
-  const [usingDemoData, setUsingDemoData] = useState(false);
   const [dueOverdue, setDueOverdue] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const dashboardRef = useRef(null);
   const { downloadDashboardPdf } = useDownloads();
-
-  const applyDemoDashboard = () => {
-    setDashboardStats(MOCK_DASHBOARD_STATS);
-    setRecentCases(MOCK_RECENT_CASES);
-    setRecentActivities(MOCK_RECENT_ACTIVITIES);
-    setRecentMessages(normalizeConversations(MOCK_RECENT_MESSAGES));
-    setUsingDemoData(true);
-  };
 
   const normalizeConversations = (conversations) =>
     sortConversationsByRecent(conversations)
@@ -82,7 +67,6 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
-      setUsingDemoData(false);
 
       const [
         statsResult,
@@ -100,16 +84,16 @@ export default function AdminDashboard() {
         getNotifications({ limit: 5 }),
       ]);
 
-      let anySuccess = false;
-
       if (statsResult.status === "fulfilled" && statsResult.value?.data?.data) {
         setDashboardStats(statsResult.value.data.data);
-        anySuccess = true;
+      } else {
+        setDashboardStats(null);
       }
 
       if (casesResult.status === "fulfilled" && casesResult.value?.data?.data) {
         setRecentCases(casesResult.value.data.data.cases || []);
-        anySuccess = true;
+      } else {
+        setRecentCases([]);
       }
 
       if (
@@ -117,19 +101,15 @@ export default function AdminDashboard() {
         activitiesResult.value?.data?.data
       ) {
         setRecentActivities(activitiesResult.value.data.data.activities || []);
-        anySuccess = true;
+      } else {
+        setRecentActivities([]);
       }
 
       if (messagesResult.status === "fulfilled") {
         const conv = extractConversationsFromResponse(messagesResult.value);
-        if (conv.length > 0) {
-          setRecentMessages(normalizeConversations(conv));
-          anySuccess = true;
-        } else {
-          setRecentMessages(normalizeConversations(MOCK_RECENT_MESSAGES));
-        }
-      } else if (messagesResult.status === "rejected") {
-        setRecentMessages(normalizeConversations(MOCK_RECENT_MESSAGES));
+        setRecentMessages(normalizeConversations(conv));
+      } else {
+        setRecentMessages([]);
       }
 
       if (dueResult.status === "fulfilled" && dueResult.value?.data?.data) {
@@ -140,30 +120,8 @@ export default function AdminDashboard() {
 
       if (notifResult.status === "fulfilled" && notifResult.value?.data?.data) {
         setNotifications(notifResult.value.data.data.notifications || []);
-        anySuccess = true;
       } else {
         setNotifications([]);
-      }
-
-      if (!anySuccess) {
-        console.warn("Dashboard API unavailable — showing sample data");
-        applyDemoDashboard();
-      } else {
-        if (statsResult.status === "rejected") {
-          setDashboardStats(MOCK_DASHBOARD_STATS);
-          setUsingDemoData(true);
-        }
-        if (casesResult.status === "rejected") {
-          setRecentCases(MOCK_RECENT_CASES);
-          setUsingDemoData(true);
-        }
-        if (activitiesResult.status === "rejected") {
-          setRecentActivities(MOCK_RECENT_ACTIVITIES);
-          setUsingDemoData(true);
-        }
-        if (messagesResult.status === "rejected") {
-          setRecentMessages(normalizeConversations(MOCK_RECENT_MESSAGES));
-        }
       }
 
       setLoading(false);

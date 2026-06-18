@@ -3,18 +3,59 @@ import { RiNotification3Line, RiCheckDoubleLine, RiFilter3Line, RiSettings4Line,
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
 import { motion } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import {
   fetchPlatformNotifications,
   markPlatformNotificationRead,
-  markAllPlatformNotificationsRead
+  markAllPlatformNotificationsRead,
+  getNotificationPreferences,
+  updateNotificationPreferences,
 } from '../../services/superadminNotification.service';
 import { formatDateLong, formatDateTime } from '../../utils/datetime';
+
+const DEFAULT_PREFS = {
+  subscription_events: true,
+  organisation_events: true,
+  team_events:         true,
+  security_alerts:     true,
+  billing_alerts:      true,
+  system_updates:      false,
+};
 
 const SuperadminNotifications = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState(DEFAULT_PREFS);
+  const [prefsLoading, setPrefsLoading] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+
+  useEffect(() => {
+    if (!isPreferencesOpen) return;
+    setPrefsLoading(true);
+    getNotificationPreferences()
+      .then((res) => {
+        const prefs = res.data?.data?.preferences;
+        if (prefs) setNotifPrefs(prefs);
+      })
+      .catch(() => {})
+      .finally(() => setPrefsLoading(false));
+  }, [isPreferencesOpen]);
+
+  const handleSavePreferences = async () => {
+    setSavingPrefs(true);
+    try {
+      await updateNotificationPreferences(notifPrefs);
+      toast.success('Notification preferences saved');
+      setIsPreferencesOpen(false);
+    } catch {
+      toast.error('Failed to save preferences');
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
@@ -70,7 +111,12 @@ const SuperadminNotifications = () => {
           <Button variant="outline" onClick={handleMarkAllRead} className="text-[10px] font-black uppercase tracking-widest px-4 py-2">
             <RiCheckDoubleLine size={16} className="inline mr-1" /> Mark All Read
           </Button>
-          <Button variant="outline" className="text-[10px] font-black uppercase tracking-widest px-4 py-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsPreferencesOpen(true)}
+            className="text-[10px] font-black uppercase tracking-widest px-4 py-2"
+          >
             <RiSettings4Line size={16} className="inline mr-1" /> Preferences
           </Button>
         </div>
@@ -83,6 +129,7 @@ const SuperadminNotifications = () => {
             {['All', 'Unread'].map(tab => (
               <button
                 key={tab}
+                type="button"
                 onClick={() => setActiveTab(tab)}
                 className={`px-5 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${
                   activeTab === tab
@@ -94,7 +141,7 @@ const SuperadminNotifications = () => {
               </button>
             ))}
           </div>
-          <button className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-secondary transition-colors">
+          <button type="button" className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-secondary transition-colors">
             <RiFilter3Line size={14} className="inline mr-1" /> Filter
           </button>
         </div>
@@ -200,6 +247,79 @@ const SuperadminNotifications = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Notification Preferences Modal */}
+      <Modal
+        isOpen={isPreferencesOpen}
+        onClose={() => setIsPreferencesOpen(false)}
+        title="Notification Preferences"
+        subtitle="Choose which platform events generate alerts for your account."
+        maxWidth="max-w-md"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsPreferencesOpen(false)}
+              disabled={savingPrefs}
+              className="px-5 py-2 text-xs font-black uppercase tracking-widest"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleSavePreferences}
+              disabled={savingPrefs || prefsLoading}
+              className="px-6 py-2 text-xs font-black uppercase tracking-widest"
+            >
+              {savingPrefs ? 'Saving...' : 'Save Preferences'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          {prefsLoading && (
+            <div className="flex items-center justify-center py-8 text-gray-400">
+              <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin mr-3" />
+              <span className="text-xs font-bold uppercase tracking-widest">Loading preferences...</span>
+            </div>
+          )}
+          {!prefsLoading && [
+            { key: 'subscription_events', label: 'Subscription Events',   desc: 'New subscriptions, renewals, cancellations' },
+            { key: 'organisation_events', label: 'Organisation Events',   desc: 'Onboarding, suspension, deletion' },
+            { key: 'team_events',         label: 'Team Events',           desc: 'Member invites, role changes, removals' },
+            { key: 'security_alerts',     label: 'Security Alerts',       desc: 'Login failures, IP blocks, MFA events' },
+            { key: 'billing_alerts',      label: 'Billing Alerts',        desc: 'Failed payments, invoice overdue' },
+            { key: 'system_updates',      label: 'System Updates',        desc: 'Deployments, migrations, maintenance' },
+          ].map(({ key, label, desc }) => (
+            <div
+              key={key}
+              className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50/60 transition-colors"
+            >
+              <div>
+                <p className="text-sm font-bold text-secondary">{label}</p>
+                <p className="text-[10px] text-gray-400 font-medium mt-0.5">{desc}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notifPrefs[key]}
+                onClick={() => setNotifPrefs(prev => ({ ...prev, [key]: !prev[key] }))}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                  notifPrefs[key] ? 'bg-primary' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${
+                    notifPrefs[key] ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          ))}
+        </div>
       </Modal>
     </div>
   );

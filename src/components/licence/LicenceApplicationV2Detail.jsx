@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ChevronLeft, Loader2, FileText, CheckCircle2, XCircle, Clock } from "lucide-react";
-import { getAdminLicenceV2, getCaseworkerLicenceV2 } from "../../services/licenceV2Api";
+import { ChevronLeft, Loader2, FileText, CheckCircle2, XCircle, Clock, UserPlus, X, Check, Download } from "lucide-react";
+import {
+  getAdminLicenceV2,
+  getCaseworkerLicenceV2,
+  verifyAppendixDocument,
+  rejectAppendixDocument
+} from "../../services/licenceV2Api";
 import LicenceStages from "./LicenceStages";
+import { getCaseworkers } from "../../services/caseWorker";
+import { assignLicenceCaseworker, downloadAdminLicenceDocument, downloadCaseworkerLicenceDocument } from "../../services/licenceApi";
+import Modal from "../Modal";
+import toast from "react-hot-toast";
 
 const ROUTE_LABELS = {
   SkilledWorker: "Skilled Worker", Student: "Student", ScaleUp: "Scale-up",
@@ -36,6 +45,105 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [caseworkers, setCaseworkers] = useState([]);
+  const [selectedCaseworkerIds, setSelectedCaseworkerIds] = useState([]);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [actioningDocId, setActioningDocId] = useState(null);
+
+  const handleDownload = async (index, filename) => {
+    try {
+      const downloader = role === "admin" ? downloadAdminLicenceDocument : downloadCaseworkerLicenceDocument;
+      const res = await downloader(id, index);
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename || "document");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      toast.error("Failed to download document");
+    }
+  };
+
+  const handleVerifyDoc = async (docId) => {
+    if (actioningDocId) return;
+    try {
+      setActioningDocId(docId);
+      await verifyAppendixDocument(role, id, docId);
+      toast.success("Document verified");
+      
+      const fetcher = role === "caseworker" ? getCaseworkerLicenceV2 : getAdminLicenceV2;
+      const res = await fetcher(id);
+      setApp(res.data.data);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to verify document");
+    } finally {
+      setActioningDocId(null);
+    }
+  };
+
+  const handleRejectDoc = async (docId) => {
+    if (actioningDocId) return;
+    const reason = window.prompt("Enter rejection reason:");
+    if (!reason || !reason.trim()) return;
+    try {
+      setActioningDocId(docId);
+      await rejectAppendixDocument(role, id, docId, reason.trim());
+      toast.success("Document rejected");
+      
+      const fetcher = role === "caseworker" ? getCaseworkerLicenceV2 : getAdminLicenceV2;
+      const res = await fetcher(id);
+      setApp(res.data.data);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to reject document");
+    } finally {
+      setActioningDocId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (role !== "admin") return;
+    (async () => {
+      try {
+        const res = await getCaseworkers(1, 100);
+        setCaseworkers(res.data?.data?.caseworkers || []);
+      } catch (err) {
+        console.error("Failed to fetch caseworkers", err);
+      }
+    })();
+  }, [role]);
+
+  useEffect(() => {
+    if (app) {
+      setSelectedCaseworkerIds(Array.isArray(app.assignedcaseworkerId) ? app.assignedcaseworkerId : []);
+    }
+  }, [app]);
+
+  const handleAssign = async () => {
+    if (assignLoading) return;
+    if (selectedCaseworkerIds.length === 0) {
+      toast.error("Please select at least one caseworker");
+      return;
+    }
+    try {
+      setAssignLoading(true);
+      await assignLicenceCaseworker(id, { caseworkerIds: selectedCaseworkerIds });
+      toast.success("Caseworker(s) assigned successfully");
+      setShowAssignModal(false);
+      
+      // Refresh application details
+      const fetcher = role === "caseworker" ? getCaseworkerLicenceV2 : getAdminLicenceV2;
+      const res = await fetcher(id);
+      setApp(res.data.data);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Assignment failed. Please try again.");
+    } finally {
+      setAssignLoading(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -78,6 +186,14 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
           <p className="text-sm text-gray-500 font-bold">Version 2 · Submitted {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString("en-GB") : "—"}</p>
         </div>
         <div className="flex items-center gap-3">
+          {role === "admin" && (
+            <button
+              onClick={() => setShowAssignModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-xl transition-all text-xs font-black uppercase border border-blue-100 cursor-pointer"
+            >
+              <UserPlus size={14} /> Assign
+            </button>
+          )}
           <span className="text-xs font-black px-3 py-1.5 rounded-full bg-primary/10 text-primary">{app.status}</span>
           <span className="text-sm font-black text-secondary">{money(app.fee?.total, app.fee?.currency)}</span>
         </div>
@@ -137,15 +253,52 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
           {(app.appendixDocuments || []).map((d) => {
             const Icon = d.verificationStatus === "Verified" ? CheckCircle2 : d.verificationStatus === "Rejected" ? XCircle : Clock;
             const tone = d.verificationStatus === "Verified" ? "text-emerald-600" : d.verificationStatus === "Rejected" ? "text-red-600" : "text-amber-600";
+            
+            const isUploaded = !!d.filePath;
+            const uploadedDocs = (app.appendixDocuments || []).filter(doc => doc.filePath);
+            const downloadIdx = isUploaded ? uploadedDocs.findIndex(doc => doc.id === d.id) : -1;
+            const filename = d.filePath ? d.filePath.split(/[\\/]/).pop() : d.documentName;
+
             return (
-              <div key={d.id} className="flex items-center justify-between gap-3 py-2 border-b border-gray-50 last:border-0">
+              <div key={d.id} className="flex items-center justify-between gap-3 py-2 border-b border-gray-50 last:border-0 flex-wrap sm:flex-nowrap">
                 <div className="flex items-center gap-2 min-w-0">
                   <FileText size={15} className="text-gray-400 shrink-0" />
-                  <span className="text-sm font-bold text-secondary truncate">{d.documentName}{d.required && <span className="text-red-500"> *</span>}</span>
+                  {isUploaded ? (
+                    <button
+                      onClick={() => handleDownload(downloadIdx, filename)}
+                      className="text-sm font-bold text-primary hover:underline text-left truncate flex items-center gap-1"
+                      title="Click to download"
+                    >
+                      {d.documentName}
+                      <Download size={12} className="shrink-0" />
+                    </button>
+                  ) : (
+                    <span className="text-sm font-bold text-gray-400 truncate">
+                      {d.documentName}{d.required && <span className="text-red-500"> *</span>}
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-[11px] font-black text-gray-500">{d.receivedStatus}</span>
-                  <span className={`flex items-center gap-1 text-[11px] font-black ${tone}`}><Icon size={13} /> {d.verificationStatus}</span>
+                <div className="flex items-center gap-4 shrink-0 ml-auto">
+                  <span className="text-[11px] font-black text-gray-500">{d.receivedStatus || "Not Received"}</span>
+                  <span className={`flex items-center gap-1 text-[11px] font-black ${tone}`}><Icon size={13} /> {d.verificationStatus || "Pending"}</span>
+                  {isUploaded && d.verificationStatus !== "Verified" && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleVerifyDoc(d.id)}
+                        disabled={actioningDocId === d.id}
+                        className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50"
+                      >
+                        Verify
+                      </button>
+                      <button
+                        onClick={() => handleRejectDoc(d.id)}
+                        disabled={actioningDocId === d.id}
+                        className="px-2 py-0.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -205,6 +358,85 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
           <Field label="Signed date" value={dec.signedDate} />
         </div>
       </Section>
+
+      {/* Assign Caseworker Modal */}
+      {role === "admin" && (
+        <Modal
+          open={showAssignModal}
+          onClose={() => setShowAssignModal(false)}
+          title="Assign Caseworker"
+          maxWidthClass="max-w-md"
+          bodyClassName="p-6"
+          footer={
+            <>
+              <button
+                onClick={() => setShowAssignModal(false)}
+                disabled={assignLoading}
+                className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-secondary disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssign}
+                disabled={assignLoading || selectedCaseworkerIds.length === 0}
+                className="bg-primary hover:bg-primary/95 text-white font-black text-sm px-6 py-2 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {assignLoading ? <Loader2 size={16} className="animate-spin" /> : <><UserPlus size={16} /> Confirm Assignment</>}
+              </button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
+              Select Caseworkers
+              {selectedCaseworkerIds.length > 0 && (
+                <span className="ml-2 text-primary normal-case tracking-normal">
+                  ({selectedCaseworkerIds.length} selected)
+                </span>
+              )}
+            </p>
+            {caseworkers.length === 0 ? (
+              <div className="p-4 bg-gray-50 rounded-xl text-center">
+                <p className="text-xs font-bold text-gray-400">No caseworkers available to assign.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                {caseworkers.map((cw) => {
+                  const isSelected = selectedCaseworkerIds.some((id) => String(id) === String(cw.id));
+                  return (
+                    <button
+                      key={cw.id}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedCaseworkerIds(selectedCaseworkerIds.filter((id) => String(id) !== String(cw.id)));
+                        } else {
+                          setSelectedCaseworkerIds([...selectedCaseworkerIds, cw.id]);
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border ${
+                        isSelected
+                          ? "bg-primary/5 border-primary text-primary"
+                          : "bg-gray-50 border-gray-100 text-secondary hover:border-gray-200"
+                      } shadow-sm group cursor-pointer`}
+                    >
+                      <div className="text-left">
+                        <p className="text-sm font-black">{cw.first_name} {cw.last_name}</p>
+                        <p className="text-[10px] opacity-70 font-bold">{cw.email}</p>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                        isSelected ? "bg-primary border-primary" : "border-gray-200"
+                      }`}>
+                        {isSelected && <Check size={12} className="text-white" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

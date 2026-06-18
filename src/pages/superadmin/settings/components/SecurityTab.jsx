@@ -22,11 +22,14 @@ const SecurityTab = () => {
     toggleSetting,
   } = usePlatformSecurity();
 
-  // Fetch on mount
+  // Fetch on mount; cancel if the tab unmounts before the response arrives
   useEffect(() => {
+    let cancelled = false;
     fetchSecuritySettings().then((result) => {
+      if (cancelled) return;
       if (!result.ok) toast.error('Failed to load security settings');
     });
+    return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {

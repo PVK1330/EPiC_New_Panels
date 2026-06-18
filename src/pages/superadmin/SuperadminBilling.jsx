@@ -29,12 +29,14 @@ import toast from 'react-hot-toast';
 import { formatDate } from '../../utils/datetime';
 import { resolveAssetUrl } from '../../utils/assetUrl';
 import { getGatewayStatus } from '../../services/billingApi';
+import { formatCurrencyExact } from '../../utils/currencyFormatter';
+import usePlatformCurrency from '../../hooks/usePlatformCurrency';
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
-function fmtGbp(amount) {
-  const n = parseFloat(amount || 0);
-  return `£${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// fmtCurrency is called with the gateway currency code resolved at runtime
+function fmtCurrency(amount, code) {
+  return formatCurrencyExact(amount, code);
 }
 
 function ukDate(d) {
@@ -61,7 +63,7 @@ function StatusBadge({ status }) {
 
 /* ── Invoice Preview Modal ───────────────────────────────────────────────── */
 
-function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, taxId = null }) {
+function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, taxId = null, currency = 'GBP' }) {
   if (!invoice) return null;
 
   const amountNet = parseFloat(invoice.amount || 0);
@@ -194,9 +196,9 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, 
                           )}
                         </td>
                         <td className="px-3 py-4 text-center text-xs font-semibold text-gray-600">{plan.billing_cycle || 'Monthly'}</td>
-                        <td className="px-3 py-4 text-right text-sm font-semibold text-secondary">{fmtGbp(amountNet)}</td>
-                        {taxEnabled && <td className="px-3 py-4 text-right text-sm font-semibold text-gray-500">{fmtGbp(vatAmount)}</td>}
-                        {taxEnabled && <td className="px-4 py-4 text-right text-sm font-black text-primary">{fmtGbp(totalGross)}</td>}
+                        <td className="px-3 py-4 text-right text-sm font-semibold text-secondary">{fmtCurrency(amountNet, currency)}</td>
+                        {taxEnabled && <td className="px-3 py-4 text-right text-sm font-semibold text-gray-500">{fmtCurrency(vatAmount, currency)}</td>}
+                        {taxEnabled && <td className="px-4 py-4 text-right text-sm font-black text-primary">{fmtCurrency(totalGross, currency)}</td>}
                       </tr>
                     </tbody>
                   </table>
@@ -209,21 +211,21 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, 
                       <>
                         <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
                           <span className="text-xs text-gray-500">Subtotal (ex. VAT)</span>
-                          <span className="text-sm font-semibold text-secondary">{fmtGbp(amountNet)}</span>
+                          <span className="text-sm font-semibold text-secondary">{fmtCurrency(amountNet, currency)}</span>
                         </div>
                         <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
                           <span className="text-xs text-gray-500">VAT @ {taxRate}%</span>
-                          <span className="text-sm font-semibold text-secondary">{fmtGbp(vatAmount)}</span>
+                          <span className="text-sm font-semibold text-secondary">{fmtCurrency(vatAmount, currency)}</span>
                         </div>
                         <div className="flex justify-between items-center px-4 py-3 bg-primary">
                           <span className="text-sm font-black text-white">TOTAL DUE</span>
-                          <span className="text-base font-black text-white">{fmtGbp(totalGross)}</span>
+                          <span className="text-base font-black text-white">{fmtCurrency(totalGross, currency)}</span>
                         </div>
                       </>
                     ) : (
                       <div className="flex justify-between items-center px-4 py-3 bg-primary">
                         <span className="text-sm font-black text-white">TOTAL DUE</span>
-                        <span className="text-base font-black text-white">{fmtGbp(amountNet)}</span>
+                        <span className="text-base font-black text-white">{fmtCurrency(amountNet, currency)}</span>
                       </div>
                     )}
                   </div>
@@ -288,6 +290,7 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, 
 const ITEMS_PER_PAGE = 10;
 
 const SuperadminBilling = () => {
+  const currency = usePlatformCurrency();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
@@ -319,10 +322,10 @@ const SuperadminBilling = () => {
   }, [fetchInvoices, fetchDashboardStats]);
 
   const stats = [
-    { title: 'Monthly Recurring', subtitle: 'MRR', value: `£${dashboardStats?.mrr || '0'}`, icon: RiPulseLine,   bgClass: 'bg-blue-600' },
-    { title: 'Annual Recurring',  subtitle: 'ARR', value: `£${dashboardStats?.arr || '0'}`, icon: RiWallet3Line, bgClass: 'bg-indigo-600' },
-    { title: 'Churn Rate',        subtitle: '30d',  value: `${dashboardStats?.churnRate || '0'}%`, icon: RiPieChartLine, bgClass: 'bg-amber-500' },
-    { title: 'Active Subscriptions', subtitle: 'Live', value: dashboardStats?.activeSubscriptions || '0', icon: RiBillLine, bgClass: 'bg-emerald-600' },
+    { title: 'Monthly Recurring', subtitle: 'MRR', value: fmtCurrency(dashboardStats?.revenue?.mrr || 0, currency),       icon: RiPulseLine,   bgClass: 'bg-blue-600' },
+    { title: 'Annual Recurring',  subtitle: 'ARR', value: fmtCurrency(dashboardStats?.revenue?.arr || 0, currency),       icon: RiWallet3Line, bgClass: 'bg-indigo-600' },
+    { title: 'Churn Rate',        subtitle: '30d',  value: `${dashboardStats?.subscriptions?.churnRate || '0'}%`,         icon: RiPieChartLine, bgClass: 'bg-amber-500' },
+    { title: 'Active Subscriptions', subtitle: 'Live', value: dashboardStats?.subscriptions?.active ?? '0',               icon: RiBillLine, bgClass: 'bg-emerald-600' },
   ];
 
   const filteredBilling = invoices.filter(item => {
@@ -441,15 +444,15 @@ const SuperadminBilling = () => {
           <table className="w-full text-sm">
             <thead className="bg-gray-50/60 text-[10px] text-gray-400 font-black uppercase tracking-widest border-b border-gray-100">
               <tr>
-                <th className="px-5 py-3 text-left">Invoice</th>
-                <th className="px-5 py-3 text-left">Organisation</th>
-                <th className="px-5 py-3 text-left">Plan</th>
-                {taxRate > 0 && <th className="px-5 py-3 text-right">Net Amount</th>}
-                {taxRate > 0 && <th className="px-5 py-3 text-right">VAT ({taxRate}%)</th>}
-                <th className="px-5 py-3 text-right">{taxRate > 0 ? "Total" : "Amount"}</th>
-                <th className="px-5 py-3 text-center">Due</th>
-                <th className="px-5 py-3 text-left">Status</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th scope="col" className="px-5 py-3 text-left">Invoice</th>
+                <th scope="col" className="px-5 py-3 text-left">Organisation</th>
+                <th scope="col" className="px-5 py-3 text-left">Plan</th>
+                {taxRate > 0 && <th scope="col" className="px-5 py-3 text-right">Net Amount</th>}
+                {taxRate > 0 && <th scope="col" className="px-5 py-3 text-right">VAT ({taxRate}%)</th>}
+                <th scope="col" className="px-5 py-3 text-right">{taxRate > 0 ? "Total" : "Amount"}</th>
+                <th scope="col" className="px-5 py-3 text-center">Due</th>
+                <th scope="col" className="px-5 py-3 text-left">Status</th>
+                <th scope="col" className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -511,9 +514,9 @@ const SuperadminBilling = () => {
                           {item.subscription?.plan?.name || '—'}
                         </span>
                       </td>
-                      {taxRate > 0 && <td className="px-5 py-3.5 text-right text-xs font-semibold text-secondary">{fmtGbp(net)}</td>}
-                      {taxRate > 0 && <td className="px-5 py-3.5 text-right text-xs font-semibold text-gray-400">{fmtGbp(vat)}</td>}
-                      <td className="px-5 py-3.5 text-right text-sm font-black text-secondary">{taxRate > 0 ? fmtGbp(total) : fmtGbp(net)}</td>
+                      {taxRate > 0 && <td className="px-5 py-3.5 text-right text-xs font-semibold text-secondary">{fmtCurrency(net, currency)}</td>}
+                      {taxRate > 0 && <td className="px-5 py-3.5 text-right text-xs font-semibold text-gray-400">{fmtCurrency(vat, currency)}</td>}
+                      <td className="px-5 py-3.5 text-right text-sm font-black text-secondary">{taxRate > 0 ? fmtCurrency(total, currency) : fmtCurrency(net, currency)}</td>
                       <td className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500">
                         <span className="flex items-center justify-center gap-1">
                           <RiCalendarLine size={11} className="text-gray-400" />
@@ -528,14 +531,16 @@ const SuperadminBilling = () => {
                           <button
                             onClick={() => handleView(item)}
                             title="View Invoice"
+                            aria-label="View Invoice"
                             className="p-1.5 rounded-lg text-gray-400 hover:text-secondary hover:bg-gray-100 transition-all"
                           >
-                            <RiEyeLine size={15} />
+                            <RiEyeLine size={15} aria-hidden="true" />
                           </button>
                           <button
                             onClick={() => handleDownload(item)}
                             disabled={busy[`invoicePdf_${item.id}`]}
                             title="Download PDF"
+                            aria-label="Download PDF"
                             className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-wait"
                           >
                             {busy[`invoicePdf_${item.id}`]
@@ -597,6 +602,7 @@ const SuperadminBilling = () => {
           downloading={busy[`invoicePdf_${selectedInvoice?.id}`]}
           taxRate={taxRate}
           taxId={taxId}
+          currency={currency}
         />
       )}
     </div>

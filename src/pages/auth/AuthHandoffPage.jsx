@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "../../store/slices/authSlice";
@@ -17,6 +17,7 @@ export default function AuthHandoffPage() {
   const dispatch = useDispatch();
   const ticket = searchParams.get("ticket");
   const next = searchParams.get("next");
+  const redeemedRef = useRef(false);
   // Lazy initializer avoids a synchronous setState inside the effect.
   const [error, setError] = useState(
     ticket ? null : "Missing handoff ticket. Try Login as again from superadmin.",
@@ -24,6 +25,8 @@ export default function AuthHandoffPage() {
 
   useEffect(() => {
     if (!ticket) return;
+    if (redeemedRef.current) return;
+    redeemedRef.current = true;
 
     // Redeem the ticket; the backend sets the httpOnly cookie and returns the user.
     apiClient.post("/api/auth/handoff", { ticket })

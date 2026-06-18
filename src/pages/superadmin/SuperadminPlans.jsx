@@ -15,6 +15,8 @@ import PageHero, { HeroButton } from '../../components/superadmin/PageHero';
 import * as planService from '../../services/superadminPlan.service';
 import { toast } from 'react-hot-toast';
 import useModules from '../../hooks/useModules';
+import { formatCurrencyExact } from '../../utils/currencyFormatter';
+import usePlatformCurrency from '../../hooks/usePlatformCurrency';
 
 const PANEL_LABELS = {
   admin: 'Admin',
@@ -38,6 +40,7 @@ const sortModules = (mods) =>
   });
 
 const SuperadminPlans = () => {
+  const currency = usePlatformCurrency();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -246,7 +249,7 @@ const SuperadminPlans = () => {
               </div>
 
               <div className="flex items-baseline gap-2 py-3 border-y border-gray-50/50">
-                <span className="text-3xl font-black text-secondary tracking-tighter">£{plan.price}</span>
+                <span className="text-3xl font-black text-secondary tracking-tighter">{formatCurrencyExact(plan.price, currency)}</span>
                 <span className="text-xs text-gray-400 font-bold opacity-60">/{plan.interval}</span>
               </div>
 
@@ -326,19 +329,22 @@ const SuperadminPlans = () => {
             <div className="space-y-5">
               <Input
                 label="Plan Name"
+                name="plan_name"
                 placeholder="e.g. Professional"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
               <Input
                 label="Description"
+                name="plan_description"
                 placeholder="Brief description of the tier"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
               <div className="grid grid-cols-2 gap-4">
                 <Input
-                  label="Price (£)"
+                  label={`Price (${currency})`}
+                  name="plan_price"
                   type="number"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}

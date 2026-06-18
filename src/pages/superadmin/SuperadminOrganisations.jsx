@@ -90,6 +90,7 @@ const SuperadminOrganisations = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [blockedHandoffUrl, setBlockedHandoffUrl] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewOrg, setViewOrg] = useState(null);
   const [viewLoading, setViewLoading] = useState(false);
@@ -274,6 +275,8 @@ const SuperadminOrganisations = () => {
   };
 
   const handleLoginAs = async (org) => {
+    // Open a blank window synchronously. We omit "noopener" so we can navigate it after the async call completes.
+    const win = window.open("", "_blank");
     setActionLoading(true);
     try {
       const res = await impersonateOrganisation(org.id);
@@ -282,21 +285,27 @@ const SuperadminOrganisations = () => {
       const user = inner?.user;
       if (!ticket || !user) throw new Error(res.data?.message || 'Impersonation failed');
       const slug = inner?.organisation?.slug || org.slug;
-      // No JWT crosses the browser: only an opaque single-use ticket goes in the
-      // URL. The JWT is minted server-side at /api/auth/handoff and set as an
-      // httpOnly cookie; the superadmin session is restored via /api/auth/me on
-      // return to the platform.
+      
       const superUser = getUser();
       if (superUser) saveImpersonatorSession(null, superUser);
       const handoffUrl = buildTenantHandoffUrl(slug, {
         ticket,
         nextPath: getDashboardRouteForUser(user),
       });
-      // Open the impersonated session in a NEW TAB so the superadmin stays
-      // signed in on the platform tab. Fall back to same-tab if the popup is blocked.
-      const win = window.open(handoffUrl, "_blank", "noopener");
-      if (!win) window.location.href = handoffUrl;
+      
+      if (win) {
+        win.location.href = handoffUrl;
+        try {
+          win.focus();
+        } catch (err) {
+          // ignore focus error if browser blocks it
+        }
+      } else {
+        // Fallback warning if window.open was still blocked (extremely rare when called synchronously).
+        setBlockedHandoffUrl(handoffUrl);
+      }
     } catch (e) {
+      if (win) win.close();
       toast.error(e?.response?.data?.message || e.message || 'Login as failed');
     } finally {
       setActionLoading(false);
@@ -443,6 +452,38 @@ const SuperadminOrganisations = () => {
         </div>
       </Modal>
 
+      {/* Popup Blocked Fallback Modal */}
+      <Modal
+        isOpen={!!blockedHandoffUrl}
+        onClose={() => setBlockedHandoffUrl(null)}
+        title="Popup Blocked"
+        subtitle="Your browser blocked the login tab."
+        maxWidth="max-w-md"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <Button variant="secondary" onClick={() => setBlockedHandoffUrl(null)} className="px-5 py-2 text-[10px] font-bold uppercase tracking-widest">
+              Cancel
+            </Button>
+            <a
+              href={blockedHandoffUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setBlockedHandoffUrl(null)}
+              className="inline-flex items-center justify-center px-6 py-2 bg-primary hover:bg-primary/95 text-white border border-primary text-[10px] font-bold uppercase tracking-widest rounded-lg shadow-sm"
+            >
+              Open Tab Manually
+            </a>
+          </div>
+        }
+      >
+        <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg flex gap-3">
+           <RiErrorWarningLine className="text-blue-500 shrink-0" size={20} />
+           <p className="text-xs text-blue-800 font-bold leading-normal">
+              To log in automatically next time, please allow popups for this site in your browser's address bar. For now, you can open the session using the button below.
+           </p>
+        </div>
+      </Modal>
+
       {/* Branded gradient hero */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -464,6 +505,7 @@ const SuperadminOrganisations = () => {
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setIsCreateModalOpen(true)}
             className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-white text-secondary text-sm font-bold shadow-lg hover:bg-gray-50 active:scale-[0.98] transition-all"
           >
@@ -486,6 +528,7 @@ const SuperadminOrganisations = () => {
           {tabs.map((tab) => (
             <button
               key={tab}
+              type="button"
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-1.5 rounded text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-1.5 ${
                 activeTab === tab
@@ -515,7 +558,7 @@ const SuperadminOrganisations = () => {
               className="pl-9 pr-4 py-1.5 bg-white border border-gray-100 rounded-lg text-[10px] font-bold text-secondary w-full md:w-48 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-gray-300 uppercase"
             />
           </div>
-          <button className="p-1.5 bg-white border border-gray-100 text-gray-400 hover:text-secondary rounded-lg transition-all shadow-sm">
+          <button type="button" className="p-1.5 bg-white border border-gray-100 text-gray-400 hover:text-secondary rounded-lg transition-all shadow-sm">
             <RiFilter3Line size={16} />
           </button>
         </div>
@@ -527,11 +570,11 @@ const SuperadminOrganisations = () => {
           <table className="w-full text-sm">
             <thead className="bg-gray-50/50 text-[10px] uppercase text-gray-400 tracking-widest font-bold border-b border-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left">Organisation</th>
-                <th className="px-5 py-3 text-left">Tier</th>
-                <th className="px-5 py-3 text-center">Users</th>
-                <th className="px-5 py-3 text-left">Status</th>
-                <th className="px-5 py-3 text-right">Action</th>
+                <th scope="col" className="px-5 py-3 text-left">Organisation</th>
+                <th scope="col" className="px-5 py-3 text-left">Tier</th>
+                <th scope="col" className="px-5 py-3 text-center">Users</th>
+                <th scope="col" className="px-5 py-3 text-left">Status</th>
+                <th scope="col" className="px-5 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50/50">
@@ -636,14 +679,16 @@ const SuperadminOrganisations = () => {
         <div className="px-5 py-4 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
           <p className="text-xs font-bold text-gray-400">Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredOrgs.length)} to {Math.min(currentPage * itemsPerPage, filteredOrgs.length)} of {filteredOrgs.length} results</p>
           <div className="flex gap-2">
-            <button 
-              disabled={currentPage === 1} 
+            <button
+              type="button"
+              disabled={currentPage === 1}
               onClick={() => setCurrentPage(p => p - 1)}
               className="px-4 py-2 rounded-lg text-xs font-bold bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50 disabled:hover:bg-white"
             >
               Prev
             </button>
-            <button 
+            <button
+              type="button"
               disabled={currentPage === totalPages || totalPages === 0}
               onClick={() => setCurrentPage(p => p + 1)}
               className="px-4 py-2 rounded-lg text-xs font-bold bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50 disabled:hover:bg-white"

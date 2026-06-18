@@ -34,12 +34,14 @@ import Button from '../../components/Button';
 import Input from '../../components/Input';
 import PageHero, { HeroButton, HeroGhostButton } from '../../components/superadmin/PageHero';
 import { formatDate, formatDateTime } from '../../utils/datetime';
+import { formatCurrencyExact } from '../../utils/currencyFormatter';
+import usePlatformCurrency from '../../hooks/usePlatformCurrency';
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
-function fmtGbp(amount) {
-  const n = parseFloat(amount || 0);
-  return `£${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// fmtGbp is now currency-aware — pass the platform currency code from usePlatformCurrency
+function fmtGbp(amount, code = 'GBP') {
+  return formatCurrencyExact(amount, code);
 }
 
 function ukDateTime(d) {
@@ -72,7 +74,7 @@ function TxnBadge({ status }) {
 
 /* ── Transaction Detail Modal ────────────────────────────────────────────── */
 
-function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRate = 0, taxId = null }) {
+function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRate = 0, taxId = null, currency = 'GBP' }) {
   if (!txn) return null;
 
   const amount = parseFloat(txn.amount || 0);
@@ -176,10 +178,10 @@ function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRat
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-primary text-white">
-                        <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Description</th>
-                        <th className="text-center px-3 py-3 text-[11px] font-bold uppercase tracking-wider">Gateway Ref</th>
-                        {taxEnabled && <th className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">VAT ({taxRate}%)</th>}
-                        <th className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-wider">{taxEnabled ? "Amount (ex. Tax)" : "Amount"}</th>
+                        <th scope="col" className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Description</th>
+                        <th scope="col" className="text-center px-3 py-3 text-[11px] font-bold uppercase tracking-wider">Gateway Ref</th>
+                        {taxEnabled && <th scope="col" className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">VAT ({taxRate}%)</th>}
+                        <th scope="col" className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-wider">{taxEnabled ? "Amount (ex. Tax)" : "Amount"}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -194,8 +196,8 @@ function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRat
                           )}
                         </td>
                         <td className="px-3 py-4 text-center text-xs font-mono text-gray-500">{txn.gateway_reference || 'N/A'}</td>
-                        {taxEnabled && <td className="px-3 py-4 text-right text-sm font-semibold text-gray-500">{fmtGbp(vatAmount)}</td>}
-                        <td className="px-4 py-4 text-right text-sm font-black text-primary">{fmtGbp(taxEnabled ? amount : amount)}</td>
+                        {taxEnabled && <td className="px-3 py-4 text-right text-sm font-semibold text-gray-500">{fmtGbp(vatAmount, currency)}</td>}
+                        <td className="px-4 py-4 text-right text-sm font-black text-primary">{fmtGbp(amount, currency)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -208,21 +210,21 @@ function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRat
                       <>
                         <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
                           <span className="text-xs text-gray-500">Subtotal (ex. VAT)</span>
-                          <span className="text-sm font-semibold text-secondary">{fmtGbp(amount)}</span>
+                          <span className="text-sm font-semibold text-secondary">{fmtGbp(amount, currency)}</span>
                         </div>
                         <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
                           <span className="text-xs text-gray-500">VAT @ {taxRate}%</span>
-                          <span className="text-sm font-semibold text-secondary">{fmtGbp(vatAmount)}</span>
+                          <span className="text-sm font-semibold text-secondary">{fmtGbp(vatAmount, currency)}</span>
                         </div>
                         <div className="flex justify-between items-center px-4 py-3 bg-primary">
                           <span className="text-sm font-black text-white">TOTAL CHARGED</span>
-                          <span className="text-base font-black text-white">{fmtGbp(total)}</span>
+                          <span className="text-base font-black text-white">{fmtGbp(total, currency)}</span>
                         </div>
                       </>
                     ) : (
                       <div className="flex justify-between items-center px-4 py-3 bg-primary">
                         <span className="text-sm font-black text-white">TOTAL CHARGED</span>
-                        <span className="text-base font-black text-white">{fmtGbp(amount)}</span>
+                        <span className="text-base font-black text-white">{fmtGbp(amount, currency)}</span>
                       </div>
                     )}
                   </div>
@@ -231,9 +233,9 @@ function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRat
                 {/* Status note */}
                 <div className={`rounded-xl p-4 text-xs border ${txn.status === 'completed' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : txn.status === 'refunded' ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-gray-50 border-gray-100 text-gray-600'}`}>
                   {txn.status === 'completed'
-                    ? `✓ Payment of ${fmtGbp(total)} was successfully processed on ${ukDateTime(txn.createdAt)}.`
+                    ? `✓ Payment of ${fmtGbp(total, currency)} was successfully processed on ${ukDateTime(txn.createdAt)}.`
                     : txn.status === 'refunded'
-                    ? `This transaction was refunded. Original amount: ${fmtGbp(total)}.`
+                    ? `This transaction was refunded. Original amount: ${fmtGbp(total, currency)}.`
                     : txn.failure_reason || `Transaction status: ${txn.status}.`}
                 </div>
 
@@ -300,6 +302,7 @@ function StatCard({ title, value, icon: Icon, bgClass, delay }) {
 const ITEMS_PER_PAGE = 10;
 
 const SuperadminPayments = () => {
+  const currency = usePlatformCurrency();
   const [activeTab, setActiveTab] = useState('Transactions');
   const [isGatewayModalOpen, setIsGatewayModalOpen] = useState(false);
   const [selectedTxn, setSelectedTxn] = useState(null);
@@ -337,10 +340,10 @@ const SuperadminPayments = () => {
   }, [fetchTransactions, fetchGatewayStatus, fetchDashboardStats]);
 
   const stats = [
-    { title: 'Gross Volume',    value: `£${dashboardStats?.grossVolume  || '0'}`, icon: RiMoneyPoundCircleLine, bgClass: 'bg-blue-600',     delay: 0 },
-    { title: 'Net Revenue',     value: `£${dashboardStats?.netRevenue   || '0'}`, icon: RiPulseLine,           bgClass: 'bg-indigo-600',  delay: 0.05 },
-    { title: 'Success Rate',    value: `${dashboardStats?.successRate   || '0'}%`, icon: RiShieldCheckLine,    bgClass: 'bg-emerald-600',   delay: 0.1 },
-    { title: 'Refund Rate',     value: `${dashboardStats?.refundRate    || '0'}%`, icon: RiExchangeLine,       bgClass: 'bg-amber-500',   delay: 0.15 },
+    { title: 'Gross Volume',    value: fmtGbp(dashboardStats?.transactions?.grossVolume  || 0, currency), icon: RiMoneyPoundCircleLine, bgClass: 'bg-blue-600',    delay: 0 },
+    { title: 'Net Revenue',     value: fmtGbp(dashboardStats?.transactions?.netRevenue   || 0, currency), icon: RiPulseLine,           bgClass: 'bg-indigo-600',  delay: 0.05 },
+    { title: 'Success Rate',    value: `${dashboardStats?.transactions?.successRate   || '0'}%`,           icon: RiShieldCheckLine,    bgClass: 'bg-emerald-600', delay: 0.1 },
+    { title: 'Refund Rate',     value: `${dashboardStats?.transactions?.refundRate    || '0'}%`,           icon: RiExchangeLine,       bgClass: 'bg-amber-500',   delay: 0.15 },
   ];
 
   const filteredData = transactions
@@ -496,13 +499,13 @@ const SuperadminPayments = () => {
             <table className="w-full text-sm">
               <thead className="bg-gray-50/60 text-[10px] text-gray-400 font-black border-b border-gray-100 uppercase tracking-widest">
                 <tr>
-                  <th className="px-5 py-3 text-left">Reference</th>
-                  <th className="px-5 py-3 text-left">Organisation</th>
-                  <th className="px-5 py-3 text-right">Amount</th>
-                  <th className="px-5 py-3 text-left">Method</th>
-                  <th className="px-5 py-3 text-center">Date</th>
-                  <th className="px-5 py-3 text-left">Status</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
+                  <th scope="col" className="px-5 py-3 text-left">Reference</th>
+                  <th scope="col" className="px-5 py-3 text-left">Organisation</th>
+                  <th scope="col" className="px-5 py-3 text-right">Amount</th>
+                  <th scope="col" className="px-5 py-3 text-left">Method</th>
+                  <th scope="col" className="px-5 py-3 text-center">Date</th>
+                  <th scope="col" className="px-5 py-3 text-left">Status</th>
+                  <th scope="col" className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -542,7 +545,7 @@ const SuperadminPayments = () => {
                         <p className="text-[10px] text-gray-400">{formatDate(txn.createdAt)}</p>
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <span className="text-sm font-black text-secondary">{fmtGbp(txn.amount)}</span>
+                        <span className="text-sm font-black text-secondary">{fmtGbp(txn.amount, currency)}</span>
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2">
@@ -569,14 +572,16 @@ const SuperadminPayments = () => {
                           <button
                             onClick={() => handleViewTransaction(txn)}
                             title="View Details"
+                            aria-label="View transaction details"
                             className="p-1.5 rounded-lg text-gray-400 hover:text-secondary hover:bg-gray-100 transition-all"
                           >
-                            <RiEyeLine size={15} />
+                            <RiEyeLine size={15} aria-hidden="true" />
                           </button>
                           <button
                             onClick={() => handleDownloadReceipt(txn)}
                             disabled={busy[`receipt_${txn.id}`]}
                             title="Download Receipt"
+                            aria-label="Download receipt"
                             className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-wait"
                           >
                             {busy[`receipt_${txn.id}`]
@@ -714,6 +719,7 @@ const SuperadminPayments = () => {
           downloading={busy[`receipt_${selectedTxn?.id}`]}
           taxRate={parseFloat(gatewayStatus?.tax_rate || '0')}
           taxId={gatewayStatus?.tax_id || null}
+          currency={currency}
         />
       )}
 
