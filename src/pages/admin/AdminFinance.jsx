@@ -290,29 +290,44 @@ export default function AdminFinance() {
       </motion.div>
 
       {/* Stats Cards */}
-      <motion.div
-        className="grid grid-cols-2 md:grid-cols-4 gap-3"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {stats.map(({ label, value, sub, bg, color, subColor, icon: Icon }) => (
-          <motion.div
-            key={label}
-            variants={cardVariants}
-            className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-4"
-          >
-            <div className={`p-3 ${bg} rounded-lg shrink-0`}>
-              <Icon className={`${color} h-6 w-6`} />
+      {isLoading ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-4 animate-pulse">
+              <div className="p-3 bg-gray-200 rounded-lg shrink-0 h-12 w-12" />
+              <div className="flex-1 pt-1">
+                <div className="h-3 bg-gray-200 rounded w-2/3 mb-2" />
+                <div className="h-7 bg-gray-200 rounded w-1/2 mb-1" />
+                <div className="h-2 bg-gray-200 rounded w-3/4" />
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-600">{label}</p>
-              <p className="text-2xl font-black text-secondary">{value}</p>
-              <p className={`text-xs ${subColor} mt-0.5`}>{sub}</p>
-            </div>
-          </motion.div>
-        ))}
-      </motion.div>
+          ))}
+        </div>
+      ) : (
+        <motion.div
+          className="grid grid-cols-2 md:grid-cols-4 gap-3"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {stats.map(({ label, value, sub, bg, color, subColor, icon: Icon }) => (
+            <motion.div
+              key={label}
+              variants={cardVariants}
+              className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-4"
+            >
+              <div className={`p-3 ${bg} rounded-lg shrink-0`}>
+                <Icon className={`${color} h-6 w-6`} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">{label}</p>
+                <p className="text-2xl font-black text-secondary">{value}</p>
+                <p className={`text-xs ${subColor} mt-0.5`}>{sub}</p>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
 
       {/* Recent Transactions Table */}
       <motion.div

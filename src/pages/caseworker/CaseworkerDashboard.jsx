@@ -63,8 +63,8 @@ const CaseworkerDashboard = () => {
       month: "long",
       year: "numeric",
     });
-    return `${line} · Good morning, ${user?.name?.split(" ")[0] || "there"}`;
-  }, [user?.name]);
+    return `${line} · Good morning, ${user?.first_name || user?.name?.split(" ")[0] || "there"}`;
+  }, [user?.first_name, user?.name]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {

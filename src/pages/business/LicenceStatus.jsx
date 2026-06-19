@@ -37,7 +37,6 @@ import {
 import { triggerDownload } from "../../services/documentApi";
 import LicenceWorkflowTimeline from "../../components/licence/LicenceWorkflowTimeline";
 import { useToast } from "../../context/ToastContext";
-import { Skeleton } from "boneyard-js/react";
 import { formatDate, formatDateLong } from "../../utils/datetime";
 
 const LicenceStatus = () => {
@@ -477,7 +476,7 @@ const LicenceStatus = () => {
                     [1, 2, 3].map(i => (
                       <tr key={i}>
                         <td colSpan={4} className="px-3 py-2">
-                          <Skeleton height={48} className="w-full rounded-xl" />
+                          <div className="animate-pulse bg-gray-200 h-12 w-full rounded-xl" />
                         </td>
                       </tr>
                     ))

@@ -921,12 +921,6 @@ export default function AdminCases() {
           </div>
         )}
 
-        {loading && (
-          <div className="px-6 py-8 text-center text-sm text-gray-500 font-semibold">
-            Loading cases…
-          </div>
-        )}
-
         <div className="px-3 py-3 border-b border-gray-100">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
@@ -1002,6 +996,15 @@ export default function AdminCases() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
+              {loading && Array.from({ length: 5 }).map((_, i) => (
+                <tr key={`skel-${i}`} className="animate-pulse">
+                  {TABLE_COLS.map((col) => (
+                    <td key={col} className="px-4 py-3">
+                      <div className="h-4 bg-gray-200 rounded w-3/4" />
+                    </td>
+                  ))}
+                </tr>
+              ))}
               {!loading && filteredCases.length === 0 && (
                 <tr>
                   <td colSpan={TABLE_COLS.length} className="px-4 py-8 text-center text-sm text-gray-500">
@@ -1009,13 +1012,13 @@ export default function AdminCases() {
                   </td>
                 </tr>
               )}
-              {filteredCases.map((c, i) => (
+              {!loading && filteredCases.map((c, i) => (
                 <motion.tr
                   key={c.caseId}
                   className="hover:bg-gray-50 transition-colors"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: 0.4 + i * 0.06 }}
+                  transition={{ duration: 0.2, delay: i * 0.04 }}
                 >
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-secondary">
                     {c.caseId}

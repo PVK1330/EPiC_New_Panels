@@ -257,11 +257,11 @@ const AppRouter = () => {
           <Route path="dashboard" element={<CandidateDashboard />} />
           <Route path="visa-enquiry" element={<CandidateVisaEnquiry />} />
           <Route path="application" element={<Application />} />
-          <Route path="documents" element={<Navigate to="/candidate/document-checklist" replace />} />
+          <Route path="documents" element={<Documents />} />
           <Route path="document-checklist" element={<DocumentChecklist />} />
           <Route path="upload-documents" element={<UploadDocuments />} />
           <Route path="third-party-docs" element={<ThirdPartyDocs />} />
-          <Route path="documents-legacy" element={<Documents />} />
+          <Route path="documents-legacy" element={<Navigate to="/candidate/documents" replace />} />
           <Route path="payments" element={<Payments />} />
           <Route path="payment-summary" element={<Navigate to="/candidate/payments" replace />} />
           <Route path="payment-history" element={<Navigate to="/candidate/payments?tab=history" replace />} />

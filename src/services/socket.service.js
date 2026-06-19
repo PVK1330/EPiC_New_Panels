@@ -6,11 +6,18 @@ let socketInstance = null;
 // Auth is cookie-based: the browser sends the HttpOnly `token` cookie on the
 // Socket.IO handshake because withCredentials is enabled. No JWT is read from
 // localStorage. The backend (socketServer.js) reads the token from that cookie.
-const createSocket = () =>
-  io(getMessagingSocketUrl(), {
+const createSocket = () => {
+  const socket = io(getMessagingSocketUrl(), {
     withCredentials: true,
     transports: ["websocket", "polling"],
+    reconnectionAttempts: 3,
+    reconnectionDelay: 2000,
   });
+  // Prevent unhandled connect_error events from surfacing as console errors
+  // when auth isn't ready yet (e.g. page loads before cookie is propagated).
+  socket.on("connect_error", () => {});
+  return socket;
+};
 
 const getSocket = () => {
   if (!socketInstance) {
