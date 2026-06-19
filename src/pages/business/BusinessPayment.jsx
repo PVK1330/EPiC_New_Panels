@@ -1,46 +1,129 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CreditCard, Download, Filter, Search, CheckCircle2, AlertCircle, Eye, LayoutDashboard, DollarSign, Clock, Loader2, X } from "lucide-react";
-import { getBusinessPayments } from "../../services/businessProfileApi";
+import { CreditCard, Download, Filter, Search, CheckCircle2, AlertCircle, Eye, LayoutDashboard, DollarSign, Clock, Loader2, X, ArrowRight } from "lucide-react";
+import { getBusinessPayments, createSponsorPaymentCheckout, verifySponsorPayment } from "../../services/businessProfileApi";
 import { formatDate } from "../../utils/datetime";
 import { useToast } from "../../context/ToastContext";
 
 const money = (n) => `£${Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+const PAYABLE_LABEL = {
+  licence_fee: "Licence fee",
+  isc: "Immigration Skills Charge",
+  case_fee: "Case fee",
+};
+
 const BusinessPayment = () => {
   const { showToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [loading, setLoading] = useState(true);
   const [payments, setPayments] = useState([]);
+  const [payables, setPayables] = useState([]);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [downloading, setDownloading] = useState(null);
+  const [payingKey, setPayingKey] = useState(null);
+  const [verifying, setVerifying] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await getBusinessPayments();
+      const data = res?.data?.data || {};
+      const caseRows = (data.payments || []).map((p) => ({
+        id: `case_${p.id}`,
+        rawId: p.id,
+        kind: "case",
+        description: p.notes || p.Case?.caseId || "Case payment",
+        amount: Number(p.amount || 0),
+        date: p.paymentDate || p.created_at,
+        status: p.paymentStatus || "pending",
+        invoiceNo: p.invoiceNumber || `INV-${p.id}`,
+        dueDate: p.dueDate || null,
+        caseRef: p.Case?.caseId || "N/A",
+        candidateName: `${p.Case?.candidate?.first_name || ""} ${p.Case?.candidate?.last_name || ""}`.trim() || "Candidate",
+      }));
+      // Licence-fee / ISC payments live in the sponsor ledger, not case_payments.
+      const ledgerRows = (data.sponsorPayments || []).map((p) => ({
+        id: `sp_${p.id}`,
+        rawId: p.id,
+        kind: "sponsor",
+        description: p.description || PAYABLE_LABEL[p.payableType] || "Sponsor payment",
+        amount: Number(p.amount || 0),
+        date: p.paid_at || p.created_at,
+        status: p.status || "pending",
+        invoiceNo: p.stripe_payment_intent_id || `SP-${p.id}`,
+        dueDate: null,
+        caseRef: PAYABLE_LABEL[p.payableType] || "—",
+        candidateName: PAYABLE_LABEL[p.payableType] || "Sponsor",
+      }));
+      setPayments([...caseRows, ...ledgerRows]);
+      setPayables(data.payables || []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const res = await getBusinessPayments();
-        const rows = res?.data?.data?.payments || [];
-        setPayments(
-          rows.map((p) => ({
-            id: p.id,
-            description: p.notes || p.Case?.caseId || "Case payment",
-            amount: Number(p.amount || 0),
-            date: p.paymentDate || p.created_at,
-            status: p.paymentStatus || "pending",
-            invoiceNo: p.invoiceNumber || `INV-${p.id}`,
-            dueDate: p.dueDate || null,
-            caseRef: p.Case?.caseId || "N/A",
-            candidateName: `${p.Case?.candidate?.first_name || ""} ${p.Case?.candidate?.last_name || ""}`.trim() || "Candidate",
-          }))
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
     load();
-  }, []);
+  }, [load]);
+
+  // Finalise after returning from Stripe Checkout (?payment=success&session_id=…).
+  useEffect(() => {
+    const result = searchParams.get("payment");
+    const sessionId = searchParams.get("session_id");
+    if (!result) return;
+
+    if (result === "cancelled") {
+      showToast({ message: "Payment cancelled.", variant: "warning" });
+      setSearchParams({}, { replace: true });
+      return;
+    }
+    if (result !== "success" || !sessionId) return;
+
+    let cancelled = false;
+    (async () => {
+      setVerifying(true);
+      try {
+        const res = await verifySponsorPayment(sessionId);
+        if (cancelled) return;
+        if (res?.data?.data?.paid) {
+          showToast({ message: "Payment received. Thank you!", variant: "success" });
+          await load();
+        } else {
+          showToast({ message: "Payment is still processing. We'll update your balance shortly.", variant: "info" });
+        }
+      } catch (e) {
+        if (!cancelled) showToast({ message: e?.response?.data?.message || "Could not verify payment", variant: "danger" });
+      } finally {
+        if (!cancelled) {
+          setVerifying(false);
+          setSearchParams({}, { replace: true });
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [searchParams, setSearchParams, showToast, load]);
+
+  const handlePay = async (payable) => {
+    const key = `${payable.payableType}:${payable.payableRef}`;
+    setPayingKey(key);
+    try {
+      const res = await createSponsorPaymentCheckout({
+        payableType: payable.payableType,
+        payableRef: payable.payableRef,
+      });
+      const url = res?.data?.data?.url;
+      if (!url) throw new Error("Stripe checkout could not be started");
+      window.location.href = url;
+    } catch (e) {
+      setPayingKey(null);
+      showToast({ message: e?.response?.data?.message || e.message || "Failed to start payment", variant: "danger" });
+    }
+  };
 
   const filteredPayments = useMemo(
     () =>
@@ -73,7 +156,7 @@ const BusinessPayment = () => {
     setDownloading(payment.id);
     try {
       const { downloadInvoiceReceiptPdf } = await import("../../services/downloadApi");
-      const res = await downloadInvoiceReceiptPdf({ paymentId: payment.id, invoiceNumber: payment.invoiceNo });
+      const res = await downloadInvoiceReceiptPdf({ paymentId: payment.rawId ?? payment.id, invoiceNumber: payment.invoiceNo });
       const url = URL.createObjectURL(res.data);
       const a = document.createElement("a");
       a.href = url;
@@ -125,6 +208,48 @@ const BusinessPayment = () => {
           <p className="text-2xl font-black text-secondary">{payments.length}</p>
         </motion.div>
       </motion.div>
+
+      {payables.length > 0 && (
+        <motion.div className="rounded-2xl border border-amber-200 bg-amber-50/60 shadow-sm overflow-hidden relative" variants={cardVariants} initial="hidden" animate="visible">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-amber-400 to-amber-500" />
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock size={18} className="text-amber-600" />
+              <h2 className="text-sm font-black text-secondary uppercase tracking-wide">Outstanding charges</h2>
+            </div>
+            <div className="space-y-2.5">
+              {payables.map((p) => {
+                const key = `${p.payableType}:${p.payableRef}`;
+                const isPaying = payingKey === key;
+                return (
+                  <div key={key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white rounded-xl border border-amber-100 p-3.5">
+                    <div>
+                      <p className="text-sm font-black text-secondary">{p.description}</p>
+                      <span className="inline-block mt-0.5 text-[10px] font-black uppercase tracking-widest text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
+                        {PAYABLE_LABEL[p.payableType] || p.payableType}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-base font-black text-secondary">{money(p.amount)}</span>
+                      <button
+                        type="button"
+                        onClick={() => handlePay(p)}
+                        disabled={isPaying || verifying}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white shadow-sm hover:bg-primary-dark disabled:opacity-50"
+                      >
+                        {isPaying ? <Loader2 size={15} className="animate-spin" /> : <CreditCard size={15} />}
+                        {isPaying ? "Starting…" : "Pay now"}
+                        {!isPaying && <ArrowRight size={14} />}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-amber-700/80 font-bold mt-3">Payments are processed securely by Stripe on your provider's account.</p>
+          </div>
+        </motion.div>
+      )}
 
       <motion.div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative" variants={cardVariants} initial="hidden" animate="visible">
         <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />

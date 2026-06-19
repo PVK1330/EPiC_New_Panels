@@ -37,3 +37,14 @@ export const getBusinessCases = (params = {}) =>
 export const getBusinessPayments = () =>
   api.get("/api/business/payments");
 
+/**
+ * Start a Stripe Checkout for a sponsor payable on the tenant's Stripe account.
+ * @param {{ payableType: 'licence_fee'|'isc'|'case_fee', payableRef: string|number }} payload
+ */
+export const createSponsorPaymentCheckout = (payload) =>
+  api.post("/api/business/payments/checkout", payload);
+
+/** Verify + finalise a sponsor Checkout session after returning from Stripe. */
+export const verifySponsorPayment = (sessionId) =>
+  api.get(`/api/business/payments/verify-session/${sessionId}`);
+

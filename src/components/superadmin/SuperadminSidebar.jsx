@@ -25,12 +25,18 @@ import {
 import useModuleAccess from "../../hooks/useModuleAccess";
 import { resolveAssetUrl } from "../../utils/assetUrl";
 
+// `moduleKey` gates an item against the staff member's allowedModules
+// (superadmin sees everything). `alwaysShow` marks personal account pages that
+// every authenticated staff member must reach regardless of granted modules.
+// NOTE: "announcements"/"notifications" are platform-admin features — they are
+// not in the 8 grantable modules, so restricted staff don't see them until/unless
+// those are added as modules; superadmin always does.
 const navSections = [
   {
     items: [
       { label: "Dashboard", to: "/superadmin/dashboard", icon: RiDashboardLine, moduleKey: "dashboard" },
       { label: "Organizations", to: "/superadmin/organisations", icon: RiBuilding4Line, moduleKey: "organizations" },
-      { label: "Announcements", to: "/superadmin/announcements", icon: RiMegaphoneLine, moduleKey: null },
+      { label: "Announcements", to: "/superadmin/announcements", icon: RiMegaphoneLine, moduleKey: "announcements" },
     ],
   },
   {
@@ -51,9 +57,9 @@ const navSections = [
   {
     label: "Platform",
     items: [
-      { label: "Notifications", to: "/superadmin/notifications", icon: RiNotification3Line, moduleKey: null },
+      { label: "Notifications", to: "/superadmin/notifications", icon: RiNotification3Line, moduleKey: "notifications" },
       { label: "Settings", to: "/superadmin/settings", icon: RiSettings4Line, moduleKey: "settings" },
-      { label: "My Profile", to: "/superadmin/profile", icon: RiShieldKeyholeLine, moduleKey: null },
+      { label: "My Profile", to: "/superadmin/profile", icon: RiShieldKeyholeLine, alwaysShow: true },
     ],
   },
 ];
@@ -83,7 +89,9 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
     const visibleSections = navSections
       .map((section) => ({
         ...section,
-        items: section.items.filter((item) => canAccess(item.moduleKey)),
+        items: section.items.filter(
+          (item) => item.alwaysShow || canAccess(item.moduleKey),
+        ),
       }))
       .filter((section) => section.items.length > 0);
 
