@@ -13,8 +13,7 @@ import {
   Building,
   Briefcase,
   Building2,
-  DollarSign,
-  IdCard,
+  PoundSterling,
   FileText,
   LayoutDashboard,
   Hash,
@@ -33,7 +32,6 @@ const SponsoredWorkerForm = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [previousVisa, setPreviousVisa] = useState("no");
   const [visaTypeOptions, setVisaTypeOptions] = useState([]);
   const { ready: licenceReady, licenceStatus, canSponsorWorkers } = useSponsorLicence();
   const workerBlocked = licenceReady && !canSponsorWorkers;
@@ -437,7 +435,7 @@ const SponsoredWorkerForm = () => {
                   className={inputStyle}
                   required
                 />
-                <DollarSign className="absolute right-3 top-10 text-gray-400" />
+                <PoundSterling className="absolute right-3 top-10 text-gray-400" />
               </div>
 
             </div>
@@ -515,29 +513,31 @@ const SponsoredWorkerForm = () => {
 
             <div className="space-y-4">
 
-              <div className="flex gap-6">
-                <label className="flex gap-2">
-                  <input
-                    type="radio"
-                    name="previousVisa"
-                    value="yes"
-                    checked={formData.previousVisa === "yes"}
-                    onChange={handleInputChange}
-                  />
-                  Yes
-                </label>
-
-                <label className="flex gap-2">
-                  <input
-                    type="radio"
-                    name="previousVisa"
-                    value="no"
-                    checked={formData.previousVisa === "no"}
-                    onChange={handleInputChange}
-                  />
-                  No
-                </label>
-              </div>
+              <fieldset>
+                <legend className="text-xs font-bold text-gray-700 mb-2">Has the applicant previously held a UK visa?</legend>
+                <div className="flex gap-6 mt-2">
+                  <label className="flex gap-2">
+                    <input
+                      type="radio"
+                      name="previousVisa"
+                      value="yes"
+                      checked={formData.previousVisa === "yes"}
+                      onChange={handleInputChange}
+                    />
+                    Yes
+                  </label>
+                  <label className="flex gap-2">
+                    <input
+                      type="radio"
+                      name="previousVisa"
+                      value="no"
+                      checked={formData.previousVisa === "no"}
+                      onChange={handleInputChange}
+                    />
+                    No
+                  </label>
+                </div>
+              </fieldset>
 
               <div className="relative">
                 <label className={labelStyle}>Notes</label>

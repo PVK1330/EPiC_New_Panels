@@ -42,14 +42,18 @@ const SponsoredWorkerDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { downloadAssetFile, busy } = useDownloads();
-  
-  const queryParams = new URLSearchParams(location.search);
-  const candidateId = queryParams.get("candidateId");
+
+  // CRIT-01: read from router state — candidateId no longer exposed in the URL
+  // CRIT-02: validate presence before fetching; redirect if tampered/missing
+  const candidateId = location.state?.candidateId;
 
   useEffect(() => {
-    if (candidateId) {
-      fetchWorkerDetails();
+    if (!candidateId) {
+      navigate("/business/workers", { replace: true });
+      return;
     }
+    fetchWorkerDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candidateId]);
 
   useEffect(() => {
@@ -152,12 +156,12 @@ const SponsoredWorkerDetails = () => {
     );
   }
 
-  if (!workerData) {
+  if (!workerData || !workerData.case) {
     return (
       <div className="p-8 text-center">
         <AlertCircle size={48} className="mx-auto text-red-500 mb-4" />
         <p className="text-lg font-black text-secondary">Worker not found</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-primary font-bold">Go Back</button>
+        <button onClick={() => navigate("/business/workers")} className="mt-4 text-primary font-bold">Go Back</button>
       </div>
     );
   }
@@ -604,46 +608,52 @@ const SponsoredWorkerDetails = () => {
             animate={{ opacity: 1 }}
             className="space-y-6"
           >
-             <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50/50 p-6">
-                <div className="flex items-center gap-4">
-                  <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${
-                    Object.values(workerData.documents).every(s => s === 'complete') ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
-                  }`}>
-                    <ShieldCheck size={28} />
-                  </div>
-                  <div>
-                    <p className="text-lg font-black text-secondary">Right to Work Verification</p>
-                    <p className="text-sm font-bold text-gray-500 italic">Automated Compliance Status</p>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className={`inline-flex items-center px-4 py-1.5 text-xs font-black rounded-full uppercase tracking-wider ${
-                    Object.values(workerData.documents).every(s => s === 'complete') ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {Object.values(workerData.documents).every(s => s === 'complete') ? 'Compliant' : 'Review Required'}
-                  </span>
-                  <p className="text-[10px] font-bold text-gray-400">Last Checked: {formatDate(new Date())}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {Object.entries(workerData.documents).map(([doc, status]) => (
-                  <div key={doc} className={`p-4 rounded-2xl border ${
-                    status === 'complete' ? 'border-emerald-100 bg-emerald-50/30' : 
-                    status === 'partial' ? 'border-amber-100 bg-amber-50/30' : 'border-red-100 bg-red-50/30'
-                  }`}>
-                    <p className="text-[10px] font-black text-gray-500 uppercase mb-2">{doc.replace(/([A-Z])/g, ' $1')}</p>
-                    <div className="flex items-center gap-1">
-                      {status === 'complete' ? <Check size={14} className="text-emerald-600" /> : <AlertCircle size={14} className={status === 'partial' ? 'text-amber-600' : 'text-red-600'} />}
-                      <span className={`text-[10px] font-black capitalize ${
-                        status === 'complete' ? 'text-emerald-700' : status === 'partial' ? 'text-amber-700' : 'text-red-700'
-                      }`}>
-                        {status === 'risk' ? 'Missing' : status}
-                      </span>
+             {(() => {
+                const docs = workerData.documents || {};
+                const docEntries = Object.entries(docs);
+                const allComplete = docEntries.length > 0 && docEntries.every(([, s]) => s === 'complete');
+                return (
+                  <>
+                  <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50/50 p-6">
+                    <div className="flex items-center gap-4">
+                      <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${allComplete ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                        <ShieldCheck size={28} />
+                      </div>
+                      <div>
+                        <p className="text-lg font-black text-secondary">Right to Work Verification</p>
+                        <p className="text-sm font-bold text-gray-500 italic">Automated Compliance Status</p>
+                      </div>
                     </div>
+                    <span className={`inline-flex items-center px-4 py-1.5 text-xs font-black rounded-full uppercase tracking-wider ${allComplete ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {allComplete ? 'Compliant' : docEntries.length === 0 ? 'No Data' : 'Review Required'}
+                    </span>
                   </div>
-                ))}
-              </div>
+
+                  {docEntries.length === 0 ? (
+                    <div className="text-center py-10 text-sm font-bold text-gray-400">No compliance documents recorded.</div>
+                  ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {docEntries.map(([doc, status]) => (
+                      <div key={doc} className={`p-4 rounded-2xl border ${
+                        status === 'complete' ? 'border-emerald-100 bg-emerald-50/30' :
+                        status === 'partial' ? 'border-amber-100 bg-amber-50/30' : 'border-red-100 bg-red-50/30'
+                      }`}>
+                        <p className="text-[10px] font-black text-gray-500 uppercase mb-2">{doc.replace(/([A-Z])/g, ' $1')}</p>
+                        <div className="flex items-center gap-1">
+                          {status === 'complete' ? <Check size={14} className="text-emerald-600" /> : <AlertCircle size={14} className={status === 'partial' ? 'text-amber-600' : 'text-red-600'} />}
+                          <span className={`text-[10px] font-black capitalize ${
+                            status === 'complete' ? 'text-emerald-700' : status === 'partial' ? 'text-amber-700' : 'text-red-700'
+                          }`}>
+                            {status === 'risk' ? 'Missing' : status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  )}
+                  </>
+                );
+              })()}
           </motion.div>
         )}
       </motion.div>
@@ -657,8 +667,8 @@ const SponsoredWorkerDetails = () => {
             className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${statusToUpdate === 'Approve' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                {statusToUpdate === 'Approve' ? <Check size={28} /> : <XCircle size={28} />}
+              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${statusToUpdate === 'Approved' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                {statusToUpdate === 'Approved' ? <Check size={28} /> : <XCircle size={28} />}
               </div>
               <div>
                 <h3 className="text-2xl font-black text-secondary">{statusToUpdate} Worker</h3>
@@ -686,7 +696,7 @@ const SponsoredWorkerDetails = () => {
                 </button>
                 <button
                   onClick={handleStatusUpdate}
-                  className={`flex-1 px-6 py-3 rounded-2xl text-sm font-black text-white transition shadow-lg ${statusToUpdate === 'Approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
+                  className={`flex-1 px-6 py-3 rounded-2xl text-sm font-black text-white transition shadow-lg ${statusToUpdate === 'Approved' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
                 >
                   CONFIRM {statusToUpdate.toUpperCase()}
                 </button>

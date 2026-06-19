@@ -111,6 +111,7 @@ export default function AdminBusinesses() {
   const [detailTab, setDetailTab] = useState("overview");
 
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [toggleId, setToggleId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [exporting, setExporting] = useState(false);
@@ -151,7 +152,7 @@ export default function AdminBusinesses() {
     statusFilter,
     fetchSponsors,
     showToast,
-    statusParam,
+    // statusParam is derived from statusFilter synchronously; listing both would be a duplicate dep
   ]);
 
   const closeModal = () => {
@@ -377,7 +378,7 @@ export default function AdminBusinesses() {
       setResetErrors(errs);
       return;
     }
-    setSaving(true);
+    setResetting(true);
     try {
       const res = await resetSponsorPassword(modal.data.id, {
         new_password: resetForm.new_password,
@@ -391,7 +392,7 @@ export default function AdminBusinesses() {
     } catch (e) {
       showToast({ message: getApiError(e), variant: "danger" });
     } finally {
-      setSaving(false);
+      setResetting(false);
     }
   };
 
@@ -465,7 +466,7 @@ export default function AdminBusinesses() {
     setImporting(true);
     try {
       const res = await bulkImportSponsors(importFile);
-      const { successful, failed, total_processed, results } = res.data?.data || {};
+      const { successful, failed, total_processed } = res.data?.data || {};
 
       showToast({
         message: `Bulk import completed: ${successful} successful, ${failed} failed out of ${total_processed}`,
@@ -581,6 +582,7 @@ export default function AdminBusinesses() {
             />
             <input
               type="text"
+              aria-label="Search sponsors"
               placeholder="Search sponsors…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
@@ -627,7 +629,7 @@ export default function AdminBusinesses() {
               {!loading && sponsors.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="px-4 py-8 text-center text-sm text-gray-400"
                   >
                     No sponsors found.
@@ -658,7 +660,7 @@ export default function AdminBusinesses() {
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 ${AVATAR_COLORS[user.id % AVATAR_COLORS.length]}`}
                           >
                             {initials}
                           </div>
@@ -729,9 +731,18 @@ export default function AdminBusinesses() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => openReset(user)}
+                          disabled={resetting}
+                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Reset password"
+                        >
+                          <FiRefreshCw size={14} />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => openDelete(user)}
                           className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete"
+                          title="Deactivate"
                         >
                           <FiTrash2 size={14} />
                         </button>
@@ -936,7 +947,7 @@ export default function AdminBusinesses() {
 
       <Modal
         open={modal.type === "view"}
-        onClose={() => { closeModal(); setDetailTab("overview"); }}
+        onClose={closeModal}
         title={modal.data ? `Sponsor ${modal.data.sponsorProfile?.companyName || fullName(modal.data)}` : ""}
         maxWidthClass="max-w-4xl"
         bodyClassName="p-0"
@@ -960,13 +971,24 @@ export default function AdminBusinesses() {
                     </span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openEdit(b)}
-                  className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/5"
-                >
-                  Edit sponsor
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => openReset(b)}
+                    disabled={resetting}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-600 hover:bg-indigo-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <FiRefreshCw size={12} />
+                    Reset password
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openEdit(b)}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/5"
+                  >
+                    Edit sponsor
+                  </button>
+                </div>
               </div>
 
               <div className="shrink-0 flex gap-0 overflow-x-auto border-b border-gray-100 bg-gray-50/50 px-2 no-scrollbar">
@@ -1142,11 +1164,11 @@ export default function AdminBusinesses() {
             </Button>
             <Button
               variant="primary"
-              disabled={saving}
+              disabled={resetting}
               onClick={handleResetSubmit}
               className="rounded-xl"
             >
-              {saving ? "Saving…" : "Reset password"}
+              {resetting ? "Resetting…" : "Reset password"}
             </Button>
           </>
         }
