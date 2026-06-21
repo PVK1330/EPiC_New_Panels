@@ -90,6 +90,8 @@ const SuperadminOrganisations = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  // BUG-050: require the org name to be typed before the destructive delete is enabled.
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [blockedHandoffUrl, setBlockedHandoffUrl] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewOrg, setViewOrg] = useState(null);
@@ -245,12 +247,15 @@ const SuperadminOrganisations = () => {
 
   const handleDeleteOrg = async () => {
     if (!selectedOrg?.id) return;
+    // BUG-050: guard against accidental deletion — the typed name must match.
+    if (deleteConfirmText.trim() !== (selectedOrg?.name || '').trim()) return;
     setActionLoading(true);
     try {
       await deleteOrganisation(selectedOrg.id);
       toast.success('Organisation deleted. You can recreate it with the same admin email/mobile.');
       await loadOrgs();
       setIsDeleteModalOpen(false);
+      setDeleteConfirmText('');
     } catch (e) {
       toast.error(e?.response?.data?.message || e.message || 'Delete failed');
     } finally {
@@ -433,14 +438,20 @@ const SuperadminOrganisations = () => {
       {/* Delete Confirmation Modal */}
       <Modal
         isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
+        onClose={() => { setIsDeleteModalOpen(false); setDeleteConfirmText(''); }}
         title="Delete Organisation"
         subtitle="This action cannot be undone."
         maxWidth="max-w-md"
         footer={
           <div className="flex justify-end gap-2 w-full">
-            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)} className="px-5 py-2 text-[10px] font-bold uppercase tracking-widest">Cancel</Button>
-            <Button className="bg-red-500 hover:bg-red-600 border-red-600 px-6 py-2 text-[10px] font-bold uppercase tracking-widest" onClick={handleDeleteOrg}>Delete</Button>
+            <Button variant="secondary" onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmText(''); }} className="px-5 py-2 text-[10px] font-bold uppercase tracking-widest">Cancel</Button>
+            <Button
+              className="bg-red-500 hover:bg-red-600 border-red-600 px-6 py-2 text-[10px] font-bold uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={actionLoading || deleteConfirmText.trim() !== (selectedOrg?.name || '').trim()}
+              onClick={handleDeleteOrg}
+            >
+              Delete
+            </Button>
           </div>
         }
       >
@@ -449,6 +460,21 @@ const SuperadminOrganisations = () => {
            <p className="text-[10px] text-red-800 font-bold uppercase leading-tight">
               Delete {selectedOrg?.name}? All data will be permanently removed.
            </p>
+        </div>
+        {/* BUG-050: type-to-confirm gate (AWS/Azure style) */}
+        <div className="mt-4">
+          <label htmlFor="delete-org-confirm" className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">
+            Type <span className="text-red-600">{selectedOrg?.name}</span> to confirm
+          </label>
+          <input
+            id="delete-org-confirm"
+            type="text"
+            autoComplete="off"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder={selectedOrg?.name || 'Organisation name'}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+          />
         </div>
       </Modal>
 

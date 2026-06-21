@@ -41,9 +41,12 @@ export const saveImpersonatorSession = (token, user) => {
 export const getImpersonatorSession = () => {
   const token = sessionStorage.getItem(IMPERSONATOR_TOKEN_KEY);
   const userRaw = sessionStorage.getItem(IMPERSONATOR_USER_KEY);
-  if (!token || !userRaw) return null;
+  // BUG-049: the impersonation handoff intentionally keeps token null (it uses an
+  // HttpOnly cookie), so the session must be retrievable on userRaw alone.
+  // Requiring a token here made "return to platform" permanently unreachable.
+  if (!userRaw) return null;
   try {
-    return { token, user: JSON.parse(userRaw) };
+    return { token: token || null, user: JSON.parse(userRaw) };
   } catch {
     return null;
   }

@@ -360,6 +360,18 @@ export default function AdminUsers() {
     };
     const newStatus = statusMap[user.status] || 'active';
 
+    // BUG-063: deactivating an admin is destructive (can cause lockout). Require an
+    // explicit confirmation before deactivating, with a stronger warning when the
+    // admin is deactivating their own account.
+    if (newStatus === 'inactive') {
+      const isSelf = currentUser?.id === user.id;
+      const who = isSelf
+        ? 'YOUR OWN account. You may be logged out and lose access.'
+        : `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'this admin';
+      const confirmed = window.confirm(`Deactivate ${who}?\n\nThis admin will no longer be able to sign in. Continue?`);
+      if (!confirmed) return;
+    }
+
     try {
       const res = await updateAdmin(user.id, {
         first_name: user.first_name,

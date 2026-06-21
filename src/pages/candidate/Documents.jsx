@@ -87,7 +87,10 @@ const Documents = () => {
   const { downloadDocument } = useDownloads();
 
   const loadDocs = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

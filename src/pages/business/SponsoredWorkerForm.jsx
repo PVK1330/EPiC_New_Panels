@@ -13,8 +13,7 @@ import {
   Building,
   Briefcase,
   Building2,
-  DollarSign,
-  IdCard,
+  PoundSterling,
   FileText,
   LayoutDashboard,
   Hash,
@@ -22,6 +21,7 @@ import {
   Loader2
 } from "lucide-react";
 import { addSponsoredWorker } from "../../services/sponsoredWorkerApi";
+import { getCosSummary } from "../../services/licenceApi";
 import { useToast } from "../../context/ToastContext";
 import { fetchVisaTypeOptions } from "../../services/visaTypeApi";
 import DatePicker from "../../components/DatePicker";
@@ -32,7 +32,6 @@ const SponsoredWorkerForm = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [previousVisa, setPreviousVisa] = useState("no");
   const [visaTypeOptions, setVisaTypeOptions] = useState([]);
   const { ready: licenceReady, licenceStatus, canSponsorWorkers } = useSponsorLicence();
   const workerBlocked = licenceReady && !canSponsorWorkers;
@@ -91,6 +90,27 @@ const SponsoredWorkerForm = () => {
       return;
     }
     setLoading(true);
+
+    // BUG-091: block creating a sponsored worker when no CoS allocation remains.
+    // Previously only licence-active was checked, so a sponsor could silently
+    // exceed their CoS quota (a Home Office compliance issue). Backend should also
+    // enforce, but this gives the sponsor a clear pre-submit message.
+    try {
+      const summaryRes = await getCosSummary();
+      const summary = summaryRes?.data?.data?.summary || {};
+      const remaining = Number(summary.remaining);
+      if (Number.isFinite(remaining) && remaining <= 0) {
+        showToast(
+          "You have no Certificates of Sponsorship (CoS) remaining. Request more CoS before adding a worker.",
+          "error"
+        );
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // If the summary can't be loaded, don't hard-block here — the backend still
+      // enforces the quota. Proceed and let the server reject if over-allocated.
+    }
 
     try {
       const response = await addSponsoredWorker(formData);
@@ -415,7 +435,7 @@ const SponsoredWorkerForm = () => {
                   className={inputStyle}
                   required
                 />
-                <DollarSign className="absolute right-3 top-10 text-gray-400" />
+                <PoundSterling className="absolute right-3 top-10 text-gray-400" />
               </div>
 
             </div>
@@ -493,29 +513,31 @@ const SponsoredWorkerForm = () => {
 
             <div className="space-y-4">
 
-              <div className="flex gap-6">
-                <label className="flex gap-2">
-                  <input
-                    type="radio"
-                    name="previousVisa"
-                    value="yes"
-                    checked={formData.previousVisa === "yes"}
-                    onChange={handleInputChange}
-                  />
-                  Yes
-                </label>
-
-                <label className="flex gap-2">
-                  <input
-                    type="radio"
-                    name="previousVisa"
-                    value="no"
-                    checked={formData.previousVisa === "no"}
-                    onChange={handleInputChange}
-                  />
-                  No
-                </label>
-              </div>
+              <fieldset>
+                <legend className="text-xs font-bold text-gray-700 mb-2">Has the applicant previously held a UK visa?</legend>
+                <div className="flex gap-6 mt-2">
+                  <label className="flex gap-2">
+                    <input
+                      type="radio"
+                      name="previousVisa"
+                      value="yes"
+                      checked={formData.previousVisa === "yes"}
+                      onChange={handleInputChange}
+                    />
+                    Yes
+                  </label>
+                  <label className="flex gap-2">
+                    <input
+                      type="radio"
+                      name="previousVisa"
+                      value="no"
+                      checked={formData.previousVisa === "no"}
+                      onChange={handleInputChange}
+                    />
+                    No
+                  </label>
+                </div>
+              </fieldset>
 
               <div className="relative">
                 <label className={labelStyle}>Notes</label>

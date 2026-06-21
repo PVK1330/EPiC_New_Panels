@@ -33,6 +33,7 @@ import {
   submitSponsorIntakeForm as submitIntakeFormApi,
   getMyLicenceApplications,
   getSponsorDispatchedDocuments,
+  downloadSponsorDispatchedDocument,
 } from "../../services/licenceApi";
 import { LICENCE_STAGES, STAGE_ROLES, getSponsorStageAction } from "../../constants/licenceStages";
 import { formatDate, formatDateTime } from "../../utils/datetime";
@@ -88,6 +89,33 @@ const LicenceProcess = () => {
   const [timelineFetched, setTimelineFetched] = useState(false);
   const [dispatchDocs, setDispatchDocs] = useState([]);
   const [dispatchDocsLoading, setDispatchDocsLoading] = useState(false);
+  const [downloadingDocId, setDownloadingDocId] = useState(null);
+
+  // Download a dispatched document through `api` (not a plain <a href>) so the CSRF
+  // token and org-slug headers are attached. Filename comes from Content-Disposition.
+  const handleDownloadDispatched = useCallback(async (doc) => {
+    if (!app?.id || !doc?.id) return;
+    setDownloadingDocId(doc.id);
+    try {
+      const res = await downloadSponsorDispatchedDocument(app.id, doc.id);
+      const cd = res.headers?.["content-disposition"] || "";
+      const match = /filename\*?=(?:UTF-8'')?["']?([^"';]+)/i.exec(cd);
+      const filename = match ? decodeURIComponent(match[1]) : (doc.documentName || `document-${doc.id}`);
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || "Download failed";
+      showToast({ message, variant: "danger" });
+    } finally {
+      setDownloadingDocId(null);
+    }
+  }, [app?.id, showToast]);
 
   useEffect(() => {
     let active = true;
@@ -869,13 +897,19 @@ const LicenceProcess = () => {
                       </p>
                       {doc.message && <p className="text-xs text-gray-500 mt-1 italic">"{doc.message}"</p>}
                     </div>
-                    <a
-                      href={`/api/business/licence/${app?.id}/dispatch-documents/${doc.id}/download`}
-                      download
-                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white text-xs font-black rounded-lg hover:bg-teal-700 transition-all active:scale-95"
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadDispatched(doc)}
+                      disabled={downloadingDocId === doc.id}
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white text-xs font-black rounded-lg hover:bg-teal-700 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <ArrowRight size={12} /> Download
-                    </a>
+                      {downloadingDocId === doc.id ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <ArrowRight size={12} />
+                      )}{" "}
+                      Download
+                    </button>
                   </div>
                 ))}
               </div>

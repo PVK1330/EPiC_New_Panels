@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { ClipboardCheck, Search, Upload, MessageSquare } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
@@ -23,24 +23,30 @@ export default function ComplianceReviewStatus() {
   const [busy, setBusy] = useState(false);
 
   const cfg = ENTITY_CONFIG[entity];
+  // HIGH-04: stable ref to track in-flight fetch so entity switches don't leak stale state
+  const cancelledRef = useRef(false);
 
-  const fetchItems = async () => {
+  // HIGH-04: useCallback so fetchItems is stable and can be a proper useEffect dep
+  const fetchItems = useCallback(async () => {
+    cancelledRef.current = false;
     try {
       setLoading(true);
       const res = await getSponsorItems(entity);
-      setItems(res?.data?.data || []);
+      if (!cancelledRef.current) setItems(res?.data?.data || []);
     } catch (err) {
-      showToast({ message: "Failed to load compliance items", variant: "danger" });
-      setItems([]);
+      if (!cancelledRef.current) {
+        showToast({ message: "Failed to load compliance items", variant: "danger" });
+        setItems([]);
+      }
     } finally {
-      setLoading(false);
+      if (!cancelledRef.current) setLoading(false);
     }
-  };
+  }, [entity, showToast]);
 
   useEffect(() => {
     fetchItems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entity]);
+    return () => { cancelledRef.current = true; };
+  }, [fetchItems]);
 
   const handleRespond = async ({ notes, evidence }) => {
     if (!respond.record) return;
@@ -49,7 +55,7 @@ export default function ComplianceReviewStatus() {
       await sponsorRespond(entity, respond.record.id, { notes, evidence });
       showToast({ message: "Response submitted for re-review", variant: "success" });
       setRespond({ open: false, record: null });
-      fetchItems();
+      await fetchItems();
     } catch (err) {
       showToast({ message: err?.response?.data?.message || "Failed to submit response", variant: "danger" });
     } finally {
@@ -97,6 +103,7 @@ export default function ComplianceReviewStatus() {
         <Search className="absolute left-3 top-2.5 text-gray-300" size={16} />
         <input
           type="text"
+          aria-label="Search compliance submissions"
           placeholder="Search your submissions..."
           className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-2xl text-sm font-bold shadow-sm focus:border-primary/20 outline-none"
           value={search}

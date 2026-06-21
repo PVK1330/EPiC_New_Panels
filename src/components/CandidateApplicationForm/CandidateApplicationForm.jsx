@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   APPLICATION_STEP_LABELS,
@@ -476,6 +476,10 @@ export default function CandidateApplicationForm({
   const [step, setStep] = useState(0);
   const [showSecondParent, setShowSecondParent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // BUG-107: a synchronous ref guard against double-submit. setIsSubmitting is
+  // async, so the disabled button alone can't stop a rapid second click firing a
+  // duplicate submitApplication() before React re-renders.
+  const submitInFlightRef = useRef(false);
   const [formErrors, setFormErrors] = useState({});
   const [draftLoading, setDraftLoading] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
@@ -766,13 +770,22 @@ export default function CandidateApplicationForm({
     // Candidate variant  required fields relaxed to allow fluid navigation and submission
     setFormErrors({});
 
+    // BUG-107: block duplicate submissions from rapid double-clicks.
+    if (submitInFlightRef.current) return;
+    submitInFlightRef.current = true;
+
     // Sanitize date fields  convert empty strings to null
     const payload = sanitizeForApi(cleaned);
 
     setIsSubmitting(true);
     setApiError(null);
-    const result = await submitApplication(payload);
-    setIsSubmitting(false);
+    let result;
+    try {
+      result = await submitApplication(payload);
+    } finally {
+      setIsSubmitting(false);
+      submitInFlightRef.current = false;
+    }
 
     if (result.ok) {
       navigate("/candidate/dashboard");

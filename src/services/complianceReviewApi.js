@@ -28,9 +28,14 @@ export const ENTITY_CONFIG = {
     reviewerBase: "/api/compliance-review/right-to-work",
     isDocument: false,
     statusField: "reviewStatus",
-    sponsorList: null, // per-worker — no flat sponsor list
+    sponsorList: "/api/business/right-to-work",
     title: (r) => `RTW Check #${r.id}`,
-    subtitle: (r) => `Ref: ${r.referenceNumber || "—"}`,
+    subtitle: (r) => {
+      const worker = r.worker;
+      const name = worker ? `${worker.first_name} ${worker.last_name}`.trim() : null;
+      const ref = r.referenceNumber || "—";
+      return name ? `${name} · Ref: ${ref}` : `Ref: ${ref}`;
+    },
   },
   "worker-events": {
     label: "Worker Events",

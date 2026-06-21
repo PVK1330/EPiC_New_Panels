@@ -313,8 +313,15 @@ export default function Pipeline() {
         transition={{ duration: 0.35 }}
       >
         {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-gray-500">Loading pipeline...</div>
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1 mt-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="shrink-0 w-[240px] animate-pulse">
+                <div className="h-8 bg-gray-200 rounded-xl mb-3" />
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <div key={j} className="h-24 bg-gray-100 rounded-xl mb-2 border border-gray-200" />
+                ))}
+              </div>
+            ))}
           </div>
         ) : (
           <>

@@ -18,10 +18,13 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (!user) return <Navigate to="/login" replace />;
 
+  // BUG-048: strict role gate. Previously, if the current path matched the user's
+  // own dashboard route we returned children even when the role was not allowed —
+  // that let a wrong-role user through via URL manipulation. Always redirect a
+  // disallowed role to their own dashboard (or /login if that can't be resolved),
+  // never render the gated children.
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    const target = getDashboardRouteForUser(user);
-    const currentPath = window.location.pathname.replace(/\/$/, '');
-    if (currentPath === target.replace(/\/$/, '')) return children;
+    const target = getDashboardRouteForUser(user) || '/login';
     return <Navigate to={target} replace />;
   }
 

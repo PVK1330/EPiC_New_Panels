@@ -34,6 +34,7 @@ import {
   ClipboardCheck,
   BadgeCheck,
   CircleDot,
+  Upload,
 } from "lucide-react";
 import {
   getAllLicenceApplications,
@@ -143,6 +144,15 @@ const AdminLicenceApplications = () => {
     setCredForm({ ukviPortalUserId: "", ukviPortalPassword: "", smsPortalUsername: "" });
     setShowPwd(false);
     setGrantForm({ expiryDate: "", cosAllocation: "" });
+    setShowDispatch(false);
+    setSelectedApp(null);
+  };
+
+  // Closing the read-only "Request Details" side panel must also reset the
+  // dispatch form toggle — otherwise reopening any application shows the
+  // "Send Document" form expanded from a previous session.
+  const closeDetailsPanel = () => {
+    setShowDispatch(false);
     setSelectedApp(null);
   };
 
@@ -764,7 +774,7 @@ const AdminLicenceApplications = () => {
                       <p className="text-xs font-bold text-gray-400">Application ID: #{selectedApp?.id}</p>
                     </div>
                   </div>
-                  <button onClick={() => setSelectedApp(null)} className="p-2 text-gray-400 hover:text-secondary transition-colors">
+                  <button onClick={closeDetailsPanel} className="p-2 text-gray-400 hover:text-secondary transition-colors">
                     <X size={20} />
                   </button>
                 </div>

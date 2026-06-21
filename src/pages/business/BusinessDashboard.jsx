@@ -236,19 +236,19 @@ export default function BusinessDashboard() {
   return (
     <div className="space-y-5 pb-6">
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
-            <LayoutDashboard className="text-red-600" size={26} />
-            Business Dashboard
-          </h1>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
+          <LayoutDashboard className="text-red-600" size={26} />
+          Business Dashboard
+        </h1>
+        <div className="flex flex-wrap items-center gap-3 mt-0.5">
+          <p className="text-primary font-bold text-sm">
+            Manage your business operations and workers.
+            {dashboard?.licenceNumber && (
+              <span className="ml-2 text-gray-500">• Licence No. {dashboard.licenceNumber}</span>
+            )}
+          </p>
           {dashboard?.licenceStatus && <LicenceStatusBadge status={dashboard.licenceStatus} />}
         </div>
-        <p className="text-primary font-bold text-sm mt-0.5">
-          Manage your business operations and workers.
-          {dashboard?.licenceNumber && (
-            <span className="ml-2 text-gray-500">• Licence No. {dashboard.licenceNumber}</span>
-          )}
-        </p>
       </motion.div>
 
       {dashboard && dashboard.licenceActive === false && (

@@ -198,28 +198,42 @@ const BusinessCompliance = () => {
         </p>
       </motion.div>
 
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {stats.map(({ label, value, icon: Icon, bg, color }) => (
-          <motion.div
-            key={label}
-            variants={cardVariants}
-            className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm flex items-center gap-3"
-          >
-            <div className={`p-2 ${bg} rounded-lg`}>
-              <Icon className={`${color} h-5 w-5`} />
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm flex items-center gap-3 animate-pulse">
+              <div className="p-2 bg-gray-200 rounded-lg w-9 h-9 shrink-0" />
+              <div className="flex-1">
+                <div className="h-2 bg-gray-200 rounded w-2/3 mb-2" />
+                <div className="h-5 bg-gray-200 rounded w-1/3" />
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">{label}</p>
-              <p className="text-xl font-black text-secondary">{value}</p>
-            </div>
-          </motion.div>
-        ))}
-      </motion.div>
+          ))}
+        </div>
+      ) : (
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {stats.map(({ label, value, icon: Icon, bg, color }) => (
+            <motion.div
+              key={label}
+              variants={cardVariants}
+              className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm flex items-center gap-3"
+            >
+              <div className={`p-2 ${bg} rounded-lg`}>
+                <Icon className={`${color} h-5 w-5`} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">{label}</p>
+                <p className="text-xl font-black text-secondary">{value}</p>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-4">
         <motion.div
