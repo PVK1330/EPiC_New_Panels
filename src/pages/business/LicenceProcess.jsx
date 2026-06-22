@@ -20,6 +20,11 @@ import {
   FolderOpen,
   Info,
   Save,
+  Eye,
+  EyeOff,
+  Copy,
+  Globe,
+  Mail,
 } from "lucide-react";
 import LicenceStages from "../../components/licence/LicenceStages";
 import IntakeDocumentChecklist from "../../components/licence/IntakeDocumentChecklist";
@@ -28,6 +33,7 @@ import { listLicenceV2Applications, getLicenceV2Application, getLicenceApplicati
 import { getLicenceStages, completeLicenceStageTask } from "../../services/licenceStageApi";
 import {
   confirmSponsorGovCredentials,
+  getSponsorGovCredentials,
   getSponsorIntakeSummary,
   updateSponsorIntakeForm,
   submitSponsorIntakeForm as submitIntakeFormApi,
@@ -38,6 +44,7 @@ import {
 import { LICENCE_STAGES, STAGE_ROLES, getSponsorStageAction } from "../../constants/licenceStages";
 import { formatDate, formatDateTime } from "../../utils/datetime";
 import { useToast } from "../../context/ToastContext";
+import { getBusinessProfile } from "../../services/businessProfileApi";
 
 const TABS = [
   { id: "status",   label: "Status",           icon: BarChart3 },
@@ -79,10 +86,13 @@ const LicenceProcess = () => {
   const [loading, setLoading] = useState(true);
   const [credLoading, setCredLoading] = useState(false);
   const [credConfirmed, setCredConfirmed] = useState(false);
+  const [govCredentials, setGovCredentials] = useState(null);
+  const [showCredPwd, setShowCredPwd] = useState(false);
   const [intakeData, setIntakeData] = useState(null);
   const [intakeLoading, setIntakeLoading] = useState(false);
   const [intakeForm, setIntakeForm] = useState({});
   const [intakeSaving, setIntakeSaving] = useState(false);
+  const [intakeErrors, setIntakeErrors] = useState({});
   const [completingStage, setCompletingStage] = useState(false);
   const [timeline, setTimeline] = useState([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
@@ -183,8 +193,74 @@ const LicenceProcess = () => {
     return () => { active = false; };
   }, [app?.id]);
 
+  // After intake loads, patch any still-blank fields from the business profile
+  // so the sponsor doesn't have to re-type data they already registered.
+  useEffect(() => {
+    if (!intakeData) return;
+    let active = true;
+    (async () => {
+      try {
+        const res = await getBusinessProfile();
+        if (!active) return;
+        const profile = res?.data?.data?.profile;
+        if (!profile) return;
+        setIntakeForm((prev) => {
+          const patch = {};
+          if (!prev.companyWebsite && profile.website) patch.companyWebsite = profile.website;
+          const addrEmpty =
+            !prev.premisesAddress?.line1 &&
+            !prev.premisesAddress?.city &&
+            !prev.premisesAddress?.postcode;
+          if (addrEmpty) {
+            const line1 = profile.tradingAddress || profile.registeredAddress || "";
+            if (line1) {
+              patch.premisesAddress = {
+                ...(prev.premisesAddress || {}),
+                line1,
+                city: profile.city || prev.premisesAddress?.city || "",
+                county: profile.state || prev.premisesAddress?.county || "",
+                postcode: profile.postalCode || prev.premisesAddress?.postcode || "",
+                country: profile.country || prev.premisesAddress?.country || "",
+              };
+            }
+          }
+          return Object.keys(patch).length ? { ...prev, ...patch } : prev;
+        });
+      } catch { /* best-effort */ }
+    })();
+    return () => { active = false; };
+  }, [intakeData]);
+
+  const validateIntakeForm = () => {
+    const e = {};
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const urlRe = /^https?:\/\/.+/i;
+    if (!intakeForm.tradingName?.trim())                  e.tradingName = "Trading Name is required";
+    if (!intakeForm.owningLimitedCompany?.trim())         e.owningLimitedCompany = "Owning Limited Company is required";
+    if (!intakeForm.namedPersonOnLicence?.trim())         e.namedPersonOnLicence = "Named Person on Licence is required";
+    if (!intakeForm.phoneNumber?.trim())                  e.phoneNumber = "Phone Number is required";
+    if (!intakeForm.niNumber?.trim())                     e.niNumber = "NI Number is required";
+    if (!intakeForm.emailAddress?.trim())                 e.emailAddress = "Email Address is required";
+    else if (!emailRe.test(intakeForm.emailAddress))      e.emailAddress = "Enter a valid email address";
+    const website = intakeForm.companyWebsite?.trim();
+    if (!website)                                          e.companyWebsite = "Company Website is required";
+    else if (!urlRe.test(website) && !/^www\./i.test(website)) e.companyWebsite = "Enter a valid URL (e.g. https://example.com or www.example.com)";
+    const numEmpty = (v) => v === null || v === undefined || v === "";
+    if (numEmpty(intakeForm.totalEmployees))                    e.totalEmployees = "Total Employees is required";
+    if (numEmpty(intakeForm.employeesUnderImmigrationRules))    e.employeesUnderImmigrationRules = "This field is required";
+    if (numEmpty(intakeForm.numberOfCosRequired))               e.numberOfCosRequired = "Number of CoS Required is required";
+    if (!intakeForm.premisesAddress?.line1?.trim())       e.premisesAddress_line1 = "Address Line 1 is required";
+    if (!intakeForm.premisesAddress?.city?.trim())        e.premisesAddress_city = "City is required";
+    if (!intakeForm.premisesAddress?.postcode?.trim())    e.premisesAddress_postcode = "Postcode is required";
+    if (!intakeForm.premisesAddress?.country?.trim())     e.premisesAddress_country = "Country is required";
+    if (!intakeForm.jobTitlesRequired?.length)            e.jobTitlesRequired = "At least one job title is required";
+    return e;
+  };
+
   const handleIntakeSave = async () => {
     if (!app?.id || intakeSaving) return;
+    const errs = validateIntakeForm();
+    if (Object.keys(errs).length) setIntakeErrors(errs);
     try {
       setIntakeSaving(true);
       await updateSponsorIntakeForm(app.id, intakeForm);
@@ -200,6 +276,12 @@ const LicenceProcess = () => {
 
   const handleIntakeSubmit = async () => {
     if (!app?.id || intakeSaving) return;
+    const errs = validateIntakeForm();
+    if (Object.keys(errs).length) {
+      setIntakeErrors(errs);
+      showToast({ message: "Please fix the errors in the form before submitting.", variant: "danger" });
+      return;
+    }
     try {
       setIntakeSaving(true);
       await updateSponsorIntakeForm(app.id, intakeForm);
@@ -227,6 +309,18 @@ const LicenceProcess = () => {
       if (summary?.form) setIntakeForm(summary.form);
     } catch { /* ignore */ }
   }, [app?.id]);
+
+  // Fetch UKVI portal credentials once the application reaches Government Processing
+  useEffect(() => {
+    if (!app?.id) return;
+    const GOV_STATUSES = ["Government Processing", "Decision Pending", "Approved"];
+    if (!GOV_STATUSES.includes(app.status)) return;
+    let active = true;
+    getSponsorGovCredentials(app.id)
+      .then((res) => { if (active) setGovCredentials(res?.data?.data || null); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [app?.id, app?.status]);
 
   // Derive credentials-confirmed state from stages data when available
   const credConfirmedFromStages = useMemo(() => {
@@ -566,40 +660,163 @@ const LicenceProcess = () => {
                   )}
                 </div>
 
-                {/* ── UKVI Portal Credentials Confirmation ── */}
-                {app.status === "Government Processing" && (
-                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                    <div className="flex items-start gap-3">
-                      <div className="p-1.5 bg-amber-50 rounded-lg shrink-0 mt-0.5">
-                        <Key className="text-amber-500" size={14} />
+                {/* ── UKVI Portal Credentials ── */}
+                {["Government Processing", "Decision Pending", "Approved"].includes(app.status) && (
+                  <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-4 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-amber-100 rounded-lg shrink-0">
+                        <Key className="text-amber-600" size={14} />
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-black text-secondary mb-1">UKVI Online Application Portal Credentials</p>
-                        <p className="text-xs font-bold text-gray-500 mb-3 leading-relaxed">
-                          Your caseworker will share UKVI portal login credentials via your registered contact details.
-                          Once you receive them, confirm below — this lets your case team know you have access and can progress to the next stage.
-                        </p>
-                        {isCredConfirmed ? (
-                          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-700">
-                            <CheckCircle2 size={14} className="shrink-0" />
-                            <span className="text-[10px] font-black">Credentials receipt confirmed — thank you</span>
+                      <p className="text-sm font-black text-secondary">UKVI Online Application Portal Credentials</p>
+                    </div>
+
+                    {govCredentials?.ukviPortalUserId ? (
+                      <div className="space-y-3">
+                        <p className="text-xs font-bold text-gray-500">Your UKVI portal login credentials are shown below. Keep these secure.</p>
+
+                        {/* Username row */}
+                        <div className="bg-white rounded-xl border border-amber-100 p-3">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Portal Username / User ID</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-black text-secondary font-mono">{govCredentials.ukviPortalUserId}</p>
+                            <button
+                              onClick={() => navigator.clipboard?.writeText(govCredentials.ukviPortalUserId)}
+                              className="text-gray-400 hover:text-primary transition shrink-0"
+                              title="Copy username"
+                            >
+                              <Copy size={13} />
+                            </button>
                           </div>
-                        ) : (
+                        </div>
+
+                        {/* Password row */}
+                        {govCredentials.ukviPortalPassword && (
+                          <div className="bg-white rounded-xl border border-amber-100 p-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Temporary Password</p>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-black text-secondary font-mono">
+                                {showCredPwd ? govCredentials.ukviPortalPassword : "•".repeat(govCredentials.ukviPortalPassword.length)}
+                              </p>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  onClick={() => setShowCredPwd((v) => !v)}
+                                  className="text-gray-400 hover:text-primary transition"
+                                  title={showCredPwd ? "Hide" : "Show"}
+                                >
+                                  {showCredPwd ? <EyeOff size={13} /> : <Eye size={13} />}
+                                </button>
+                                <button
+                                  onClick={() => navigator.clipboard?.writeText(govCredentials.ukviPortalPassword)}
+                                  className="text-gray-400 hover:text-primary transition"
+                                  title="Copy password"
+                                >
+                                  <Copy size={13} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* SMS reference */}
+                        {govCredentials.smsPortalUsername && (
+                          <div className="bg-white rounded-xl border border-amber-100 p-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">SMS Reference</p>
+                            <p className="text-sm font-black text-secondary font-mono">{govCredentials.smsPortalUsername}</p>
+                          </div>
+                        )}
+
+                        {/* Confirm receipt */}
+                        <div className="pt-1">
+                          {isCredConfirmed ? (
+                            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-700">
+                              <CheckCircle2 size={14} className="shrink-0" />
+                              <span className="text-[10px] font-black">Credentials receipt confirmed — thank you</span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={handleConfirmCredentials}
+                              disabled={credLoading}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-black text-white transition shadow-sm disabled:opacity-60 active:scale-95"
+                            >
+                              {credLoading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                              Confirm Credentials Received
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold text-gray-500 leading-relaxed">
+                          Your caseworker will prepare UKVI portal login credentials and share them with you via email and this portal.
+                          Once available they will appear here — you can also confirm receipt below.
+                        </p>
+                        {!isCredConfirmed && app.status === "Government Processing" && (
                           <button
                             onClick={handleConfirmCredentials}
                             disabled={credLoading}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-black text-white transition shadow-sm disabled:opacity-60 active:scale-95"
                           >
-                            {credLoading
-                              ? <Loader2 size={13} className="animate-spin" />
-                              : <Check size={13} />}
+                            {credLoading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
                             Confirm Credentials Received
                           </button>
                         )}
+                        {isCredConfirmed && (
+                          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-700">
+                            <CheckCircle2 size={14} className="shrink-0" />
+                            <span className="text-[10px] font-black">Credentials receipt confirmed — thank you</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Your EPiC Portal Access ── */}
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-primary/10 rounded-lg shrink-0">
+                      <Globe className="text-primary" size={14} />
+                    </div>
+                    <p className="text-sm font-black text-secondary">Your EPiC Portal Access</p>
+                  </div>
+                  <p className="text-xs font-bold text-gray-500">
+                    Your EPiC portal credentials were sent to your registered email when your account was created.
+                    Use them to log in and track your application at any time.
+                  </p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {intakeForm.emailAddress && (
+                      <div className="bg-white rounded-xl border border-primary/10 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Login Email</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-black text-secondary truncate">{intakeForm.emailAddress}</p>
+                          <button
+                            onClick={() => navigator.clipboard?.writeText(intakeForm.emailAddress)}
+                            className="text-gray-400 hover:text-primary transition shrink-0"
+                            title="Copy email"
+                          >
+                            <Copy size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="bg-white rounded-xl border border-primary/10 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Portal URL</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-black text-primary truncate">{window.location.origin}</p>
+                        <button
+                          onClick={() => navigator.clipboard?.writeText(window.location.origin)}
+                          className="text-gray-400 hover:text-primary transition shrink-0"
+                          title="Copy URL"
+                        >
+                          <Copy size={12} />
+                        </button>
                       </div>
                     </div>
                   </div>
-                )}
+                  <p className="text-[10px] font-bold text-gray-400">
+                    Can't find your credentials? Contact your caseworker to request a new copy.
+                  </p>
+                </div>
 
                 {/* ── UKVI Submission details ── */}
                 {app.governmentSubmissionRef && (
@@ -745,7 +962,7 @@ const LicenceProcess = () => {
                 <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-black text-secondary">Sponsor Information Form</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">Complete all 12 fields before submitting</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Most fields are pre-filled from your business profile. You must manually enter <span className="font-black text-secondary">NI Number</span>, <span className="font-black text-secondary">Total Employees</span>, and <span className="font-black text-secondary">Employees Under Immigration Rules</span>.</p>
                   </div>
                   {intakeData?.form?.isComplete && (
                     <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Submitted</span>
@@ -765,61 +982,84 @@ const LicenceProcess = () => {
                     { key: "numberOfCosRequired",           label: "Number of CoS Required",              type: "number" },
                   ].map(({ key, label, type }) => (
                     <div key={key}>
-                      <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">{label}</label>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
+                        {label} <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type={type}
                         value={intakeForm[key] || ""}
-                        onChange={(e) => setIntakeForm((f) => ({ ...f, [key]: e.target.value }))}
+                        onChange={(e) => {
+                          setIntakeForm((f) => ({ ...f, [key]: e.target.value }));
+                          if (intakeErrors[key]) setIntakeErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
+                        }}
                         disabled={intakeData?.form?.isComplete}
-                        className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400"
+                        className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400 ${intakeErrors[key] ? "border-red-400 bg-red-50" : "border-gray-200"}`}
                       />
+                      {intakeErrors[key] && <p className="text-[11px] text-red-500 font-bold mt-1">{intakeErrors[key]}</p>}
                     </div>
                   ))}
 
                   {/* Premises Address */}
                   <div className="sm:col-span-2">
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Premises Address</label>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
+                      Premises Address <span className="text-red-500">*</span>
+                    </label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { sub: "line1", ph: "Address Line 1" },
-                        { sub: "line2", ph: "Address Line 2 (optional)" },
-                        { sub: "city",  ph: "City" },
-                        { sub: "county",ph: "County" },
-                        { sub: "postcode", ph: "Postcode" },
-                        { sub: "country",  ph: "Country" },
-                      ].map(({ sub, ph }) => (
-                        <input
-                          key={sub}
-                          type="text"
-                          placeholder={ph}
-                          value={intakeForm.premisesAddress?.[sub] || ""}
-                          onChange={(e) => setIntakeForm((f) => ({
-                            ...f,
-                            premisesAddress: { ...(f.premisesAddress || {}), [sub]: e.target.value },
-                          }))}
-                          disabled={intakeData?.form?.isComplete}
-                          className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400"
-                        />
-                      ))}
+                        { sub: "line1",    ph: "Address Line 1",          required: true },
+                        { sub: "line2",    ph: "Address Line 2 (optional)", required: false },
+                        { sub: "city",     ph: "City",                    required: true },
+                        { sub: "county",   ph: "County (optional)",       required: false },
+                        { sub: "postcode", ph: "Postcode",                required: true },
+                        { sub: "country",  ph: "Country",                 required: true },
+                      ].map(({ sub, ph, required }) => {
+                        const errKey = `premisesAddress_${sub}`;
+                        return (
+                          <div key={sub}>
+                            <input
+                              type="text"
+                              placeholder={ph}
+                              value={intakeForm.premisesAddress?.[sub] || ""}
+                              onChange={(e) => {
+                                setIntakeForm((f) => ({
+                                  ...f,
+                                  premisesAddress: { ...(f.premisesAddress || {}), [sub]: e.target.value },
+                                }));
+                                if (intakeErrors[errKey]) setIntakeErrors((prev) => { const n = { ...prev }; delete n[errKey]; return n; });
+                              }}
+                              disabled={intakeData?.form?.isComplete}
+                              className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400 ${intakeErrors[errKey] ? "border-red-400 bg-red-50" : "border-gray-200"}`}
+                            />
+                            {intakeErrors[errKey] && <p className="text-[11px] text-red-500 font-bold mt-1">{intakeErrors[errKey]}</p>}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
                   {/* Job Titles */}
                   <div className="sm:col-span-2">
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">
-                      Job Titles Required <span className="text-gray-400 normal-case">(comma-separated)</span>
+                      Job Titles Required <span className="text-red-500">*</span> <span className="text-gray-400 normal-case">(comma-separated)</span>
                     </label>
                     <input
                       type="text"
                       value={Array.isArray(intakeForm.jobTitlesRequired) ? intakeForm.jobTitlesRequired.join(", ") : (intakeForm.jobTitlesRequired || "")}
-                      onChange={(e) => setIntakeForm((f) => ({
-                        ...f,
-                        jobTitlesRequired: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                      }))}
+                      onChange={(e) => {
+                        setIntakeForm((f) => ({ ...f, jobTitlesRequired: e.target.value }));
+                        if (intakeErrors.jobTitlesRequired) setIntakeErrors((prev) => { const n = { ...prev }; delete n.jobTitlesRequired; return n; });
+                      }}
+                      onBlur={(e) => {
+                        setIntakeForm((f) => ({
+                          ...f,
+                          jobTitlesRequired: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                        }));
+                      }}
                       disabled={intakeData?.form?.isComplete}
                       placeholder="e.g. Software Engineer, Product Manager"
-                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400"
+                      className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400 ${intakeErrors.jobTitlesRequired ? "border-red-400 bg-red-50" : "border-gray-200"}`}
                     />
+                    {intakeErrors.jobTitlesRequired && <p className="text-[11px] text-red-500 font-bold mt-1">{intakeErrors.jobTitlesRequired}</p>}
                   </div>
                 </div>
 

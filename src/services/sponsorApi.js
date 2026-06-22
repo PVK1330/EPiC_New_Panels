@@ -15,6 +15,10 @@ export const toggleSponsorStatus = (id) =>
 export const resetSponsorPassword = (id, data) =>
   api.patch(`/api/sponsors/${id}/reset-password`, data);
 
+// Generates a new password and re-sends the EPiC portal welcome email to the sponsor
+export const resendSponsorCredentials = (id) =>
+  api.post(`/api/sponsors/${id}/resend-credentials`);
+
 export const deleteSponsor = (id) => api.delete(`/api/sponsors/${id}`);
 
 export const exportSponsors = (params = {}) =>

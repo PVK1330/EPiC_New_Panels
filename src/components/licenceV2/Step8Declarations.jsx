@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CheckCircle2, AlertTriangle, Loader2, Send } from "lucide-react";
+import DatePicker from "../DatePicker";
 
 const inp = "w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20";
 const Field = ({ label, required, children }) => (
@@ -57,7 +58,13 @@ export default function Step8Declarations({ data, onChange, onBack, onSubmit, su
           <input value={dec.signatoryRole || ""} onChange={(e) => set("signatoryRole", e.target.value)} className={inp} placeholder="e.g. Director" />
         </Field>
         <Field label="Date of Signature" required>
-          <input type="date" value={dec.signedDate || ""} onChange={(e) => set("signedDate", e.target.value)} className={inp} />
+          <DatePicker
+            name="signedDate"
+            value={dec.signedDate || ""}
+            onChange={(e) => set("signedDate", e.target.value)}
+            placeholder="Select signature date"
+            max={new Date().toISOString().split("T")[0]}
+          />
         </Field>
       </div>
 

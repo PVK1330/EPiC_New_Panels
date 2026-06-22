@@ -511,22 +511,32 @@ const LicenceStatus = () => {
                         </td>
                         <td className="px-3 py-2 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => {
-                                if (isV2) {
-                                  if (app.status === "Draft" || app.status === "Information Requested") {
-                                    navigate(`/business/apply-licence-v2?draft=${app.id}`);
-                                  } else {
-                                    navigate("/business/licence-process");
-                                  }
-                                } else {
-                                  handleEditClick(app);
-                                }
-                              }}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-black text-primary hover:bg-primary hover:text-white transition shadow-sm"
-                            >
-                              <PencilLine size={12} /> {isV2 ? "View" : "Edit"}
-                            </button>
+                            {(() => {
+                              const isDraftOrInfo = app.status === "Draft" || app.status === "Information Requested";
+                              const canEdit = !isV2 || isDraftOrInfo;
+                              const BtnIcon = canEdit ? PencilLine : Eye;
+                              const btnLabel = isV2
+                                ? (app.status === "Draft" ? "Edit Draft" : isDraftOrInfo ? "Edit" : "View")
+                                : "Edit";
+                              return (
+                                <button
+                                  onClick={() => {
+                                    if (isV2) {
+                                      if (isDraftOrInfo) {
+                                        navigate(`/business/apply-licence-v2?draft=${app.id}`);
+                                      } else {
+                                        navigate("/business/licence-process");
+                                      }
+                                    } else {
+                                      handleEditClick(app);
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-black text-primary hover:bg-primary hover:text-white transition shadow-sm"
+                                >
+                                  <BtnIcon size={12} /> {btnLabel}
+                                </button>
+                              );
+                            })()}
                             <button
                               onClick={() => handleDelete(app.id)}
                               className="inline-flex items-center rounded-lg bg-red-50 px-2 py-1.5 text-red-400 hover:bg-red-500 hover:text-white transition shadow-sm"

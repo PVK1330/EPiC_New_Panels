@@ -154,6 +154,12 @@ export default function ApplyLicenceV2() {
   const [syncing, setSyncing] = useState(false);
   const [personnelSyncedAt, setPersonnelSyncedAt] = useState(null);
   const submitInFlight = useRef(false);
+  // Track whether this was a brand-new draft (created by startNew) vs a resumed one
+  const draftIsNew = useRef(false);
+  // Track whether any saves have been made — if not, delete the draft on unmount
+  const hasChanges = useRef(false);
+  const appIdRef = useRef(null);
+  const phaseRef = useRef("loading");
 
   const BLOCKING_STATUSES = ["Pending", "Under Review", "Government Processing", "Decision Pending", "Information Requested"];
 
@@ -175,11 +181,27 @@ export default function ApplyLicenceV2() {
     return () => { cancelled = true; };
   }, []);
 
+  // Keep refs in sync for use in the unmount cleanup
+  useEffect(() => { appIdRef.current = appId; }, [appId]);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  // Delete ghost drafts: if the user opened a brand-new draft but navigated away
+  // without saving anything, clean it up so it doesn't pollute the history table.
+  useEffect(() => {
+    return () => {
+      if (draftIsNew.current && !hasChanges.current && appIdRef.current) {
+        deleteLicenceV2Draft(appIdRef.current).catch(() => {});
+      }
+    };
+  }, []);
+
   const startNew = async () => {
     setPhase("loading");
     try {
       const r = await createLicenceV2Draft();
       const app = r.data.data;
+      draftIsNew.current = true;
+      hasChanges.current = false;
       setAppId(app.id);
       setFormData(appToFormData(app));
       setCurrentStep(app.currentStep || 1);
@@ -235,6 +257,7 @@ export default function ApplyLicenceV2() {
 
   const handleSyncFromProfile = async () => {
     if (!appId || syncing) return;
+    hasChanges.current = true;
     setSyncing(true);
     try {
       const r = await syncPersonnelFromProfile(appId);
@@ -260,6 +283,7 @@ export default function ApplyLicenceV2() {
   };
 
   const saveStep = async (patch, nextStep) => {
+    hasChanges.current = true;
     setSaving(true);
     try {
       const body = { currentStep: nextStep, ...patch };
@@ -298,6 +322,7 @@ export default function ApplyLicenceV2() {
 
   const handleSubmit = async (patch) => {
     if (submitInFlight.current) return;
+    hasChanges.current = true;
     submitInFlight.current = true;
     setSubmitting(true); setSubmitErrors([]);
     try {

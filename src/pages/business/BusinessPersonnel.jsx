@@ -2,8 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { User, Plus, Users, Briefcase, Trash2, Eye, Pencil, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Modal from "../../components/Modal";
+import PhoneInput from "../../components/PhoneInput";
 import { getBusinessProfile, updateKeyPersonnel } from "../../services/businessProfileApi";
 import { useToast } from "../../context/ToastContext";
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const BusinessPersonnel = () => {
   const { showToast } = useToast();
@@ -81,9 +84,13 @@ const BusinessPersonnel = () => {
 
   const [personModal, setPersonModal] = useState({ open: false, mode: "view", target: null });
   const [personDraft, setPersonDraft] = useState({ name: "", phone: "", email: "", jobTitle: "", department: "" });
+  const [personErrors, setPersonErrors] = useState({});
+  const [personPhoneValid, setPersonPhoneValid] = useState(true);
 
   const [userModal, setUserModal] = useState({ open: false, mode: "add", index: null });
   const [userDraft, setUserDraft] = useState({ name: "", phone: "", email: "", jobTitle: "", department: "" });
+  const [userErrors, setUserErrors] = useState({});
+  const [userPhoneValid, setUserPhoneValid] = useState(true);
 
   const openPersonModal = (target, mode) => {
     const base =
@@ -101,16 +108,22 @@ const BusinessPersonnel = () => {
       jobTitle: base.jobTitle ?? "",
       department: base.department ?? "",
     });
+    setPersonErrors({});
+    setPersonPhoneValid(true);
     setPersonModal({ open: true, mode, target });
   };
 
   const closePersonModal = () => setPersonModal({ open: false, mode: "view", target: null });
 
   const savePersonDraft = async () => {
-    if (!personDraft.name?.trim() || !personDraft.email?.trim() || !personDraft.phone?.trim()) {
-      showToast({ message: "Please fill in all required fields (name, phone, email)", variant: "warning" });
-      return;
-    }
+    const newErrors = {};
+    if (!personDraft.name?.trim()) newErrors.name = "Name is required";
+    if (!personDraft.phone?.trim()) newErrors.phone = "Phone is required";
+    else if (!personPhoneValid) newErrors.phone = "Enter a valid phone number for the selected country";
+    if (!personDraft.email?.trim()) newErrors.email = "Email is required";
+    else if (!emailRegex.test(personDraft.email)) newErrors.email = "Enter a valid email address";
+    setPersonErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
     let updatedAuthorising = { ...authorisingOfficer };
     let updatedKeyContact = { ...keyContact };
@@ -152,16 +165,21 @@ const BusinessPersonnel = () => {
 
   const openAdd = () => {
     setUserDraft({ name: "", phone: "", email: "", jobTitle: "", department: "" });
+    setUserErrors({});
+    setUserPhoneValid(true);
     setUserModal({ open: true, mode: "add", index: null });
   };
 
   const openView = (index) => {
     setUserDraft({ ...level1Users[index] });
+    setUserErrors({});
     setUserModal({ open: true, mode: "view", index });
   };
 
   const openEdit = (index) => {
     setUserDraft({ ...level1Users[index] });
+    setUserErrors({});
+    setUserPhoneValid(true);
     setUserModal({ open: true, mode: "edit", index });
   };
 
@@ -182,10 +200,14 @@ const BusinessPersonnel = () => {
   };
 
   const saveUserDraft = async () => {
-    if (!userDraft.name?.trim() || !userDraft.email?.trim() || !userDraft.phone?.trim()) {
-      showToast({ message: "Please fill in all required fields", variant: "warning" });
-      return;
-    }
+    const newErrors = {};
+    if (!userDraft.name?.trim()) newErrors.name = "Name is required";
+    if (!userDraft.phone?.trim()) newErrors.phone = "Phone is required";
+    else if (!userPhoneValid) newErrors.phone = "Enter a valid phone number for the selected country";
+    if (!userDraft.email?.trim()) newErrors.email = "Email is required";
+    else if (!emailRegex.test(userDraft.email)) newErrors.email = "Enter a valid email address";
+    setUserErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
     let updatedUsers = [...level1Users];
     if (userModal.mode === "add") {
@@ -577,34 +599,53 @@ const BusinessPersonnel = () => {
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Name *</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">
+              Name <span className="text-red-500">*</span>
+            </label>
             <input
               value={userDraft.name}
               disabled={userModal.mode === "view"}
-              onChange={(e) => setUserDraft((p) => ({ ...p, name: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              onChange={(e) => {
+                setUserDraft((p) => ({ ...p, name: e.target.value }));
+                if (userErrors.name) setUserErrors(prev => ({ ...prev, name: null }));
+              }}
+              className={`w-full border ${userErrors.name ? 'border-red-500' : 'border-gray-200'} rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70`}
               placeholder="Enter name"
             />
+            {userErrors.name && <p className="text-[10px] text-red-500 mt-1 font-bold">{userErrors.name}</p>}
           </div>
           <div>
-            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Phone *</label>
-            <input
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">
+              Phone <span className="text-red-500">*</span>
+            </label>
+            <PhoneInput
+              name="userPhone"
               value={userDraft.phone}
               disabled={userModal.mode === "view"}
-              onChange={(e) => setUserDraft((p) => ({ ...p, phone: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              onChange={(e) => {
+                setUserDraft((p) => ({ ...p, phone: e.target.value }));
+                if (userErrors.phone) setUserErrors(prev => ({ ...prev, phone: null }));
+              }}
+              onValidityChange={(ok) => setUserPhoneValid(ok)}
+              error={userErrors.phone || ""}
               placeholder="Enter phone number"
             />
           </div>
           <div>
-            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Email *</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">
+              Email <span className="text-red-500">*</span>
+            </label>
             <input
               value={userDraft.email}
               disabled={userModal.mode === "view"}
-              onChange={(e) => setUserDraft((p) => ({ ...p, email: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              onChange={(e) => {
+                setUserDraft((p) => ({ ...p, email: e.target.value }));
+                if (userErrors.email) setUserErrors(prev => ({ ...prev, email: null }));
+              }}
+              className={`w-full border ${userErrors.email ? 'border-red-500' : 'border-gray-200'} rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70`}
               placeholder="Enter email address"
             />
+            {userErrors.email && <p className="text-[10px] text-red-500 mt-1 font-bold">{userErrors.email}</p>}
           </div>
           <div>
             <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Job Title</label>
@@ -627,11 +668,6 @@ const BusinessPersonnel = () => {
             />
           </div>
         </div>
-        {userModal.mode !== "view" && (
-          <p className="mt-3 text-[11px] font-bold text-gray-500">
-            Required: Name, Phone, Email
-          </p>
-        )}
       </Modal>
 
       <Modal
@@ -677,34 +713,53 @@ const BusinessPersonnel = () => {
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Name *</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">
+              Name <span className="text-red-500">*</span>
+            </label>
             <input
               value={personDraft.name}
               disabled={personModal.mode !== "edit"}
-              onChange={(e) => setPersonDraft((p) => ({ ...p, name: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              onChange={(e) => {
+                setPersonDraft((p) => ({ ...p, name: e.target.value }));
+                if (personErrors.name) setPersonErrors(prev => ({ ...prev, name: null }));
+              }}
+              className={`w-full border ${personErrors.name ? 'border-red-500' : 'border-gray-200'} rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70`}
               placeholder="Enter name"
             />
+            {personErrors.name && <p className="text-[10px] text-red-500 mt-1 font-bold">{personErrors.name}</p>}
           </div>
           <div>
-            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Phone *</label>
-            <input
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">
+              Phone <span className="text-red-500">*</span>
+            </label>
+            <PhoneInput
+              name="personPhone"
               value={personDraft.phone}
               disabled={personModal.mode !== "edit"}
-              onChange={(e) => setPersonDraft((p) => ({ ...p, phone: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              onChange={(e) => {
+                setPersonDraft((p) => ({ ...p, phone: e.target.value }));
+                if (personErrors.phone) setPersonErrors(prev => ({ ...prev, phone: null }));
+              }}
+              onValidityChange={(ok) => setPersonPhoneValid(ok)}
+              error={personErrors.phone || ""}
               placeholder="Enter phone number"
             />
           </div>
           <div>
-            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Email *</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">
+              Email <span className="text-red-500">*</span>
+            </label>
             <input
               value={personDraft.email}
               disabled={personModal.mode !== "edit"}
-              onChange={(e) => setPersonDraft((p) => ({ ...p, email: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70"
+              onChange={(e) => {
+                setPersonDraft((p) => ({ ...p, email: e.target.value }));
+                if (personErrors.email) setPersonErrors(prev => ({ ...prev, email: null }));
+              }}
+              className={`w-full border ${personErrors.email ? 'border-red-500' : 'border-gray-200'} rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40 disabled:opacity-70`}
               placeholder="Enter email address"
             />
+            {personErrors.email && <p className="text-[10px] text-red-500 mt-1 font-bold">{personErrors.email}</p>}
           </div>
           {personModal.target === "keyContact" ? (
             <div>
