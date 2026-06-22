@@ -90,9 +90,21 @@ const notificationSlice = createSlice({
   initialState,
   reducers: {
     addNotification: (state, action) => {
-      state.notifications.unshift(action.payload);
-      if (!action.payload.isRead) {
+      const incoming = action.payload;
+      if (!incoming || incoming.id == null) return;
+      // Ignore duplicates — a socket may replay or two emit paths may both fire.
+      if (state.notifications.some((n) => n.id === incoming.id)) return;
+      state.notifications.unshift(incoming);
+      if (!incoming.isRead) {
         state.unreadCount += 1;
+      }
+    },
+    // Authoritative unread count pushed over the socket (notification:count).
+    // Lets the badge update in real time without an HTTP round-trip.
+    setUnreadCount: (state, action) => {
+      const count = Number(action.payload);
+      if (Number.isFinite(count) && count >= 0) {
+        state.unreadCount = count;
       }
     },
     clearError: (state) => {
@@ -197,5 +209,5 @@ const notificationSlice = createSlice({
   }
 });
 
-export const { addNotification, clearError, updateNotification } = notificationSlice.actions;
+export const { addNotification, setUnreadCount, clearError, updateNotification } = notificationSlice.actions;
 export default notificationSlice.reducer;

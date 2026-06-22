@@ -179,6 +179,7 @@ const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
               <NotificationItem
                 key={notification.id}
                 notification={notification}
+                onClose={onClose}
               />
             ))}
             

@@ -7,21 +7,30 @@ import useMessaging from '../../hooks/useMessaging';
 const MessageDropdown = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
-  const { threads, loading, fetchConversations, markThreadAsRead } = useMessaging();
+  const { threads, loading, fetchConversations, markThreadAsRead, connected } = useMessaging();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   // Calculate total unread from threads
   const unreadCount = threads.reduce((acc, thread) => acc + (thread.unread || 0), 0);
 
+  // Real-time thread updates arrive over the socket (handled in useMessaging).
+  // This is only a backstop: poll when the socket is disconnected and the tab is
+  // visible, and resync once when the tab regains focus. Initial fetch is done
+  // by useMessaging on login.
   useEffect(() => {
-    // Initial fetch handled by useMessaging for logged in user
     const interval = setInterval(() => {
-      fetchConversations();
-    }, 30000); // Poll every 30s as a fallback, sockets also update it
-
-    return () => clearInterval(interval);
-  }, [fetchConversations]);
+      if (!document.hidden && !connected) fetchConversations();
+    }, 60000);
+    const onVisible = () => {
+      if (!document.hidden) fetchConversations();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [fetchConversations, connected]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
