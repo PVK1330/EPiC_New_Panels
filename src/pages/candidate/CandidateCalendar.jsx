@@ -1,5 +1,26 @@
 import { useState, useMemo, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Search, Settings, Grid3x3, List, Calendar as CalendarIcon, Clock, MapPin, Users, Video, Phone, X, Edit, Trash2, Eye, UserCheck, CheckCircle2, CheckSquare } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Search,
+  Settings,
+  Grid3x3,
+  List,
+  Calendar as CalendarIcon,
+  Clock,
+  MapPin,
+  Users,
+  Video,
+  Phone,
+  X,
+  Edit,
+  Trash2,
+  Eye,
+  UserCheck,
+  CheckCircle2,
+  CheckSquare,
+} from "lucide-react";
 import MicrosoftConnect from "../../components/MicrosoftConnect";
 import GoogleConnect from "../../components/GoogleConnect";
 import CreateMeetingModal from "../../components/CreateMeetingModal";
@@ -10,10 +31,17 @@ import {
   getTeamsMeetings,
   cancelTeamsMeeting,
 } from "../../services/teamsApi";
-import { getMyAppointments, deleteAppointment } from "../../services/appointmentApi";
+import {
+  getMyAppointments,
+  deleteAppointment,
+} from "../../services/appointmentApi";
 import { getWorkflowCalendarEvents } from "../../services/calendarApi";
 import { mapWorkflowEventsToCalendar } from "../../utils/calendarWorkflowEvents";
-import { formatDate, formatTime, formatWithOptions } from "../../utils/datetime";
+import {
+  formatDate,
+  formatTime,
+  formatWithOptions,
+} from "../../utils/datetime";
 
 export default function CandidateCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -64,9 +92,7 @@ export default function CandidateCalendar() {
       setLoadingTeams(true);
       const body = await getTeamsMeetings();
       const list = body?.data?.meetings || [];
-      setTeamsMeetings(
-        list.filter((m) => m.status !== "cancelled")
-      );
+      setTeamsMeetings(list.filter((m) => m.status !== "cancelled"));
     } catch (error) {
       console.error("Failed to fetch Teams meetings:", error);
       setTeamsMeetings([]);
@@ -80,29 +106,34 @@ export default function CandidateCalendar() {
       setLoadingAppointments(true);
       const response = await getMyAppointments();
       const appointments = response.data?.data?.appointments || [];
-      
-      const mappedEvents = appointments.map(app => {
+
+      const mappedEvents = appointments.map((app) => {
         const startDateTime = new Date(`${app.date}T${app.time}`);
         // Default 1 hour duration
         const endDateTime = new Date(startDateTime.getTime() + 60 * 60000);
-        
+
         return {
           id: app.id,
           title: app.title,
           date: startDateTime,
           endDate: endDateTime,
           type: "meeting",
-          location: app.platform === "in-person" ? "Office" : (app.platform || "Virtual"),
+          location:
+            app.platform === "in-person" ? "Office" : app.platform || "Virtual",
           attendees: [
-            app.candidate ? `${app.candidate.first_name} ${app.candidate.last_name}` : null,
-            app.caseworker ? `${app.caseworker.first_name} ${app.caseworker.last_name}` : null
+            app.candidate
+              ? `${app.candidate.first_name} ${app.candidate.last_name}`
+              : null,
+            app.caseworker
+              ? `${app.caseworker.first_name} ${app.caseworker.last_name}`
+              : null,
           ].filter(Boolean),
           description: app.description || "",
           color: "bg-indigo-600",
           completed: app.status === "completed" || endDateTime < new Date(),
           meeting_url: app.meeting_url,
           caseId: app.case?.caseId,
-          isBackendApp: true
+          isBackendApp: true,
         };
       });
 
@@ -118,12 +149,13 @@ export default function CandidateCalendar() {
   const [events, setEvents] = useState([]);
 
   // Auto-mark past events as completed
-  const eventsWithCompletion = useMemo(() =>
-    events.map((e) => ({
-      ...e,
-      completed: e.completed || new Date(e.endDate) < today,
-    })),
-    [events]
+  const eventsWithCompletion = useMemo(
+    () =>
+      events.map((e) => ({
+        ...e,
+        completed: e.completed || new Date(e.endDate) < today,
+      })),
+    [events],
   );
 
   // Convert Teams / calendar API meetings to event format
@@ -153,7 +185,7 @@ export default function CandidateCalendar() {
 
   const allEvents = useMemo(
     () => [...eventsWithCompletion, ...teamsEvents, ...workflowEvents],
-    [eventsWithCompletion, teamsEvents, workflowEvents]
+    [eventsWithCompletion, teamsEvents, workflowEvents],
   );
 
   const [newEvent, setNewEvent] = useState({
@@ -187,8 +219,7 @@ export default function CandidateCalendar() {
   const getEventsForDay = (day) => {
     if (!day) return [];
     return allEvents.filter(
-      (event) =>
-        new Date(event.date).toDateString() === day.toDateString()
+      (event) => new Date(event.date).toDateString() === day.toDateString(),
     );
   };
 
@@ -222,11 +253,14 @@ export default function CandidateCalendar() {
 
     const eventDateTime = new Date(`${newEvent.date}T${newEvent.time}`);
     const endDateTime = new Date(
-      eventDateTime.getTime() + parseInt(newEvent.duration, 10) * 60000
+      eventDateTime.getTime() + parseInt(newEvent.duration, 10) * 60000,
     );
 
     const attendeeParts = newEvent.attendees
-      ? newEvent.attendees.split(",").map((a) => a.trim()).filter(Boolean)
+      ? newEvent.attendees
+          .split(",")
+          .map((a) => a.trim())
+          .filter(Boolean)
       : [];
     const attendees = attendeeParts.map((email) => ({
       email,
@@ -270,7 +304,7 @@ export default function CandidateCalendar() {
       alert(
         error?.response?.data?.message ||
           error.message ||
-          "Could not save event. Try again."
+          "Could not save event. Try again.",
       );
     } finally {
       setSavingEvent(false);
@@ -298,10 +332,7 @@ export default function CandidateCalendar() {
       setSelectedEvent(null);
     } catch (error) {
       console.error("Failed to delete event:", error);
-      alert(
-        error?.response?.data?.message ||
-          "Could not delete this event."
-      );
+      alert(error?.response?.data?.message || "Could not delete this event.");
     }
   };
 
@@ -309,13 +340,20 @@ export default function CandidateCalendar() {
 
   const getEventIcon = (type) => {
     switch (type) {
-      case "meeting": return <Users size={12} />;
-      case "call":    return <Phone size={12} />;
-      case "deadline":return <Clock size={12} />;
-      case "teams":   return <Video size={12} />;
-      case "task":    return <CheckSquare size={12} />;
-      case "biometric": return <UserCheck size={12} />;
-      default:        return <CalendarIcon size={12} />;
+      case "meeting":
+        return <Users size={12} />;
+      case "call":
+        return <Phone size={12} />;
+      case "deadline":
+        return <Clock size={12} />;
+      case "teams":
+        return <Video size={12} />;
+      case "task":
+        return <CheckSquare size={12} />;
+      case "biometric":
+        return <UserCheck size={12} />;
+      default:
+        return <CalendarIcon size={12} />;
     }
   };
 
@@ -336,7 +374,7 @@ export default function CandidateCalendar() {
       filteredEvents
         .filter((e) => !e.completed)
         .sort((a, b) => new Date(a.date) - new Date(b.date)),
-    [filteredEvents]
+    [filteredEvents],
   );
 
   const completedEvents = useMemo(
@@ -344,7 +382,7 @@ export default function CandidateCalendar() {
       filteredEvents
         .filter((e) => e.completed)
         .sort((a, b) => new Date(b.date) - new Date(a.date)),
-    [filteredEvents]
+    [filteredEvents],
   );
 
   const days = getDaysInMonth(currentDate);
@@ -362,7 +400,8 @@ export default function CandidateCalendar() {
         <div>
           <h1 className="text-3xl font-black text-secondary">My calendar</h1>
           <p className="text-gray-500 mt-1">
-            Your appointments, personal calendar events, and Teams meetings in one place
+            Your appointments, personal calendar events, and Teams meetings in
+            one place
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -456,9 +495,7 @@ export default function CandidateCalendar() {
                 key={mode}
                 onClick={() => setViewMode(mode)}
                 className={`px-3 py-1 text-sm rounded-md transition-colors capitalize ${
-                  viewMode === mode
-                    ? "bg-white shadow-sm"
-                    : "hover:bg-gray-200"
+                  viewMode === mode ? "bg-white shadow-sm" : "hover:bg-gray-200"
                 }`}
               >
                 {mode}
@@ -490,8 +527,7 @@ export default function CandidateCalendar() {
         <div className="grid grid-cols-7">
           {days.map((day, index) => {
             const dayEvents = day ? getEventsForDay(day) : [];
-            const isToday =
-              day && day.toDateString() === today.toDateString();
+            const isToday = day && day.toDateString() === today.toDateString();
             const isPast = day && day < today && !isToday;
             const isCurrentMonth =
               day && day.getMonth() === currentDate.getMonth();
@@ -522,7 +558,10 @@ export default function CandidateCalendar() {
                         {day.getDate()}
                       </span>
                       {isPast && dayEvents.length > 0 && (
-                        <CheckCircle2 size={11} className="text-green-400 flex-shrink-0" />
+                        <CheckCircle2
+                          size={11}
+                          className="text-green-400 flex-shrink-0"
+                        />
                       )}
                     </div>
 
@@ -542,11 +581,17 @@ export default function CandidateCalendar() {
                           title={event.title}
                         >
                           <span className="flex items-center gap-1">
-                            {event.completed
-                              ? <CheckCircle2 size={10} className="flex-shrink-0" />
-                              : getEventIcon(event.type)
-                            }
-                            <span className={`truncate ${event.completed ? "opacity-80" : ""}`}>
+                            {event.completed ? (
+                              <CheckCircle2
+                                size={10}
+                                className="flex-shrink-0"
+                              />
+                            ) : (
+                              getEventIcon(event.type)
+                            )}
+                            <span
+                              className={`truncate ${event.completed ? "opacity-80" : ""}`}
+                            >
                               {event.title}
                             </span>
                           </span>
@@ -737,7 +782,10 @@ export default function CandidateCalendar() {
                   <select
                     value={newEvent.meeting_provider}
                     onChange={(e) =>
-                      setNewEvent({ ...newEvent, meeting_provider: e.target.value })
+                      setNewEvent({
+                        ...newEvent,
+                        meeting_provider: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
                   >
@@ -842,9 +890,11 @@ export default function CandidateCalendar() {
                   <div
                     className={`w-12 h-12 rounded-xl ${selectedEvent.color} flex items-center justify-center text-white flex-shrink-0`}
                   >
-                    {selectedEvent.completed
-                      ? <CheckCircle2 size={20} />
-                      : getEventIcon(selectedEvent.type)}
+                    {selectedEvent.completed ? (
+                      <CheckCircle2 size={20} />
+                    ) : (
+                      getEventIcon(selectedEvent.type)
+                    )}
                   </div>
                   <div className="flex-1">
                     <h4 className="text-lg font-bold text-gray-900">
@@ -856,16 +906,16 @@ export default function CandidateCalendar() {
                           selectedEvent.type === "meeting"
                             ? "bg-blue-100 text-blue-700"
                             : selectedEvent.type === "call"
-                            ? "bg-amber-100 text-amber-700"
-                            : selectedEvent.type === "deadline"
-                            ? "bg-red-100 text-red-700"
-                            : selectedEvent.type === "teams"
-                            ? "bg-purple-100 text-purple-700"
-                            : selectedEvent.type === "biometric"
-                            ? "bg-cyan-100 text-cyan-800"
-                            : selectedEvent.type === "task"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-700"
+                              ? "bg-amber-100 text-amber-700"
+                              : selectedEvent.type === "deadline"
+                                ? "bg-red-100 text-red-700"
+                                : selectedEvent.type === "teams"
+                                  ? "bg-purple-100 text-purple-700"
+                                  : selectedEvent.type === "biometric"
+                                    ? "bg-cyan-100 text-cyan-800"
+                                    : selectedEvent.type === "task"
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-gray-100 text-gray-700"
                         }`}
                       >
                         {selectedEvent.type}
@@ -936,22 +986,23 @@ export default function CandidateCalendar() {
                     </div>
                   )}
 
-                  {!selectedEvent.isTeamsMeeting && selectedEvent.meeting_url && (
-                    <div className="flex items-center gap-3">
-                      <Video size={16} className="text-gray-400" />
-                      <div className="flex-1">
-                        <p className="text-xs text-gray-500">Meeting link</p>
-                        <a
-                          href={selectedEvent.meeting_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm font-bold text-indigo-600 hover:text-indigo-700 underline break-all"
-                        >
-                          {selectedEvent.meeting_url}
-                        </a>
+                  {!selectedEvent.isTeamsMeeting &&
+                    selectedEvent.meeting_url && (
+                      <div className="flex items-center gap-3">
+                        <Video size={16} className="text-gray-400" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">Meeting link</p>
+                          <a
+                            href={selectedEvent.meeting_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-bold text-indigo-600 hover:text-indigo-700 underline break-all"
+                          >
+                            {selectedEvent.meeting_url}
+                          </a>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {selectedEvent.attendees &&
                     selectedEvent.attendees.length > 0 && (
@@ -1020,7 +1071,7 @@ export default function CandidateCalendar() {
       /> */}
     </div>
   );
-};
+}
 
 // ── Shared Event Row Component ─────────────────────────────────────────────
 
@@ -1037,9 +1088,10 @@ const EventRow = ({ event, onClick, formatEventTime, isCompleted = false }) => {
     <div
       onClick={() => onClick(event)}
       className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-colors border
-        ${isCompleted
-          ? "bg-gray-50/60 border-gray-100 hover:bg-gray-100/60 opacity-80"
-          : "bg-gray-50 border-gray-100 hover:bg-gray-100 hover:border-gray-200"
+        ${
+          isCompleted
+            ? "bg-gray-50/60 border-gray-100 hover:bg-gray-100/60 opacity-80"
+            : "bg-gray-50 border-gray-100 hover:bg-gray-100 hover:border-gray-200"
         }
       `}
     >
@@ -1047,7 +1099,9 @@ const EventRow = ({ event, onClick, formatEventTime, isCompleted = false }) => {
         className={`w-4 h-4 rounded-full flex-shrink-0 ${event.color} ${isCompleted ? "opacity-60" : ""}`}
       />
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-bold truncate ${isCompleted ? "text-gray-500" : "text-gray-900"}`}>
+        <p
+          className={`text-sm font-bold truncate ${isCompleted ? "text-gray-500" : "text-gray-900"}`}
+        >
           {event.title}
           {isCompleted && (
             <CheckCircle2
@@ -1094,4 +1148,3 @@ const EventRow = ({ event, onClick, formatEventTime, isCompleted = false }) => {
     </div>
   );
 };
-
