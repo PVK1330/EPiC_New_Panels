@@ -13,10 +13,85 @@ import {
   Trash2
 } from 'lucide-react';
 import DatePicker from "../../components/DatePicker";
+import PhoneInput from "../../components/PhoneInput";
+
+const PRESET_SECTORS = [
+  'Accounting & Audit',
+  'Agriculture & Farming',
+  'Architecture & Design',
+  'Automotive',
+  'Aviation & Aerospace',
+  'Banking & Finance',
+  'Biotechnology',
+  'Construction & Civil Engineering',
+  'Consulting & Professional Services',
+  'Defence & Security',
+  'E-commerce & Retail',
+  'Education & Training',
+  'Energy & Utilities',
+  'Engineering',
+  'Entertainment & Media',
+  'Environmental Services',
+  'Food & Beverage',
+  'Government & Public Sector',
+  'Healthcare & Medical',
+  'Hospitality & Tourism',
+  'Information Technology',
+  'Insurance',
+  'Legal Services',
+  'Logistics & Supply Chain',
+  'Manufacturing',
+  'Marketing & Advertising',
+  'Mining & Extraction',
+  'Non-profit & Charity',
+  'Pharmaceuticals',
+  'Real Estate & Property',
+  'Recruitment & Staffing',
+  'Research & Development',
+  'Telecommunications',
+  'Transportation',
+  'Wholesale & Distribution',
+];
+
+const COUNTRIES = [
+  'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda',
+  'Argentina','Armenia','Australia','Austria','Azerbaijan','Bahamas','Bahrain',
+  'Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan',
+  'Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria',
+  'Burkina Faso','Burundi','Cabo Verde','Cambodia','Cameroon','Canada',
+  'Central African Republic','Chad','Chile','China','Colombia','Comoros',
+  'Congo (Brazzaville)','Congo (Kinshasa)','Costa Rica','Croatia','Cuba',
+  'Cyprus','Czech Republic','Denmark','Djibouti','Dominica','Dominican Republic',
+  'Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia',
+  'Eswatini','Ethiopia','Fiji','Finland','France','Gabon','Gambia','Georgia',
+  'Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau',
+  'Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran',
+  'Iraq','Ireland','Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan',
+  'Kenya','Kiribati','Kuwait','Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho',
+  'Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar',
+  'Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania',
+  'Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro',
+  'Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands',
+  'New Zealand','Nicaragua','Niger','Nigeria','North Korea','North Macedonia',
+  'Norway','Oman','Pakistan','Palau','Panama','Papua New Guinea','Paraguay',
+  'Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia','Rwanda',
+  'Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines',
+  'Samoa','San Marino','Sao Tome and Principe','Saudi Arabia','Senegal',
+  'Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia',
+  'Solomon Islands','Somalia','South Africa','South Korea','South Sudan',
+  'Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria',
+  'Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga',
+  'Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda',
+  'Ukraine','United Arab Emirates','United Kingdom','United States',
+  'Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam',
+  'Yemen','Zambia','Zimbabwe',
+];
 
 const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
+  const [industrySectorOther, setIndustrySectorOther] = useState(false);
+  const [phoneValid, setPhoneValid] = useState({});
   const [form, setForm] = useState({
     companyName: '',
     tradingName: '',
@@ -80,6 +155,9 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
         shareholders: initialForm.shareholders || prev.shareholders || [],
         directors: initialForm.directors || prev.directors || [],
       }));
+      if (initialForm.industrySector && !PRESET_SECTORS.includes(initialForm.industrySector)) {
+        setIndustrySectorOther(true);
+      }
     }
   }, [initialForm]);
 
@@ -91,6 +169,8 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
     { id: 5, label: 'Ownership Structure' },
     { id: 6, label: 'Documents & Billing' },
   ];
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const validateStep = (s) => {
     const newErrors = {};
@@ -109,8 +189,15 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
       if (!form.postalCode) newErrors.postalCode = "Postal Code is required";
     }
     if (s === 3) {
+      if (!form.authorisingPhone) newErrors.authorisingPhone = "Phone is required";
+      else if (phoneValid.authorisingPhone === false) newErrors.authorisingPhone = "Enter a valid phone number for the selected country";
+      if (!form.authorisingEmail) newErrors.authorisingEmail = "Email is required";
+      else if (!emailRegex.test(form.authorisingEmail)) newErrors.authorisingEmail = "Enter a valid email address";
       if (!form.keyContactName) newErrors.keyContactName = "Key Contact Name is required";
+      if (!form.keyContactPhone) newErrors.keyContactPhone = "Phone is required";
+      else if (phoneValid.keyContactPhone === false) newErrors.keyContactPhone = "Enter a valid phone number for the selected country";
       if (!form.keyContactEmail) newErrors.keyContactEmail = "Key Contact Email is required";
+      else if (!emailRegex.test(form.keyContactEmail)) newErrors.keyContactEmail = "Enter a valid email address";
     }
 
     setErrors(newErrors);
@@ -212,7 +299,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <label className="text-xs font-bold text-gray-700">Company Name *</label>
+                <label className="text-xs font-bold text-gray-700">Company Name <span className="text-red-500">*</span></label>
                 <input
                   value={form.companyName || ""}
                   onChange={(e) => handleChange('companyName', e.target.value)}
@@ -233,7 +320,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <label className="text-xs font-bold text-gray-700">Company Registration Number *</label>
+                <label className="text-xs font-bold text-gray-700">Company Registration Number <span className="text-red-500">*</span></label>
                 <input
                   value={form.registrationNumber || ""}
                   onChange={(e) => handleChange('registrationNumber', e.target.value)}
@@ -243,7 +330,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                 {errors.registrationNumber && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.registrationNumber}</p>}
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-700">Sponsor Licence Number *</label>
+                <label className="text-xs font-bold text-gray-700">Sponsor Licence Number <span className="text-red-500">*</span></label>
                 <input
                   value={form.sponsorLicenceNumber || ""}
                   onChange={(e) => handleChange('sponsorLicenceNumber', e.target.value)}
@@ -255,7 +342,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <label className="text-xs font-bold text-gray-700">Licence Rating *</label>
+                <label className="text-xs font-bold text-gray-700">Licence Rating <span className="text-red-500">*</span></label>
                 <select
                   value={form.licenceRating || ""}
                   onChange={(e) => handleChange('licenceRating', e.target.value)}
@@ -269,18 +356,33 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                 {errors.licenceRating && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.licenceRating}</p>}
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-700">Industry Sector *</label>
+                <label className="text-xs font-bold text-gray-700">Industry Sector <span className="text-red-500">*</span></label>
                 <select
-                  value={form.industrySector || ""}
-                  onChange={(e) => handleChange('industrySector', e.target.value)}
-                  className={`mt-2 w-full border ${errors.industrySector ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
+                  value={industrySectorOther ? 'Other' : (form.industrySector || "")}
+                  onChange={(e) => {
+                    if (e.target.value === 'Other') {
+                      setIndustrySectorOther(true);
+                      handleChange('industrySector', '');
+                    } else {
+                      setIndustrySectorOther(false);
+                      handleChange('industrySector', e.target.value);
+                    }
+                  }}
+                  className={`mt-2 w-full border ${errors.industrySector ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                 >
                   <option value="">Select industry</option>
-                  <option>Information Technology</option>
-                  <option>Healthcare</option>
-                  <option>Manufacturing</option>
-                  <option>Logistics</option>
+                  {PRESET_SECTORS.map(s => <option key={s}>{s}</option>)}
+                  <option value="Other">Other</option>
                 </select>
+                {industrySectorOther && (
+                  <input
+                    value={form.industrySector || ""}
+                    onChange={(e) => handleChange('industrySector', e.target.value)}
+                    className={`mt-2 w-full border ${errors.industrySector ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
+                    placeholder="Type your industry sector"
+                    autoFocus
+                  />
+                )}
                 {errors.industrySector && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.industrySector}</p>}
               </div>
             </div>
@@ -310,7 +412,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
         return (
           <div className="space-y-6">
             <div>
-              <label className="text-xs font-bold text-gray-700">Registered Address *</label>
+              <label className="text-xs font-bold text-gray-700">Registered Address <span className="text-red-500">*</span></label>
               <textarea
                 value={form.registeredAddress || ""}
                 onChange={(e) => handleChange('registeredAddress', e.target.value)}
@@ -332,7 +434,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <label className="text-xs font-bold text-gray-700">City *</label>
+                <label className="text-xs font-bold text-gray-700">City <span className="text-red-500">*</span></label>
                 <input
                   value={form.city || ""}
                   onChange={(e) => handleChange('city', e.target.value)}
@@ -342,7 +444,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                 {errors.city && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.city}</p>}
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-700">State / Region *</label>
+                <label className="text-xs font-bold text-gray-700">State / Region <span className="text-red-500">*</span></label>
                 <input
                   value={form.state || ""}
                   onChange={(e) => handleChange('state', e.target.value)}
@@ -354,22 +456,19 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <label className="text-xs font-bold text-gray-700">Country *</label>
+                <label className="text-xs font-bold text-gray-700">Country <span className="text-red-500">*</span></label>
                 <select
                   value={form.country || ""}
                   onChange={(e) => handleChange('country', e.target.value)}
-                  className={`mt-2 w-full border ${errors.country ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
+                  className={`mt-2 w-full border ${errors.country ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                 >
                   <option value="">Select country</option>
-                  <option>United Kingdom</option>
-                  <option>United States</option>
-                  <option>India</option>
-                  <option>Canada</option>
+                  {COUNTRIES.map(c => <option key={c}>{c}</option>)}
                 </select>
                 {errors.country && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.country}</p>}
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-700">Postal Code *</label>
+                <label className="text-xs font-bold text-gray-700">Postal Code <span className="text-red-500">*</span></label>
                 <input
                   value={form.postalCode || ""}
                   onChange={(e) => handleChange('postalCode', e.target.value)}
@@ -395,22 +494,25 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-700">Phone *</label>
-                <input
-                  value={form.authorisingPhone}
+                <label className="text-xs font-bold text-gray-700 mb-2 block">Phone <span className="text-red-500">*</span></label>
+                <PhoneInput
+                  name="authorisingPhone"
+                  value={form.authorisingPhone || ""}
                   onChange={(e) => handleChange('authorisingPhone', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  onValidityChange={(ok) => setPhoneValid(prev => ({ ...prev, authorisingPhone: ok }))}
+                  error={errors.authorisingPhone || ""}
                   placeholder="Enter phone number"
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-700">Email *</label>
+                <label className="text-xs font-bold text-gray-700">Email <span className="text-red-500">*</span></label>
                 <input
                   value={form.authorisingEmail}
                   onChange={(e) => handleChange('authorisingEmail', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  className={`mt-2 w-full border ${errors.authorisingEmail ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                   placeholder="Enter email address"
                 />
+                {errors.authorisingEmail && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.authorisingEmail}</p>}
               </div>
               <div className="lg:col-span-3">
                 <label className="text-xs font-bold text-gray-700">Job Title</label>
@@ -426,7 +528,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
               <h3 className="text-lg font-black text-secondary mb-4">Key Contact</h3>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div>
-                  <label className="text-xs font-bold text-gray-700">Name *</label>
+                  <label className="text-xs font-bold text-gray-700">Name <span className="text-red-500">*</span></label>
                   <input
                     value={form.keyContactName || ""}
                     onChange={(e) => handleChange('keyContactName', e.target.value)}
@@ -436,16 +538,18 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                   {errors.keyContactName && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.keyContactName}</p>}
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-700">Phone *</label>
-                  <input
+                  <label className="text-xs font-bold text-gray-700 mb-2 block">Phone <span className="text-red-500">*</span></label>
+                  <PhoneInput
+                    name="keyContactPhone"
                     value={form.keyContactPhone || ""}
                     onChange={(e) => handleChange('keyContactPhone', e.target.value)}
-                    className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                    onValidityChange={(ok) => setPhoneValid(prev => ({ ...prev, keyContactPhone: ok }))}
+                    error={errors.keyContactPhone || ""}
                     placeholder="Enter phone number"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-700">Email *</label>
+                  <label className="text-xs font-bold text-gray-700">Email <span className="text-red-500">*</span></label>
                   <input
                     value={form.keyContactEmail || ""}
                     onChange={(e) => handleChange('keyContactEmail', e.target.value)}
@@ -482,11 +586,11 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-bold text-gray-700">Phone</label>
-                        <input
+                        <label className="text-xs font-bold text-gray-700 mb-2 block">Phone</label>
+                        <PhoneInput
+                          name={`level1UserPhone_${index}`}
                           value={user.phone || ""}
                           onChange={(e) => updateLevel1User(index, 'phone', e.target.value)}
-                          className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                           placeholder="Enter phone number"
                         />
                       </div>

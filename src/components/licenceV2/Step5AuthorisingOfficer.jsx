@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import ProfileSyncBanner from "./ProfileSyncBanner";
+import DatePicker from "../DatePicker";
 
 const TITLES = ["Mr", "Mrs", "Miss", "Ms", "Dr", "Prof"];
 const IMMIGRATION_STATUSES = [
@@ -60,7 +61,13 @@ export default function Step5AuthorisingOfficer({ data, onChange, onNext, onBack
         </Field>
 
         <Field label="Date of Birth" required>
-          <input type="date" value={ao.dob || ""} onChange={(e) => set("dob", e.target.value)} className={inp} />
+          <DatePicker
+            name="dob"
+            value={ao.dob || ""}
+            onChange={(e) => set("dob", e.target.value)}
+            placeholder="Select date of birth"
+            max={new Date().toISOString().split("T")[0]}
+          />
         </Field>
 
         <Field label="Nationality" required>

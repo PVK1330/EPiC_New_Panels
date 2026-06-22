@@ -78,6 +78,9 @@ export const dispatchDocumentToCaseworker = (id, formData) =>
 export const getAdminDispatchedDocuments = (id) => api.get(`/api/admin/licence/${id}/dispatch-documents`);
 export const getCaseworkerDispatchedDocuments = (id) => api.get(`/api/caseworker/licence/${id}/dispatch-documents`);
 
+// Sponsor: view UKVI government portal credentials (username + decrypted password)
+export const getSponsorGovCredentials = (id) => api.get(`/api/business/licence/${id}/government-credentials`);
+
 // Sponsor: view documents sent by caseworker/admin
 export const getSponsorDispatchedDocuments = (id) => api.get(`/api/business/licence/${id}/dispatch-documents`);
 

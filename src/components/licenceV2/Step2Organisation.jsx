@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import ProfileSyncBanner from "./ProfileSyncBanner";
+import DatePicker from "../DatePicker";
 
 const ORG_TYPES = [
   "Limited Company",
@@ -95,7 +96,12 @@ export default function Step2Organisation({ data, onChange, onNext, onBack, savi
         </Field>
 
         <Field label="Trading Start Date" required>
-          <input type="date" value={org.tradingStartDate || ""} onChange={(e) => set("tradingStartDate", e.target.value)} className={inp} />
+          <DatePicker
+            name="tradingStartDate"
+            value={org.tradingStartDate || ""}
+            onChange={(e) => set("tradingStartDate", e.target.value)}
+            placeholder="Select date"
+          />
         </Field>
       </div>
 

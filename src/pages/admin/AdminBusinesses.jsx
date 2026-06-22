@@ -11,7 +11,7 @@ import {
   FiRefreshCw,
   FiFolder,
 } from "react-icons/fi";
-import { Loader2 } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import { motion } from "framer-motion";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
@@ -26,6 +26,7 @@ import {
   updateSponsor,
   toggleSponsorStatus,
   resetSponsorPassword,
+  resendSponsorCredentials,
   exportSponsors,
   bulkImportSponsors,
 } from "../../services/sponsorApi";
@@ -114,6 +115,7 @@ export default function AdminBusinesses() {
   const [resetting, setResetting] = useState(false);
   const [toggleId, setToggleId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [resendId, setResendId] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importFile, setImportFile] = useState(null);
@@ -424,6 +426,18 @@ export default function AdminBusinesses() {
       showToast({ message: getApiError(e), variant: "danger" });
     } finally {
       setDeleteId(null);
+    }
+  };
+
+  const handleResendCredentials = async (row) => {
+    setResendId(row.id);
+    try {
+      const res = await resendSponsorCredentials(row.id);
+      showToast({ message: res.data?.message || "Credentials resent successfully", variant: "success" });
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setResendId(null);
     }
   };
 
@@ -971,7 +985,17 @@ export default function AdminBusinesses() {
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => handleResendCredentials(b)}
+                    disabled={resendId === b.id}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-black text-teal-700 hover:bg-teal-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Generate a new password and re-send EPiC portal login details to the sponsor"
+                  >
+                    {resendId === b.id ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                    Resend portal credentials
+                  </button>
                   <button
                     type="button"
                     onClick={() => openReset(b)}

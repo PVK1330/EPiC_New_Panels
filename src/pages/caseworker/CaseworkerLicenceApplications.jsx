@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldCheck, Search, Eye, Download, Building2, Mail, Phone, AlertCircle,
   Check, X, FileText, MessageSquare, Loader2, Play, Globe, Key, Send,
-  ClipboardCheck, Calendar, Landmark, Hash, ExternalLink,
+  ClipboardCheck, Calendar, Landmark, Hash, ExternalLink, Upload,
 } from "lucide-react";
 import api from "../../services/api";
 import {
@@ -16,6 +16,7 @@ import {
   recordGovSubmission,
   getCaseworkerIntakeSummary,
   getIntakeReadiness,
+  dispatchDocumentToCaseworker,
 } from "../../services/licenceApi";
 import { triggerDownload } from "../../services/documentApi";
 import LicenceStages from "../../components/licence/LicenceStages";
@@ -82,6 +83,11 @@ const CaseworkerLicenceApplications = () => {
   const [govLoading,setGovLoading]= useState(false);
   const [regForm,   setRegForm]   = useState({ smsRegistrationRef: "", governmentRegistrationRef: "" });
   const [subForm,   setSubForm]   = useState({ submissionRef: "", submissionDate: "" });
+
+  // Document dispatch (caseworker → sponsor)
+  const [cwDispatch,     setCwDispatch]     = useState({ documentType: "sponsor_licence", documentName: "", message: "" });
+  const [cwDispatchFile, setCwDispatchFile] = useState(null);
+  const [cwDispatchLoading, setCwDispatchLoading] = useState(false);
 
   // ── Data fetching ────────────────────────────────────────────────────────────
   const fetchApplications = async () => {
@@ -237,6 +243,27 @@ const CaseworkerLicenceApplications = () => {
     } catch (err) {
       showToast({ message: err?.response?.data?.message || "Action failed — please try again", variant: "danger" });
       setGovLoading(false);
+    }
+  };
+
+  // ── Caseworker dispatch document → sponsor ──────────────────────────────────
+  const handleCwDispatch = async () => {
+    if (!selectedApp || !cwDispatchFile || cwDispatchLoading) return;
+    try {
+      setCwDispatchLoading(true);
+      const fd = new FormData();
+      fd.append("document", cwDispatchFile);
+      fd.append("documentType", cwDispatch.documentType);
+      fd.append("documentName", cwDispatch.documentName || cwDispatchFile.name);
+      if (cwDispatch.message.trim()) fd.append("message", cwDispatch.message.trim());
+      await dispatchDocumentToCaseworker(selectedApp.id, fd);
+      showToast({ message: "Document sent to sponsor successfully", variant: "success" });
+      setCwDispatch({ documentType: "sponsor_licence", documentName: "", message: "" });
+      setCwDispatchFile(null);
+    } catch (err) {
+      showToast({ message: err?.response?.data?.message || "Failed to send document", variant: "danger" });
+    } finally {
+      setCwDispatchLoading(false);
     }
   };
 
@@ -585,7 +612,7 @@ const CaseworkerLicenceApplications = () => {
                   <div>
                     {/* Sub-tabs */}
                     <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit mb-4">
-                      {[{ id: "govpipeline", label: "Pipeline Actions" }, { id: "intake", label: "Intake & Documents" }].map(({ id, label }) => (
+                      {[{ id: "govpipeline", label: "Pipeline Actions" }, { id: "intake", label: "Intake & Documents" }, { id: "dispatch", label: "Send Document" }].map(({ id, label }) => (
                         <button
                           key={id}
                           onClick={() => setIntakeTab(id)}
@@ -685,6 +712,64 @@ const CaseworkerLicenceApplications = () => {
                             </p>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Send Document to Sponsor */}
+                    {intakeTab === "dispatch" && (
+                      <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4 space-y-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Upload className="text-teal-600 shrink-0" size={14} />
+                          <p className="text-[10px] font-black uppercase tracking-widest text-teal-600">Dispatch Document to Sponsor</p>
+                        </div>
+                        <p className="text-xs font-bold text-teal-800">
+                          Upload the approved UKVI sponsor licence or any other document to send to the sponsor via email and their portal.
+                        </p>
+                        <select
+                          value={cwDispatch.documentType}
+                          onChange={(e) => setCwDispatch((f) => ({ ...f, documentType: e.target.value }))}
+                          className="w-full bg-white border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none"
+                        >
+                          <option value="sponsor_licence">Approved Sponsor Licence (UKVI)</option>
+                          <option value="declaration_form">Declaration Form</option>
+                          <option value="credentials">Credentials Document</option>
+                          <option value="supporting_document">Supporting Document</option>
+                          <option value="other">Other</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Document name (optional)"
+                          value={cwDispatch.documentName}
+                          onChange={(e) => setCwDispatch((f) => ({ ...f, documentName: e.target.value }))}
+                          className="w-full bg-white border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none"
+                        />
+                        <textarea
+                          placeholder="Message to sponsor (optional)"
+                          value={cwDispatch.message}
+                          onChange={(e) => setCwDispatch((f) => ({ ...f, message: e.target.value }))}
+                          rows={2}
+                          className="w-full bg-white border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none resize-none"
+                        />
+                        <label className="flex items-center gap-3 cursor-pointer bg-white border border-dashed border-teal-300 rounded-xl p-3 hover:bg-teal-50 transition-all">
+                          <Upload size={16} className="text-teal-500 shrink-0" />
+                          <span className="text-sm font-black text-teal-700 truncate">
+                            {cwDispatchFile ? cwDispatchFile.name : "Choose file (PDF, DOC, JPG…)"}
+                          </span>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                            onChange={(e) => setCwDispatchFile(e.target.files[0] || null)}
+                          />
+                        </label>
+                        <button
+                          onClick={handleCwDispatch}
+                          disabled={cwDispatchLoading || !cwDispatchFile}
+                          className="w-full bg-teal-600 text-white font-black rounded-xl py-3 flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-teal-700 transition-all active:scale-95"
+                        >
+                          {cwDispatchLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                          {cwDispatchLoading ? "Sending…" : "Send to Sponsor"}
+                        </button>
                       </div>
                     )}
 
