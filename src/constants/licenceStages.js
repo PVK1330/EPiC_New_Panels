@@ -259,8 +259,11 @@ export function deriveStageStatuses(app) {
   const docsComplete = docs.length > 0 && docs.every((d) => d.verificationStatus === "Verified");
 
   // Status-based sentinels — keep these in sync with the backend signal map.
-  const govActive      = ["Government Processing", "Decision Pending", "Approved"].includes(status);
-  const decisionActive = ["Decision Pending", "Approved"].includes(status);
+  // "Licence Granted" is the canonical terminal status set by grantLicence(); treat
+  // it identically to "Approved" so stages render as fully complete after approval.
+  const isGranted      = status === "Licence Granted";
+  const govActive      = ["Government Processing", "Decision Pending", "Approved", "Licence Granted"].includes(status);
+  const decisionActive = ["Decision Pending", "Approved", "Licence Granted"].includes(status);
   // infoProvided: application has been received and is actively being reviewed.
   const infoProvided   = submitted && !["Draft", "Pending"].includes(status);
 
@@ -288,10 +291,10 @@ export function deriveStageStatuses(app) {
     government_submission:         decisionActive,
     // Post-submission (17-18)
     submission:                submitted,
-    decision_activation:       status === "Approved",
+    decision_activation:       status === "Approved" || isGranted,
   };
 
-  if (status === "Approved") {
+  if (status === "Approved" || isGranted) {
     LICENCE_STAGES.forEach((s) => (statuses[s.key] = "done"));
     return statuses;
   }
@@ -308,7 +311,7 @@ export function deriveStageStatuses(app) {
     }
   });
 
-  if (status === "Rejected") {
+  if (status === "Rejected" || status === "Licence Rejected") {
     statuses.decision_activation = "rejected";
   }
 
