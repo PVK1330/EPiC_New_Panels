@@ -24,11 +24,13 @@ import {
 } from "../../services/businessProfileApi";
 import { useToast } from "../../context/ToastContext";
 import { resolveAssetUrl } from "../../utils/assetUrl";
+import api from "../../services/api";
 
 
 const BusinessProfile = () => {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [docDownloading, setDocDownloading] = useState(null);
   const [userData, setUserData] = useState(null);
   const [registrationData, setRegistrationData] = useState(null);
   const [registrationOpen, setRegistrationOpen] = useState(false);
@@ -84,6 +86,29 @@ const BusinessProfile = () => {
     () => Boolean(registrationData && registrationData.companyName),
     [registrationData],
   );
+
+  const handleDocDownload = async (field) => {
+    try {
+      setDocDownloading(field);
+      const res = await api.get(`/api/business/account/profile/documents/${field}/download`, {
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      const disposition = res.headers['content-disposition'] || '';
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      a.download = match?.[1] || field;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      showToast({ message: 'Failed to download document', variant: 'danger' });
+    } finally {
+      setDocDownloading(null);
+    }
+  };
 
   const saveRegistration = async (data) => {
     try {
@@ -639,14 +664,13 @@ const BusinessProfile = () => {
                       </div>
                     </div>
                     {registrationData?.[doc.field] && (
-                      <a
-                        href={resolveAssetUrl(registrationData[doc.field])}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition flex-shrink-0"
+                      <button
+                        onClick={() => handleDocDownload(doc.field)}
+                        disabled={docDownloading === doc.field}
+                        className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition flex-shrink-0 disabled:opacity-50"
                       >
                         <ArrowRight size={14} />
-                      </a>
+                      </button>
                     )}
                   </div>
                 ))}
