@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { getMicrosoftStatus, getMicrosoftAuthUrl, disconnectMicrosoft } from '../services/teamsApi';
-import { Video, CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import Button from './Button';
+import { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
+import {
+  getMicrosoftStatus,
+  getMicrosoftAuthUrl,
+  disconnectMicrosoft,
+} from "../services/teamsApi";
+import { Video, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import Button from "./Button";
 
 const MicrosoftConnect = () => {
   const dispatch = useDispatch();
@@ -20,7 +24,7 @@ const MicrosoftConnect = () => {
       const response = await getMicrosoftStatus();
       setStatus(response.data);
     } catch (error) {
-      console.error('Failed to check Microsoft status:', error);
+      console.error("Failed to check Microsoft status:", error);
     } finally {
       setLoading(false);
     }
@@ -33,7 +37,7 @@ const MicrosoftConnect = () => {
       const authUrl = response.data.authUrl;
       window.location.href = authUrl;
     } catch (error) {
-      console.error('Failed to get Microsoft auth URL:', error);
+      console.error("Failed to get Microsoft auth URL:", error);
     } finally {
       setConnecting(false);
     }
@@ -44,7 +48,7 @@ const MicrosoftConnect = () => {
       await disconnectMicrosoft();
       setStatus({ isConnected: false, microsoftEmail: null });
     } catch (error) {
-      console.error('Failed to disconnect Microsoft:', error);
+      console.error("Failed to disconnect Microsoft:", error);
     }
   };
 
@@ -59,16 +63,21 @@ const MicrosoftConnect = () => {
     <div className="bg-white rounded-xl shadow-sm p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className={`p-3 rounded-full ${status?.isConnected ? 'bg-green-100' : 'bg-gray-100'}`}>
-            <Video className={`w-6 h-6 ${status?.isConnected ? 'text-green-600' : 'text-gray-400'}`} />
+          <div
+            className={`p-3 rounded-full ${status?.isConnected ? "bg-green-100" : "bg-gray-100"}`}
+          >
+            <Video
+              className={`w-6 h-6 ${status?.isConnected ? "text-green-600" : "text-gray-400"}`}
+            />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">Microsoft Teams Integration</h3>
+            <h3 className="font-semibold text-gray-900">
+              Microsoft Teams Integration
+            </h3>
             <p className="text-sm text-gray-500">
-              {status?.isConnected 
+              {status?.isConnected
                 ? `Connected as ${status?.microsoftEmail}`
-                : 'Connect to create and manage Teams meetings'
-              }
+                : "Connect to create and manage Teams meetings"}
             </p>
           </div>
         </div>
@@ -77,23 +86,15 @@ const MicrosoftConnect = () => {
           {status?.isConnected ? (
             <>
               <CheckCircle className="w-5 h-5 text-green-500" />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDisconnect}
-              >
+              <Button variant="outline" size="sm" onClick={handleDisconnect}>
                 Disconnect
               </Button>
             </>
           ) : (
             <>
               <XCircle className="w-5 h-5 text-gray-300" />
-              <Button
-                size="sm"
-                onClick={handleConnect}
-                disabled={connecting}
-              >
-                {connecting ? 'Connecting...' : 'Connect'}
+              <Button size="sm" onClick={handleConnect} disabled={connecting}>
+                {connecting ? "Connecting..." : "Connect"}
               </Button>
             </>
           )}

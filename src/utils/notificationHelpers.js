@@ -73,80 +73,167 @@ function resolveRoleKey(user) {
   return user.role || null;
 }
 
-/**
- * Role-aware deep link for in-app notifications.
- */
-export function getNotificationRoute(notification, user = null) {
-  const role = resolveRoleKey(user);
-  const actionType = notification?.actionType;
-  const caseRef =
-    notification?.metadata?.caseId ||
-    notification?.metadata?.caseRef ||
-    (notification?.entityType === 'case' ? String(notification.entityId) : null);
-
-  if (actionType === 'ccl_fee_review' && role === 'admin') {
-    return '/admin/ccl-fee-approvals';
-  }
-
-  if (notification?.entityType === 'message' && notification?.metadata?.conversationId) {
-    if (role === 'admin') return `/admin/messages?conversation=${notification.metadata.conversationId}`;
-    if (role === 'caseworker') return `/caseworker/messages?conversation=${notification.metadata.conversationId}`;
-    if (role === 'candidate') return `/candidate/messages`;
-    return `/messages/${notification.metadata.conversationId}`;
-  }
-
-  if (caseRef || notification?.entityType === 'case') {
-    const ref = encodeURIComponent(String(caseRef));
-
-    if (role === 'admin') {
-      return `/admin/case-detail/${ref}`;
-    }
-    if (role === 'caseworker') {
-      return '/caseworker/cases';
-    }
-    if (role === 'candidate') {
-      if (actionType === 'ccl_issued' || actionType === 'ccl_fee_approved') {
-        return '/candidate/ccl';
-      }
-      if (actionType === 'data_capture_request' || actionType === 'data_capture_rejected') {
-        return '/candidate/document-checklist';
-      }
-      if (notification?.metadata?.nextStage === 'draft_application_review') {
-        return '/candidate/application';
-      }
-      return '/candidate/application-status';
-    }
-    if (role === 'business') {
-      return '/business/cases';
-    }
-  }
-
-  if (notification?.entityType === 'task' && caseRef) {
-    if (role === 'admin') return `/admin/case-detail/${encodeURIComponent(String(caseRef))}`;
-    if (role === 'caseworker') return '/caseworker/cases';
-    if (role === 'candidate') return '/candidate/application-status?tab=actions';
-  }
-
-  if (notification?.entityType === 'document' && caseRef && role === 'admin') {
-    return `/admin/case-detail/${encodeURIComponent(String(caseRef))}`;
-  }
-
+/** The role's generic notification-centre page (fallback / "View all"). */
+function genericNotificationsRoute(role) {
   if (role === 'admin') return '/admin/notifications';
   if (role === 'caseworker') return '/caseworker/notifications';
   if (role === 'candidate') return '/candidate/notifications';
   if (role === 'business') return '/business/notifications';
   if (role === 'superadmin') return '/superadmin/notifications';
-
   return '/notifications';
 }
 
-/** Caseworker opens case modal via navigation state. */
-export function getCaseworkerOpenCaseState(notification) {
+const enc = (v) => encodeURIComponent(String(v));
+
+/**
+ * Resolve the role-correct destination for a case-bearing notification.
+ * `caseRef` should be the human case reference (e.g. CAS-000004); the backend
+ * case-detail endpoint also accepts the numeric id, so a numeric fallback works.
+ */
+function caseTarget(role, caseRef, actionType, md = {}) {
+  if (role === 'admin') {
+    // CCL fee proposals have a dedicated approvals queue.
+    if (actionType === 'ccl_fee_review') return { path: '/admin/ccl-fee-approvals' };
+    return caseRef ? { path: `/admin/case-detail/${enc(caseRef)}` } : { path: '/admin/cases' };
+  }
+  if (role === 'caseworker') {
+    // The caseworker case list opens a per-case modal from navigation state.
+    return caseRef
+      ? { path: '/caseworker/cases', state: { openCaseRef: String(caseRef) } }
+      : { path: '/caseworker/cases' };
+  }
+  if (role === 'candidate') {
+    if (actionType === 'ccl_issued' || actionType === 'ccl_fee_approved') return { path: '/candidate/ccl' };
+    if (actionType === 'data_capture_request' || actionType === 'data_capture_rejected') {
+      return { path: '/candidate/document-checklist' };
+    }
+    if (md.nextStage === 'draft_application_review') return { path: '/candidate/application' };
+    return { path: '/candidate/application-status' };
+  }
+  if (role === 'business') {
+    // Sponsors have no "cases" page — the worker is the nearest equivalent.
+    return { path: '/business/workers' };
+  }
+  return null;
+}
+
+/**
+ * Role-aware deep link target for an in-app notification.
+ *
+ * Returns `{ path, state? }` for a concrete destination, or `null` when the
+ * notification has no specific page (the caller then shows the details modal).
+ * It resolves from the fields the backend already sends on every notification:
+ * `entityType`, `entityId`, `actionType`, `category`, `metadata`, `actionUrl`.
+ */
+export function resolveNotificationTarget(notification, user = null) {
+  const role = resolveRoleKey(user);
+  if (!notification || !role) return null;
+
+  const entityType = notification.entityType;
+  const category = notification.category;
+  const actionType = notification.actionType || notification?.metadata?.actionType;
+  const md = notification.metadata || {};
+  const entityId = notification.entityId;
+
+  // 0. An explicit actionUrl wins — but ONLY when it targets THIS user's own
+  //    area. A single event (e.g. "licence submitted") notifies several roles
+  //    with one shared actionUrl, so a role-blind redirect would mis-route.
+  if (typeof notification.actionUrl === 'string' && notification.actionUrl.startsWith(`/${role}/`)) {
+    return { path: notification.actionUrl };
+  }
+
+  // Prefer the human case reference; fall back to the numeric entityId (the
+  // case-detail endpoint and the caseworker modal both accept either form).
   const caseRef =
-    notification?.metadata?.caseId ||
-    notification?.metadata?.caseRef ||
-    (notification?.entityType === 'case' ? String(notification.entityId) : null);
-  return caseRef ? { openCaseRef: String(caseRef) } : null;
+    md.caseRef ||
+    md.caseId ||
+    md.case_reference ||
+    (entityType === 'case' && entityId != null ? String(entityId) : null);
+
+  // 1. Messages / conversations
+  if (entityType === 'message' || entityType === 'conversation' || category === 'message') {
+    const convo = md.conversationId || (entityType === 'conversation' ? entityId : null);
+    if (role === 'admin') return { path: convo ? `/admin/messages?conversation=${enc(convo)}` : '/admin/messages' };
+    if (role === 'caseworker') return { path: convo ? `/caseworker/messages?conversation=${enc(convo)}` : '/caseworker/messages' };
+    if (role === 'candidate') return { path: '/candidate/messages' };
+    if (role === 'business') return { path: '/business/messages' };
+  }
+
+  // 2. Sponsor licence applications
+  if (entityType === 'licence_application' || entityType === 'sponsor' || category === 'sponsorship') {
+    if (role === 'admin') return { path: entityId ? `/admin/licence/v2/${enc(entityId)}` : '/admin/licence-requests' };
+    if (role === 'caseworker') return { path: entityId ? `/caseworker/licence/v2/${enc(entityId)}` : '/caseworker/licence-reviews' };
+    if (role === 'business') return { path: '/business/licence' };
+  }
+
+  // 3. Certificate of Sponsorship requests
+  if (entityType === 'cos_request' || category === 'cos') {
+    if (role === 'admin') return { path: '/admin/cos-requests' };
+    if (role === 'caseworker') return { path: '/caseworker/cos-requests' };
+    if (role === 'business') return { path: '/business/cosallocation' };
+  }
+
+  // 4. Compliance reviews (compliance docs, right-to-work, reviewed worker
+  //    events / change requests — anything in the compliance category).
+  if (entityType === 'compliance_document' || entityType === 'right_to_work' || category === 'compliance') {
+    if (role === 'admin') return { path: '/admin/compliance-review' };
+    if (role === 'caseworker') return { path: '/caseworker/compliance-review' };
+    if (role === 'business') return { path: '/business/compliance-review' };
+  }
+
+  // 5. Payments / invoices
+  if (entityType === 'payment' || entityType === 'case_payment' || category === 'payment') {
+    if (role === 'admin') return { path: '/admin/finance' };
+    if (role === 'caseworker') return { path: '/caseworker/finance' };
+    if (role === 'candidate') return { path: '/candidate/payments' };
+    if (role === 'business') return { path: '/business/payment' };
+  }
+
+  // 6. Escalations — admin has a dedicated page; caseworker has none, so fall
+  //    back to the underlying case when we know it.
+  if (entityType === 'escalation') {
+    if (role === 'admin') return { path: '/admin/escalations' };
+    if (caseRef) return caseTarget(role, caseRef, actionType, md);
+  }
+
+  // 7. Worker events / change requests not already caught as compliance.
+  if (entityType === 'worker_event' || entityType === 'worker' || entityType === 'change_request') {
+    if (role === 'business') {
+      const candidateId = md.candidateId || md.workerId;
+      return candidateId
+        ? { path: '/business/worker-details', state: { candidateId } }
+        : { path: '/business/workers' };
+    }
+    if (caseRef) return caseTarget(role, caseRef, actionType, md);
+    if (role === 'admin') return { path: '/admin/compliance-review' };
+    if (role === 'caseworker') return { path: '/caseworker/compliance-review' };
+  }
+
+  // 8. Documents
+  if (entityType === 'document' || category === 'document') {
+    if (role === 'admin') return caseRef ? caseTarget('admin', caseRef, actionType, md) : { path: '/admin/documents' };
+    if (role === 'caseworker') return { path: '/caseworker/documents/upload' };
+    if (role === 'candidate') return { path: '/candidate/documents' };
+    if (role === 'business') return { path: '/business/documents' };
+  }
+
+  // 9. Cases, tasks, and anything else carrying a case reference (stage
+  //    changes, biometrics, CCL, fee reviews...).
+  if (entityType === 'case' || entityType === 'task' || caseRef) {
+    return caseTarget(role, caseRef, actionType, md);
+  }
+
+  return null; // no specific destination → caller shows the modal fallback
+}
+
+/**
+ * Role-aware deep link (path only). Thin wrapper over resolveNotificationTarget
+ * that always returns a usable path — used by the bell's "View all" footer,
+ * where an empty notification should land on the generic notifications centre.
+ */
+export function getNotificationRoute(notification, user = null) {
+  const target = resolveNotificationTarget(notification, user);
+  return target?.path || genericNotificationsRoute(resolveRoleKey(user));
 }
 
 export const groupNotificationsByDate = (notifications) => {

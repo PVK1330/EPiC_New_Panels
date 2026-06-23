@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import DatePicker from "../../components/DatePicker";
 import PhoneInput from "../../components/PhoneInput";
+import { COUNTRY_NAMES } from "../../utils/countries";
 
 const PRESET_SECTORS = [
   'Accounting & Audit',
@@ -53,39 +54,13 @@ const PRESET_SECTORS = [
   'Wholesale & Distribution',
 ];
 
-const COUNTRIES = [
-  'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda',
-  'Argentina','Armenia','Australia','Austria','Azerbaijan','Bahamas','Bahrain',
-  'Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan',
-  'Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria',
-  'Burkina Faso','Burundi','Cabo Verde','Cambodia','Cameroon','Canada',
-  'Central African Republic','Chad','Chile','China','Colombia','Comoros',
-  'Congo (Brazzaville)','Congo (Kinshasa)','Costa Rica','Croatia','Cuba',
-  'Cyprus','Czech Republic','Denmark','Djibouti','Dominica','Dominican Republic',
-  'Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia',
-  'Eswatini','Ethiopia','Fiji','Finland','France','Gabon','Gambia','Georgia',
-  'Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau',
-  'Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran',
-  'Iraq','Ireland','Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan',
-  'Kenya','Kiribati','Kuwait','Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho',
-  'Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar',
-  'Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania',
-  'Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro',
-  'Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands',
-  'New Zealand','Nicaragua','Niger','Nigeria','North Korea','North Macedonia',
-  'Norway','Oman','Pakistan','Palau','Panama','Papua New Guinea','Paraguay',
-  'Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia','Rwanda',
-  'Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines',
-  'Samoa','San Marino','Sao Tome and Principe','Saudi Arabia','Senegal',
-  'Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia',
-  'Solomon Islands','Somalia','South Africa','South Korea','South Sudan',
-  'Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria',
-  'Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga',
-  'Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda',
-  'Ukraine','United Arab Emirates','United Kingdom','United States',
-  'Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam',
-  'Yemen','Zambia','Zimbabwe',
-];
+// Shared country list — single source of truth in utils/countries.js.
+const COUNTRIES = COUNTRY_NAMES;
+
+// Year-established upper bound: a company can't have been established in the future.
+const CURRENT_YEAR = new Date().getFullYear();
+// Permissive website check: bare domain or http(s) URL.
+const URL_REGEX = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/\S*)?$/i;
 
 const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
   const [step, setStep] = useState(1);
@@ -172,36 +147,94 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const validateStep = (s) => {
-    const newErrors = {};
+  // Pure rule set for a single step — returns a field→message map (no state writes).
+  // Required fields are enforced; optional fields are only validated when filled in.
+  const getStepErrors = (s) => {
+    const e = {};
     if (s === 1) {
-      if (!form.companyName) newErrors.companyName = "Company Name is required";
-      if (!form.registrationNumber) newErrors.registrationNumber = "Registration Number is required";
-      if (!form.sponsorLicenceNumber) newErrors.sponsorLicenceNumber = "Licence Number is required";
-      if (!form.licenceRating) newErrors.licenceRating = "Licence Rating is required";
-      if (!form.industrySector) newErrors.industrySector = "Industry Sector is required";
+      if (!form.companyName) e.companyName = "Company Name is required";
+      if (!form.registrationNumber) e.registrationNumber = "Registration Number is required";
+      if (!form.sponsorLicenceNumber) e.sponsorLicenceNumber = "Licence Number is required";
+      if (!form.licenceRating) e.licenceRating = "Licence Rating is required";
+      if (!form.industrySector) e.industrySector = "Industry Sector is required";
+      if (form.yearEstablished) {
+        const y = Number(form.yearEstablished);
+        if (!/^\d{4}$/.test(String(form.yearEstablished)) || y < 1800 || y > CURRENT_YEAR) {
+          e.yearEstablished = `Enter a valid year between 1800 and ${CURRENT_YEAR}`;
+        }
+      }
+      if (form.website && !URL_REGEX.test(String(form.website).trim())) {
+        e.website = "Enter a valid website (e.g. www.example.com)";
+      }
     }
     if (s === 2) {
-      if (!form.registeredAddress) newErrors.registeredAddress = "Registered Address is required";
-      if (!form.city) newErrors.city = "City is required";
-      if (!form.state) newErrors.state = "State is required";
-      if (!form.country) newErrors.country = "Country is required";
-      if (!form.postalCode) newErrors.postalCode = "Postal Code is required";
+      if (!form.registeredAddress) e.registeredAddress = "Registered Address is required";
+      if (!form.city) e.city = "City is required";
+      if (!form.state) e.state = "State is required";
+      if (!form.country) e.country = "Country is required";
+      if (!form.postalCode) e.postalCode = "Postal Code is required";
     }
     if (s === 3) {
-      if (!form.authorisingPhone) newErrors.authorisingPhone = "Phone is required";
-      else if (phoneValid.authorisingPhone === false) newErrors.authorisingPhone = "Enter a valid phone number for the selected country";
-      if (!form.authorisingEmail) newErrors.authorisingEmail = "Email is required";
-      else if (!emailRegex.test(form.authorisingEmail)) newErrors.authorisingEmail = "Enter a valid email address";
-      if (!form.keyContactName) newErrors.keyContactName = "Key Contact Name is required";
-      if (!form.keyContactPhone) newErrors.keyContactPhone = "Phone is required";
-      else if (phoneValid.keyContactPhone === false) newErrors.keyContactPhone = "Enter a valid phone number for the selected country";
-      if (!form.keyContactEmail) newErrors.keyContactEmail = "Key Contact Email is required";
-      else if (!emailRegex.test(form.keyContactEmail)) newErrors.keyContactEmail = "Enter a valid email address";
+      if (!form.authorisingPhone) e.authorisingPhone = "Phone is required";
+      else if (phoneValid.authorisingPhone === false) e.authorisingPhone = "Enter a valid phone number for the selected country";
+      if (!form.authorisingEmail) e.authorisingEmail = "Email is required";
+      else if (!emailRegex.test(form.authorisingEmail)) e.authorisingEmail = "Enter a valid email address";
+      if (!form.keyContactName) e.keyContactName = "Key Contact Name is required";
+      if (!form.keyContactPhone) e.keyContactPhone = "Phone is required";
+      else if (phoneValid.keyContactPhone === false) e.keyContactPhone = "Enter a valid phone number for the selected country";
+      if (!form.keyContactEmail) e.keyContactEmail = "Key Contact Email is required";
+      else if (!emailRegex.test(form.keyContactEmail)) e.keyContactEmail = "Enter a valid email address";
     }
+    if (s === 4) {
+      if (form.hrEmail && !emailRegex.test(form.hrEmail)) e.hrEmail = "Enter a valid email address";
+      if (form.hrPhone && phoneValid.hrPhone === false) e.hrPhone = "Enter a valid phone number for the selected country";
+      if (form.cosAllocation && !/^\d+$/.test(String(form.cosAllocation))) {
+        e.cosAllocation = "CoS allocation must be a whole number";
+      }
+      if (form.licenceIssueDate && form.licenceExpiryDate &&
+          new Date(form.licenceExpiryDate) < new Date(form.licenceIssueDate)) {
+        e.licenceExpiryDate = "Expiry date cannot be before the issue date";
+      }
+    }
+    if (s === 5) {
+      (form.shareholders || []).forEach((sh, i) => {
+        if (sh.percentage !== "" && sh.percentage != null) {
+          const p = Number(sh.percentage);
+          if (Number.isNaN(p) || p < 0 || p > 100) {
+            e[`shareholder_${i}`] = "Percentage must be between 0 and 100";
+          }
+        }
+      });
+    }
+    if (s === 6) {
+      if (form.billingEmail && !emailRegex.test(form.billingEmail)) e.billingEmail = "Enter a valid email address";
+      if (form.billingPhone && phoneValid.billingPhone === false) e.billingPhone = "Enter a valid phone number for the selected country";
+      if (form.outstandingBalance !== "" && form.outstandingBalance != null) {
+        const n = Number(form.outstandingBalance);
+        if (Number.isNaN(n) || n < 0) e.outstandingBalance = "Enter a valid amount";
+      }
+    }
+    return e;
+  };
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const validateStep = (s) => {
+    const e = getStepErrors(s);
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  // Validate every step (used on final submit) so issues on earlier steps can't
+  // slip through. Returns the merged errors plus the first step that has any.
+  const validateAll = () => {
+    let merged = {};
+    let firstInvalid = null;
+    for (let s = 1; s <= steps.length; s += 1) {
+      const e = getStepErrors(s);
+      if (Object.keys(e).length && firstInvalid === null) firstInvalid = s;
+      merged = { ...merged, ...e };
+    }
+    setErrors(merged);
+    return { ok: Object.keys(merged).length === 0, firstInvalid };
   };
 
   const handleChange = (field, value) => {
@@ -247,6 +280,10 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
     const updated = [...(form.shareholders || [])];
     updated[idx][field] = val;
     setForm(prev => ({ ...prev, shareholders: updated }));
+    // Mirror handleChange's clear-on-edit so a fixed percentage drops its red border.
+    if (field === 'percentage' && errors[`shareholder_${idx}`]) {
+      setErrors(prev => ({ ...prev, [`shareholder_${idx}`]: null }));
+    }
   };
 
   const removeShareholder = (idx) => {
@@ -285,10 +322,13 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (validateStep(step)) {
-      if (onSubmit) {
-        onSubmit({ ...form, isFullRegistration: true });
-      }
+    const { ok, firstInvalid } = validateAll();
+    if (!ok) {
+      if (firstInvalid) setStep(firstInvalid);
+      return;
+    }
+    if (onSubmit) {
+      onSubmit({ ...form, isFullRegistration: true });
     }
   };
 
@@ -390,20 +430,25 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
               <div>
                 <label className="text-xs font-bold text-gray-700">Year Established</label>
                 <input
-                  value={form.yearEstablished}
-                  onChange={(e) => handleChange('yearEstablished', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={form.yearEstablished || ""}
+                  onChange={(e) => handleChange('yearEstablished', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  className={`mt-2 w-full border ${errors.yearEstablished ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                   placeholder="e.g. 2020"
                 />
+                {errors.yearEstablished && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.yearEstablished}</p>}
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-700">Company Website</label>
                 <input
-                  value={form.website}
+                  value={form.website || ""}
                   onChange={(e) => handleChange('website', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  className={`mt-2 w-full border ${errors.website ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                   placeholder="https://www.example.com"
                 />
+                {errors.website && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.website}</p>}
               </div>
             </div>
           </div>
@@ -463,6 +508,11 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                   className={`mt-2 w-full border ${errors.country ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                 >
                   <option value="">Select country</option>
+                  {/* Keep a previously saved, non-canonical value (e.g. free-typed
+                      elsewhere) visible/selected instead of rendering blank. */}
+                  {form.country && !COUNTRIES.includes(form.country) && (
+                    <option value={form.country}>{form.country}</option>
+                  )}
                   {COUNTRIES.map(c => <option key={c}>{c}</option>)}
                 </select>
                 {errors.country && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.country}</p>}
@@ -487,7 +537,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
               <div>
                 <label className="text-xs font-bold text-gray-700">Authorising Officer Name</label>
                 <input
-                  value={form.authorisingName}
+                  value={form.authorisingName || ""}
                   onChange={(e) => handleChange('authorisingName', e.target.value)}
                   className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                   placeholder="Enter name"
@@ -507,7 +557,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
               <div>
                 <label className="text-xs font-bold text-gray-700">Email <span className="text-red-500">*</span></label>
                 <input
-                  value={form.authorisingEmail}
+                  value={form.authorisingEmail || ""}
                   onChange={(e) => handleChange('authorisingEmail', e.target.value)}
                   className={`mt-2 w-full border ${errors.authorisingEmail ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                   placeholder="Enter email address"
@@ -644,16 +694,19 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                 <input
                   value={form.hrEmail || ""}
                   onChange={(e) => handleChange('hrEmail', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  className={`mt-2 w-full border ${errors.hrEmail ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                   placeholder="Enter HR email address"
                 />
+                {errors.hrEmail && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.hrEmail}</p>}
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-700">HR Manager Phone</label>
-                <input
+                <label className="text-xs font-bold text-gray-700 mb-2 block">HR Manager Phone</label>
+                <PhoneInput
+                  name="hrPhone"
                   value={form.hrPhone || ""}
                   onChange={(e) => handleChange('hrPhone', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  onValidityChange={(ok) => setPhoneValid(prev => ({ ...prev, hrPhone: ok }))}
+                  error={errors.hrPhone || ""}
                   placeholder="Enter HR phone number"
                 />
               </div>
@@ -683,17 +736,22 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                   name="licenceExpiryDate"
                   value={form.licenceExpiryDate || ""}
                   onChange={(e) => handleChange('licenceExpiryDate', e.target.value)}
+                  min={form.licenceIssueDate || undefined}
+                  error={errors.licenceExpiryDate || ""}
                   placeholder="Select date"
                 />
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-700">CoS Allocation</label>
                 <input
+                  type="text"
+                  inputMode="numeric"
                   value={form.cosAllocation || ""}
-                  onChange={(e) => handleChange('cosAllocation', e.target.value)}
-                  className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                  onChange={(e) => handleChange('cosAllocation', e.target.value.replace(/\D/g, ''))}
+                  className={`mt-2 w-full border ${errors.cosAllocation ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                   placeholder="Enter number of CoS"
                 />
+                {errors.cosAllocation && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.cosAllocation}</p>}
               </div>
             </div>
           </div>
@@ -731,12 +789,16 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                         onChange={(e) => updateShareholder(idx, "name", e.target.value)}
                         className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-white"
                       />
-                      <input
-                        placeholder="Percentage (e.g. 50%)"
-                        value={s.percentage || ""}
-                        onChange={(e) => updateShareholder(idx, "percentage", e.target.value)}
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-white"
-                      />
+                      <div>
+                        <input
+                          placeholder="Percentage (e.g. 50)"
+                          inputMode="decimal"
+                          value={s.percentage || ""}
+                          onChange={(e) => updateShareholder(idx, "percentage", e.target.value.replace(/[^\d.]/g, ''))}
+                          className={`w-full border ${errors[`shareholder_${idx}`] ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 text-sm font-bold text-secondary bg-white`}
+                        />
+                        {errors[`shareholder_${idx}`] && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors[`shareholder_${idx}`]}</p>}
+                      </div>
                     </div>
                     <button type="button" onClick={() => removeShareholder(idx)} className="text-red-400 hover:text-red-600">
                       <Trash2 size={20} />
@@ -830,27 +892,33 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
                     <input
                       value={form.billingEmail || ""}
                       onChange={(e) => handleChange('billingEmail', e.target.value)}
-                      className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                      className={`mt-2 w-full border ${errors.billingEmail ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                       placeholder="Enter email"
                     />
+                    {errors.billingEmail && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.billingEmail}</p>}
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-700">Billing Phone</label>
-                    <input
+                    <label className="text-xs font-bold text-gray-700 mb-2 block">Billing Phone</label>
+                    <PhoneInput
+                      name="billingPhone"
                       value={form.billingPhone || ""}
                       onChange={(e) => handleChange('billingPhone', e.target.value)}
-                      className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                      onValidityChange={(ok) => setPhoneValid(prev => ({ ...prev, billingPhone: ok }))}
+                      error={errors.billingPhone || ""}
                       placeholder="Enter phone number"
                     />
                   </div>
                   <div>
                     <label className="text-xs font-bold text-gray-700">Outstanding Balance</label>
                     <input
+                      type="text"
+                      inputMode="decimal"
                       value={form.outstandingBalance || ""}
-                      onChange={(e) => handleChange('outstandingBalance', e.target.value)}
-                      className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+                      onChange={(e) => handleChange('outstandingBalance', e.target.value.replace(/[^\d.]/g, ''))}
+                      className={`mt-2 w-full border ${errors.outstandingBalance ? 'border-red-500' : 'border-gray-200'} rounded-xl px-4 py-3 pr-10 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40`}
                       placeholder="Enter amount"
                     />
+                    {errors.outstandingBalance && <p className="text-[10px] text-red-500 mt-1 font-bold">{errors.outstandingBalance}</p>}
                   </div>
                   <div className="lg:col-span-2">
                     <label className="text-xs font-bold text-gray-700">Payment Terms</label>
