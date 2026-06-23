@@ -1,5 +1,14 @@
 import { getInitialApplicationFormData } from "./initialFormState";
 import { formatDateLong } from "../../utils/datetime";
+import { getCountries, getCountryCallingCode } from "libphonenumber-js";
+
+// getCountriesForCallingCode is not exported from the main bundle — build it from the available API
+function getCountriesForCallingCode(callingCode) {
+  const code = String(callingCode);
+  return getCountries().filter((iso) => {
+    try { return String(getCountryCallingCode(iso)) === code; } catch { return false; }
+  });
+}
 
 // Helper function to format date for HTML date input (YYYY-MM-DD)
 function formatDateForInput(date) {
@@ -64,16 +73,27 @@ export function mapApplicationToCandidateRow(application, overrides = {}) {
     ? formatDateLong(application.dob, { month: "short" })
     : "";
 
-  // Parse phone number to extract country code and mobile
-  const phoneNumber = application.contactNumber || "";
-  let country_code = "+44"; // Default UK code
-  let mobile = phoneNumber;
-  
-  if (phoneNumber && phoneNumber.startsWith('+')) {
-    const match = phoneNumber.match(/^(\+\d+)(.*)$/);
-    if (match) {
-      country_code = match[1];
-      mobile = match[2].trim();
+  // Extract country code and mobile from the split PhoneInput fields.
+  // If contactCountryCode (ISO code, e.g. "GB") is present use it; fall back
+  // to parsing a legacy combined string like "+44 07123456789".
+  let country_code = "+44";
+  let mobile = application.contactNumber || "";
+
+  if (application.contactCountryCode) {
+    try {
+      country_code = `+${getCountryCallingCode(application.contactCountryCode)}`;
+    } catch {
+      // unknown ISO code — leave default
+    }
+    mobile = application.contactNumber || "";
+  } else {
+    const phoneNumber = application.contactNumber || "";
+    if (phoneNumber.startsWith("+")) {
+      const match = phoneNumber.match(/^(\+\d+)\s*(.*)$/);
+      if (match) {
+        country_code = match[1];
+        mobile = match[2].trim();
+      }
     }
   }
 
@@ -221,10 +241,19 @@ export function candidateRowToApplicationForm(c) {
   if (c.application && typeof c.application === "object") {
     const app = c.application;
     
-    // Combine country code and mobile for contact number
-    const contactNumber = c.country_code && c.mobile 
-      ? `${c.country_code} ${c.mobile}` 
-      : c.phone || c.mobile || "";
+    // Resolve country ISO code from stored dial code (e.g. "+44" → "GB").
+    // getCountriesForCallingCode returns an array; pick the first (canonical) one.
+    let contactCountryCode = "GB";
+    if (c.country_code) {
+      try {
+        const dialDigits = String(c.country_code).replace(/^\+/, "");
+        const matches = getCountriesForCallingCode(dialDigits);
+        if (matches && matches.length > 0) contactCountryCode = matches[0];
+      } catch {
+        // unknown dial code — keep default
+      }
+    }
+    const contactNumber = c.mobile || c.phone || "";
 
     return {
       ...base,
@@ -232,6 +261,7 @@ export function candidateRowToApplicationForm(c) {
       firstName: c.first_name ?? c.firstName ?? "",
       lastName: c.last_name ?? c.lastName ?? "",
       email: c.email ?? "",
+      contactCountryCode,
       contactNumber,
       
       // All application fields from child table

@@ -44,6 +44,7 @@ import {
   updateAdminCandidateApplication,
   exportCandidateApplicationsExcel,
   importCandidateApplicationsExcel,
+  downloadImportSampleTemplate,
   assignCandidateBusiness,
 } from "../../services/candidateApi";
 import { getSponsors } from "../../services/sponsorApi";
@@ -83,6 +84,43 @@ const VISA_CHIPS = {
   "Family Visa": "bg-pink-100 text-pink-700",
   "Youth Mobility": "bg-lime-100 text-lime-700",
   "Visitor Visa": "bg-orange-100 text-orange-700",
+};
+
+/** Maps each application field key → the form step it appears in. */
+const FIELD_STEP_MAP = {
+  applicationType: "Personal",   firstName: "Personal",     lastName: "Personal",
+  email: "Personal",             gender: "Personal",        contactNumber: "Personal",
+  relationshipStatus: "Personal",address: "Personal",
+  nationality: "Nationality",    birthCountry: "Nationality", placeOfBirth: "Nationality",
+  dob: "Nationality",            passportNumber: "Nationality", issuingAuthority: "Nationality",
+  issueDate: "Nationality",      expiryDate: "Nationality", passportAvailable: "Nationality",
+  nationalIdNumber: "Identity",  idIssuingAuthorityNational: "Identity",
+  otherNationality: "Identity",  ukLicense: "Identity",     medicalTreatment: "Identity",
+  ukStayDuration: "Identity",    contactNumber2: "Identity",
+  previousAddress: "Identity",   startDate: "Identity",     endDate: "Identity",
+  parentName: "Parent",          parentRelation: "Parent",  parentDob: "Parent",
+  parentNationality: "Parent",   sameNationality: "Parent",
+  parent2Name: "Parent",         parent2Relation: "Parent", parent2Dob: "Parent",
+  parent2Nationality: "Parent",  parent2SameNationality: "Parent",
+  illegalEntry: "Travel & visa", overstayed: "Travel & visa", breach: "Travel & visa",
+  falseInfo: "Travel & visa",    otherBreach: "Travel & visa",
+  refusedVisa: "Travel & visa",  refusedEntry: "Travel & visa",
+  refusedPermission: "Travel & visa", refusedAsylum: "Travel & visa",
+  deported: "Travel & visa",     removed: "Travel & visa",
+  requiredToLeave: "Travel & visa", banned: "Travel & visa",
+  visitedOther: "Status",        countryVisited: "Status",  visitReason: "Status",
+  entryDate: "Status",           leaveDate: "Status",       visaType: "Status",
+  brpNumber: "Status",           visaEndDate: "Status",     niNumber: "Status",
+  sponsored: "Status",           englishProof: "Status",
+};
+
+const STEP_BADGE = {
+  "Personal":     "bg-blue-50 text-blue-600 border-blue-100",
+  "Nationality":  "bg-purple-50 text-purple-600 border-purple-100",
+  "Identity":     "bg-amber-50 text-amber-600 border-amber-100",
+  "Parent":       "bg-green-50 text-green-600 border-green-100",
+  "Travel & visa":"bg-orange-50 text-orange-600 border-orange-100",
+  "Status":       "bg-teal-50 text-teal-600 border-teal-100",
 };
 
 
@@ -257,6 +295,8 @@ export default function AdminCandidates() {
   const [assigning, setAssigning] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importFile, setImportFile] = useState(null);
+  const [importResults, setImportResults] = useState(null);
+  const [downloadingSample, setDownloadingSample] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -349,6 +389,8 @@ export default function AdminCandidates() {
     setEditForm(null);
     setErrors({});
     setDetailTab("overview");
+    setImportResults(null);
+    setImportFile(null);
   };
 
   const openCreate = () => {
@@ -790,31 +832,43 @@ export default function AdminCandidates() {
     setImporting(true);
     try {
       const res = await importCandidateApplicationsExcel(importFile);
-      const { successful, failed, total_processed } = res.data?.data || {};
+      const data = res.data?.data || {};
+      const { successful, failed, total_processed, results } = data;
 
-      showToast({
-        message: `Import finished: ${successful ?? 0} successful, ${failed ?? 0} failed (${total_processed ?? 0} rows)`,
-        variant: (successful ?? 0) > 0 ? "success" : "danger",
-      });
+      // Collect newly-created candidates that have temporary passwords
+      const newAccounts = (results?.success || []).filter((r) => r.created && r.temporary_password);
 
-      const r = await fetchCandidates(
-        page,
-        limit,
-        debouncedSearch.trim(),
-        statusParam,
-        visaParam,
-        payParam,
-      );
-      if (!r.ok) {
-        showToast({ message: getApiError(r.error), variant: "danger" });
-      }
-
+      setImportResults({ successful, failed, total_processed, errors: results?.errors || [], newAccounts });
       setImportFile(null);
-      closeModal();
+
+      await fetchCandidates(page, limit, debouncedSearch.trim(), statusParam, visaParam, payParam);
     } catch (e) {
       showToast({ message: getApiError(e), variant: "danger" });
     } finally {
       setImporting(false);
+    }
+  };
+
+  const handleDownloadSample = async () => {
+    setDownloadingSample(true);
+    try {
+      const res = await downloadImportSampleTemplate();
+      const blob = new Blob([res.data], {
+        type: res.headers["content-type"] ||
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "candidate-import-sample.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setDownloadingSample(false);
     }
   };
 
@@ -872,14 +926,14 @@ export default function AdminCandidates() {
           <p className="text-sm text-gray-500 mt-0.5">All registered clients and their case details</p>
         </div>
         <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
-          <button
+          {/* <button
             type="button"
             onClick={() => setFieldPanelOpen((o) => !o)}
             className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors"
           >
             Application form fields
             {fieldPanelOpen ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />}
-          </button>
+          </button> */}
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <button
               onClick={handleExport}
@@ -923,27 +977,41 @@ export default function AdminCandidates() {
             </div>
           )}
           <div>
-            <p className="text-sm font-bold text-gray-700 mb-3">
-              Built-in fields — toggle visibility for candidates. Changes save immediately on the server.
+            <p className="text-sm font-bold text-gray-700 mb-1">
+              Built-in fields — toggle visibility for candidates.
+            </p>
+            <p className="text-xs text-gray-400 mb-3">
+              Hidden fields are removed from the candidate application form. Each badge shows which form step the field belongs to.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[min(50vh,28rem)] overflow-y-auto pr-1">
               {[...applicationFieldSettings]
                 .sort((a, b) => (a.field_order ?? 0) - (b.field_order ?? 0))
-                .map((row) => (
-                  <label
-                    key={row.id ?? row.field_key}
-                    className="flex items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 accent-indigo-600 shrink-0"
-                      checked={row.is_visible !== false}
-                      onChange={(e) => handleBuiltinToggle(row, e.target.checked)}
-                      disabled={applicationFieldsLoading}
-                    />
-                    <span>{row.field_label}</span>
-                  </label>
-                ))}
+                .map((row) => {
+                  const step = FIELD_STEP_MAP[row.field_key];
+                  const badgeCls = step ? STEP_BADGE[step] : "bg-gray-100 text-gray-500 border-gray-200";
+                  return (
+                    <label
+                      key={row.id ?? row.field_key}
+                      className="flex items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 accent-indigo-600 shrink-0"
+                        checked={row.is_visible !== false}
+                        onChange={(e) => handleBuiltinToggle(row, e.target.checked)}
+                        disabled={applicationFieldsLoading}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold text-gray-700 leading-snug">{row.field_label}</span>
+                        {step && (
+                          <span className={`inline-block mt-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${badgeCls}`}>
+                            {step}
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
             </div>
           </div>
 
@@ -1410,73 +1478,156 @@ export default function AdminCandidates() {
         footer={
           <>
             <Button variant="ghost" onClick={closeModal} className="rounded-xl">
-              Cancel
+              {importResults ? "Close" : "Cancel"}
             </Button>
-            <Button
-              variant="primary"
-              disabled={importing || !importFile}
-              onClick={handleBulkImport}
-              className="rounded-xl"
-            >
-              {importing ? (
-                <>
-                  <Loader2 size={14} className="animate-spin mr-2" />
-                  Importing…
-                </>
-              ) : (
-                "Import"
-              )}
-            </Button>
+            {!importResults && (
+              <Button
+                variant="primary"
+                disabled={importing || !importFile}
+                onClick={handleBulkImport}
+                className="rounded-xl"
+              >
+                {importing ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin mr-2" />
+                    Importing…
+                  </>
+                ) : (
+                  "Import"
+                )}
+              </Button>
+            )}
           </>
         }
       >
-        <div className="space-y-4">
-          <p className="text-xs text-gray-600 leading-relaxed">
-            Export applications first to obtain the correct column headers. Rows are matched by email (and optionally User ID). New emails create candidates with a temporary password returned in the summary.
-          </p>
-
-          <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-gray-300 transition-colors">
-            <input
-              type="file"
-              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-              onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-              className="hidden"
-              id="import-file-input"
-            />
-            <label
-              htmlFor="import-file-input"
-              className="cursor-pointer flex flex-col items-center gap-2"
-            >
-              <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center">
-                <FiUpload size={20} className="text-gray-500" />
+        {importResults ? (
+          /* ── Results view shown after import completes ── */
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                <p className="text-xl font-black text-gray-800">{importResults.total_processed ?? 0}</p>
+                <p className="text-[10px] font-bold uppercase text-gray-400 mt-0.5">Rows</p>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-700">
-                  {importFile ? importFile.name : "Click to upload Excel file"}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  .xlsx or .xls — max 5MB
-                </p>
+              <div className="rounded-xl bg-green-50 border border-green-100 p-3">
+                <p className="text-xl font-black text-green-700">{importResults.successful ?? 0}</p>
+                <p className="text-[10px] font-bold uppercase text-green-500 mt-0.5">Success</p>
               </div>
-            </label>
-          </div>
-
-          {importFile && (
-            <div className="flex items-center justify-between p-3 bg-green-50 border border-green-100 rounded-xl">
-              <div className="flex items-center gap-2">
-                <FiCheck size={16} className="text-green-600" />
-                <span className="text-sm font-medium text-green-700">File selected</span>
+              <div className="rounded-xl bg-red-50 border border-red-100 p-3">
+                <p className="text-xl font-black text-red-600">{importResults.failed ?? 0}</p>
+                <p className="text-[10px] font-bold uppercase text-red-400 mt-0.5">Failed</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setImportFile(null)}
-                className="text-xs text-gray-500 hover:text-gray-700"
-              >
-                Remove
-              </button>
             </div>
-          )}
-        </div>
+
+            {importResults.newAccounts?.length > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2">
+                <p className="text-xs font-black text-amber-800">
+                  New accounts created — save these temporary passwords
+                </p>
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {importResults.newAccounts.map((a) => (
+                    <div key={a.email} className="flex items-center justify-between gap-3 rounded-lg bg-white border border-amber-100 px-3 py-2">
+                      <span className="text-xs font-semibold text-gray-700 truncate">{a.email}</span>
+                      <code className="text-xs font-black text-amber-700 shrink-0 bg-amber-100 px-2 py-0.5 rounded">
+                        {a.temporary_password}
+                      </code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {importResults.errors?.length > 0 && (
+              <div className="rounded-xl border border-red-100 bg-red-50 p-3 space-y-1.5">
+                <p className="text-xs font-black text-red-700">Errors</p>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {importResults.errors.map((e, i) => (
+                    <p key={i} className="text-xs text-red-600">
+                      <span className="font-bold">Row {e.row}:</span> {e.error}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setImportResults(null)}
+              className="w-full text-sm font-bold text-indigo-600 hover:text-indigo-700"
+            >
+              ← Import another file
+            </button>
+          </div>
+        ) : (
+          /* ── Upload view ── */
+          <div className="space-y-4">
+            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 space-y-1.5">
+              <p className="text-xs font-bold text-blue-800">How to import</p>
+              <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+                <li>Download the sample template below for the correct column headers</li>
+                <li>Each row is matched by <span className="font-bold">Email</span> (required) or User ID</li>
+                <li>Existing candidates are updated; new emails create accounts with a temporary password</li>
+                <li>Dates must be in <span className="font-bold">YYYY-MM-DD</span> format (e.g. 1990-05-15)</li>
+                <li>Yes/No fields accept <span className="font-bold">Yes</span> or <span className="font-bold">No</span></li>
+              </ul>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleDownloadSample}
+              disabled={downloadingSample}
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-green-700 bg-green-50 border border-green-200 rounded-xl hover:bg-green-100 transition-colors disabled:opacity-50"
+            >
+              {downloadingSample ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <FiDownload size={14} />
+              )}
+              Download sample template (.xlsx)
+            </button>
+
+            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-gray-300 transition-colors">
+              <input
+                type="file"
+                accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                className="hidden"
+                id="import-file-input"
+              />
+              <label
+                htmlFor="import-file-input"
+                className="cursor-pointer flex flex-col items-center gap-2"
+              >
+                <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center">
+                  <FiUpload size={20} className="text-gray-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">
+                    {importFile ? importFile.name : "Click to upload Excel file"}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    .xlsx or .xls — max 5MB
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {importFile && (
+              <div className="flex items-center justify-between p-3 bg-green-50 border border-green-100 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <FiCheck size={16} className="text-green-600" />
+                  <span className="text-sm font-medium text-green-700">File selected</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setImportFile(null)}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </motion.div>
   );

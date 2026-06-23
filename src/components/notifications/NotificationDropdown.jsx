@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Bell, BellRing } from 'lucide-react';
-import { fetchUnreadCount, fetchNotifications } from '../../store/slices/notificationSlice';
+import { fetchUnreadCount, addNotification, setUnreadCount } from '../../store/slices/notificationSlice';
 import NotificationList from './NotificationList';
 import { getMessagingSocketUrl } from '../../utils/socketOrigin';
 import { getNotificationRoute } from '../../utils/notificationHelpers';
@@ -16,21 +16,38 @@ const NotificationDropdown = () => {
   const { user, token } = useSelector((state) => state.auth);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  // Tracks live socket state so the backstop poll never competes with real-time.
+  const socketConnectedRef = useRef(false);
 
+  // Initial count on mount, and a resync whenever the tab regains focus (covers
+  // anything missed while the tab was backgrounded). Real-time updates otherwise
+  // arrive over the socket below.
   useEffect(() => {
     dispatch(fetchUnreadCount());
-    
-    // Set up polling for unread count every 30 seconds (fallback)
-    const interval = setInterval(() => {
-      dispatch(fetchUnreadCount());
-    }, 30000);
+    const onVisible = () => {
+      if (!document.hidden) dispatch(fetchUnreadCount());
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [dispatch]);
 
+  // Backstop polling — only fires when the socket is NOT connected (e.g. the
+  // production WebSocket upgrade is unavailable) and the tab is visible. When
+  // real-time works this never runs, so the bell makes no periodic requests.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!document.hidden && !socketConnectedRef.current) {
+        dispatch(fetchUnreadCount());
+      }
+    }, 60000);
     return () => clearInterval(interval);
   }, [dispatch]);
 
-  // Real-time socket listener for instant message notifications
+  // Real-time updates. The server pushes the new notification and the
+  // authoritative unread count, so we update the store directly instead of
+  // re-fetching over HTTP on every event.
   useEffect(() => {
-    if (!user?.id || !token) return;
+    if (!user?.id || !token) return undefined;
 
     const url = getMessagingSocketUrl();
     const socket = io(url, {
@@ -40,23 +57,28 @@ const NotificationDropdown = () => {
       transports: ['websocket', 'polling'],
     });
 
-    // Server pushes `notification:new` for every notification type (messages,
-    // case updates, tasks, etc). Refresh the badge and first page on arrival.
-    const refresh = () => {
+    socket.on('connect', () => {
+      socketConnectedRef.current = true;
+      // Catch up on anything missed while the socket was down.
       dispatch(fetchUnreadCount());
-      dispatch(fetchNotifications({ limit: 20, unread_only: false, page: 1 }));
-    };
-    socket.on('notification:new', refresh);
-    socket.on('notification:count', () => dispatch(fetchUnreadCount()));
+    });
+    socket.on('disconnect', () => {
+      socketConnectedRef.current = false;
+    });
 
-    // Fallback: a brand-new message also implies a notification for the receiver.
-    socket.on('message:new', (payload) => {
-      const m = payload?.message;
-      if (!m) return;
-      if (Number(user.id) === Number(m.receiverId)) refresh();
+    // New notification → prepend to the list and bump the badge (deduped in the slice).
+    socket.on('notification:new', (payload) => {
+      if (payload && payload.id != null) dispatch(addNotification(payload));
+    });
+    // Authoritative unread count from the server — no HTTP round-trip.
+    socket.on('notification:count', (payload) => {
+      if (payload && typeof payload.count === 'number') {
+        dispatch(setUnreadCount(payload.count));
+      }
     });
 
     return () => {
+      socketConnectedRef.current = false;
       // Small delay to ensure any pending connection attempts are handled
       // before we forcefully disconnect during rapid remounts.
       setTimeout(() => {

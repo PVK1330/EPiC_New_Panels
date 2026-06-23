@@ -155,12 +155,12 @@ const BusinessPayment = () => {
   const handleDownload = async (payment) => {
     setDownloading(payment.id);
     try {
-      const { downloadInvoiceReceiptPdf } = await import("../../services/downloadApi");
-      const res = await downloadInvoiceReceiptPdf({ paymentId: payment.rawId ?? payment.id, invoiceNumber: payment.invoiceNo });
-      const url = URL.createObjectURL(res.data);
+      const { downloadSponsorInvoicePdf } = await import("../../services/downloadApi");
+      const { blob, filename } = await downloadSponsorInvoicePdf(payment.rawId ?? payment.id, payment.kind);
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${payment.invoiceNo}.pdf`;
+      a.download = filename || `${payment.invoiceNo}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {

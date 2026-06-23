@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { motion } from "framer-motion";
 import { FiImage, FiSave, FiRefreshCw } from "react-icons/fi";
 import Button from "../../Button";
-import { resolveOrganisationLogoUrl } from "../../../utils/assetUrl";
+import { resolveOrganisationLogoUrl, resolveAssetUrl } from "../../../utils/assetUrl";
 
 const panelMotion = {
   initial: { opacity: 0, y: 10 },
@@ -16,13 +16,21 @@ export default function OrganisationSettings({
   onLogoFileChange,
   onSave,
   saving,
+  faviconFile,
+  onFaviconFileChange,
+  onFaviconSave,
+  savingFavicon,
   loading,
   error,
 }) {
   const fileRef = useRef(null);
+  const faviconRef = useRef(null);
   const previewUrl = logoFile
     ? URL.createObjectURL(logoFile)
     : resolveOrganisationLogoUrl(organisation);
+  const faviconPreviewUrl = faviconFile
+    ? URL.createObjectURL(faviconFile)
+    : resolveAssetUrl(organisation?.faviconUrl ?? organisation?.favicon_url);
 
   return (
     <motion.div {...panelMotion} className="space-y-6">
@@ -40,70 +48,122 @@ export default function OrganisationSettings({
           <div>
             <h3 className="text-base font-bold text-secondary">Organisation branding</h3>
             <p className="text-xs text-gray-500">
-              Logo appears on the right side of the app header for your organisation
+              Logo and favicon for your organisation — changes apply immediately across the app
             </p>
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-8">
           {loading ? (
             <div className="py-12 flex justify-center">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
             </div>
           ) : (
             <>
-              <div className="flex flex-col sm:flex-row items-center gap-6">
-                <div className="w-40 h-20 rounded-2xl border border-dashed border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
-                  {previewUrl ? (
-                    <img
-                      src={previewUrl}
-                      alt="Organisation logo"
-                      className="max-h-16 max-w-[140px] object-contain"
+              {/* ── Logo ── */}
+              <div className="space-y-4">
+                <p className="text-xs font-black text-gray-500 uppercase tracking-widest">App Logo</p>
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                  <div className="w-40 h-20 rounded-2xl border border-dashed border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt="Organisation logo"
+                        className="max-h-16 max-w-[140px] object-contain"
+                      />
+                    ) : (
+                      <span className="text-xs font-bold text-gray-400">No logo yet</span>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <p className="text-sm font-bold text-secondary">
+                      {organisation?.name || "Your organisation"}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      PNG, JPG or WEBP · max 2 MB · wide logo on transparent background recommended
+                    </p>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) onLogoFileChange(f);
+                      }}
                     />
-                  ) : (
-                    <span className="text-xs font-bold text-gray-400">No logo yet</span>
-                  )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      Choose file
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex-1 space-y-2">
-                  <p className="text-sm font-bold text-secondary">
-                    {organisation?.name || "Your organisation"}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    PNG, JPG, WEBP, or SVG. Max 2 MB. Recommended wide logo on transparent background.
-                  </p>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) onLogoFileChange(f);
-                    }}
-                  />
+                <div className="flex justify-end">
                   <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileRef.current?.click()}
+                    onClick={onSave}
+                    disabled={saving || !logoFile}
+                    className="rounded-2xl px-8 flex items-center gap-2"
                   >
-                    Choose file
+                    {saving ? <FiRefreshCw className="animate-spin" /> : <FiSave />}
+                    {saving ? "Uploading…" : "Upload logo"}
                   </Button>
                 </div>
               </div>
 
-              <div className="flex justify-end">
-                <Button
-                  onClick={onSave}
-                  disabled={saving || !logoFile}
-                  className="rounded-2xl px-8 flex items-center gap-2"
-                >
-                  {saving ? (
-                    <FiRefreshCw className="animate-spin" />
-                  ) : (
-                    <FiSave />
-                  )}
-                  {saving ? "Uploading…" : "Upload organisation logo"}
-                </Button>
+              <div className="border-t border-gray-100" />
+
+              {/* ── Favicon ── */}
+              <div className="space-y-4">
+                <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Favicon</p>
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                  <div className="w-20 h-20 rounded-2xl border border-dashed border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                    {faviconPreviewUrl ? (
+                      <img
+                        src={faviconPreviewUrl}
+                        alt="Organisation favicon"
+                        className="w-10 h-10 object-contain"
+                      />
+                    ) : (
+                      <span className="text-xs font-bold text-gray-400 text-center leading-tight px-1">No favicon</span>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <p className="text-xs text-gray-500">
+                      Shown in the browser tab when users access your organisation's portal.
+                      <br />PNG, ICO or WEBP · max 512 KB · square image recommended (e.g. 32×32 or 64×64)
+                    </p>
+                    <input
+                      ref={faviconRef}
+                      type="file"
+                      accept="image/png,image/x-icon,image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) onFaviconFileChange(f);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => faviconRef.current?.click()}
+                    >
+                      Choose file
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={onFaviconSave}
+                    disabled={savingFavicon || !faviconFile}
+                    className="rounded-2xl px-8 flex items-center gap-2"
+                  >
+                    {savingFavicon ? <FiRefreshCw className="animate-spin" /> : <FiSave />}
+                    {savingFavicon ? "Uploading…" : "Upload favicon"}
+                  </Button>
+                </div>
               </div>
             </>
           )}

@@ -63,16 +63,17 @@ const SuperadminLayout = () => {
   }, [dispatch]);
 
   // Apply the uploaded favicon to the document <link rel="icon"> at runtime.
+  // index.html ships multiple size-specific icon <link> tags; browsers prefer
+  // those over the unsized one, so we must replace ALL of them — not just the
+  // first — to guarantee the uploaded favicon is actually shown in the tab.
   useEffect(() => {
     const href = resolveAssetUrl(faviconUrl);
     if (!href) return;
-    let link = document.querySelector('link[rel~="icon"]');
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = "icon";
-      document.head.appendChild(link);
-    }
+    document.querySelectorAll('link[rel~="icon"]').forEach((el) => el.remove());
+    const link = document.createElement("link");
+    link.rel = "icon";
     link.href = href;
+    document.head.appendChild(link);
   }, [faviconUrl]);
 
   // Inactivity auto-logout is handled app-wide by <SessionTimeout> in App.jsx

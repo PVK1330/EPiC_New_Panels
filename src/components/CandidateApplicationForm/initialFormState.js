@@ -144,6 +144,7 @@ export function getInitialApplicationFormData() {
     lastName: "",
     email: "",
     gender: "",
+    contactCountryCode: "GB",
     contactNumber: "",
     relationshipStatus: "",
     address: "",

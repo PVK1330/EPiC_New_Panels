@@ -548,6 +548,7 @@ export default function Pipeline() {
           date: pendingBiometricCard.availability.preferredDate,
           time: pendingBiometricCard.availability.preferredTime,
           instructions: pendingBiometricCard.availability.notes,
+          timezone: pendingBiometricCard.availability.timezone,
         } : undefined}
       />
     </DndContext>

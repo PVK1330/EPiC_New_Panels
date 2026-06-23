@@ -347,7 +347,7 @@ const CandidateDashboard = () => {
         })()
       )}
 
-      {canMarkBiometricAttended && (biometricLocation || biometricDate) && (
+      {canMarkBiometricAttended && (
         <section className="rounded-2xl border-2 border-primary/30 bg-primary/5 p-5 shadow-sm">
           <p className="text-[11px] font-black uppercase tracking-widest text-primary mb-2">
             Pending task — biometrics

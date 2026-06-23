@@ -16,7 +16,9 @@ import {
 } from "lucide-react";
 import Modal from "../../components/Modal";
 import DatePicker from "../../components/DatePicker";
+import PhoneInput from "../../components/PhoneInput";
 import BusinessRegistration from "./BusinessRegistration";
+import { COUNTRY_NAMES } from "../../utils/countries";
 import {
   getBusinessProfile,
   updateBusinessProfile,
@@ -168,7 +170,7 @@ const BusinessProfile = () => {
         setAddressModalOpen(false);
       }
     } catch (err) {
-      showToast({ message: "Address update failed", variant: "danger" });
+      showToast({ message: err.response?.data?.message || "Address update failed", variant: "danger" });
     } finally {
       setLoading(false);
     }
@@ -207,7 +209,7 @@ const BusinessProfile = () => {
         setKeyPersonModalOpen(false);
       }
     } catch (err) {
-      showToast({ message: "Key Personnel update failed", variant: "danger" });
+      showToast({ message: err.response?.data?.message || "Key Personnel update failed", variant: "danger" });
     } finally {
       setLoading(false);
     }
@@ -233,7 +235,7 @@ const BusinessProfile = () => {
         setOwnershipModalOpen(false);
       }
     } catch (err) {
-      showToast({ message: "Ownership update failed", variant: "danger" });
+      showToast({ message: err.response?.data?.message || "Ownership update failed", variant: "danger" });
     } finally {
       setLoading(false);
     }
@@ -262,7 +264,7 @@ const BusinessProfile = () => {
         setHrModalOpen(false);
       }
     } catch (err) {
-      showToast({ message: "Update failed", variant: "danger" });
+      showToast({ message: err.response?.data?.message || "Update failed", variant: "danger" });
     } finally {
       setLoading(false);
     }
@@ -290,7 +292,7 @@ const BusinessProfile = () => {
         setBillingModalOpen(false);
       }
     } catch (err) {
-      showToast({ message: "Update failed", variant: "danger" });
+      showToast({ message: err.response?.data?.message || "Update failed", variant: "danger" });
     } finally {
       setLoading(false);
     }
@@ -800,12 +802,17 @@ const BusinessProfile = () => {
           </div>
           <div>
             <label className="text-xs font-bold text-gray-700 mb-1 block">Country</label>
-            <input
-              value={addressDraft.country}
+            <select
+              value={addressDraft.country || ""}
               onChange={(e) => setAddressDraft({ ...addressDraft, country: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
-              placeholder="Enter country"
-            />
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
+            >
+              <option value="">Select country</option>
+              {addressDraft.country && !COUNTRY_NAMES.includes(addressDraft.country) && (
+                <option value={addressDraft.country}>{addressDraft.country}</option>
+              )}
+              {COUNTRY_NAMES.map((c) => <option key={c}>{c}</option>)}
+            </select>
           </div>
           <div>
             <label className="text-xs font-bold text-gray-700 mb-1 block">Postal Code</label>
@@ -858,10 +865,10 @@ const BusinessProfile = () => {
             </div>
             <div>
               <label className="text-xs font-bold text-gray-700 mb-1 block">Phone</label>
-              <input
+              <PhoneInput
+                name="authorisingPhone"
                 value={keyPersonDraft.authorisingPhone || ""}
                 onChange={(e) => setKeyPersonDraft({ ...keyPersonDraft, authorisingPhone: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 placeholder="Enter phone"
               />
             </div>
@@ -897,10 +904,10 @@ const BusinessProfile = () => {
             </div>
             <div>
               <label className="text-xs font-bold text-gray-700 mb-1 block">Phone</label>
-              <input
+              <PhoneInput
+                name="keyContactPhone"
                 value={keyPersonDraft.keyContactPhone || ""}
                 onChange={(e) => setKeyPersonDraft({ ...keyPersonDraft, keyContactPhone: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
                 placeholder="Enter phone"
               />
             </div>
@@ -1159,11 +1166,11 @@ const BusinessProfile = () => {
             </div>
             <div>
               <label className="text-xs font-bold text-gray-700 mb-1 block">HR Manager Phone</label>
-              <input
+              <PhoneInput
+                name="hrPhone"
                 value={hrDraft.hrPhone || ""}
                 onChange={(e) => setHrDraft({ ...hrDraft, hrPhone: e.target.value })}
                 placeholder="Enter HR manager phone"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
               />
             </div>
             <div className="md:col-span-2">
@@ -1244,11 +1251,11 @@ const BusinessProfile = () => {
             </div>
             <div>
               <label className="text-xs font-bold text-gray-700 mb-1 block">Billing Phone</label>
-              <input
+              <PhoneInput
+                name="billingPhone"
                 value={billingDraft.billingPhone || ""}
                 onChange={(e) => setBillingDraft({ ...billingDraft, billingPhone: e.target.value })}
                 placeholder="Enter billing phone"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-secondary bg-gray-50/40"
               />
             </div>
             <div className="md:col-span-2">

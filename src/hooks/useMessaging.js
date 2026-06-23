@@ -108,6 +108,8 @@ const useMessaging = (opts = {}) => {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Live socket state — lets consumers (dropdowns) poll only as a fallback.
+  const [connected, setConnected] = useState(false);
 
   const userRef = useRef(user);
   userRef.current = user;
@@ -120,6 +122,7 @@ const useMessaging = (opts = {}) => {
   const socketRef = useRef(null);
   const prevThreadSubRef = useRef(null);
   const openThreadConvRef = useRef(null);
+  const hasConnectedRef = useRef(false);
 
   const activeThreadSubConvId = useMemo(() => {
     if (activeThreadPartnerId == null) return null;
@@ -322,11 +325,19 @@ const useMessaging = (opts = {}) => {
     socketRef.current = socket;
 
     socket.on("connect", () => {
+      setConnected(true);
+      // Resync after a RE-connect; the mount fetch already covers first connect.
+      if (hasConnectedRef.current) {
+        fetchConversationsRef.current?.();
+      }
+      hasConnectedRef.current = true;
       const cid = openThreadConvRef.current;
       if (cid != null && Number.isFinite(cid) && cid > 0) {
         socket.emit("thread:subscribe", { conversationId: cid });
       }
     });
+
+    socket.on("disconnect", () => setConnected(false));
 
     const me = () => Number(userRef.current?.id);
 
@@ -442,6 +453,8 @@ const useMessaging = (opts = {}) => {
     });
 
     return () => {
+      hasConnectedRef.current = false;
+      setConnected(false);
       if (socketRef.current) {
         const s = socketRef.current;
         // Small delay to ensure any pending connection attempts are handled
@@ -479,6 +492,7 @@ const useMessaging = (opts = {}) => {
     availableUsers,
     loading,
     error,
+    connected,
     fetchConversations,
     fetchThread,
     markThreadAsRead,

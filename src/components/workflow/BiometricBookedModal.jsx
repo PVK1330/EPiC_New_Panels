@@ -66,6 +66,7 @@ export default function BiometricBookedModal({
   initialData,
   loading = false,
 }) {
+  const candidateTimezone = initialData?.timezone || null;
   const [step, setStep] = useState(1); // 1 = form, 2 = confirm
   const [location, setLocation] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
@@ -197,6 +198,16 @@ export default function BiometricBookedModal({
               >
                 {/* ── Form ── */}
                 <div className="p-6 space-y-4">
+                  {candidateTimezone && (
+                    <div className="flex items-center gap-2.5 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                      <Clock size={14} className="text-amber-600 shrink-0" />
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Candidate's timezone</p>
+                        <p className="text-sm font-bold text-gray-800">{candidateTimezone}</p>
+                      </div>
+                    </div>
+                  )}
+
                   <Input
                     label="Appointment Location"
                     value={location}

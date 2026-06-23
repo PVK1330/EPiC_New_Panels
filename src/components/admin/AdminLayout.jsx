@@ -33,6 +33,7 @@ const AdminLayout = () => {
   const user = useSelector((state) => state.auth.user);
   const profileMenuPaths = getProfileMenuPaths(user);
   const [orgLogoUrl, setOrgLogoUrl] = useState(null);
+  const [orgFaviconUrl, setOrgFaviconUrl] = useState(null);
 
   const fullName = user?.first_name
     ? `${user?.first_name} ${user?.last_name || ""}`.trim()
@@ -48,8 +49,10 @@ const AdminLayout = () => {
       const res = await getOrganisationBranding();
       const organisation = res.data?.data?.organisation;
       setOrgLogoUrl(resolveOrganisationLogoUrl(organisation));
+      setOrgFaviconUrl(resolveAssetUrl(organisation?.faviconUrl ?? organisation?.favicon_url) ?? null);
     } catch {
       setOrgLogoUrl(null);
+      setOrgFaviconUrl(null);
     }
   }, []);
 
@@ -63,6 +66,17 @@ const AdminLayout = () => {
         onBrandingUpdated,
       );
   }, [fetchOrganisationBranding]);
+
+  // Apply the org favicon to the browser tab — mirrors the pattern in SuperadminLayout.
+  // Removes all static icon <link> tags first so the uploaded one always wins.
+  useEffect(() => {
+    if (!orgFaviconUrl) return;
+    document.querySelectorAll('link[rel~="icon"]').forEach((el) => el.remove());
+    const link = document.createElement("link");
+    link.rel = "icon";
+    link.href = orgFaviconUrl;
+    document.head.appendChild(link);
+  }, [orgFaviconUrl]);
 
   const handleLogout = () => {
     performLogout(dispatch, navigate);

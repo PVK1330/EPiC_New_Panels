@@ -101,3 +101,16 @@ export async function downloadCosRequestsExcel() {
     `cos_requests_${new Date().toISOString().split("T")[0]}.xlsx`;
   return { blob, filename };
 }
+
+export async function downloadSponsorInvoicePdf(paymentId, kind) {
+  const res = await api.get(`/api/business/payments/${encodeURIComponent(paymentId)}/invoice`, {
+    params: { kind },
+    responseType: "blob",
+    timeout: 120000,
+  });
+  const blob = res.data;
+  const filename =
+    parseFilenameFromDisposition(res.headers["content-disposition"]) ||
+    `Invoice_${paymentId}.pdf`;
+  return { blob, filename };
+}

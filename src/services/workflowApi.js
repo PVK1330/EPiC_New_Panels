@@ -84,3 +84,6 @@ export const recordBiometricDocsUploaded = (caseId) =>
 
 export const recordVisaPortalReply = (caseId, body) =>
   api.post(`/api/workflow/cases/${caseId}/visa-portal-reply`, body).then(unwrap);
+
+export const communicateDecision = (caseId, body) =>
+  api.post(`/api/workflow/cases/${caseId}/communicate-decision`, body).then(unwrap);

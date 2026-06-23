@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Bell, MessageSquare, FileText, AlertTriangle, CheckCircle, Clock, User, Trash2, X, ArrowRight } from 'lucide-react';
+import { Bell, MessageSquare, FileText, AlertTriangle, CheckCircle, Clock, User, Trash2, X } from 'lucide-react';
 import { markAsRead, removeNotification } from '../../store/slices/notificationSlice';
-import { getNotificationRoute, getCaseworkerOpenCaseState } from '../../utils/notificationHelpers';
+import { resolveNotificationTarget } from '../../utils/notificationHelpers';
 import { formatDate, formatDateTime } from '../../utils/datetime';
 
 // The list row prefers `createdAt` (always populated) over `sentAt` (nullable in
@@ -79,7 +79,10 @@ const getDisplayMetadata = (metadata) => {
     .filter(([, value]) => value !== '');
 };
 
-const NotificationItem = ({ notification }) => {
+// `onClose` is supplied when the row is rendered inside the bell dropdown, so a
+// click can close the dropdown after navigating. It is undefined on the
+// full-page notification views, where there is no dropdown to close.
+const NotificationItem = ({ notification, onClose = null }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
@@ -140,31 +143,19 @@ const NotificationItem = ({ notification }) => {
     dispatch(removeNotification(notification.id));
   };
 
+  // Clicking a notification takes the user straight to the page it refers to
+  // (the case, document, licence, payment, message...). The details modal is
+  // only a fallback for notifications that have no specific destination.
   const handleClick = () => {
     handleMarkAsRead();
+    const target = resolveNotificationTarget(notification, user);
+    if (target?.path) {
+      onClose?.(); // close the bell dropdown before navigating
+      navigate(target.path, target.state ? { state: target.state } : undefined);
+      return;
+    }
     setShowModal(true);
   };
-
-  const handleNavigate = () => {
-    setShowModal(false);
-    const route = getNotificationRoute(notification, user);
-    const roleId = Number(user?.role_id);
-    const isCaseworker = user?.role === 'caseworker' || roleId === 2;
-
-    if (isCaseworker) {
-      const openState = getCaseworkerOpenCaseState(notification);
-      if (openState) {
-        navigate('/caseworker/cases', { state: openState });
-        return;
-      }
-    }
-
-    if (route) {
-      navigate(route);
-    }
-  };
-
-  const hasRoute = getNotificationRoute(notification, user) || getCaseworkerOpenCaseState(notification);
 
   const timestamp = getNotificationTimestamp(notification);
   const timeAgo = formatTimeAgo(timestamp);
@@ -182,7 +173,7 @@ const NotificationItem = ({ notification }) => {
     >
       <div className="flex items-start space-x-3">
         <div className="flex-shrink-0 mt-0.5">
-          {getIcon(notification.type || notification.actionType)}
+          {getIcon(notification.actionType || notification.type)}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -317,19 +308,6 @@ const NotificationItem = ({ notification }) => {
               >
                 Close
               </button>
-              {hasRoute && (
-                <button
-                  type="button"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors flex items-center gap-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleNavigate();
-                  }}
-                >
-                  View Details
-                  <ArrowRight size={16} />
-                </button>
-              )}
             </div>
           </div>
         </div>,
