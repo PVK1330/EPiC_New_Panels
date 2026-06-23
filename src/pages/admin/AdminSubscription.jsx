@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import toast from "react-hot-toast";
-import { logout as logoutAction } from "../../store/slices/authSlice";
+import api from "../../services/api";
+import { logout as logoutAction, setCredentials } from "../../store/slices/authSlice";
+import { setOrgSettings } from "../../store/slices/orgSettingsSlice";
+import { normalizeAuthUser } from "../../utils/authResponse";
 import { logoutUser } from "../../services/auth.service";
 import {
   getMySubscription,
@@ -10,7 +13,7 @@ import {
   verifySubscriptionSession,
 } from "../../services/orgBillingApi";
 
-const CURRENCY_SYMBOLS = { GBP: "£", USD: "$", EUR: "", INR: "₹" };
+const CURRENCY_SYMBOLS = { GBP: "£", USD: "$", EUR: "€", INR: "₹" };
 
 function formatPrice(amount, currency) {
   const code = String(currency || "GBP").toUpperCase();
@@ -44,6 +47,29 @@ export default function AdminSubscription() {
   const [data, setData] = useState(null); // { organisation, subscription, expired }
   const [error, setError] = useState("");
 
+  // After activation the org flips to "active" and allowedModules become the
+  // paid plan's modules. Re-fetch /api/auth/me so Redux (org status + module
+  // scope) is fresh BEFORE we land on the dashboard — otherwise the stale
+  // "expired" state can re-trigger the gate or mis-scope the sidebar.
+  const refreshSession = useCallback(async () => {
+    try {
+      const res = await api.get("/api/auth/me");
+      const me = res.data?.data ?? res.data;
+      if (me?.user) {
+        dispatch(
+          setCredentials({
+            user: normalizeAuthUser(me.user),
+            token: "httpOnly",
+            allowedModules: me.allowedModules ?? [],
+          }),
+        );
+        if (me.user.organisation) dispatch(setOrgSettings(me.user.organisation));
+      }
+    } catch {
+      /* non-fatal: the dashboard's own guards will reconcile on next request */
+    }
+  }, [dispatch]);
+
   const loadSubscription = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -69,10 +95,11 @@ export default function AdminSubscription() {
     if (payment === "success" && sessionId) {
       setVerifying(true);
       verifySubscriptionSession(sessionId)
-        .then((res) => {
+        .then(async (res) => {
           if (res?.paid) {
             setActivated(true);
             toast.success("Subscription activated. Welcome back!");
+            await refreshSession();
             setTimeout(() => navigate("/admin/dashboard"), 1800);
           } else {
             toast.error("Payment is still processing. Please try again shortly.");
@@ -114,6 +141,7 @@ export default function AdminSubscription() {
       if (res?.activated) {
         setActivated(true);
         toast.success("Subscription activated.");
+        await refreshSession();
         setTimeout(() => navigate("/admin/dashboard"), 1500);
         return;
       }
@@ -141,6 +169,9 @@ export default function AdminSubscription() {
 
   const plan = data?.subscription?.plan;
   const orgName = data?.organisation?.name;
+  const charge = data?.charge;
+  const currency = charge?.currency || plan?.currency || "GBP";
+  const totalDue = charge ? Number(charge.total) : Number(plan?.price || 0);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
@@ -199,10 +230,38 @@ export default function AdminSubscription() {
                       {plan?.billing_cycle || "—"}
                     </span>
                   </div>
+                  {/* Itemised breakdown — what the customer is actually charged. */}
                   <div className="flex justify-between px-4 py-3">
-                    <span className="text-gray-500">Amount due</span>
-                    <span className="font-semibold text-gray-900">
-                      {plan ? formatPrice(plan.price, plan.currency) : "—"}
+                    <span className="text-gray-500">Subscription</span>
+                    <span className="font-medium text-gray-900">
+                      {formatPrice(charge ? charge.planPrice : plan?.price, currency)}
+                    </span>
+                  </div>
+                  {charge && Number(charge.platformFee) > 0 && (
+                    <div className="flex justify-between px-4 py-3">
+                      <span className="text-gray-500">
+                        Platform fee{charge.platformFeePercent ? ` (${charge.platformFeePercent}%)` : ""}
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {formatPrice(charge.platformFee, currency)}
+                      </span>
+                    </div>
+                  )}
+                  {charge && Number(charge.taxAmount) > 0 && (
+                    <div className="flex justify-between px-4 py-3">
+                      <span className="text-gray-500">
+                        VAT{charge.taxRatePercent ? ` (${charge.taxRatePercent}%)` : ""}
+                        {charge.taxId ? ` · ${charge.taxId}` : ""}
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {formatPrice(charge.taxAmount, currency)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between px-4 py-3 bg-gray-50">
+                    <span className="font-semibold text-gray-700">Total due</span>
+                    <span className="font-bold text-gray-900">
+                      {plan ? formatPrice(totalDue, currency) : "—"}
                     </span>
                   </div>
                   {data?.subscription?.current_period_end && (
@@ -223,7 +282,7 @@ export default function AdminSubscription() {
                   >
                     {paying
                       ? "Starting checkout…"
-                      : `Pay ${formatPrice(plan.price, plan.currency)} & activate`}
+                      : `Pay ${formatPrice(totalDue, currency)} & activate`}
                   </button>
                 ) : (
                   <div className="rounded-lg bg-amber-50 text-amber-700 p-4 text-sm text-center">

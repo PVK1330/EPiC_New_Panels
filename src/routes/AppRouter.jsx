@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import ProtectedRoute from './ProtectedRoute';
+import RequireAdminModule from './RequireAdminModule';
 import AdminLayout from '../layouts/AdminLayout';
 import SuperadminLayout from '../layouts/SuperadminLayout';
 import NotFoundPage from '../pages/NotFoundPage';
@@ -204,7 +205,9 @@ const AppRouter = () => {
           path="/admin"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
-              <AdminLayout />
+              <RequireAdminModule>
+                <AdminLayout />
+              </RequireAdminModule>
             </ProtectedRoute>
           }
         >

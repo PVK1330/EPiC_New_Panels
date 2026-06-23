@@ -209,6 +209,13 @@ export const deleteComplianceDocument = (id) =>
 export const getEmployeeRecords = () =>
   api.get("/api/business/workers/employee-records");
 
+// Business: download a worker's documents.
+// Server streams a single file when there is one document, or a .zip for 2+.
+export const downloadWorkerDocuments = (candidateId) =>
+  api.get(`/api/business/workers/${candidateId}/documents/download`, {
+    responseType: "blob",
+  });
+
 // ── Intake: Information Form + Document Checklist ────────────────────────────
 
 // Sponsor: get intake summary (form + document checklist)

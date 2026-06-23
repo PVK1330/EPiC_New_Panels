@@ -23,6 +23,10 @@ export const exportCaseCSV = (id) =>
 export const exportCasePDF = (id) =>
   api.get(`/api/case-details/${id}/export/pdf`, { responseType: "blob" });
 
+// GET /api/case-details/:id/invoice/pdf — branded invoice for the case
+export const exportCaseInvoicePDF = (id) =>
+  api.get(`/api/case-details/${id}/invoice/pdf`, { responseType: "blob" });
+
 // ── Cases (list / CRUD / pipeline) ──────────────────────────────────────────
 // GET /api/cases?page=&limit=&search=&status=&priority=&visaType=
 export const getCases = (params = {}) => api.get(`/api/cases`, { params });
