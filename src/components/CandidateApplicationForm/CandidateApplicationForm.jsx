@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef } from "react";
+import { isValidPhoneNumber } from "libphonenumber-js";
 import { useNavigate } from "react-router-dom";
 import {
   APPLICATION_STEP_LABELS,
@@ -24,6 +25,8 @@ import { formatDateLong } from "../../utils/datetime";
 import DatePicker from "../DatePicker";
 import NationalitySelect from "../NationalitySelect";
 import CountrySelect from "../CountrySelect";
+import GlobalPhoneInput from "../PhoneInput";
+import { getCountryByCode, getCountryByDialCode } from "../../utils/countries";
 
 const inputClass =
   "mt-1 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-shadow";
@@ -34,6 +37,24 @@ const fieldLabelClass =
 
 const sectionHeadingClass =
   "mb-3 mt-1 block border-l-4 border-secondary pl-3 text-sm font-bold leading-snug tracking-normal text-secondary md:col-span-2";
+
+/**
+ * Render a field label, turning any `*` character into a red asterisk so required
+ * fields are visually distinguished without cluttering the label strings themselves.
+ */
+function renderLabel(text) {
+  if (!text) return text;
+  const idx = text.indexOf("*");
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <span className="text-red-500">*</span>
+      {text.slice(idx + 1)}
+    </>
+  );
+}
+
 
 function SectionTitle({ children }) {
   return <h3 className={sectionHeadingClass}>{children}</h3>;
@@ -107,7 +128,7 @@ function AppInput({
   return (
     <div className={className}>
       <label htmlFor={name} className={fieldLabelClass}>
-        {label}
+        {renderLabel(label)}
       </label>
       {control}
     </div>
@@ -126,9 +147,9 @@ function AppSelect({
 }) {
   return (
     <div>
-      {question ? <p className={fieldLabelClass}>{question}</p> : null}
+      {question ? <p className={fieldLabelClass}>{renderLabel(question)}</p> : null}
       <label htmlFor={name} className={fieldLabelClass}>
-        {label}
+        {renderLabel(label)}
       </label>
       <select
         id={name}
@@ -171,7 +192,7 @@ function AppTextarea({ label, id, value, onChange, className = "" }) {
 function YesNo({ label, name, formData, onChange, error = "" }) {
   return (
     <div>
-      <span className={fieldLabelClass}>{label}</span>
+      <span className={fieldLabelClass}>{renderLabel(label)}</span>
       <div className="flex flex-wrap gap-4">
         {["Yes", "No"].map((val) => (
           <label
@@ -196,6 +217,7 @@ function YesNo({ label, name, formData, onChange, error = "" }) {
     </div>
   );
 }
+
 
 function FormProgress({ step, labels, onStepClick }) {
   const last = Math.max(labels.length - 1, 1);
@@ -339,13 +361,23 @@ function validateStep(stepIndex, data) {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
       errs.email = "Enter a valid email address";
     }
+    if (!data.contactCountryCode) {
+      errs.contactCountryCode = "Please select a country code";
+    }
     if (!data.contactNumber?.toString().trim()) {
       errs.contactNumber = "Contact number is required";
     } else {
-      // Digits only, 7–15 (E.164 max). Allows leading + and spaces in input.
-      const digits = data.contactNumber.toString().replace(/[^\d]/g, "");
-      if (digits.length < 7 || digits.length > 15)
-        errs.contactNumber = "Enter a valid contact number (7–15 digits)";
+      try {
+        const country = data.contactCountryCode || "GB";
+        if (!isValidPhoneNumber(data.contactNumber.toString().trim(), country)) {
+          errs.contactNumber = "Enter a valid phone number for the selected country";
+        }
+      } catch {
+        // Fall back to digit-length check if libphonenumber throws
+        const digits = data.contactNumber.toString().replace(/[^\d]/g, "");
+        if (digits.length < 7 || digits.length > 15)
+          errs.contactNumber = "Enter a valid contact number (7–15 digits)";
+      }
     }
     if (!data.gender) errs.gender = "Please select a gender";
   }
@@ -1190,14 +1222,28 @@ export default function CandidateApplicationForm({
                   />
                 )}
                 {show("contactNumber") && (
-                  <AppInput
-                    label="Contact number *"
-                    name="contactNumber"
-                    type="tel"
-                    formData={formData}
-                    onChange={handleChange}
-                    error={formErrors.contactNumber}
-                  />
+                  <div>
+                    <label className={fieldLabelClass}>
+                      {renderLabel("Contact number *")}
+                    </label>
+                    <GlobalPhoneInput
+                      split
+                      className="mt-1"
+                      dialCode={getCountryByCode(formData.contactCountryCode)?.dialCode || "+44"}
+                      national={formData.contactNumber ?? ""}
+                      dialName="_contactDialCode"
+                      nationalName="contactNumber"
+                      onChange={(e) => {
+                        if (e.target.name === "_contactDialCode") {
+                          const c = getCountryByDialCode(e.target.value);
+                          handleChange({ target: { name: "contactCountryCode", value: c?.code || "GB" } });
+                        } else {
+                          handleChange(e);
+                        }
+                      }}
+                      error={formErrors.contactNumber || formErrors.contactCountryCode}
+                    />
+                  </div>
                 )}
                 {show("relationshipStatus") && (
                   <AppSelect

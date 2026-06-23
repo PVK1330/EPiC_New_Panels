@@ -113,6 +113,7 @@ function CasesAuditLogsTab({
           date: detailCase.workflowState.biometrics.availability.preferredDate,
           time: detailCase.workflowState.biometrics.availability.preferredTime,
           instructions: detailCase.workflowState.biometrics.availability.notes,
+          timezone: detailCase.workflowState.biometrics.availability.timezone,
         } : undefined}
       />
     </div>

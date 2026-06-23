@@ -59,3 +59,11 @@ export const uploadOrganisationLogo = (file) => {
     headers: { "Content-Type": "multipart/form-data" },
   });
 };
+
+export const uploadOrganisationFavicon = (file) => {
+  const formData = new FormData();
+  formData.append("favicon", file);
+  return api.post("/api/settings/organisation/favicon", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};

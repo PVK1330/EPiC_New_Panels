@@ -942,6 +942,7 @@ const AdminCaseDetail = () => {
           date: caseData.workflowState.biometrics.availability.preferredDate,
           time: caseData.workflowState.biometrics.availability.preferredTime,
           instructions: caseData.workflowState.biometrics.availability.notes,
+          timezone: caseData.workflowState.biometrics.availability.timezone,
         } : undefined}
       />
     </motion.div>

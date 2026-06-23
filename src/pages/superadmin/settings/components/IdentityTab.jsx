@@ -187,7 +187,7 @@ const IdentityTab = () => {
         <div className="space-y-4">
           <h4 className="text-xs font-black text-secondary uppercase tracking-widest">Brand Assets</h4>
           <p className="text-[10px] text-gray-400 font-medium -mt-2">
-            PNG, JPG, WEBP or SVG · max 2 MB · changes apply to the sidebar immediately
+            Logo: PNG, JPG, WEBP · max 2 MB · Favicon: PNG, ICO, WEBP · max 512 KB · changes apply immediately
           </p>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
@@ -198,7 +198,7 @@ const IdentityTab = () => {
                 label="App Logo"
                 currentUrl={resolveAssetUrl(settings.logo_url)}
                 uploading={uploadingLogo}
-                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                accept="image/png,image/jpeg,image/webp"
                 onFile={handleLogoFile}
                 onClear={() => handleChange('logo_url', null)}
               />
@@ -211,7 +211,7 @@ const IdentityTab = () => {
                 label="Favicon"
                 currentUrl={resolveAssetUrl(settings.favicon_url)}
                 uploading={uploadingFavicon}
-                accept="image/png,image/x-icon,image/svg+xml,image/webp"
+                accept="image/png,image/x-icon,image/webp"
                 onFile={handleFaviconFile}
                 onClear={() => handleChange('favicon_url', null)}
               />

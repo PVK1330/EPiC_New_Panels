@@ -53,6 +53,9 @@ export const importCandidateApplicationsExcel = (file) => {
   });
 };
 
+export const downloadImportSampleTemplate = () =>
+  api.get(`/api/admin/candidates/applications/import/sample`, { responseType: "blob" });
+
 // ── Candidate-facing application routes (/api/candidate/application) ────────
 
 /** Fetch the currently logged-in candidate's saved application */

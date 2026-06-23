@@ -92,6 +92,7 @@ import {
   testSmtpSettings,
   getOrganisation,
   uploadOrganisationLogo,
+  uploadOrganisationFavicon,
 } from "../../services/settingsService";
 
 const CONFIG_TABS = [
@@ -142,6 +143,8 @@ export default function AdminSettings() {
   const [organisation, setOrganisation] = useState(null);
   const [orgLogoFile, setOrgLogoFile] = useState(null);
   const [savingOrgLogo, setSavingOrgLogo] = useState(false);
+  const [orgFaviconFile, setOrgFaviconFile] = useState(null);
+  const [savingOrgFavicon, setSavingOrgFavicon] = useState(false);
   const [smtpForm, setSmtpForm] = useState({
     enabled: false,
     host: "",
@@ -231,6 +234,7 @@ export default function AdminSettings() {
         const res = await getOrganisation();
         setOrganisation(res.data?.data?.organisation ?? null);
         setOrgLogoFile(null);
+        setOrgFaviconFile(null);
       } else if (configTab === "smtp") {
         const res = await getSmtpSettings();
         const d = res.data?.data || {};
@@ -489,6 +493,25 @@ export default function AdminSettings() {
       showToast({ message: getApiError(e), variant: "danger" });
     } finally {
       setSavingOrgLogo(false);
+    }
+  };
+
+  const handleOrganisationFaviconSave = async () => {
+    if (!orgFaviconFile) return;
+    setSavingOrgFavicon(true);
+    try {
+      const res = await uploadOrganisationFavicon(orgFaviconFile);
+      const org = res.data?.data?.organisation;
+      if (org) {
+        setOrganisation((prev) => ({ ...(prev || {}), ...org }));
+        setOrgFaviconFile(null);
+        window.dispatchEvent(new CustomEvent("organisation-branding-updated"));
+      }
+      showToast({ message: "Organisation favicon uploaded." });
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSavingOrgFavicon(false);
     }
   };
 
@@ -809,6 +832,10 @@ export default function AdminSettings() {
                 onLogoFileChange={setOrgLogoFile}
                 onSave={handleOrganisationLogoSave}
                 saving={savingOrgLogo}
+                faviconFile={orgFaviconFile}
+                onFaviconFileChange={setOrgFaviconFile}
+                onFaviconSave={handleOrganisationFaviconSave}
+                savingFavicon={savingOrgFavicon}
                 loading={loading}
                 error={error}
               />

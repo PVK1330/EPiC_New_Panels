@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
 import Button from "../Button";
 import BiometricBookedModal from "../workflow/BiometricBookedModal";
@@ -8,6 +8,7 @@ import {
   sendBiometricSlot,
   recordBiometricDocsUploaded,
   recordVisaPortalReply,
+  communicateDecision,
 } from "../../services/workflowApi";
 
 function apiErrorMessage(error) {
@@ -29,6 +30,8 @@ export default function CaseWorkflowPostCcl({
   const [visaReply, setVisaReply] = useState(
     workflowState?.biometrics?.visaPortalReply?.summary || "",
   );
+  const [decisionOutcome, setDecisionOutcome] = useState("approved");
+  const [decisionNotes, setDecisionNotes] = useState("");
 
   const ws = workflowState || {};
   const availability = ws.biometrics?.availability;
@@ -36,6 +39,7 @@ export default function CaseWorkflowPostCcl({
   const docsUploaded = ws.biometrics?.documentsUploadedAt;
   const portalReply = ws.biometrics?.visaPortalReply;
   const visaSubmitted = ws.visaPortal?.submittedAt;
+  const decision = ws.decision;
 
   const run = async (key, fn) => {
     setBusy(key);
@@ -63,8 +67,18 @@ export default function CaseWorkflowPostCcl({
     ["biometrics_confirmation_sent", "biometrics_booked"].includes(caseStage) && !docsUploaded;
   const showVisaReply =
     ["documents_uploaded", "awaiting_decision"].includes(caseStage) && !portalReply?.recordedAt;
+  const showDecision = caseStage === "awaiting_decision" && !decision?.communicatedAt;
+  const showDecisionRecorded = !!decision?.communicatedAt;
 
-  if (!showVisaSubmit && !showBiometricBook && !showDocsUpload && !showVisaReply && !availability) {
+  if (
+    !showVisaSubmit &&
+    !showBiometricBook &&
+    !showDocsUpload &&
+    !showVisaReply &&
+    !showDecision &&
+    !showDecisionRecorded &&
+    !availability
+  ) {
     return null;
   }
 
@@ -109,6 +123,49 @@ export default function CaseWorkflowPostCcl({
           {booked.instructions && (
             <p className="font-bold text-emerald-800/90">{booked.instructions}</p>
           )}
+        </div>
+      )}
+
+      {showDecisionRecorded && (
+        <div
+          className={`rounded-lg border p-3 text-xs space-y-1 ${
+            decision.outcome === "approved"
+              ? "bg-emerald-50 border-emerald-100"
+              : "bg-red-50 border-red-100"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {decision.outcome === "approved" ? (
+              <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+            ) : (
+              <XCircle size={14} className="text-red-500 shrink-0" />
+            )}
+            <p
+              className={`font-black ${
+                decision.outcome === "approved" ? "text-emerald-800" : "text-red-800"
+              }`}
+            >
+              Decision communicated —{" "}
+              {decision.outcome === "approved" ? "Approved ✓" : "Refused"}
+            </p>
+          </div>
+          {decision.notes && (
+            <p
+              className={`font-bold pl-5 ${
+                decision.outcome === "approved" ? "text-emerald-700" : "text-red-700"
+              }`}
+            >
+              {decision.notes}
+            </p>
+          )}
+          <p className="text-gray-400 font-bold pl-5">
+            Communicated:{" "}
+            {new Date(decision.communicatedAt).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
+          </p>
         </div>
       )}
 
@@ -165,6 +222,7 @@ export default function CaseWorkflowPostCcl({
           date: availability.preferredDate,
           time: availability.preferredTime,
           instructions: availability.notes,
+          timezone: availability.timezone,
         } : undefined}
         onConfirm={async (payload) => {
           setBusy("biometric-slot");
@@ -226,6 +284,57 @@ export default function CaseWorkflowPostCcl({
             }
           >
             {busy === "visa-reply" ? "Saving…" : "Record reply & advance to awaiting decision"}
+          </Button>
+        </div>
+      )}
+
+      {showDecision && (
+        <div className="space-y-2 border-t border-gray-100 pt-3">
+          <p className="text-xs font-black text-gray-700">
+            Communicate Home Office decision to candidate
+          </p>
+          <p className="text-[11px] font-bold text-gray-500">
+            Upload decision letter, approval notice, and visa copy to the Documents tab first —
+            they will unlock automatically for the candidate once you communicate the decision.
+          </p>
+          <select
+            value={decisionOutcome}
+            onChange={(e) => setDecisionOutcome(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold bg-white"
+          >
+            <option value="approved">Approved</option>
+            <option value="refused">Refused</option>
+          </select>
+          <textarea
+            value={decisionNotes}
+            onChange={(e) => setDecisionNotes(e.target.value)}
+            rows={3}
+            placeholder="Optional message for the candidate — e.g. next steps, visa collection instructions, BRP collection details…"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold resize-none"
+          />
+          <Button
+            type="button"
+            disabled={!!busy}
+            className={
+              decisionOutcome === "approved"
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                : "bg-red-600 hover:bg-red-700 text-white"
+            }
+            onClick={() =>
+              run("decision", () =>
+                communicateDecision(caseId, { outcome: decisionOutcome, notes: decisionNotes }),
+              )
+            }
+          >
+            {busy === "decision" ? (
+              <>
+                <Loader2 size={14} className="animate-spin inline mr-1" /> Sending…
+              </>
+            ) : decisionOutcome === "approved" ? (
+              "Notify candidate — Approved"
+            ) : (
+              "Notify candidate — Refused"
+            )}
           </Button>
         </div>
       )}
