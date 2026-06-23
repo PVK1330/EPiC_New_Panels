@@ -26,7 +26,7 @@ const ConnectivityTab = () => {
     runSmtpSendTest,
   } = usePlatformConnectivity();
 
-  const [testRecipient, setTestRecipient] = useState('technoweb@gmail.com');
+  const [testRecipient, setTestRecipient] = useState('demo@gmail.com');
 
   // Fetch on mount
   useEffect(() => {
@@ -186,7 +186,7 @@ const ConnectivityTab = () => {
               label="Recipient"
               value={testRecipient}
               onChange={(e) => setTestRecipient(e.target.value)}
-              placeholder="technoweb@gmail.com"
+              placeholder="demo@gmail.com"
             />
             {sendTestResult && (
               <div className={`flex items-start gap-2 p-3 rounded-lg text-xs font-bold border ${
