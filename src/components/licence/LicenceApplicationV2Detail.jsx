@@ -51,6 +51,8 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
   const [selectedCaseworkerIds, setSelectedCaseworkerIds] = useState([]);
   const [assignLoading, setAssignLoading] = useState(false);
   const [actioningDocId, setActioningDocId] = useState(null);
+  const [rejectDocId, setRejectDocId] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const handleDownload = async (index, filename) => {
     try {
@@ -63,7 +65,7 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (err) {
+    } catch {
       toast.error("Failed to download document");
     }
   };
@@ -85,18 +87,36 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
     }
   };
 
-  const handleRejectDoc = async (docId) => {
+  const openRejectModal = (docId) => {
     if (actioningDocId) return;
-    const reason = window.prompt("Enter rejection reason:");
-    if (!reason || !reason.trim()) return;
+    setRejectDocId(docId);
+    setRejectReason("");
+  };
+
+  const closeRejectModal = () => {
+    if (actioningDocId) return;
+    setRejectDocId(null);
+    setRejectReason("");
+  };
+
+  const confirmRejectDoc = async () => {
+    const reason = rejectReason.trim();
+    if (!reason) {
+      toast.error("Please enter a rejection reason");
+      return;
+    }
     try {
-      setActioningDocId(docId);
-      await rejectAppendixDocument(role, id, docId, reason.trim());
-      toast.success("Document rejected");
-      
+      setActioningDocId(rejectDocId);
+      await rejectAppendixDocument(role, id, rejectDocId, reason);
+      // Rejection is a negative outcome — surface it with a danger (red) toast, not the
+      // green success style used for verification.
+      toast.error("Document rejected");
+
       const fetcher = role === "caseworker" ? getCaseworkerLicenceV2 : getAdminLicenceV2;
       const res = await fetcher(id);
       setApp(res.data.data);
+      setRejectDocId(null);
+      setRejectReason("");
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to reject document");
     } finally {
@@ -291,11 +311,12 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
                         Verify
                       </button>
                       <button
-                        onClick={() => handleRejectDoc(d.id)}
-                        disabled={actioningDocId === d.id}
-                        className="px-2 py-0.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50"
+                        onClick={() => openRejectModal(d.id)}
+                        disabled={actioningDocId === d.id || d.verificationStatus === "Rejected"}
+                        title={d.verificationStatus === "Rejected" ? "Already rejected" : "Reject document"}
+                        className="px-2 py-0.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-50 disabled:hover:text-red-600"
                       >
-                        Reject
+                        {d.verificationStatus === "Rejected" ? "Rejected" : "Reject"}
                       </button>
                     </div>
                   )}
@@ -437,6 +458,47 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
           </div>
         </Modal>
       )}
+
+      {/* Reject Document Modal (admin + caseworker) — replaces the native prompt */}
+      <Modal
+        open={rejectDocId !== null}
+        onClose={closeRejectModal}
+        title="Reject Document"
+        maxWidthClass="max-w-md"
+        bodyClassName="p-6"
+        footer={
+          <>
+            <button
+              onClick={closeRejectModal}
+              disabled={!!actioningDocId}
+              className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-secondary disabled:opacity-40"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmRejectDoc}
+              disabled={!!actioningDocId || !rejectReason.trim()}
+              className="bg-red-600 hover:bg-red-700 text-white font-black text-sm px-6 py-2 rounded-xl shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {actioningDocId ? <Loader2 size={16} className="animate-spin" /> : <><XCircle size={16} /> Reject Document</>}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm font-bold text-gray-500">
+            Tell the sponsor why this document was rejected. They'll be notified and asked to re-upload a corrected copy, and this status updates everywhere the document appears.
+          </p>
+          <textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            rows={4}
+            autoFocus
+            placeholder="e.g. The certificate has expired / the document is illegible / wrong document type"
+            className="w-full text-sm font-medium text-secondary border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 resize-none"
+          />
+        </div>
+      </Modal>
     </div>
   );
 }
