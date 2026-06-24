@@ -21,7 +21,7 @@ import {
   FiFileText,
   FiImage,
 } from "react-icons/fi";
-import { RiShieldFlashLine, RiTeamLine } from "react-icons/ri";
+import { RiShieldFlashLine, RiTeamLine, RiBankCardLine } from "react-icons/ri";
 
 // Components
 import Modal from "../../components/Modal";
@@ -48,6 +48,7 @@ import EmailTemplatePreview from "../../components/admin/settings/EmailTemplateP
 import DocumentChecklistSettings from "../../components/admin/settings/DocumentChecklistSettings";
 import CclTemplateSettings from "../../components/admin/settings/CclTemplateSettings";
 import OrganisationSettings from "../../components/admin/settings/OrganisationSettings";
+import BillingSettings from "../../components/admin/settings/BillingSettings";
 import RolesAndPermissionsPanel from "../../components/permissions/RolesAndPermissionsPanel";
 import UsersAndRolesPanel from "../../components/permissions/UsersAndRolesPanel";
 import { TAB_IDS, TABS } from "../../components/permissions/permissionsData";
@@ -184,6 +185,13 @@ const CONFIG_TABS = [
     icon: <FiClock />,
     color: "text-orange-500",
     bg: "bg-orange-50",
+  },
+  {
+    id: "billing",
+    label: "Billing & Plan",
+    icon: <RiBankCardLine />,
+    color: "text-primary",
+    bg: "bg-primary/10",
   },
 ];
 
@@ -1216,6 +1224,8 @@ export default function AdminSettings() {
                 error={error}
               />
             )}
+
+            {configTab === "billing" && <BillingSettings />}
           </motion.div>
         </AnimatePresence>
       </main>

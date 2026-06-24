@@ -17,6 +17,7 @@ import {
 } from '../../utils/organisationHost';
 import { COUNTRIES, isValidPhone } from '../../utils/countries';
 import { fetchPlans } from '../../services/superadminPlan.service';
+import { getGatewayStatus } from '../../services/billingApi';
 import { formatCurrencyExact } from '../../utils/currencyFormatter';
 import usePlatformCurrency from '../../hooks/usePlatformCurrency';
 
@@ -44,6 +45,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
   const [slugTouched, setSlugTouched] = useState(false);
   const [plans, setPlans] = useState([]);
   const [plansLoading, setPlansLoading] = useState(false);
+  const [trialSettings, setTrialSettings] = useState({ free_trial_enabled: true, free_trial_days: 14 });
 
   useEffect(() => {
     if (isOpen) {
@@ -51,6 +53,7 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
       setSlugTouched(false);
       setSubmitting(false);
       loadPlans();
+      loadTrialSettings();
     }
   }, [isOpen]);
 
@@ -67,6 +70,19 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
       setPlans([]);
     } finally {
       setPlansLoading(false);
+    }
+  };
+
+  const loadTrialSettings = async () => {
+    try {
+      const res = await getGatewayStatus();
+      const gw = res.data?.data?.gateway || {};
+      setTrialSettings({
+        free_trial_enabled: gw.free_trial_enabled !== false,
+        free_trial_days: gw.free_trial_days ?? 14,
+      });
+    } catch {
+      // default to trial enabled if settings can't be loaded
     }
   };
 
@@ -244,6 +260,15 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
                 size={18}
               />
             </div>
+            {trialSettings.free_trial_enabled ? (
+              <p className="text-[11px] text-green-600 font-semibold ml-1">
+                ✓ {trialSettings.free_trial_days}-day free trial — admin can access the platform immediately, payment required after trial ends.
+              </p>
+            ) : (
+              <p className="text-[11px] text-amber-600 font-semibold ml-1">
+                ⚠ No trial — admin will be redirected to billing and must pay for this plan before accessing the platform.
+              </p>
+            )}
           </div>
         </div>
 
