@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ChevronLeft, Loader2, FileText, CheckCircle2, XCircle, Clock, UserPlus, X, Check, Download } from "lucide-react";
+import { ChevronLeft, Loader2, FileText, CheckCircle2, XCircle, Clock, UserPlus, X, Check, Download, Eye } from "lucide-react";
 import {
   getAdminLicenceV2,
   getCaseworkerLicenceV2,
@@ -65,6 +65,20 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
       link.remove();
     } catch (err) {
       toast.error("Failed to download document");
+    }
+  };
+
+  const handleView = async (index, filename) => {
+    try {
+      const downloader = role === "admin" ? downloadAdminLicenceDocument : downloadCaseworkerLicenceDocument;
+      const res = await downloader(id, index, { download: false });
+      const mimeType = res.headers?.["content-type"] || "application/octet-stream";
+      const blob = new Blob([res.data], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => window.URL.revokeObjectURL(url), 30000);
+    } catch (err) {
+      toast.error("Failed to preview document");
     }
   };
 
@@ -264,39 +278,50 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
                 <div className="flex items-center gap-2 min-w-0">
                   <FileText size={15} className="text-gray-400 shrink-0" />
                   {isUploaded ? (
-                    <button
-                      onClick={() => handleDownload(downloadIdx, filename)}
-                      className="text-sm font-bold text-primary hover:underline text-left truncate flex items-center gap-1"
-                      title="Click to download"
-                    >
-                      {d.documentName}
-                      <Download size={12} className="shrink-0" />
-                    </button>
+                    <span className="text-sm font-bold text-secondary truncate">{d.documentName}</span>
                   ) : (
                     <span className="text-sm font-bold text-gray-400 truncate">
                       {d.documentName}{d.required && <span className="text-red-500"> *</span>}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-4 shrink-0 ml-auto">
+                <div className="flex items-center gap-3 shrink-0 ml-auto">
                   <span className="text-[11px] font-black text-gray-500">{d.receivedStatus || "Not Received"}</span>
                   <span className={`flex items-center gap-1 text-[11px] font-black ${tone}`}><Icon size={13} /> {d.verificationStatus || "Pending"}</span>
-                  {isUploaded && d.verificationStatus !== "Verified" && (
+                  {isUploaded && (
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => handleVerifyDoc(d.id)}
-                        disabled={actioningDocId === d.id}
-                        className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50"
+                        onClick={() => handleView(downloadIdx, filename)}
+                        title="View document"
+                        className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
                       >
-                        Verify
+                        <Eye size={14} />
                       </button>
                       <button
-                        onClick={() => handleRejectDoc(d.id)}
-                        disabled={actioningDocId === d.id}
-                        className="px-2 py-0.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50"
+                        onClick={() => handleDownload(downloadIdx, filename)}
+                        title="Download document"
+                        className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
                       >
-                        Reject
+                        <Download size={14} />
                       </button>
+                      {d.verificationStatus !== "Verified" && (
+                        <>
+                          <button
+                            onClick={() => handleVerifyDoc(d.id)}
+                            disabled={actioningDocId === d.id}
+                            className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50"
+                          >
+                            Verify
+                          </button>
+                          <button
+                            onClick={() => handleRejectDoc(d.id)}
+                            disabled={actioningDocId === d.id}
+                            className="px-2 py-0.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

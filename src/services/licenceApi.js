@@ -181,6 +181,12 @@ export const uploadLicenceV2AppendixDocument = (appId, docId, file) => {
     { headers: { "Content-Type": "multipart/form-data" } }
   );
 };
+
+export const previewLicenceV2AppendixDocument = (appId, docId) =>
+  api.get(
+    `/api/business/licence/v2/applications/${appId}/appendix-documents/${docId}/file`,
+    { responseType: "blob" }
+  );
 export const getLicenceV2FeePreview = (data) =>
   api.post("/api/business/licence/v2/fee/preview", data);
 export const syncPersonnelFromProfile = (id) =>
