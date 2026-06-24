@@ -40,12 +40,16 @@ const SuperadminSettings = () => {
     platform_fee: '0',
     tax_rate: '',
     tax_id: '',
+    free_trial_enabled: true,
+    free_trial_days: 14,
   });
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeSaving, setStripeSaving] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   const [stripeStatus, setStripeStatus] = useState(null);
+  const [secretKeySet, setSecretKeySet] = useState(false);
+  const [webhookSecretSet, setWebhookSecretSet] = useState(false);
 
   const { modules, modulesLoading, fetchAllModules, addModule, removeModule } = useModules();
 
@@ -60,6 +64,8 @@ const SuperadminSettings = () => {
       const res = await getGatewayStatus();
       const gw = res.data?.data?.gateway || {};
       setStripeStatus(gw.status);
+      setSecretKeySet(!!gw.secret_key_set);
+      setWebhookSecretSet(!!gw.webhook_secret_set);
       setStripeConfig({
         publishable_key: gw.publishable_key || '',
         secret_key: '',
@@ -68,6 +74,8 @@ const SuperadminSettings = () => {
         platform_fee: gw.platform_fee || '0',
         tax_rate: gw.tax_rate || '',
         tax_id:   gw.tax_id   || '',
+        free_trial_enabled: gw.free_trial_enabled !== false,
+        free_trial_days: gw.free_trial_days ?? 14,
       });
     } catch {
       setStripeStatus(null);
@@ -87,6 +95,8 @@ const SuperadminSettings = () => {
         platform_fee: stripeConfig.platform_fee,
         tax_rate: stripeConfig.tax_rate,
         tax_id: stripeConfig.tax_id,
+        free_trial_enabled: stripeConfig.free_trial_enabled,
+        free_trial_days: stripeConfig.free_trial_enabled ? Number(stripeConfig.free_trial_days) : undefined,
       });
       toast.success('Configuration saved successfully');
       await loadStripeConfig();
@@ -187,6 +197,8 @@ const SuperadminSettings = () => {
               stripeConfig={stripeConfig}
               setStripeConfig={setStripeConfig}
               stripeStatus={stripeStatus}
+              secretKeySet={secretKeySet}
+              webhookSecretSet={webhookSecretSet}
               showSecretKey={showSecretKey}
               setShowSecretKey={setShowSecretKey}
               showWebhookSecret={showWebhookSecret}
