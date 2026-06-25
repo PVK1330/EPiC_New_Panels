@@ -535,6 +535,7 @@ const CaseworkerLicenceApplications = () => {
                       <InfoRow label="Type"          value={selectedApp.licenceType} />
                       <InfoRow label="CoS Allocation"value={selectedApp.cosAllocation} />
                       <InfoRow label="App. Type"     value={selectedApp.type} />
+                      <InfoRow label="Sponsor Size"  value={selectedApp.feeSponsorSize === "small" ? "Small / Charity" : selectedApp.feeSponsorSize === "medium_large" ? "Medium / Large" : selectedApp.feeSponsorSize || "—"} />
                     </div>
                   </div>
                 </div>
