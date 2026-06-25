@@ -867,6 +867,66 @@ const LicenceProcess = () => {
         </motion.div>
       )}
 
+      {/* ── Licence Granted ── */}
+      {app.status === "Licence Granted" && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-emerald-200 bg-emerald-50/60 shadow-sm overflow-hidden relative"
+        >
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+          <div className="p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-emerald-100 rounded-lg shrink-0">
+                <CheckCircle2 className="text-emerald-600" size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-emerald-700">
+                  Congratulations — Your Sponsor Licence Has Been Granted!
+                </h3>
+                <p className="text-xs font-bold text-gray-500 mt-1 leading-relaxed">
+                  UKVI has approved your sponsor licence application. You can now issue Certificates of Sponsorship and begin hiring skilled workers.
+                </p>
+              </div>
+            </div>
+            {(app.licenceNumber || app.licenceExpiryDate || app.licenceCosAllocation != null) && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {app.licenceNumber && (
+                  <div className="bg-white rounded-xl border border-emerald-100 p-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Licence Number</p>
+                    <div className="flex items-center gap-1">
+                      <p className="text-xs font-black text-secondary truncate">{app.licenceNumber}</p>
+                      <button onClick={() => navigator.clipboard?.writeText(app.licenceNumber)} className="text-gray-400 hover:text-primary shrink-0" title="Copy"><Copy size={11} /></button>
+                    </div>
+                  </div>
+                )}
+                {app.licenceExpiryDate && (
+                  <div className="bg-white rounded-xl border border-emerald-100 p-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Expiry Date</p>
+                    <p className="text-xs font-black text-secondary">{formatDate(app.licenceExpiryDate)}</p>
+                  </div>
+                )}
+                {app.licenceCosAllocation != null && (
+                  <div className="bg-white rounded-xl border border-emerald-100 p-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">CoS Allocation</p>
+                    <p className="text-xs font-black text-secondary">{app.licenceCosAllocation}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Link
+                to="/business/cos-requests"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black shadow-sm hover:bg-emerald-700 transition-all active:scale-95"
+              >
+                <ArrowRight size={13} /> Issue Certificate of Sponsorship
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Licence Rejected ── */}
       {app.status === "Licence Rejected" && app.rejectionCooldownUntil && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
@@ -874,23 +934,31 @@ const LicenceProcess = () => {
           className="rounded-2xl border border-red-100 bg-red-50/60 shadow-sm overflow-hidden relative"
         >
           <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-red-400 to-red-600" />
-          <div className="p-5 flex items-start gap-3">
-            <div className="p-2 bg-red-100 rounded-lg shrink-0">
-              <ShieldAlert className="text-red-600" size={18} />
+          <div className="p-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-red-100 rounded-lg shrink-0">
+                <ShieldAlert className="text-red-600" size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-red-700">
+                  Licence Application Rejected — 6-Month Reapplication Cooldown
+                </h3>
+                <p className="text-xs font-bold text-gray-500 mt-1 leading-relaxed">
+                  UKVI policy requires a 6-month waiting period before reapplying after a rejection.
+                  You may submit a fresh application after{" "}
+                  <span className="font-black text-secondary">
+                    {new Date(app.rejectionCooldownUntil).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+                  </span>
+                  . The full application process must be restarted from the beginning.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-black text-red-700">
-                Licence Application Rejected — 6-Month Reapplication Cooldown
-              </h3>
-              <p className="text-xs font-bold text-gray-500 mt-1 leading-relaxed">
-                UKVI policy requires a 6-month waiting period before reapplying after a rejection.
-                You may submit a fresh application after{" "}
-                <span className="font-black text-secondary">
-                  {new Date(app.rejectionCooldownUntil).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
-                </span>
-                . The full application process must be restarted from the beginning.
-              </p>
-            </div>
+            {app.rejectionReason && (
+              <div className="bg-white border border-red-100 rounded-xl p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Reason Given</p>
+                <p className="text-xs font-bold text-gray-600 leading-relaxed">{app.rejectionReason}</p>
+              </div>
+            )}
           </div>
         </motion.div>
       )}
