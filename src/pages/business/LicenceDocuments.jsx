@@ -113,9 +113,11 @@ const LicenceDocuments = () => {
   };
 
   const filteredDocuments = documents.filter((doc) => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch =
-      doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.category.toLowerCase().includes(searchQuery.toLowerCase());
+      doc.name.toLowerCase().includes(q) ||
+      (doc.fileName || "").toLowerCase().includes(q) ||
+      doc.category.toLowerCase().includes(q);
     const matchesFilter =
       filterType === "all" ||
       (filterType === "verified" && (doc.status === "Verified" || doc.status === "Valid")) ||
@@ -152,7 +154,7 @@ const LicenceDocuments = () => {
       const blob = new Blob([res.data], { type: res.headers["content-type"] || "application/octet-stream" });
       const cd = res.headers["content-disposition"] || "";
       const match = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(cd);
-      const filename = match ? match[1].replace(/['"]/g, "") : doc.name;
+      const filename = match ? match[1].replace(/['"]/g, "") : (doc.fileName || doc.name);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -329,6 +331,7 @@ const LicenceDocuments = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px] w-12">Sr No</th>
                   <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Document Name</th>
                   <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Category</th>
                   <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Upload Date</th>
@@ -338,8 +341,11 @@ const LicenceDocuments = () => {
               </thead>
               <tbody>
                 {filteredDocuments.length > 0 ? (
-                  filteredDocuments.map((doc) => (
+                  filteredDocuments.map((doc, index) => (
                     <tr key={doc.id} className="border-b border-gray-100 last:border-0 group hover:bg-gray-50/50 transition-colors">
+                      <td className="px-3 py-2">
+                        <span className="text-sm font-black text-gray-500 tabular-nums">{index + 1}</span>
+                      </td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-primary/5 rounded-lg flex items-center justify-center shrink-0">
@@ -347,7 +353,11 @@ const LicenceDocuments = () => {
                           </div>
                           <div>
                             <p className="text-sm font-black text-secondary">{doc.name}</p>
-                            <p className="text-[10px] font-bold text-gray-400">ID: #DOC-{doc.id}</p>
+                            {doc.fileName && doc.fileName !== doc.name && (
+                              <p className="text-[10px] font-bold text-gray-400 truncate max-w-[220px]" title={doc.fileName}>
+                                {doc.fileName}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -420,7 +430,7 @@ const LicenceDocuments = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-3 py-20 text-center">
+                    <td colSpan={6} className="px-3 py-20 text-center">
                       <div className="max-w-[200px] mx-auto">
                         <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
                           <FileText size={24} className="text-gray-200" />

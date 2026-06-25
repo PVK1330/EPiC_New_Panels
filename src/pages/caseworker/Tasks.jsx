@@ -1,10 +1,11 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { useSelector } from "react-redux";
-import { Plus, Check, Search } from "lucide-react";
+import { Plus, Check, Search, FileText, AlertCircle, Clock } from "lucide-react";
 import Modal from "../../components/Modal";
 import DatePicker from "../../components/DatePicker";
 import { INITIAL_CASES } from "../../data/casesData";
 import api from "../../services/api";
+import { getMyLicenceStageTasks } from "../../services/licenceApi";
 import { classifyTaskDue } from "../../utils/taskDueStatus";
 import { formatDateLong } from "../../utils/datetime";
 
@@ -130,6 +131,8 @@ export default function Tasks() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
   const [caseOptions, setCaseOptions] = useState([]);
+  const [stageTasks, setStageTasks] = useState([]);
+  const [stageLoading, setStageLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState(emptyCreateForm);
   const [createErrors, setCreateErrors] = useState({});
@@ -238,6 +241,14 @@ export default function Tasks() {
 
     fetchTasks();
   }, [filter, search, page]);
+
+  useEffect(() => {
+    setStageLoading(true);
+    getMyLicenceStageTasks()
+      .then((res) => setStageTasks(res.data?.data?.tasks || []))
+      .catch(() => setStageTasks([]))
+      .finally(() => setStageLoading(false));
+  }, []);
 
   // Filter case options to show only cases assigned to current caseworker
   const taskCaseOptions = useMemo(() => {
@@ -788,6 +799,57 @@ export default function Tasks() {
           </div>
         </div>
       </Modal>
+
+      {/* Licence Stage Tasks */}
+      {(stageLoading || stageTasks.length > 0) && (
+        <div className="rounded-2xl border border-violet-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-4 py-3 bg-violet-50 border-b border-violet-100 flex items-center gap-2">
+            <FileText size={15} className="text-violet-600" />
+            <span className="text-xs font-black uppercase tracking-wider text-violet-700">Licence Applications — Stage Tasks</span>
+            {!stageLoading && (
+              <span className="ml-auto text-[10px] font-black text-violet-500 bg-violet-100 px-2 py-0.5 rounded-full">{stageTasks.length}</span>
+            )}
+          </div>
+          {stageLoading ? (
+            <div className="flex items-center justify-center py-6 text-sm font-bold text-gray-400">Loading…</div>
+          ) : (
+            <div className="divide-y divide-violet-50">
+              {stageTasks.map((task) => (
+                <div key={task.id} className="px-4 py-3 flex items-start gap-3 hover:bg-violet-50/40 transition-colors">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    task.section === "overdue" ? "bg-red-100" : "bg-violet-100"
+                  }`}>
+                    {task.section === "overdue"
+                      ? <AlertCircle size={13} className="text-red-500" />
+                      : <Clock size={13} className="text-violet-600" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-black text-gray-900">{task.title}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      <span className="text-[10px] font-black text-violet-600 bg-violet-100 px-2 py-0.5 rounded-full">
+                        Licence #{task.licenceApplicationId}
+                      </span>
+                      {task.section === "overdue" && (
+                        <span className="text-[10px] font-black text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">Overdue</span>
+                      )}
+                      {task.section === "due_soon" && (
+                        <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">Due soon</span>
+                      )}
+                    </div>
+                  </div>
+                  {task.due_date && (
+                    <div className="text-right flex-shrink-0">
+                      <p className={`text-xs font-black ${task.section === "overdue" ? "text-red-500" : "text-gray-500"}`}>
+                        {formatDue(task.due_date)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex flex-wrap gap-2">

@@ -74,6 +74,16 @@ export const completeGovRegistration = (id, data) => api.post(`/api/caseworker/l
 export const requestGovCredentials = (id) => api.post(`/api/caseworker/licence/${id}/request-government-credentials`);
 export const recordGovSubmission = (id, data) => api.post(`/api/caseworker/licence/${id}/government-submission`, data);
 
+// Caseworker: view / verify / request resubmission of sponsor-submitted UKVI credentials
+export const getCaseworkerSubmittedCredentials = (id) => api.get(`/api/caseworker/licence/${id}/submitted-credentials`);
+export const verifyCaseworkerCredentials = (id) => api.post(`/api/caseworker/licence/${id}/verify-credentials`);
+export const requestCaseworkerCredentialsResubmission = (id) => api.post(`/api/caseworker/licence/${id}/request-credentials-resubmission`);
+
+// Admin: same credential actions
+export const getAdminSubmittedCredentials = (id) => api.get(`/api/admin/licence/${id}/submitted-credentials`);
+export const verifyAdminSubmittedCredentials = (id) => api.post(`/api/admin/licence/${id}/verify-credentials`);
+export const requestAdminCredentialsResubmission = (id) => api.post(`/api/admin/licence/${id}/request-credentials-resubmission`);
+
 // Caseworker: confirm physical documents dispatched to Home Office (flow v2)
 export const recordHomeOfficeDispatch = (id, data = {}) =>
   api.post(`/api/caseworker/licence/${id}/home-office-dispatch`, data);
@@ -125,6 +135,9 @@ export const downloadSponsorLicenceDocument = (id, index, { download = false } =
     params: download ? { download: 1 } : {},
     responseType: "blob",
   });
+
+// All roles: pending licence stage tasks for the authenticated user's role
+export const getMyLicenceStageTasks = () => api.get("/api/tasks/my-stage-tasks");
 
 // Business: Licence Summary (real CoS used count from DB)
 export const getLicenceSummary = () =>

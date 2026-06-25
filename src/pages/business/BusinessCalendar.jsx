@@ -7,6 +7,8 @@ import DatePicker from "../../components/DatePicker";
 import TimePicker from "../../components/TimePicker";
 import { getUpcomingMeetings } from "../../services/teamsApi";
 import { getMyAppointments } from "../../services/appointmentApi";
+import { getWorkflowCalendarEvents } from "../../services/calendarApi";
+import { mapWorkflowEventsToCalendar } from "../../utils/calendarWorkflowEvents";
 import { formatDate, formatTime, formatWithOptions } from "../../utils/datetime";
 
 const Calendar = () => {
@@ -21,12 +23,14 @@ const Calendar = () => {
   const [teamsMeetings, setTeamsMeetings] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [workflowEvents, setWorkflowEvents] = useState([]);
 
   const today = new Date();
 
   useEffect(() => {
     fetchTeamsMeetings();
     fetchAppointments();
+    fetchWorkflowEvents();
   }, []);
 
   const fetchTeamsMeetings = async () => {
@@ -86,6 +90,16 @@ const Calendar = () => {
     }
   };
 
+  const fetchWorkflowEvents = async () => {
+    try {
+      const res = await getWorkflowCalendarEvents();
+      const apiEvents = res.data?.data?.events || res.data?.events || [];
+      setWorkflowEvents(mapWorkflowEventsToCalendar(apiEvents));
+    } catch {
+      setWorkflowEvents([]);
+    }
+  };
+
   // Mock events data — includes past months for completed meetings display
   const [events, setEvents] = useState([]);
 
@@ -115,8 +129,8 @@ const Calendar = () => {
   }));
 
   const allEvents = useMemo(
-    () => [...eventsWithCompletion, ...teamsEvents],
-    [eventsWithCompletion, teamsEvents]
+    () => [...eventsWithCompletion, ...teamsEvents, ...workflowEvents],
+    [eventsWithCompletion, teamsEvents, workflowEvents]
   );
 
   const [newEvent, setNewEvent] = useState({

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { CheckSquare, Clock, AlertCircle, Check, Search, Loader2 } from "lucide-react";
+import { CheckSquare, Clock, AlertCircle, Check, Search, Loader2, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import api from "../../services/api";
+import { getMyLicenceStageTasks } from "../../services/licenceApi";
 import { formatDateLong } from "../../utils/datetime";
 import { classifyTaskDue } from "../../utils/taskDueStatus";
 
@@ -30,9 +31,11 @@ export default function BusinessTasks() {
   const [filter, setFilter] = useState("all");
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("") ;
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
+  const [stageTasks, setStageTasks] = useState([]);
+  const [stageLoading, setStageLoading] = useState(true);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -68,6 +71,14 @@ export default function BusinessTasks() {
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
+  useEffect(() => {
+    setStageLoading(true);
+    getMyLicenceStageTasks()
+      .then((res) => setStageTasks(res.data?.data?.tasks || []))
+      .catch(() => setStageTasks([]))
+      .finally(() => setStageLoading(false));
+  }, []);
+
   const sections = ["overdue", "due_soon", "today", "upcoming", "completed"];
   const grouped = Object.fromEntries(sections.map((s) => [s, tasks.filter((t) => t.section === s)]));
 
@@ -86,6 +97,60 @@ export default function BusinessTasks() {
         </h1>
         <p className="text-primary font-bold text-sm mt-0.5">Actions required from you across your licence applications.</p>
       </motion.div>
+
+      {/* Licence Stage Tasks */}
+      {(stageLoading || stageTasks.length > 0) && (
+        <div className="relative rounded-2xl border border-violet-200 bg-white shadow-sm overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-violet-500 to-violet-700" />
+          <div className="px-4 py-3 bg-violet-50 border-b border-violet-100 flex items-center gap-2">
+            <FileText size={15} className="text-violet-600" />
+            <span className="text-xs font-black uppercase tracking-wider text-violet-700">Licence Application — Pending Actions</span>
+            {!stageLoading && (
+              <span className="ml-auto text-[10px] font-black text-violet-500 bg-violet-100 px-2 py-0.5 rounded-full">{stageTasks.length}</span>
+            )}
+          </div>
+          {stageLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 size={22} className="text-violet-400 animate-spin" />
+            </div>
+          ) : (
+            <div className="divide-y divide-violet-50">
+              {stageTasks.map((task) => (
+                <div key={task.id} className="px-4 py-3 flex items-start gap-3 hover:bg-violet-50/40 transition-colors relative">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    task.section === "overdue" ? "bg-red-100" : "bg-violet-100"
+                  }`}>
+                    {task.section === "overdue"
+                      ? <AlertCircle size={13} className="text-red-500" />
+                      : <Clock size={13} className="text-violet-600" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-black text-secondary">{task.title}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      <span className="text-[10px] font-black text-violet-600 bg-violet-100 px-2 py-0.5 rounded-full">
+                        Licence Application
+                      </span>
+                      {task.section === "overdue" && (
+                        <span className="text-[10px] font-black text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">Overdue</span>
+                      )}
+                      {task.section === "due_soon" && (
+                        <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">Due soon</span>
+                      )}
+                    </div>
+                  </div>
+                  {task.due_date && (
+                    <div className="text-right flex-shrink-0">
+                      <p className={`text-xs font-black ${task.section === "overdue" ? "text-red-500" : "text-gray-500"}`}>
+                        {formatDateLong(task.due_date + "T12:00:00", { month: "short" })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filters + Search */}
       <div className="flex flex-col sm:flex-row gap-3">
