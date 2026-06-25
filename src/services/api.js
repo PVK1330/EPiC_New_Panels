@@ -168,6 +168,24 @@ api.interceptors.response.use(
       } catch (err) {
         isRefreshing = false;
         processQueue(err, null);
+
+        // Ask the server to clear both cookies (Set-Cookie: Max-Age=0).
+        // Best-effort — we navigate to /login regardless of whether this call
+        // succeeds so a network failure here doesn't trap the user.
+        try {
+          const logoutCsrf = await ensureCsrfToken();
+          await axios.post(
+            `${API_BASE_URL}/api/auth/logout`,
+            {},
+            {
+              withCredentials: true,
+              headers: logoutCsrf ? { [CSRF_HEADER]: logoutCsrf } : {},
+            },
+          );
+        } catch {
+          // swallow — clearing cookies is best-effort
+        }
+
         store.dispatch(logout());
         window.location.href = "/login";
         return Promise.reject(err);
