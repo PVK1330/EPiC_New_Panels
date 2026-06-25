@@ -1,5 +1,6 @@
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import ProfileSyncBanner from "./ProfileSyncBanner";
+import PhoneInput from "../PhoneInput";
 
 const EMPTY_L1 = { firstName: "", lastName: "", email: "", phone: "", jobTitle: "", isAuthorisingOfficer: false };
 const inp = "w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20";
@@ -34,9 +35,14 @@ function L1Row({ index, user, onChange, onRemove, totalRows }) {
         <Field label="Email" required>
           <input type="email" value={user.email} onChange={(e) => set("email", e.target.value)} className={inp} placeholder="user@company.com" />
         </Field>
-        <Field label="Phone">
-          <input type="tel" value={user.phone} onChange={(e) => set("phone", e.target.value)} className={inp} placeholder="+44 7700 000000" />
-        </Field>
+        <PhoneInput
+          name="phone"
+          label="Phone"
+          value={user.phone || ""}
+          onChange={(e) => set("phone", e.target.value)}
+          defaultCountry="GB"
+          placeholder="Phone number"
+        />
         <Field label="Job Title">
           <input value={user.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} className={inp} placeholder="e.g. HR Coordinator" />
         </Field>

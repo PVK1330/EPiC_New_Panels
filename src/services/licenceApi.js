@@ -249,6 +249,20 @@ export const uploadIntakeDocument = (id, documentKey, file) => {
 export const deleteIntakeDocument = (id, documentKey) =>
   api.delete(`/api/business/licence/${id}/intake/documents/${documentKey}`);
 
+// Sponsor: view/download an uploaded intake document
+export const viewSponsorIntakeDocument = (id, documentKey, { download = false } = {}) =>
+  api.get(`/api/business/licence/${id}/intake/documents/${documentKey}/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
+
+// Caseworker: view/download an intake document
+export const viewCaseworkerIntakeDocument = (id, documentKey, { download = false } = {}) =>
+  api.get(`/api/caseworker/licence/${id}/intake/documents/${documentKey}/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
+
 // Caseworker: get intake summary for review
 export const getCaseworkerIntakeSummary = (id) =>
   api.get(`/api/caseworker/licence/${id}/intake`);

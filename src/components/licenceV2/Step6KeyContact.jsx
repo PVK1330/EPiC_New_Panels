@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import ProfileSyncBanner from "./ProfileSyncBanner";
+import PhoneInput from "../PhoneInput";
 
 const inp = "w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20";
 const Field = ({ label, required, children }) => (
@@ -72,9 +73,15 @@ export default function Step6KeyContact({ data, onChange, onNext, onBack, saving
           <Field label="Email" required>
             <input type="email" value={kc.email || ""} onChange={(e) => set("email", e.target.value)} className={inp} placeholder="keycontact@company.com" />
           </Field>
-          <Field label="Phone" required>
-            <input type="tel" value={kc.phone || ""} onChange={(e) => set("phone", e.target.value)} className={inp} placeholder="+44 7700 000000" />
-          </Field>
+          <PhoneInput
+            name="phone"
+            label="Phone"
+            value={kc.phone || ""}
+            onChange={(e) => set("phone", e.target.value)}
+            defaultCountry="GB"
+            placeholder="Phone number"
+            required
+          />
           <Field label="Job Title">
             <input value={kc.jobTitle || ""} onChange={(e) => set("jobTitle", e.target.value)} className={inp} placeholder="e.g. HR Manager" />
           </Field>

@@ -57,7 +57,7 @@ import { formatDate, formatDateTime } from "../../utils/datetime";
 import { useToast } from "../../context/ToastContext";
 import { getBusinessProfile } from "../../services/businessProfileApi";
 import PhoneInput from "../../components/PhoneInput";
-import { COUNTRY_NAMES } from "../../utils/countries";
+import CountrySelect from "../../components/CountrySelect";
 
 const TABS = [
   { id: "status", label: "Status", icon: BarChart3 },
@@ -180,6 +180,7 @@ const LicenceProcess = () => {
   const [dispatchDocs, setDispatchDocs] = useState([]);
   const [dispatchDocsLoading, setDispatchDocsLoading] = useState(false);
   const [downloadingDocId, setDownloadingDocId] = useState(null);
+  const [viewingDocId, setViewingDocId] = useState(null);
 
   // Download a dispatched document through `api` (not a plain <a href>) so the CSRF
   // token and org-slug headers are attached. Filename comes from Content-Disposition.
@@ -208,6 +209,27 @@ const LicenceProcess = () => {
         showToast({ message, variant: "danger" });
       } finally {
         setDownloadingDocId(null);
+      }
+    },
+    [app?.id, showToast],
+  );
+
+  const handleViewDispatched = useCallback(
+    async (doc) => {
+      if (!app?.id || !doc?.id) return;
+      setViewingDocId(doc.id);
+      try {
+        const res = await downloadSponsorDispatchedDocument(app.id, doc.id);
+        const mimeType = res.headers?.["content-type"] || "application/octet-stream";
+        const blob = new Blob([res.data], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank", "noopener,noreferrer");
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+      } catch (err) {
+        const message = err?.response?.data?.message || err?.message || "Failed to preview document";
+        showToast({ message, variant: "danger" });
+      } finally {
+        setViewingDocId(null);
       }
     },
     [app?.id, showToast],
@@ -1484,7 +1506,7 @@ const LicenceProcess = () => {
                         { sub: "city", ph: "City", required: true },
                         {
                           sub: "county",
-                          ph: "County (optional)",
+                          ph: "County / Region (optional)",
                           required: false,
                         },
                         { sub: "postcode", ph: "Postcode", required: true },
@@ -1494,10 +1516,9 @@ const LicenceProcess = () => {
                         return (
                           <div key={sub}>
                             {sub === "country" ? (
-                              <select
-                                value={
-                                  intakeForm.premisesAddress?.country || ""
-                                }
+                              <CountrySelect
+                                name="country"
+                                value={intakeForm.premisesAddress?.country || ""}
                                 onChange={(e) => {
                                   setIntakeForm((f) => ({
                                     ...f,
@@ -1514,48 +1535,42 @@ const LicenceProcess = () => {
                                     });
                                 }}
                                 disabled={intakeData?.form?.isComplete}
-                                className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400 ${intakeErrors[errKey] ? "border-red-400 bg-red-50" : "border-gray-200"}`}
-                              >
-                                <option value="">Select country</option>
-                                {intakeForm.premisesAddress?.country &&
-                                  !COUNTRY_NAMES.includes(
-                                    intakeForm.premisesAddress.country,
-                                  ) && (
-                                    <option
-                                      value={intakeForm.premisesAddress.country}
-                                    >
-                                      {intakeForm.premisesAddress.country}
-                                    </option>
-                                  )}
-                                {COUNTRY_NAMES.map((c) => (
-                                  <option key={c}>{c}</option>
-                                ))}
-                              </select>
-                            ) : (
-                              <input
-                                type="text"
-                                placeholder={ph}
-                                value={intakeForm.premisesAddress?.[sub] || ""}
-                                onChange={(e) => {
-                                  setIntakeForm((f) => ({
-                                    ...f,
-                                    premisesAddress: {
-                                      ...(f.premisesAddress || {}),
-                                      [sub]: e.target.value,
-                                    },
-                                  }));
-                                  if (intakeErrors[errKey])
-                                    setIntakeErrors((prev) => {
-                                      const n = { ...prev };
-                                      delete n[errKey];
-                                      return n;
-                                    });
-                                }}
-                                disabled={intakeData?.form?.isComplete}
-                                className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400 ${intakeErrors[errKey] ? "border-red-400 bg-red-50" : "border-gray-200"}`}
+                                error={intakeErrors[errKey] || ""}
+                                placeholder="Select country"
+                                required
                               />
+                            ) : (
+                              <>
+                                <input
+                                  type="text"
+                                  placeholder={ph}
+                                  value={intakeForm.premisesAddress?.[sub] || ""}
+                                  onChange={(e) => {
+                                    setIntakeForm((f) => ({
+                                      ...f,
+                                      premisesAddress: {
+                                        ...(f.premisesAddress || {}),
+                                        [sub]: e.target.value,
+                                      },
+                                    }));
+                                    if (intakeErrors[errKey])
+                                      setIntakeErrors((prev) => {
+                                        const n = { ...prev };
+                                        delete n[errKey];
+                                        return n;
+                                      });
+                                  }}
+                                  disabled={intakeData?.form?.isComplete}
+                                  className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50 disabled:text-gray-400 ${intakeErrors[errKey] ? "border-red-400 bg-red-50" : "border-gray-200"}`}
+                                />
+                                {sub === "county" && (
+                                  <p className="text-[10px] text-gray-400 mt-1">
+                                    The administrative county or region — e.g. Surrey, Kent, West Yorkshire. Leave blank if not applicable.
+                                  </p>
+                                )}
+                              </>
                             )}
-                            {intakeErrors[errKey] && (
+                            {sub !== "country" && intakeErrors[errKey] && (
                               <p className="text-[11px] text-red-500 font-bold mt-1">
                                 {intakeErrors[errKey]}
                               </p>
@@ -1711,19 +1726,34 @@ const LicenceProcess = () => {
                           </p>
                         )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDownloadDispatched(doc)}
-                        disabled={downloadingDocId === doc.id}
-                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white text-xs font-black rounded-lg hover:bg-teal-700 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {downloadingDocId === doc.id ? (
-                          <Loader2 size={12} className="animate-spin" />
-                        ) : (
-                          <ArrowRight size={12} />
-                        )}{" "}
-                        Download
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleViewDispatched(doc)}
+                          disabled={viewingDocId === doc.id || downloadingDocId === doc.id}
+                          title="Preview document"
+                          className="flex items-center justify-center w-8 h-8 bg-white border border-teal-200 text-teal-600 rounded-lg hover:bg-teal-50 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {viewingDocId === doc.id ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : (
+                            <Eye size={13} />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadDispatched(doc)}
+                          disabled={downloadingDocId === doc.id || viewingDocId === doc.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white text-xs font-black rounded-lg hover:bg-teal-700 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {downloadingDocId === doc.id ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            <ArrowRight size={12} />
+                          )}{" "}
+                          Download
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

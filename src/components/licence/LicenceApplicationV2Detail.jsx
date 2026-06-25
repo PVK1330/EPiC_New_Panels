@@ -477,22 +477,13 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
                           : "Reject"}
                       </button>
                       {d.verificationStatus !== "Verified" && (
-                        <>
-                          <button
-                            onClick={() => handleVerifyDoc(d.id)}
-                            disabled={actioningDocId === d.id}
-                            className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50"
-                          >
-                            Verify
-                          </button>
-                          <button
-                            onClick={() => handleRejectDoc(d.id)}
-                            disabled={actioningDocId === d.id}
-                            className="px-2 py-0.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50"
-                          >
-                            Reject
-                          </button>
-                        </>
+                        <button
+                          onClick={() => handleVerifyDoc(d.id)}
+                          disabled={actioningDocId === d.id}
+                          className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50"
+                        >
+                          Verify
+                        </button>
                       )}
                     </div>
                   )}
