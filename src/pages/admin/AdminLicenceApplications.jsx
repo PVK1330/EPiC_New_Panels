@@ -799,6 +799,7 @@ const AdminLicenceApplications = () => {
                         <p className="text-sm font-black text-secondary">{selectedApp.licenceType}</p>
                         <p className="text-xs font-bold text-gray-500">Allocation: {selectedApp.cosAllocation}</p>
                         <p className="text-xs font-bold text-gray-500">Type: {selectedApp.type}</p>
+                        <p className="text-xs font-bold text-gray-500">Sponsor Size: {selectedApp.feeSponsorSize === "small" ? "Small / Charity" : selectedApp.feeSponsorSize === "medium_large" ? "Medium / Large" : selectedApp.feeSponsorSize || "—"}</p>
                       </div>
                     </div>
                   </div>
