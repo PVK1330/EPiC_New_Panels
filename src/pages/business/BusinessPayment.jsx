@@ -60,7 +60,8 @@ const BusinessPayment = () => {
         candidateName: PAYABLE_LABEL[p.payableType] || "Sponsor",
       }));
       setPayments([...caseRows, ...ledgerRows]);
-      setPayables(data.payables || []);
+      // licence_fee is paid directly on the UKVI portal — exclude it from Stripe payables.
+      setPayables((data.payables || []).filter((p) => p.payableType !== "licence_fee"));
     } finally {
       setLoading(false);
     }
@@ -191,7 +192,7 @@ const BusinessPayment = () => {
           <LayoutDashboard className="text-primary" size={26} />
           Payments
         </h1>
-        <p className="text-primary font-bold text-sm mt-0.5">Case fees, licence charges, and billing status.</p>
+        <p className="text-primary font-bold text-sm mt-0.5">Case fees and billing status. Sponsor licence fees are paid directly on the UKVI portal.</p>
       </motion.div>
 
       <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-3" variants={cardVariants} initial="hidden" animate="visible">

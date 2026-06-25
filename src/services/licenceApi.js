@@ -56,8 +56,16 @@ export const deleteLicenceApplicationByAdmin = (id) => api.delete(`/api/admin/li
 export const generateLicenceCredentials = (id, data) => api.post(`/api/admin/licence/${id}/generate-credentials`, data);
 export const resendLicenceCredentials = (id) => api.post(`/api/admin/licence/${id}/resend-credentials`);
 
-// Sponsor: confirm UKVI portal credentials received
+// Sponsor: confirm UKVI portal credentials received (legacy)
 export const confirmSponsorGovCredentials = (id) => api.post(`/api/business/licence/${id}/government-credentials`);
+
+// Sponsor: submit UKVI credentials received via email from UKVI (flow v2)
+export const submitSponsorUkviCredentials = (id, data) =>
+  api.post(`/api/business/licence/${id}/submit-credentials`, data);
+
+// Sponsor: confirm UKVI licence fee payment made on UKVI portal (flow v2)
+export const confirmSponsorUkviPayment = (id) =>
+  api.post(`/api/business/licence/${id}/confirm-payment`);
 
 // Caseworker: government pipeline (Phase 3)
 export const startLicenceReview = (id) => api.post(`/api/caseworker/licence/${id}/start-review`);
@@ -65,6 +73,10 @@ export const startGovRegistration = (id) => api.post(`/api/caseworker/licence/${
 export const completeGovRegistration = (id, data) => api.post(`/api/caseworker/licence/${id}/government-registration/complete`, data);
 export const requestGovCredentials = (id) => api.post(`/api/caseworker/licence/${id}/request-government-credentials`);
 export const recordGovSubmission = (id, data) => api.post(`/api/caseworker/licence/${id}/government-submission`, data);
+
+// Caseworker: confirm physical documents dispatched to Home Office (flow v2)
+export const recordHomeOfficeDispatch = (id, data = {}) =>
+  api.post(`/api/caseworker/licence/${id}/home-office-dispatch`, data);
 
 // Dispatch documents (admin/caseworker → sponsor)
 export const dispatchDocumentToSponsor = (id, formData) =>

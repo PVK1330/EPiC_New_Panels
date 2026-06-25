@@ -12,6 +12,21 @@ import {
   Check,
   Download,
   Eye,
+  Building2,
+  Briefcase,
+  Users,
+  ShieldCheck,
+  Globe,
+  User,
+  Phone,
+  Mail,
+  Hash,
+  Calendar,
+  BadgeCheck,
+  AlertTriangle,
+  ClipboardList,
+  Landmark,
+  Star,
 } from "lucide-react";
 import {
   getAdminLicenceV2,
@@ -37,21 +52,62 @@ const ROUTE_LABELS = {
   GAE: "Government Authorised Exchange",
 };
 
-const Field = ({ label, value }) => (
+const ROUTE_COLOURS = {
+  SkilledWorker: "bg-blue-50 text-blue-700 border-blue-100",
+  Student: "bg-violet-50 text-violet-700 border-violet-100",
+  ScaleUp: "bg-emerald-50 text-emerald-700 border-emerald-100",
+  GBM: "bg-amber-50 text-amber-700 border-amber-100",
+  GAE: "bg-rose-50 text-rose-700 border-rose-100",
+};
+
+const STATUS_COLOURS = {
+  "Pending": "bg-gray-100 text-gray-600",
+  "Under Review": "bg-blue-100 text-blue-700",
+  "Information Requested": "bg-amber-100 text-amber-700",
+  "Government Processing": "bg-violet-100 text-violet-700",
+  "Decision Pending": "bg-orange-100 text-orange-700",
+  "Licence Granted": "bg-emerald-100 text-emerald-700",
+  "Licence Rejected": "bg-red-100 text-red-700",
+};
+
+const Field = ({ label, value, icon: Icon }) => (
   <div>
-    <p className="text-[11px] font-black text-gray-400 uppercase tracking-wide">
+    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+      {Icon && <Icon size={10} />}
       {label}
     </p>
-    <p className="text-sm font-bold text-secondary break-words">
-      {value ?? "—"}
+    <p className="text-sm font-bold text-secondary break-words leading-snug">
+      {value ?? <span className="text-gray-300">—</span>}
     </p>
   </div>
 );
 
-const Section = ({ title, children }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-    <h3 className="text-sm font-black text-secondary mb-4">{title}</h3>
-    {children}
+const BoolChip = ({ value }) =>
+  value ? (
+    <span className="inline-flex items-center gap-1 text-[11px] font-black bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full">
+      <CheckCircle2 size={11} /> Yes
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 text-[11px] font-black bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full">
+      <XCircle size={11} /> No
+    </span>
+  );
+
+const SectionCard = ({ title, icon: Icon, accent = "from-primary to-primary-dark", children, action }) => (
+  <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+    <div className={`absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r ${accent}`} />
+    <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        {Icon && (
+          <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-100">
+            <Icon size={14} className="text-secondary" />
+          </div>
+        )}
+        <h3 className="text-sm font-black text-secondary">{title}</h3>
+      </div>
+      {action}
+    </div>
+    <div className="p-5">{children}</div>
   </div>
 );
 
@@ -159,8 +215,6 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
     try {
       setActioningDocId(rejectDocId);
       await rejectAppendixDocument(role, id, rejectDocId, reason);
-      // Rejection is a negative outcome — surface it with a danger (red) toast, not the
-      // green success style used for verification.
       toast.error("Document rejected");
 
       const fetcher =
@@ -210,7 +264,6 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
       toast.success("Caseworker(s) assigned successfully");
       setShowAssignModal(false);
 
-      // Refresh application details
       const fetcher =
         role === "caseworker" ? getCaseworkerLicenceV2 : getAdminLicenceV2;
       const res = await fetcher(id);
@@ -247,15 +300,23 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="animate-spin text-primary" size={26} />
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <Loader2 className="animate-spin text-primary" size={30} />
+        <p className="text-sm font-bold text-gray-400">Loading application…</p>
       </div>
     );
   }
   if (error || !app) {
     return (
-      <div className="p-8 text-center text-sm font-bold text-gray-500">
-        {error || "Application not found."}
+      <div className="flex flex-col items-center justify-center min-h-[300px] gap-3">
+        <AlertTriangle size={32} className="text-amber-400" />
+        <p className="text-sm font-bold text-gray-500">{error || "Application not found."}</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="text-xs font-black text-primary hover:underline"
+        >
+          Go back
+        </button>
       </div>
     );
   }
@@ -265,321 +326,416 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
   const kc = app.keyContact || {};
   const dec = app.declaration || {};
 
+  const statusColour = STATUS_COLOURS[app.status] || "bg-gray-100 text-gray-600";
+  const uploadedDocs = (app.appendixDocuments || []).filter((d) => d.filePath);
+  const verifiedCount = (app.appendixDocuments || []).filter((d) => d.verificationStatus === "Verified").length;
+  const totalDocs = (app.appendixDocuments || []).length;
+
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-5 pb-12">
+      {/* ── Back + breadcrumb ── */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-primary"
+        className="inline-flex items-center gap-1.5 text-xs font-black text-gray-400 hover:text-primary transition-colors"
       >
-        <ChevronLeft size={16} /> Back
+        <ChevronLeft size={15} />
+        Back to Applications
       </button>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-black text-secondary">
-            Licence Application #{app.id}
-          </h1>
-          <p className="text-sm text-gray-500 font-bold">
-            Version 2 · Submitted{" "}
-            {app.submittedAt
-              ? new Date(app.submittedAt).toLocaleDateString("en-GB")
-              : "—"}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {role === "admin" && (
-            <button
-              onClick={() => setShowAssignModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-xl transition-all text-xs font-black uppercase border border-blue-100 cursor-pointer"
-            >
-              <UserPlus size={14} /> Assign
-            </button>
-          )}
-          <span className="text-xs font-black px-3 py-1.5 rounded-full bg-primary/10 text-primary">
-            {app.status}
-          </span>
-          <span className="text-sm font-black text-secondary">
-            {money(app.fee?.total, app.fee?.currency)}
-          </span>
+      {/* ── Hero header card ── */}
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+        <div className="p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/5 border border-gray-100">
+                <ClipboardList className="text-primary" size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl font-black text-secondary tracking-tight">
+                    Licence Application
+                  </h1>
+                  <span className="text-[10px] font-black text-gray-400 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">
+                    #LIC-{app.id}
+                  </span>
+                  <span className="text-[10px] font-black bg-gray-100 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                    V2
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-gray-400 mt-0.5 flex items-center gap-3 flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <Calendar size={11} />
+                    Submitted{" "}
+                    {app.submittedAt
+                      ? new Date(app.submittedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+                      : "—"}
+                  </span>
+                  {app.fee?.total && (
+                    <span className="flex items-center gap-1">
+                      <Landmark size={11} />
+                      {money(app.fee.total, app.fee.currency)}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-xs font-black px-3 py-1.5 rounded-full ${statusColour}`}>
+                {app.status || "Pending"}
+              </span>
+              {role === "admin" && (
+                <button
+                  onClick={() => setShowAssignModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-lg transition-all text-xs font-black border border-blue-100"
+                >
+                  <UserPlus size={13} /> Assign Caseworker
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Quick stats row */}
+          <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="text-center">
+              <p className="text-xs font-black text-secondary">{(app.routes || []).length}</p>
+              <p className="text-[10px] font-bold text-gray-400">Licence Routes</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-black text-secondary">{(app.cosRequirements || []).length}</p>
+              <p className="text-[10px] font-bold text-gray-400">CoS Requirements</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-black text-secondary">{verifiedCount}/{totalDocs}</p>
+              <p className="text-[10px] font-bold text-gray-400">Docs Verified</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-black text-secondary">{(app.level1Users || []).length}</p>
+              <p className="text-[10px] font-bold text-gray-400">Level 1 Users</p>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* ── Workflow stages ── */}
       <LicenceStages applicationId={app.id} app={app} viewerRole={role} />
 
-      <Section title="Licence Routes">
-        <div className="flex flex-wrap gap-2">
-          {(app.routes || []).length === 0 && (
-            <span className="text-sm text-gray-400">None</span>
-          )}
-          {(app.routes || []).map((r) => (
-            <span
-              key={r}
-              className="text-xs font-bold px-3 py-1 rounded-full bg-gray-100 text-secondary"
-            >
-              {ROUTE_LABELS[r] || r}
-            </span>
-          ))}
-        </div>
-      </Section>
+      {/* ── Licence Routes ── */}
+      <SectionCard title="Licence Routes" icon={Globe} accent="from-violet-400 to-violet-600">
+        {(app.routes || []).length === 0 ? (
+          <p className="text-sm text-gray-400">No routes selected.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {(app.routes || []).map((r) => (
+              <span
+                key={r}
+                className={`inline-flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-full border ${ROUTE_COLOURS[r] || "bg-gray-50 text-gray-600 border-gray-100"}`}
+              >
+                <BadgeCheck size={12} />
+                {ROUTE_LABELS[r] || r}
+              </span>
+            ))}
+          </div>
+        )}
+      </SectionCard>
 
-      <Section title="Organisation Information">
-        <div className="grid sm:grid-cols-3 gap-4">
-          <Field label="Organisation type" value={org.organisationType} />
-          <Field label="Companies House no." value={org.companiesHouseNumber} />
-          <Field label="PAYE reference" value={org.payeReference} />
-          <Field
-            label="Accounts Office ref."
-            value={org.accountsOfficeReference}
-          />
-          <Field label="VAT number" value={org.vatNumber} />
-          <Field label="Trading start date" value={org.tradingStartDate} />
+      {/* ── Organisation Information ── */}
+      <SectionCard title="Organisation Information" icon={Building2} accent="from-blue-400 to-blue-600">
+        <div className="grid sm:grid-cols-3 gap-5">
+          <Field label="Organisation type" value={org.organisationType} icon={Building2} />
+          <Field label="Companies House no." value={org.companiesHouseNumber} icon={Hash} />
+          <Field label="PAYE reference" value={org.payeReference} icon={Hash} />
+          <Field label="Accounts Office ref." value={org.accountsOfficeReference} icon={Hash} />
+          <Field label="VAT number" value={org.vatNumber} icon={Hash} />
+          <Field label="Trading start date" value={org.tradingStartDate} icon={Calendar} />
           <Field
             label="Charity"
             value={
               org.charityStatus
-                ? `Yes${org.charityNumber ? ` (${org.charityNumber})` : ""}`
+                ? `Yes${org.charityNumber ? ` · ${org.charityNumber}` : ""}`
                 : "No"
             }
           />
           <Field label="SIC codes" value={(org.sicCodes || []).join(", ")} />
           <Field label="Regions" value={(org.regions || []).join(", ")} />
-          <Field
-            label="Accreditations"
-            value={(org.accreditations || []).join(", ")}
-          />
-          <Field
-            label="Previous trading names"
-            value={(org.previousTradingNames || []).join(", ")}
-          />
+          <div className="sm:col-span-2">
+            <Field label="Accreditations" value={(org.accreditations || []).join(", ") || "None"} />
+          </div>
+          <div className="sm:col-span-1">
+            <Field label="Previous trading names" value={(org.previousTradingNames || []).join(", ") || "None"} />
+          </div>
         </div>
-      </Section>
+      </SectionCard>
 
-      <Section
+      {/* ── CoS Requirements ── */}
+      <SectionCard
         title={`CoS Requirements (${(app.cosRequirements || []).length})`}
+        icon={Briefcase}
+        accent="from-emerald-400 to-emerald-600"
       >
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[11px] font-black text-gray-400 uppercase">
-                <th className="py-2 pr-3">SOC</th>
-                <th className="py-2 pr-3">Role</th>
-                <th className="py-2 pr-3">Salary</th>
-                <th className="py-2 pr-3">Duration</th>
-                <th className="py-2 pr-3">Candidate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(app.cosRequirements || []).map((c) => (
-                <tr key={c.id} className="border-t border-gray-50">
-                  <td className="py-2 pr-3 font-bold">{c.socCode || "—"}</td>
-                  <td className="py-2 pr-3">{c.roleTitle || "—"}</td>
-                  <td className="py-2 pr-3">
-                    {c.salary ? money(c.salary, c.salaryCurrency) : "—"}
-                  </td>
-                  <td className="py-2 pr-3">
-                    {c.sponsorshipDurationMonths
-                      ? `${c.sponsorshipDurationMonths} mo`
-                      : "—"}
-                  </td>
-                  <td className="py-2 pr-3">{c.candidateName || "—"}</td>
+        {(app.cosRequirements || []).length === 0 ? (
+          <p className="text-sm text-gray-400">No CoS requirements listed.</p>
+        ) : (
+          <div className="overflow-x-auto -mx-1">
+            <table className="w-full text-sm min-w-[520px]">
+              <thead>
+                <tr className="bg-gray-50 rounded-lg">
+                  <th className="text-left px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider rounded-l-lg">SOC</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider">Role Title</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider">Salary</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider">Duration</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider rounded-r-lg">Candidate</th>
                 </tr>
-              ))}
-              {(app.cosRequirements || []).length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-3 text-gray-400">
-                    None
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Section>
+              </thead>
+              <tbody>
+                {(app.cosRequirements || []).map((c, i) => (
+                  <tr key={c.id} className={`border-b border-gray-50 last:border-0 ${i % 2 === 0 ? "" : "bg-gray-50/40"}`}>
+                    <td className="px-3 py-2.5">
+                      <span className="text-[11px] font-black text-secondary bg-gray-100 px-2 py-0.5 rounded font-mono">
+                        {c.socCode || "—"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 font-bold text-secondary">{c.roleTitle || "—"}</td>
+                    <td className="px-3 py-2.5 font-bold text-secondary">{c.salary ? money(c.salary, c.salaryCurrency) : "—"}</td>
+                    <td className="px-3 py-2.5 text-gray-600 font-bold">
+                      {c.sponsorshipDurationMonths ? `${c.sponsorshipDurationMonths} mo` : "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-gray-600 font-bold">{c.candidateName || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
 
-      <Section title="Appendix A Documents">
-        <div className="space-y-2">
-          {(app.appendixDocuments || []).map((d) => {
-            const Icon =
-              d.verificationStatus === "Verified"
-                ? CheckCircle2
-                : d.verificationStatus === "Rejected"
-                  ? XCircle
-                  : Clock;
-            const tone =
-              d.verificationStatus === "Verified"
-                ? "text-emerald-600"
-                : d.verificationStatus === "Rejected"
-                  ? "text-red-600"
-                  : "text-amber-600";
+      {/* ── Appendix A Documents ── */}
+      <SectionCard
+        title={`Appendix A Documents (${totalDocs})`}
+        icon={FileText}
+        accent="from-amber-400 to-amber-600"
+        action={
+          totalDocs > 0 && (
+            <span className="text-[10px] font-black text-gray-400">
+              {verifiedCount} of {totalDocs} verified
+            </span>
+          )
+        }
+      >
+        {totalDocs === 0 ? (
+          <p className="text-sm text-gray-400">No documents.</p>
+        ) : (
+          <div className="space-y-2">
+            {(app.appendixDocuments || []).map((d) => {
+              const isUploaded = !!d.filePath;
+              const downloadIdx = isUploaded
+                ? uploadedDocs.findIndex((doc) => doc.id === d.id)
+                : -1;
+              const filename = d.filePath ? d.filePath.split(/[\\/]/).pop() : d.documentName;
 
-            const isUploaded = !!d.filePath;
-            const uploadedDocs = (app.appendixDocuments || []).filter(
-              (doc) => doc.filePath,
-            );
-            const downloadIdx = isUploaded
-              ? uploadedDocs.findIndex((doc) => doc.id === d.id)
-              : -1;
-            const filename = d.filePath
-              ? d.filePath.split(/[\\/]/).pop()
-              : d.documentName;
+              const statusConfig =
+                d.verificationStatus === "Verified"
+                  ? { Icon: CheckCircle2, cls: "bg-emerald-50 text-emerald-700 border-emerald-100", label: "Verified" }
+                  : d.verificationStatus === "Rejected"
+                  ? { Icon: XCircle, cls: "bg-red-50 text-red-600 border-red-100", label: "Rejected" }
+                  : { Icon: Clock, cls: "bg-amber-50 text-amber-700 border-amber-100", label: "Pending" };
 
-            return (
-              <div
-                key={d.id}
-                className="flex items-center justify-between gap-3 py-2 border-b border-gray-50 last:border-0 flex-wrap sm:flex-nowrap"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <FileText size={15} className="text-gray-400 shrink-0" />
-                  {isUploaded ? (
-                    <span className="text-sm font-bold text-secondary truncate">
-                      {d.documentName}
-                    </span>
-                  ) : (
-                    <span className="text-sm font-bold text-gray-400 truncate">
-                      {d.documentName}
-                      {d.required && <span className="text-red-500"> *</span>}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 shrink-0 ml-auto">
-                  <span className="text-[11px] font-black text-gray-500">
-                    {d.receivedStatus || "Not Received"}
-                  </span>
-                  <span
-                    className={`flex items-center gap-1 text-[11px] font-black ${tone}`}
-                  >
-                    <Icon size={13} /> {d.verificationStatus || "Pending"}
-                  </span>
-                  {isUploaded && (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleView(downloadIdx, filename)}
-                        title="View document"
-                        className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
-                      >
-                        <Eye size={14} />
-                      </button>
-                      <button
-                        onClick={() => openRejectModal(d.id)}
-                        disabled={
-                          actioningDocId === d.id ||
-                          d.verificationStatus === "Rejected"
-                        }
-                        title={
-                          d.verificationStatus === "Rejected"
-                            ? "Already rejected"
-                            : "Reject document"
-                        }
-                        className="px-2 py-0.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-50 disabled:hover:text-red-600"
-                      >
-                        {d.verificationStatus === "Rejected"
-                          ? "Rejected"
-                          : "Reject"}
-                      </button>
-                      {d.verificationStatus !== "Verified" && (
-                        <button
-                          onClick={() => handleVerifyDoc(d.id)}
-                          disabled={actioningDocId === d.id}
-                          className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded text-[10px] font-bold transition-all disabled:opacity-50"
-                        >
-                          Verify
-                        </button>
+              const isActioning = actioningDocId === d.id;
+
+              return (
+                <div
+                  key={d.id}
+                  className={`rounded-xl border p-3 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap transition-colors ${
+                    isUploaded ? "border-gray-200 bg-white" : "border-dashed border-gray-200 bg-gray-50/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className={`p-1.5 rounded-lg shrink-0 ${isUploaded ? "bg-blue-50" : "bg-gray-100"}`}>
+                      <FileText size={13} className={isUploaded ? "text-blue-500" : "text-gray-400"} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className={`text-sm font-bold truncate ${isUploaded ? "text-secondary" : "text-gray-400"}`}>
+                        {d.documentName}
+                        {d.required && !isUploaded && <span className="text-red-400 ml-1">*</span>}
+                      </p>
+                      {d.receivedStatus && (
+                        <p className="text-[10px] font-bold text-gray-400 mt-0.5">{d.receivedStatus}</p>
                       )}
                     </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          {(app.appendixDocuments || []).length === 0 && (
-            <p className="text-sm text-gray-400">No documents.</p>
-          )}
-        </div>
-      </Section>
+                  </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Section title="Authorising Officer">
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Verification status chip */}
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full border ${statusConfig.cls}`}>
+                      <statusConfig.Icon size={10} />
+                      {statusConfig.label}
+                    </span>
+
+                    {/* View / Download / Verify / Reject */}
+                    {isUploaded && (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleView(downloadIdx, filename)}
+                          title="Preview document"
+                          disabled={isActioning}
+                          className="flex items-center justify-center w-7 h-7 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-all disabled:opacity-50"
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDownload(downloadIdx, filename)}
+                          title="Download document"
+                          disabled={isActioning}
+                          className="flex items-center justify-center w-7 h-7 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-lg transition-all disabled:opacity-50"
+                        >
+                          <Download size={13} />
+                        </button>
+                        {d.verificationStatus !== "Rejected" && (
+                          <button
+                            onClick={() => openRejectModal(d.id)}
+                            disabled={isActioning}
+                            title="Reject document"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-lg text-[10px] font-black transition-all disabled:opacity-50"
+                          >
+                            {isActioning ? <Loader2 size={11} className="animate-spin" /> : <XCircle size={11} />}
+                            Reject
+                          </button>
+                        )}
+                        {d.verificationStatus !== "Verified" && (
+                          <button
+                            onClick={() => handleVerifyDoc(d.id)}
+                            disabled={isActioning}
+                            title="Verify document"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-lg text-[10px] font-black transition-all disabled:opacity-50"
+                          >
+                            {isActioning ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />}
+                            Verify
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {!isUploaded && (
+                      <span className="text-[10px] font-bold text-gray-400 italic">Not uploaded</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
+
+      {/* ── Authorising Officer + Key Contact ── */}
+      <div className="grid md:grid-cols-2 gap-5">
+        <SectionCard title="Authorising Officer" icon={User} accent="from-secondary to-secondary/80">
           <div className="grid grid-cols-2 gap-4">
             <Field
-              label="Name"
-              value={[ao.title, ao.firstName, ao.lastName]
-                .filter(Boolean)
-                .join(" ")}
+              label="Full Name"
+              value={[ao.title, ao.firstName, ao.lastName].filter(Boolean).join(" ")}
+              icon={User}
             />
-            <Field label="Date of birth" value={ao.dob} />
-            <Field label="Nationality" value={ao.nationality} />
-            <Field label="NI number" value={ao.niNumber} />
-            <Field label="Immigration status" value={ao.immigrationStatus} />
-            <Field
-              label="Convictions"
-              value={ao.hasConvictions ? "Declared" : "None"}
-            />
-            <Field label="Email" value={ao.email} />
-            <Field label="Phone" value={ao.phone} />
+            <Field label="Date of Birth" value={ao.dob} icon={Calendar} />
+            <Field label="Nationality" value={ao.nationality} icon={Globe} />
+            <Field label="NI Number" value={ao.niNumber} icon={Hash} />
+            <Field label="Immigration Status" value={ao.immigrationStatus} icon={ShieldCheck} />
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">Convictions</p>
+              <BoolChip value={ao.hasConvictions} />
+            </div>
+            <Field label="Email" value={ao.email} icon={Mail} />
+            <Field label="Phone" value={ao.phone} icon={Phone} />
+            {ao.designation && <Field label="Designation" value={ao.designation} icon={Briefcase} />}
           </div>
-        </Section>
-        <Section title="Key Contact">
+        </SectionCard>
+
+        <SectionCard title="Key Contact" icon={User} accent="from-secondary to-secondary/80">
           {kc.sameAsAuthorisingOfficer ? (
-            <p className="text-sm font-bold text-gray-500">
-              Same as Authorising Officer
-            </p>
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
+              <CheckCircle2 size={14} className="text-blue-500 shrink-0" />
+              <p className="text-sm font-bold text-blue-700">Same as Authorising Officer</p>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <Field
-                label="Name"
-                value={[kc.title, kc.firstName, kc.lastName]
-                  .filter(Boolean)
-                  .join(" ")}
+                label="Full Name"
+                value={[kc.title, kc.firstName, kc.lastName].filter(Boolean).join(" ")}
+                icon={User}
               />
-              <Field label="Job title" value={kc.jobTitle} />
-              <Field label="Email" value={kc.email} />
-              <Field label="Phone" value={kc.phone} />
+              <Field label="Job Title" value={kc.jobTitle} icon={Briefcase} />
+              <Field label="Email" value={kc.email} icon={Mail} />
+              <Field label="Phone" value={kc.phone} icon={Phone} />
             </div>
           )}
-        </Section>
+        </SectionCard>
       </div>
 
-      <Section title={`Level 1 Users (${(app.level1Users || []).length})`}>
-        <div className="space-y-2">
-          {(app.level1Users || []).map((u) => (
-            <div
-              key={u.id}
-              className="flex flex-wrap gap-x-6 gap-y-1 text-sm py-1.5 border-b border-gray-50 last:border-0"
-            >
-              <span className="font-bold text-secondary">
-                {[u.firstName, u.lastName].filter(Boolean).join(" ") || "—"}
-              </span>
-              <span className="text-gray-500">{u.email || "—"}</span>
-              <span className="text-gray-500">{u.jobTitle || "—"}</span>
-              {u.isAuthorisingOfficer && (
-                <span className="text-[11px] font-black text-primary">AO</span>
-              )}
-            </div>
-          ))}
-          {(app.level1Users || []).length === 0 && (
-            <p className="text-sm text-gray-400">None</p>
-          )}
-        </div>
-      </Section>
+      {/* ── Level 1 Users ── */}
+      <SectionCard
+        title={`Level 1 Users (${(app.level1Users || []).length})`}
+        icon={Users}
+        accent="from-teal-400 to-teal-600"
+      >
+        {(app.level1Users || []).length === 0 ? (
+          <p className="text-sm text-gray-400">No Level 1 Users added.</p>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {(app.level1Users || []).map((u) => (
+              <div
+                key={u.id}
+                className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 space-y-1.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-black text-secondary truncate">
+                    {[u.firstName, u.lastName].filter(Boolean).join(" ") || "—"}
+                  </p>
+                  {u.isAuthorisingOfficer && (
+                    <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-black text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-full">
+                      <Star size={9} /> AO
+                    </span>
+                  )}
+                </div>
+                {u.email && (
+                  <p className="text-[11px] font-bold text-gray-500 truncate flex items-center gap-1">
+                    <Mail size={10} className="shrink-0 text-gray-400" />
+                    {u.email}
+                  </p>
+                )}
+                {u.jobTitle && (
+                  <p className="text-[11px] font-bold text-gray-400 truncate flex items-center gap-1">
+                    <Briefcase size={10} className="shrink-0 text-gray-300" />
+                    {u.jobTitle}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </SectionCard>
 
-      <Section title="Declarations">
-        <div className="grid sm:grid-cols-3 gap-4">
-          <Field
-            label="Accuracy confirmed"
-            value={dec.accuracyConfirmed ? "Yes" : "No"}
-          />
-          <Field
-            label="Duties understood"
-            value={dec.dutiesUnderstood ? "Yes" : "No"}
-          />
-          <Field label="Data consent" value={dec.dataConsent ? "Yes" : "No"} />
-          <Field label="Signatory" value={dec.signatoryName} />
-          <Field label="Signatory role" value={dec.signatoryRole} />
-          <Field label="Signed date" value={dec.signedDate} />
+      {/* ── Declarations ── */}
+      <SectionCard title="Declarations" icon={ShieldCheck} accent="from-rose-400 to-rose-600">
+        <div className="grid sm:grid-cols-3 gap-5">
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">Accuracy Confirmed</p>
+            <BoolChip value={dec.accuracyConfirmed} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">Duties Understood</p>
+            <BoolChip value={dec.dutiesUnderstood} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">Data Consent</p>
+            <BoolChip value={dec.dataConsent} />
+          </div>
+          <Field label="Signatory" value={dec.signatoryName} icon={User} />
+          <Field label="Signatory Role" value={dec.signatoryRole} icon={Briefcase} />
+          <Field label="Signed Date" value={dec.signedDate} icon={Calendar} />
         </div>
-      </Section>
+      </SectionCard>
 
-      {/* Assign Caseworker Modal */}
+      {/* ── Assign Caseworker Modal ── */}
       {role === "admin" && (
         <Modal
           open={showAssignModal}
@@ -685,7 +841,7 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
         </Modal>
       )}
 
-      {/* Reject Document Modal (admin + caseworker) — replaces the native prompt */}
+      {/* ── Reject Document Modal ── */}
       <Modal
         open={rejectDocId !== null}
         onClose={closeRejectModal}
@@ -718,7 +874,7 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
         }
       >
         <div className="space-y-3">
-          <p className="text-sm font-bold text-gray-500">
+          <p className="text-sm font-bold text-gray-500 leading-relaxed">
             Tell the sponsor why this document was rejected. They'll be notified
             and asked to re-upload a corrected copy, and this status updates
             everywhere the document appears.

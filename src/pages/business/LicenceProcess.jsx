@@ -39,8 +39,9 @@ import {
   completeLicenceStageTask,
 } from "../../services/licenceStageApi";
 import {
-  confirmSponsorGovCredentials,
   getSponsorGovCredentials,
+  submitSponsorUkviCredentials,
+  confirmSponsorUkviPayment,
   getSponsorIntakeSummary,
   updateSponsorIntakeForm,
   submitSponsorIntakeForm as submitIntakeFormApi,
@@ -163,10 +164,7 @@ const LicenceProcess = () => {
   const [app, setApp] = useState(null);
   const [stagesData, setStagesData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [credLoading, setCredLoading] = useState(false);
-  const [credConfirmed, setCredConfirmed] = useState(false);
   const [govCredentials, setGovCredentials] = useState(null);
-  const [showCredPwd, setShowCredPwd] = useState(false);
   const [intakeData, setIntakeData] = useState(null);
   const [intakeLoading, setIntakeLoading] = useState(false);
   const [intakeForm, setIntakeForm] = useState({});
@@ -181,6 +179,10 @@ const LicenceProcess = () => {
   const [dispatchDocsLoading, setDispatchDocsLoading] = useState(false);
   const [downloadingDocId, setDownloadingDocId] = useState(null);
   const [viewingDocId, setViewingDocId] = useState(null);
+  const [credSubmitForm, setCredSubmitForm] = useState({ ukviPortalUserId: "", ukviPortalPassword: "" });
+  const [credSubmitPwdVisible, setCredSubmitPwdVisible] = useState(false);
+  const [credSubmitting, setCredSubmitting] = useState(false);
+  const [paymentConfirming, setPaymentConfirming] = useState(false);
 
   // Download a dispatched document through `api` (not a plain <a href>) so the CSRF
   // token and org-slug headers are attached. Filename comes from Content-Disposition.
@@ -516,39 +518,41 @@ const LicenceProcess = () => {
     };
   }, [app?.id, app?.status]);
 
-  // Derive credentials-confirmed state from stages data when available
-  const credConfirmedFromStages = useMemo(() => {
-    const govStage = (stagesData?.stages || []).find(
-      (s) => s.key === "government_portal_credentials",
-    );
-    if (!govStage) return false;
-    return (govStage.tasks || []).some(
-      (t) => t.role === "sponsor" && t.status === "completed",
-    );
-  }, [stagesData]);
 
-  const isCredConfirmed = credConfirmed || credConfirmedFromStages;
-
-  const handleConfirmCredentials = async () => {
-    if (!app?.id || credLoading) return;
+  const handleSubmitUkviCredentials = async () => {
+    if (!app?.id || credSubmitting) return;
+    if (!credSubmitForm.ukviPortalUserId?.trim() || !credSubmitForm.ukviPortalPassword?.trim()) {
+      showToast({ message: "Both UKVI Portal User ID and Password are required.", variant: "danger" });
+      return;
+    }
     try {
-      setCredLoading(true);
-      await confirmSponsorGovCredentials(app.id);
-      setCredConfirmed(true);
-      showToast({
-        message:
-          "Credentials receipt confirmed — your case team has been notified.",
-        variant: "success",
-      });
+      setCredSubmitting(true);
+      await submitSponsorUkviCredentials(app.id, credSubmitForm);
+      const res = await getSponsorGovCredentials(app.id);
+      setGovCredentials(res?.data?.data || null);
+      showToast({ message: "UKVI credentials submitted — your case team has been notified.", variant: "success" });
     } catch (err) {
-      showToast({
-        message:
-          err?.response?.data?.message ||
-          "Failed to confirm — please try again.",
-        variant: "danger",
-      });
+      showToast({ message: err?.response?.data?.message || "Failed to submit credentials — please try again.", variant: "danger" });
     } finally {
-      setCredLoading(false);
+      setCredSubmitting(false);
+    }
+  };
+
+  const handleConfirmUkviPayment = async () => {
+    if (!app?.id || paymentConfirming) return;
+    try {
+      setPaymentConfirming(true);
+      await confirmSponsorUkviPayment(app.id);
+      setApp((prev) => ({ ...prev, ukviPaymentConfirmedAt: new Date().toISOString() }));
+      showToast({ message: "UKVI payment confirmed — your case team has been notified.", variant: "success" });
+      // Refresh stage tracker so the timeline advances immediately.
+      getLicenceStages("sponsor", app.id)
+        .then((r) => setStagesData(r?.data?.data || null))
+        .catch(() => {});
+    } catch (err) {
+      showToast({ message: err?.response?.data?.message || "Failed to confirm payment — please try again.", variant: "danger" });
+    } finally {
+      setPaymentConfirming(false);
     }
   };
 
@@ -799,34 +803,94 @@ const LicenceProcess = () => {
         </motion.div>
       )}
 
-      {app.status === "Government Processing" && !isCredConfirmed && (
+      {app.status === "Government Processing" && !govCredentials?.ukviCredentialsSubmittedAt && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
+          className="rounded-2xl border border-amber-100 bg-amber-50/60 shadow-sm overflow-hidden relative"
         >
-          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-amber-400 to-amber-600" />
           <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-violet-100 rounded-lg shrink-0">
-                <Key className="text-violet-600" size={18} />
+              <div className="p-2 bg-amber-100 rounded-lg shrink-0">
+                <Mail className="text-amber-600" size={18} />
               </div>
               <div>
                 <h3 className="text-sm font-black text-secondary">
-                  Government Portal — Action Pending
+                  Action Required — Submit Your UKVI Portal Credentials
                 </h3>
                 <p className="text-xs font-bold text-gray-500 mt-0.5">
-                  Your UKVI portal credentials are being prepared. Confirm
-                  receipt once you receive them from your caseworker.
+                  UKVI will send your portal login credentials to your registered email. Once received, submit them here so your caseworker can proceed.
                 </p>
               </div>
             </div>
             <button
               onClick={() => setTab("status")}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-1.5 text-xs font-black text-white transition shadow-sm shrink-0"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-black text-white transition shadow-sm shrink-0"
             >
-              View Credentials
+              Submit Credentials
             </button>
+          </div>
+        </motion.div>
+      )}
+
+      {app.status === "Decision Pending" && !app.ukviPaymentConfirmedAt && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-emerald-100 bg-emerald-50/60 shadow-sm overflow-hidden relative"
+        >
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+          <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 rounded-lg shrink-0">
+                <Landmark className="text-emerald-600" size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-secondary">
+                  Action Required — Confirm UKVI Licence Fee Payment
+                </h3>
+                <p className="text-xs font-bold text-gray-500 mt-0.5">
+                  Please pay the sponsor licence fee directly on the UKVI portal, then confirm payment here.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleConfirmUkviPayment}
+              disabled={paymentConfirming}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-black text-white transition shadow-sm shrink-0 disabled:opacity-60"
+            >
+              {paymentConfirming ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+              Confirm Payment
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {app.status === "Licence Rejected" && app.rejectionCooldownUntil && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-red-100 bg-red-50/60 shadow-sm overflow-hidden relative"
+        >
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-red-400 to-red-600" />
+          <div className="p-5 flex items-start gap-3">
+            <div className="p-2 bg-red-100 rounded-lg shrink-0">
+              <ShieldAlert className="text-red-600" size={18} />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-red-700">
+                Licence Application Rejected — 6-Month Reapplication Cooldown
+              </h3>
+              <p className="text-xs font-bold text-gray-500 mt-1 leading-relaxed">
+                UKVI policy requires a 6-month waiting period before reapplying after a rejection.
+                You may submit a fresh application after{" "}
+                <span className="font-black text-secondary">
+                  {new Date(app.rejectionCooldownUntil).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+                </span>
+                . The full application process must be restarted from the beginning.
+              </p>
+            </div>
           </div>
         </motion.div>
       )}
@@ -956,150 +1020,94 @@ const LicenceProcess = () => {
                         <Key className="text-amber-600" size={14} />
                       </div>
                       <p className="text-sm font-black text-secondary">
-                        UKVI Online Application Portal Credentials
+                        UKVI Portal Credentials
                       </p>
                     </div>
 
-                    {govCredentials?.ukviPortalUserId ? (
+                    {govCredentials?.ukviCredentialsSubmittedAt ? (
+                      /* Credentials already submitted — show confirmation */
                       <div className="space-y-3">
-                        <p className="text-xs font-bold text-gray-500">
-                          Your UKVI portal login credentials are shown below.
-                          Keep these secure.
-                        </p>
-
-                        {/* Username row */}
-                        <div className="bg-white rounded-xl border border-amber-100 p-3">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
-                            Portal Username / User ID
-                          </p>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-black text-secondary font-mono">
-                              {govCredentials.ukviPortalUserId}
-                            </p>
-                            <button
-                              onClick={() =>
-                                navigator.clipboard?.writeText(
-                                  govCredentials.ukviPortalUserId,
-                                )
-                              }
-                              className="text-gray-400 hover:text-primary transition shrink-0"
-                              title="Copy username"
-                            >
-                              <Copy size={13} />
-                            </button>
-                          </div>
+                        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-700">
+                          <CheckCircle2 size={14} className="shrink-0" />
+                          <span className="text-xs font-black">
+                            Credentials submitted on{" "}
+                            {formatDateTime(govCredentials.ukviCredentialsSubmittedAt)}
+                            {" "}— your case team has been notified.
+                          </span>
                         </div>
-
-                        {/* Password row */}
-                        {govCredentials.ukviPortalPassword && (
+                        {govCredentials.ukviPortalUserId && (
                           <div className="bg-white rounded-xl border border-amber-100 p-3">
                             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
-                              Temporary Password
+                              Submitted Portal User ID
                             </p>
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-sm font-black text-secondary font-mono">
-                                {showCredPwd
-                                  ? govCredentials.ukviPortalPassword
-                                  : "•".repeat(
-                                      govCredentials.ukviPortalPassword.length,
-                                    )}
+                                {govCredentials.ukviPortalUserId}
                               </p>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <button
-                                  onClick={() => setShowCredPwd((v) => !v)}
-                                  className="text-gray-400 hover:text-primary transition"
-                                  title={showCredPwd ? "Hide" : "Show"}
-                                >
-                                  {showCredPwd ? (
-                                    <EyeOff size={13} />
-                                  ) : (
-                                    <Eye size={13} />
-                                  )}
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    navigator.clipboard?.writeText(
-                                      govCredentials.ukviPortalPassword,
-                                    )
-                                  }
-                                  className="text-gray-400 hover:text-primary transition"
-                                  title="Copy password"
-                                >
-                                  <Copy size={13} />
-                                </button>
-                              </div>
+                              <button
+                                onClick={() => navigator.clipboard?.writeText(govCredentials.ukviPortalUserId)}
+                                className="text-gray-400 hover:text-primary transition shrink-0"
+                                title="Copy user ID"
+                              >
+                                <Copy size={13} />
+                              </button>
                             </div>
                           </div>
                         )}
-
-                        {/* SMS reference */}
-                        {govCredentials.smsPortalUsername && (
-                          <div className="bg-white rounded-xl border border-amber-100 p-3">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
-                              SMS Reference
-                            </p>
-                            <p className="text-sm font-black text-secondary font-mono">
-                              {govCredentials.smsPortalUsername}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Confirm receipt */}
-                        <div className="pt-1">
-                          {isCredConfirmed ? (
-                            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-700">
-                              <CheckCircle2 size={14} className="shrink-0" />
-                              <span className="text-[10px] font-black">
-                                Credentials receipt confirmed — thank you
-                              </span>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={handleConfirmCredentials}
-                              disabled={credLoading}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-black text-white transition shadow-sm disabled:opacity-60 active:scale-95"
-                            >
-                              {credLoading ? (
-                                <Loader2 size={13} className="animate-spin" />
-                              ) : (
-                                <Check size={13} />
-                              )}
-                              Confirm Credentials Received
-                            </button>
-                          )}
-                        </div>
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      /* Credentials not yet submitted — show submission form */
+                      <div className="space-y-3">
                         <p className="text-xs font-bold text-gray-500 leading-relaxed">
-                          Your caseworker will prepare UKVI portal login
-                          credentials and share them with you via email and this
-                          portal. Once available they will appear here — you can
-                          also confirm receipt below.
+                          UKVI will send your portal login credentials directly to your registered email address.
+                          Once you receive them, enter them below to share with your case team so they can continue processing your application.
                         </p>
-                        {!isCredConfirmed &&
-                          app.status === "Government Processing" && (
-                            <button
-                              onClick={handleConfirmCredentials}
-                              disabled={credLoading}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-black text-white transition shadow-sm disabled:opacity-60 active:scale-95"
-                            >
-                              {credLoading ? (
-                                <Loader2 size={13} className="animate-spin" />
-                              ) : (
-                                <Check size={13} />
-                              )}
-                              Confirm Credentials Received
-                            </button>
-                          )}
-                        {isCredConfirmed && (
-                          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-700">
-                            <CheckCircle2 size={14} className="shrink-0" />
-                            <span className="text-[10px] font-black">
-                              Credentials receipt confirmed — thank you
-                            </span>
+                        <div className="bg-white rounded-xl border border-amber-100 p-3 space-y-3">
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
+                              UKVI Portal User ID <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={credSubmitForm.ukviPortalUserId}
+                              onChange={(e) => setCredSubmitForm((f) => ({ ...f, ukviPortalUserId: e.target.value }))}
+                              placeholder="Enter the User ID from your UKVI email"
+                              disabled={credSubmitting}
+                              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:bg-gray-50 disabled:text-gray-400"
+                            />
                           </div>
-                        )}
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
+                              UKVI Portal Password <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                              <input
+                                type={credSubmitPwdVisible ? "text" : "password"}
+                                value={credSubmitForm.ukviPortalPassword}
+                                onChange={(e) => setCredSubmitForm((f) => ({ ...f, ukviPortalPassword: e.target.value }))}
+                                placeholder="Enter the password from your UKVI email"
+                                disabled={credSubmitting}
+                                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 pr-9 focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:bg-gray-50 disabled:text-gray-400"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setCredSubmitPwdVisible((v) => !v)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition"
+                                title={credSubmitPwdVisible ? "Hide password" : "Show password"}
+                              >
+                                {credSubmitPwdVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleSubmitUkviCredentials}
+                          disabled={credSubmitting || !credSubmitForm.ukviPortalUserId.trim() || !credSubmitForm.ukviPortalPassword.trim()}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-black text-white transition shadow-sm disabled:opacity-60 active:scale-95"
+                        >
+                          {credSubmitting ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                          {credSubmitting ? "Submitting…" : "Submit Credentials to Case Team"}
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1205,6 +1213,42 @@ const LicenceProcess = () => {
                           awaiting their decision — this typically takes 8–12
                           weeks. You will be notified when a decision is made.
                         </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── UKVI Licence Fee Payment Confirmation ── */}
+                {["Decision Pending", "Licence Granted"].includes(app.status) && (
+                  <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-emerald-100 rounded-lg shrink-0">
+                        <Landmark className="text-emerald-600" size={14} />
+                      </div>
+                      <p className="text-sm font-black text-secondary">
+                        UKVI Licence Fee Payment
+                      </p>
+                    </div>
+                    {app.ukviPaymentConfirmedAt ? (
+                      <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-emerald-700">
+                        <CheckCircle2 size={14} className="shrink-0" />
+                        <span className="text-xs font-black">
+                          Payment confirmed on {formatDateTime(app.ukviPaymentConfirmedAt)} — thank you.
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <p className="text-xs font-bold text-gray-500 leading-relaxed">
+                          The sponsor licence fee must be paid directly on the UKVI portal. Once you have completed payment on the UKVI website, confirm it here to allow the process to continue.
+                        </p>
+                        <button
+                          onClick={handleConfirmUkviPayment}
+                          disabled={paymentConfirming}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-black text-white transition shadow-sm disabled:opacity-60 active:scale-95"
+                        >
+                          {paymentConfirming ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                          {paymentConfirming ? "Confirming…" : "I Have Paid on UKVI Portal"}
+                        </button>
                       </div>
                     )}
                   </div>
