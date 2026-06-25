@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, ShieldAlert, ShieldCheck, FileText } from "lucide-react";
 import Input from "../Input";
 import Button from "../Button";
-import { updateCaseFinance } from "../../services/caseDetailApi";
+import { updateCaseFinance, exportCaseInvoicePDF } from "../../services/caseDetailApi";
 import { reviewCclFees, getCclStatus } from "../../services/workflowApi";
 import { useToast } from "../../context/ToastContext";
 import { formatDate } from "../../utils/datetime";
@@ -19,6 +19,7 @@ const CaseDetailPayments = ({ payments, onReload }) => {
   const { showToast } = useToast();
   const [method, setMethod] = useState("Card");
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [ccl, setCcl] = useState(null);
   const [reviewNotes, setReviewNotes] = useState("");
 
@@ -83,6 +84,45 @@ const CaseDetailPayments = ({ payments, onReload }) => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateInvoice = async () => {
+    if (!caseRef) {
+      showToast({ variant: "danger", message: "Case reference unavailable." });
+      return;
+    }
+    setGenerating(true);
+    try {
+      const res = await exportCaseInvoicePDF(caseRef);
+      const cd = res.headers?.["content-disposition"] || "";
+      const match = /filename="?([^";]+)"?/i.exec(cd);
+      const filename = match ? match[1].trim() : `Invoice_${caseRef}.pdf`;
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast({ message: "Invoice downloaded." });
+    } catch (err) {
+      let message = "Failed to generate invoice PDF.";
+      const blob = err?.response?.data;
+      if (blob instanceof Blob) {
+        try {
+          const parsed = JSON.parse(await blob.text());
+          if (parsed?.message) message = parsed.message;
+        } catch {
+          /* keep default */
+        }
+      } else if (err?.response?.data?.message) {
+        message = err.response.data.message;
+      }
+      showToast({ variant: "danger", message });
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -314,8 +354,14 @@ const CaseDetailPayments = ({ payments, onReload }) => {
             onChange={(e) => setMethod(e.target.value)}
             options={METHODS}
           />
-          <Button type="button" variant="primary" className="rounded-xl w-full mt-4">
-            Generate Invoice PDF
+          <Button
+            type="button"
+            variant="primary"
+            onClick={handleGenerateInvoice}
+            disabled={generating}
+            className="rounded-xl w-full mt-4"
+          >
+            {generating ? "Generating…" : "Generate Invoice PDF"}
           </Button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Upload, CheckCircle2, Clock, AlertCircle, Loader2, FileText } from "lucide-react";
-import { uploadLicenceV2AppendixDocument } from "../../services/licenceApi";
+import { Upload, CheckCircle2, Clock, AlertCircle, Loader2, FileText, Eye } from "lucide-react";
+import { uploadLicenceV2AppendixDocument, previewLicenceV2AppendixDocument } from "../../services/licenceApi";
 
 function statusBadge(doc) {
   if (doc.filePath) {
@@ -27,6 +27,7 @@ function statusBadge(doc) {
 export default function Step4AppendixDocuments({ appId, data, onRefresh, onNext, onBack, saving }) {
   const docs = data.appendixDocuments || [];
   const [uploading, setUploading] = useState(null); // docId while uploading
+  const [viewing, setViewing] = useState(null);     // docId while loading preview
 
   const handleUpload = async (doc, file) => {
     if (!file) return;
@@ -38,6 +39,23 @@ export default function Step4AppendixDocuments({ appId, data, onRefresh, onNext,
       // error surfaced via toast in parent
     } finally {
       setUploading(null);
+    }
+  };
+
+  const handleView = async (doc) => {
+    if (!doc.filePath) return;
+    setViewing(doc.id);
+    try {
+      const res = await previewLicenceV2AppendixDocument(appId, doc.id);
+      const mimeType = res.headers?.["content-type"] || "application/octet-stream";
+      const blob = new Blob([res.data], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => window.URL.revokeObjectURL(url), 30000);
+    } catch {
+      // silently ignore — sponsor can still replace the file
+    } finally {
+      setViewing(null);
     }
   };
 
@@ -65,14 +83,25 @@ export default function Step4AppendixDocuments({ appId, data, onRefresh, onNext,
                 <p className="text-sm font-black text-secondary truncate">{doc.documentName}</p>
                 <div className="mt-1">{statusBadge(doc)}</div>
               </div>
-              <div className="shrink-0">
+              <div className="shrink-0 flex items-center gap-2">
                 {uploading === doc.id ? (
                   <Loader2 size={20} className="animate-spin text-primary" />
                 ) : doc.filePath ? (
-                  <label className="cursor-pointer text-xs font-black text-primary hover:underline">
-                    Replace
-                    <input type="file" className="hidden" onChange={(e) => handleUpload(doc, e.target.files[0])} />
-                  </label>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleView(doc)}
+                      disabled={viewing === doc.id}
+                      title="Preview document"
+                      className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all disabled:opacity-50"
+                    >
+                      {viewing === doc.id ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+                    </button>
+                    <label className="cursor-pointer text-xs font-black text-primary hover:underline">
+                      Replace
+                      <input type="file" className="hidden" onChange={(e) => handleUpload(doc, e.target.files[0])} />
+                    </label>
+                  </>
                 ) : (
                   <label className="cursor-pointer inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-black px-3 py-2 rounded-xl hover:bg-primary/20 transition-all">
                     <Upload size={13} /> Upload

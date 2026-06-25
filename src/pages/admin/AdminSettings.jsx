@@ -21,10 +21,7 @@ import {
   FiFileText,
   FiImage,
 } from "react-icons/fi";
-import {
-  RiShieldFlashLine,
-  RiTeamLine,
-} from "react-icons/ri";
+import { RiShieldFlashLine, RiTeamLine, RiBankCardLine } from "react-icons/ri";
 
 // Components
 import Modal from "../../components/Modal";
@@ -44,11 +41,14 @@ import SLASettings from "../../components/admin/settings/SLASettings";
 import DepartmentSettings from "../../components/admin/settings/DepartmentSettings";
 import CategorySettings from "../../components/admin/settings/CategorySettings";
 // Lazy: pulls in react-quill (heavy rich-text editor) — only load when the email editor modal opens.
-const EmailTemplateEditor = lazy(() => import("../../components/admin/settings/EmailTemplateEditor"));
+const EmailTemplateEditor = lazy(
+  () => import("../../components/admin/settings/EmailTemplateEditor"),
+);
 import EmailTemplatePreview from "../../components/admin/settings/EmailTemplatePreview";
 import DocumentChecklistSettings from "../../components/admin/settings/DocumentChecklistSettings";
 import CclTemplateSettings from "../../components/admin/settings/CclTemplateSettings";
 import OrganisationSettings from "../../components/admin/settings/OrganisationSettings";
+import BillingSettings from "../../components/admin/settings/BillingSettings";
 import RolesAndPermissionsPanel from "../../components/permissions/RolesAndPermissionsPanel";
 import UsersAndRolesPanel from "../../components/permissions/UsersAndRolesPanel";
 import { TAB_IDS, TABS } from "../../components/permissions/permissionsData";
@@ -57,7 +57,12 @@ import GoogleConnect from "../../components/GoogleConnect";
 import IntegrationCredentials from "../../components/admin/settings/IntegrationCredentials";
 
 // Services
-import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from "../../services/caseWorker";
+import {
+  getDepartments,
+  createDepartment,
+  updateDepartment,
+  deleteDepartment,
+} from "../../services/caseWorker";
 import { useToast } from "../../context/ToastContext";
 import {
   getMe,
@@ -96,19 +101,98 @@ import {
 } from "../../services/settingsService";
 
 const CONFIG_TABS = [
-  { id: "account", label: "Account & Profile", icon: <FiUser />, color: "text-blue-500", bg: "bg-blue-50" },
-  { id: "organisation", label: "Organisation", icon: <FiImage />, color: "text-violet-500", bg: "bg-violet-50" },
-  { id: "visa", label: "Visa & Petitions", icon: <FiLayers />, color: "text-indigo-500", bg: "bg-indigo-50" },
-  { id: "checklist", label: "Document Checklists", icon: <FiFileText />, color: "text-teal-500", bg: "bg-teal-50" },
-  { id: "categories", label: "Case Categories", icon: <FiFolder />, color: "text-emerald-500", bg: "bg-emerald-50" },
-  { id: "departments", label: "Departments", icon: <FiFolder />, color: "text-violet-500", bg: "bg-violet-50" },
-  { id: "roles", label: "Role Permissions", icon: <FiShield />, color: "text-amber-500", bg: "bg-amber-50" },
-  { id: "integrations", label: "Integrations", icon: <RiTeamLine />, color: "text-purple-500", bg: "bg-purple-50" },
-  { id: "email", label: "Email Templates", icon: <FiMail />, color: "text-rose-500", bg: "bg-rose-50" },
-  { id: "ccl", label: "CCL Templates", icon: <FiFileText />, color: "text-fuchsia-500", bg: "bg-fuchsia-50" },
-  { id: "smtp", label: "SMTP / Mail", icon: <FiMail />, color: "text-pink-500", bg: "bg-pink-50" },
-  { id: "payment", label: "Payment Config", icon: <FiCreditCard />, color: "text-cyan-500", bg: "bg-cyan-50" },
-  { id: "sla", label: "SLA Rules", icon: <FiClock />, color: "text-orange-500", bg: "bg-orange-50" },
+  {
+    id: "account",
+    label: "Account & Profile",
+    icon: <FiUser />,
+    color: "text-blue-500",
+    bg: "bg-blue-50",
+  },
+  {
+    id: "organisation",
+    label: "Organisation",
+    icon: <FiImage />,
+    color: "text-violet-500",
+    bg: "bg-violet-50",
+  },
+  {
+    id: "visa",
+    label: "Visa & Petitions",
+    icon: <FiLayers />,
+    color: "text-indigo-500",
+    bg: "bg-indigo-50",
+  },
+  {
+    id: "checklist",
+    label: "Document Checklists",
+    icon: <FiFileText />,
+    color: "text-teal-500",
+    bg: "bg-teal-50",
+  },
+  {
+    id: "categories",
+    label: "Case Categories",
+    icon: <FiFolder />,
+    color: "text-emerald-500",
+    bg: "bg-emerald-50",
+  },
+  {
+    id: "departments",
+    label: "Departments",
+    icon: <FiFolder />,
+    color: "text-violet-500",
+    bg: "bg-violet-50",
+  },
+  // { id: "roles", label: "Role Permissions", icon: <FiShield />, color: "text-amber-500", bg: "bg-amber-50" },
+  {
+    id: "integrations",
+    label: "Integrations",
+    icon: <RiTeamLine />,
+    color: "text-purple-500",
+    bg: "bg-purple-50",
+  },
+  {
+    id: "email",
+    label: "Email Templates",
+    icon: <FiMail />,
+    color: "text-rose-500",
+    bg: "bg-rose-50",
+  },
+  {
+    id: "ccl",
+    label: "CCL Templates",
+    icon: <FiFileText />,
+    color: "text-fuchsia-500",
+    bg: "bg-fuchsia-50",
+  },
+  {
+    id: "smtp",
+    label: "SMTP / Mail",
+    icon: <FiMail />,
+    color: "text-pink-500",
+    bg: "bg-pink-50",
+  },
+  {
+    id: "payment",
+    label: "Payment Config",
+    icon: <FiCreditCard />,
+    color: "text-cyan-500",
+    bg: "bg-cyan-50",
+  },
+  {
+    id: "sla",
+    label: "SLA Rules",
+    icon: <FiClock />,
+    color: "text-orange-500",
+    bg: "bg-orange-50",
+  },
+  {
+    id: "billing",
+    label: "Billing & Plan",
+    icon: <RiBankCardLine />,
+    color: "text-primary",
+    bg: "bg-primary/10",
+  },
 ];
 
 export default function AdminSettings() {
@@ -125,10 +209,31 @@ export default function AdminSettings() {
   const [error, setError] = useState("");
 
   // Account States (DYNAMIC)
-  const [profile, setProfile] = useState({ first_name: "", last_name: "", email: "", country_code: "", mobile: "", avatar_url: "", role_name: "" });
+  const [profile, setProfile] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    country_code: "",
+    mobile: "",
+    avatar_url: "",
+    role_name: "",
+  });
   const [profileFile, setProfileFile] = useState(null);
-  const [preferences, setPreferences] = useState({ two_factor_enabled: false, email_notifications: true, case_updates: true, payment_alerts: false, timezone: "UTC-05:00 Eastern Time", language: "English", date_format: "MM/DD/YYYY", data_collection: false });
-  const [security, setSecurity] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [preferences, setPreferences] = useState({
+    two_factor_enabled: false,
+    email_notifications: true,
+    case_updates: true,
+    payment_alerts: false,
+    timezone: "UTC-05:00 Eastern Time",
+    language: "English",
+    date_format: "MM/DD/YYYY",
+    data_collection: false,
+  });
+  const [security, setSecurity] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
   const [passwordError, setPasswordError] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
@@ -139,7 +244,23 @@ export default function AdminSettings() {
   const [categories, setCategories] = useState([]);
   const [emailTemplates, setEmailTemplates] = useState([]);
   const [slaRules, setSlaRules] = useState([]);
-  const [paymentConfig, setPaymentConfig] = useState({ currency: "GBP", pay_bank: true, pay_card: true, pay_cheque: false, bank_details: "Account Name: ElitePic Global Ltd\nSort Code: 20-04-15\nAccount No: 88291044\nBank: Barclays Bank PLC", invoice_prefix: "INV-", stripe_public_key: "", stripe_secret_key: "", stripe_webhook_secret: "", paypal_client_id: "", paypal_secret: "", razorpay_key_id: "", razorpay_key_secret: "", active_gateway: "stripe" });
+  const [paymentConfig, setPaymentConfig] = useState({
+    currency: "GBP",
+    pay_bank: true,
+    pay_card: true,
+    pay_cheque: false,
+    bank_details:
+      "Account Name: ElitePic Global Ltd\nSort Code: 20-04-15\nAccount No: 88291044\nBank: Barclays Bank PLC",
+    invoice_prefix: "INV-",
+    stripe_public_key: "",
+    stripe_secret_key: "",
+    stripe_webhook_secret: "",
+    paypal_client_id: "",
+    paypal_secret: "",
+    razorpay_key_id: "",
+    razorpay_key_secret: "",
+    active_gateway: "stripe",
+  });
   const [organisation, setOrganisation] = useState(null);
   const [orgLogoFile, setOrgLogoFile] = useState(null);
   const [savingOrgLogo, setSavingOrgLogo] = useState(false);
@@ -156,7 +277,10 @@ export default function AdminSettings() {
     password: "",
     hasPassword: false,
   });
-  const [smtpMeta, setSmtpMeta] = useState({ activeSource: "none", platformConfigured: false });
+  const [smtpMeta, setSmtpMeta] = useState({
+    activeSource: "none",
+    platformConfigured: false,
+  });
   const [testingSmtp, setTestingSmtp] = useState(false);
 
   // Permissions Sub-tab State
@@ -214,7 +338,10 @@ export default function AdminSettings() {
         if (p) setProfile(p);
         if (pref) setPreferences(pref);
       } else if (configTab === "visa") {
-        const [vRes, pRes] = await Promise.all([getVisaTypes(), getPetitionTypes()]);
+        const [vRes, pRes] = await Promise.all([
+          getVisaTypes(),
+          getPetitionTypes(),
+        ]);
         setVisaTypes(vRes.data?.data?.visa_types ?? []);
         setPetitionTypes(pRes.data?.data?.petition_types ?? []);
       } else if (configTab === "categories") {
@@ -303,17 +430,17 @@ export default function AdminSettings() {
       let dataToSubmit = profile;
       if (profileFile) {
         dataToSubmit = new FormData();
-        Object.keys(profile).forEach(key => {
+        Object.keys(profile).forEach((key) => {
           if (profile[key] !== null && profile[key] !== undefined) {
             dataToSubmit.append(key, profile[key]);
           }
         });
-        dataToSubmit.append('profile_pic', profileFile);
+        dataToSubmit.append("profile_pic", profileFile);
       }
       // Parallel update for performance
       const [prefRes, meRes] = await Promise.all([
         updateMePreferences(preferences),
-        updateMe(dataToSubmit)
+        updateMe(dataToSubmit),
       ]);
       setProfileFile(null);
       if (meRes?.data?.data?.profile) {
@@ -322,7 +449,12 @@ export default function AdminSettings() {
       // Reflect the org-wide timezone/date_format change immediately across the panel.
       const savedPrefs = prefRes?.data?.data?.preferences;
       if (savedPrefs) {
-        dispatch(setOrgSettings({ timezone: savedPrefs.timezone, date_format: savedPrefs.date_format }));
+        dispatch(
+          setOrgSettings({
+            timezone: savedPrefs.timezone,
+            date_format: savedPrefs.date_format,
+          }),
+        );
       }
       showToast({ message: "Profile and preferences updated successfully." });
       loadData(); // Refresh to ensure sync
@@ -342,9 +474,16 @@ export default function AdminSettings() {
     setSavingPassword(true);
     setPasswordError("");
     try {
-      await changePassword({ current_password: security.currentPassword, new_password: security.newPassword });
+      await changePassword({
+        current_password: security.currentPassword,
+        new_password: security.newPassword,
+      });
       showToast({ message: "Password updated successfully." });
-      setSecurity({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setSecurity({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
     } catch (e) {
       setPasswordError(getApiError(e));
     } finally {
@@ -357,24 +496,38 @@ export default function AdminSettings() {
     e.preventDefault();
     if (!visaFormName.trim()) return setVisaFormError("Name is required");
     try {
-      if (visaModalMode === "add") await createVisaType({ name: visaFormName.trim() });
+      if (visaModalMode === "add")
+        await createVisaType({ name: visaFormName.trim() });
       else await updateVisaType(editingVisaId, { name: visaFormName.trim() });
       loadData();
       setVisaModalOpen(false);
-      showToast({ message: `Visa type ${visaModalMode === "add" ? "added" : "updated"}.` });
-    } catch (e) { setVisaFormError(getApiError(e)); }
+      showToast({
+        message: `Visa type ${visaModalMode === "add" ? "added" : "updated"}.`,
+      });
+    } catch (e) {
+      setVisaFormError(getApiError(e));
+    }
   };
 
   const submitPetitionForm = async (e) => {
     e.preventDefault();
-    if (!petitionFormName.trim()) return setPetitionFormError("Name is required");
+    if (!petitionFormName.trim())
+      return setPetitionFormError("Name is required");
     try {
-      if (petitionModalMode === "add") await createPetitionType({ name: petitionFormName.trim() });
-      else await updatePetitionType(editingPetitionId, { name: petitionFormName.trim() });
+      if (petitionModalMode === "add")
+        await createPetitionType({ name: petitionFormName.trim() });
+      else
+        await updatePetitionType(editingPetitionId, {
+          name: petitionFormName.trim(),
+        });
       loadData();
       setPetitionModalOpen(false);
-      showToast({ message: `Petition type ${petitionModalMode === "add" ? "added" : "updated"}.` });
-    } catch (e) { setPetitionFormError(getApiError(e)); }
+      showToast({
+        message: `Petition type ${petitionModalMode === "add" ? "added" : "updated"}.`,
+      });
+    } catch (e) {
+      setPetitionFormError(getApiError(e));
+    }
   };
 
   const CCL_TEMPLATE_MAX_BYTES = 5 * 1024 * 1024;
@@ -382,12 +535,18 @@ export default function AdminSettings() {
   const handleUploadCclTemplate = async (visaId, file) => {
     if (!file) return;
     if (file.size > CCL_TEMPLATE_MAX_BYTES) {
-      showToast({ variant: "danger", message: "File must be 5 MB or smaller." });
+      showToast({
+        variant: "danger",
+        message: "File must be 5 MB or smaller.",
+      });
       return;
     }
     const name = file.name.toLowerCase();
     if (!name.endsWith(".docx") && !name.endsWith(".pdf")) {
-      showToast({ variant: "danger", message: "Only .docx and .pdf files are allowed." });
+      showToast({
+        variant: "danger",
+        message: "Only .docx and .pdf files are allowed.",
+      });
       return;
     }
     try {
@@ -422,14 +581,24 @@ export default function AdminSettings() {
   // Department Handlers
   const submitDepartmentForm = async (e) => {
     e.preventDefault();
-    if (!departmentFormName.trim()) return setDepartmentFormError("Name is required");
+    if (!departmentFormName.trim())
+      return setDepartmentFormError("Name is required");
     try {
-      if (departmentModalMode === "add") await createDepartment({ name: departmentFormName.trim() });
-      else await updateDepartment({ oldName: editingDepartment, newName: departmentFormName.trim() });
+      if (departmentModalMode === "add")
+        await createDepartment({ name: departmentFormName.trim() });
+      else
+        await updateDepartment({
+          oldName: editingDepartment,
+          newName: departmentFormName.trim(),
+        });
       loadData();
       setDepartmentModalOpen(false);
-      showToast({ message: `Department ${departmentModalMode === "add" ? "added" : "updated"}.` });
-    } catch (e) { setDepartmentFormError(getApiError(e)); }
+      showToast({
+        message: `Department ${departmentModalMode === "add" ? "added" : "updated"}.`,
+      });
+    } catch (e) {
+      setDepartmentFormError(getApiError(e));
+    }
   };
 
   // Category Handlers
@@ -439,18 +608,28 @@ export default function AdminSettings() {
       await createCaseCategory({ name: name });
       loadData();
       showToast({ message: "Category added successfully." });
-    } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
-    finally { setSaving(false); }
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCategoryDelete = async (cat) => {
-    const res = await Swal.fire({ title: "Delete Category?", text: `Are you sure you want to remove "${cat.name}"?`, icon: "warning", showCancelButton: true });
+    const res = await Swal.fire({
+      title: "Delete Category?",
+      text: `Are you sure you want to remove "${cat.name}"?`,
+      icon: "warning",
+      showCancelButton: true,
+    });
     if (res.isConfirmed) {
       try {
         await deleteCaseCategory(cat.id);
         loadData();
         showToast({ message: "Category deleted." });
-      } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
+      } catch (e) {
+        showToast({ message: getApiError(e), variant: "danger" });
+      }
     }
   };
 
@@ -458,13 +637,19 @@ export default function AdminSettings() {
   const submitEmailForm = async (data) => {
     if (!data.template_key.trim()) return setEmailFormError("Key is required");
     try {
-      const payload = { template_key: data.template_key.trim(), subject: data.subject.trim(), body: data.body.trim() };
+      const payload = {
+        template_key: data.template_key.trim(),
+        subject: data.subject.trim(),
+        body: data.body.trim(),
+      };
       if (emailModalMode === "add") await createEmailTemplate(payload);
       else await updateEmailTemplate(editingEmailKey, payload);
       loadData();
       setEmailModalOpen(false);
       showToast({ message: "Email template saved." });
-    } catch (e) { setEmailFormError(getApiError(e)); }
+    } catch (e) {
+      setEmailFormError(getApiError(e));
+    }
   };
 
   // Payment Handlers
@@ -473,8 +658,11 @@ export default function AdminSettings() {
     try {
       await updatePaymentSetting(paymentConfig);
       showToast({ message: "Payment configuration updated." });
-    } catch (e) { showToast({ message: getApiError(e), variant: "danger" }); }
-    finally { setSaving(false); }
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleOrganisationLogoSave = async () => {
@@ -530,8 +718,15 @@ export default function AdminSettings() {
       if (smtpForm.password) payload.pass = smtpForm.password;
       const res = await updateSmtpSettings(payload);
       const d = res.data?.data || {};
-      setSmtpMeta((m) => ({ ...m, activeSource: d.activeSource || m.activeSource }));
-      setSmtpForm((f) => ({ ...f, password: "", hasPassword: f.enabled ? true : f.hasPassword }));
+      setSmtpMeta((m) => ({
+        ...m,
+        activeSource: d.activeSource || m.activeSource,
+      }));
+      setSmtpForm((f) => ({
+        ...f,
+        password: "",
+        hasPassword: f.enabled ? true : f.hasPassword,
+      }));
       showToast({ message: res.data?.message || "SMTP settings saved." });
       loadData();
     } catch (e) {
@@ -556,15 +751,22 @@ export default function AdminSettings() {
   // SLA Handlers
   const submitSlaForm = async (e) => {
     e.preventDefault();
-    if (!slaFormName.trim() || !slaFormDays) return setSlaFormError("Required fields missing");
+    if (!slaFormName.trim() || !slaFormDays)
+      return setSlaFormError("Required fields missing");
     try {
-      const payload = { name: slaFormName.trim(), days: parseInt(slaFormDays), rule_type: slaFormType };
+      const payload = {
+        name: slaFormName.trim(),
+        days: parseInt(slaFormDays),
+        rule_type: slaFormType,
+      };
       if (slaModalMode === "add") await createSlaRule(payload);
       else await updateSlaRule(editingSlaId, payload);
       loadData();
       setSlaModalOpen(false);
       showToast({ message: "SLA rule saved." });
-    } catch (e) { setSlaFormError(getApiError(e)); }
+    } catch (e) {
+      setSlaFormError(getApiError(e));
+    }
   };
 
   return (
@@ -576,28 +778,41 @@ export default function AdminSettings() {
             <div className="p-2 bg-primary rounded-xl text-white shadow-lg shadow-primary/20">
               <FiSettings size={22} />
             </div>
-            <h1 className="text-xl font-black text-secondary tracking-tight">Admin Central</h1>
+            <h1 className="text-xl font-black text-secondary tracking-tight">
+              Admin Central
+            </h1>
           </div>
-          <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-black">System Preferences</p>
+          <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-black">
+            System Preferences
+          </p>
         </div>
 
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar pb-6">
           {CONFIG_TABS.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => { setConfigTab(tab.id); setMobileMenuOpen(false); }}
+              onClick={() => {
+                setConfigTab(tab.id);
+                setMobileMenuOpen(false);
+              }}
               className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all group relative ${
                 configTab === tab.id
-                ? "bg-secondary text-white shadow-xl shadow-secondary/20"
-                : "text-gray-500 hover:bg-gray-50 hover:text-secondary"
+                  ? "bg-secondary text-white shadow-xl shadow-secondary/20"
+                  : "text-gray-500 hover:bg-gray-50 hover:text-secondary"
               }`}
             >
-              <div className={`p-2 rounded-xl transition-colors ${
-                configTab === tab.id ? "bg-white/10" : `${tab.bg} ${tab.color}`
-              }`}>
+              <div
+                className={`p-2 rounded-xl transition-colors ${
+                  configTab === tab.id
+                    ? "bg-white/10"
+                    : `${tab.bg} ${tab.color}`
+                }`}
+              >
                 {tab.icon}
               </div>
-              <span className="text-sm font-bold tracking-tight">{tab.label}</span>
+              <span className="text-sm font-bold tracking-tight">
+                {tab.label}
+              </span>
               {configTab === tab.id && (
                 <motion.div layoutId="activeIndicator" className="ml-auto">
                   <FiArrowRight size={16} />
@@ -608,7 +823,10 @@ export default function AdminSettings() {
         </nav>
 
         <div className="p-4 border-t border-gray-50 bg-gray-50/30">
-          <Link to="/admin/dashboard" className="flex items-center justify-center gap-3 px-4 py-4 rounded-2xl bg-white border border-gray-100 text-primary font-black text-xs uppercase tracking-widest hover:shadow-lg transition-all">
+          <Link
+            to="/admin/dashboard"
+            className="flex items-center justify-center gap-3 px-4 py-4 rounded-2xl bg-white border border-gray-100 text-primary font-black text-xs uppercase tracking-widest hover:shadow-lg transition-all"
+          >
             Dashboard <FiArrowRight />
           </Link>
         </div>
@@ -618,17 +836,33 @@ export default function AdminSettings() {
       <div className="md:hidden bg-white border-b border-gray-100 p-3 sticky top-0 z-50 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <FiSettings className="text-primary" />
-          <h1 className="text-lg font-black text-secondary uppercase tracking-tighter">Settings</h1>
+          <h1 className="text-lg font-black text-secondary uppercase tracking-tighter">
+            Settings
+          </h1>
         </div>
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 bg-gray-50 rounded-xl">
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 bg-gray-50 rounded-xl"
+        >
           {mobileMenuOpen ? <FiX /> : <FiMenu />}
         </button>
       </div>
 
       {mobileMenuOpen && (
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="md:hidden bg-white border-b border-gray-100 p-4 grid grid-cols-2 gap-2 z-40 fixed top-16 left-0 right-0 shadow-2xl">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="md:hidden bg-white border-b border-gray-100 p-4 grid grid-cols-2 gap-2 z-40 fixed top-16 left-0 right-0 shadow-2xl"
+        >
           {CONFIG_TABS.map((tab) => (
-            <button key={tab.id} onClick={() => { setConfigTab(tab.id); setMobileMenuOpen(false); }} className={`p-4 rounded-2xl text-xs font-black flex items-center gap-3 ${configTab === tab.id ? "bg-secondary text-white" : "bg-gray-50 text-gray-500"}`}>
+            <button
+              key={tab.id}
+              onClick={() => {
+                setConfigTab(tab.id);
+                setMobileMenuOpen(false);
+              }}
+              className={`p-4 rounded-2xl text-xs font-black flex items-center gap-3 ${configTab === tab.id ? "bg-secondary text-white" : "bg-gray-50 text-gray-500"}`}
+            >
               {tab.icon} {tab.label}
             </button>
           ))}
@@ -641,18 +875,22 @@ export default function AdminSettings() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <h2 className="text-2xl md:text-3xl font-black text-secondary tracking-tight mb-2">
-                {CONFIG_TABS.find(t => t.id === configTab)?.label}
+                {CONFIG_TABS.find((t) => t.id === configTab)?.label}
               </h2>
               <div className="flex items-center gap-3 text-gray-500">
                 <span className="text-sm font-medium">Control Center</span>
                 <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-                <span className="text-sm font-medium">{configTab.charAt(0).toUpperCase() + configTab.slice(1)}</span>
+                <span className="text-sm font-medium">
+                  {configTab.charAt(0).toUpperCase() + configTab.slice(1)}
+                </span>
               </div>
             </div>
             {configTab === "account" && (
               <div className="flex items-center gap-3 px-5 py-2.5 bg-blue-50 text-blue-700 rounded-2xl border border-blue-100 shadow-sm">
                 <FiCheckCircle size={18} />
-                <span className="text-xs font-black uppercase tracking-widest">Real-time Sync</span>
+                <span className="text-xs font-black uppercase tracking-widest">
+                  Real-time Sync
+                </span>
               </div>
             )}
           </div>
@@ -671,19 +909,36 @@ export default function AdminSettings() {
                 profile={profile}
                 profileFile={profileFile}
                 preferences={preferences}
-                onProfileChange={(e) => setProfile({...profile, [e.target.name]: e.target.value})}
+                onProfileChange={(e) =>
+                  setProfile({ ...profile, [e.target.name]: e.target.value })
+                }
                 onProfileFileChange={(f) => setProfileFile(f)}
-                onPreferenceChange={(e) => setPreferences({...preferences, [e.target.name]: e.target.value})}
-                onPreferenceToggle={(id) => setPreferences({...preferences, [id]: !preferences[id]})}
+                onPreferenceChange={(e) =>
+                  setPreferences({
+                    ...preferences,
+                    [e.target.name]: e.target.value,
+                  })
+                }
+                onPreferenceToggle={(id) =>
+                  setPreferences({ ...preferences, [id]: !preferences[id] })
+                }
                 onSave={handleProfileSave}
                 saving={saving}
                 security={security}
-                onSecurityChange={(e) => setSecurity({...security, [e.target.name]: e.target.value})}
+                onSecurityChange={(e) =>
+                  setSecurity({ ...security, [e.target.name]: e.target.value })
+                }
                 onPasswordSubmit={handlePasswordSubmit}
                 savingPassword={savingPassword}
                 passwordError={passwordError}
-                onReset2FA={() => { setTwoFactorMode("setup"); setTwoFactorModalOpen(true); }}
-                onDisable2FA={() => { setTwoFactorMode("disable"); setTwoFactorModalOpen(true); }}
+                onReset2FA={() => {
+                  setTwoFactorMode("setup");
+                  setTwoFactorModalOpen(true);
+                }}
+                onDisable2FA={() => {
+                  setTwoFactorMode("disable");
+                  setTwoFactorModalOpen(true);
+                }}
               />
             )}
 
@@ -692,25 +947,61 @@ export default function AdminSettings() {
                 visaTypes={visaTypes}
                 petitionTypes={petitionTypes}
                 loading={loading}
-                onAddVisa={() => { setVisaModalMode("add"); setVisaFormName(""); setVisaModalOpen(true); }}
-                onEditVisa={(id) => { const v = visaTypes.find(x => x.id === id); setVisaModalMode("edit"); setEditingVisaId(id); setVisaFormName(v.name); setVisaModalOpen(true); }}
-                onDeleteVisa={async (id) => { const r = await Swal.fire({ title: "Delete Visa Type?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteVisaType(id); loadData(); } }}
+                onAddVisa={() => {
+                  setVisaModalMode("add");
+                  setVisaFormName("");
+                  setVisaModalOpen(true);
+                }}
+                onEditVisa={(id) => {
+                  const v = visaTypes.find((x) => x.id === id);
+                  setVisaModalMode("edit");
+                  setEditingVisaId(id);
+                  setVisaFormName(v.name);
+                  setVisaModalOpen(true);
+                }}
+                onDeleteVisa={async (id) => {
+                  const r = await Swal.fire({
+                    title: "Delete Visa Type?",
+                    icon: "warning",
+                    showCancelButton: true,
+                  });
+                  if (r.isConfirmed) {
+                    await deleteVisaType(id);
+                    loadData();
+                  }
+                }}
                 onUploadCclTemplate={handleUploadCclTemplate}
                 onDeleteCclTemplate={handleDeleteCclTemplate}
-                onAddPetition={() => { setPetitionModalMode("add"); setPetitionFormName(""); setPetitionModalOpen(true); }}
-                onEditPetition={(id) => { const p = petitionTypes.find(x => x.id === id); setPetitionModalMode("edit"); setEditingPetitionId(id); setPetitionFormName(p.name); setPetitionModalOpen(true); }}
-                onDeletePetition={async (id) => { const r = await Swal.fire({ title: "Delete Petition Type?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deletePetitionType(id); loadData(); } }}
+                onAddPetition={() => {
+                  setPetitionModalMode("add");
+                  setPetitionFormName("");
+                  setPetitionModalOpen(true);
+                }}
+                onEditPetition={(id) => {
+                  const p = petitionTypes.find((x) => x.id === id);
+                  setPetitionModalMode("edit");
+                  setEditingPetitionId(id);
+                  setPetitionFormName(p.name);
+                  setPetitionModalOpen(true);
+                }}
+                onDeletePetition={async (id) => {
+                  const r = await Swal.fire({
+                    title: "Delete Petition Type?",
+                    icon: "warning",
+                    showCancelButton: true,
+                  });
+                  if (r.isConfirmed) {
+                    await deletePetitionType(id);
+                    loadData();
+                  }
+                }}
                 error={error}
               />
             )}
 
-            {configTab === "checklist" && (
-              <DocumentChecklistSettings />
-            )}
+            {configTab === "checklist" && <DocumentChecklistSettings />}
 
-            {configTab === "ccl" && (
-              <CclTemplateSettings />
-            )}
+            {configTab === "ccl" && <CclTemplateSettings />}
 
             {configTab === "categories" && (
               <CategorySettings
@@ -727,9 +1018,28 @@ export default function AdminSettings() {
               <DepartmentSettings
                 departments={departments}
                 loading={loading}
-                onAdd={() => { setDepartmentModalMode("add"); setDepartmentFormName(""); setDepartmentModalOpen(true); }}
-                onEdit={(name) => { setDepartmentModalMode("edit"); setEditingDepartment(name); setDepartmentFormName(name); setDepartmentModalOpen(true); }}
-                onDelete={async (name) => { const r = await Swal.fire({ title: "Delete Department?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteDepartment({ name }); loadData(); } }}
+                onAdd={() => {
+                  setDepartmentModalMode("add");
+                  setDepartmentFormName("");
+                  setDepartmentModalOpen(true);
+                }}
+                onEdit={(name) => {
+                  setDepartmentModalMode("edit");
+                  setEditingDepartment(name);
+                  setDepartmentFormName(name);
+                  setDepartmentModalOpen(true);
+                }}
+                onDelete={async (name) => {
+                  const r = await Swal.fire({
+                    title: "Delete Department?",
+                    icon: "warning",
+                    showCancelButton: true,
+                  });
+                  if (r.isConfirmed) {
+                    await deleteDepartment({ name });
+                    loadData();
+                  }
+                }}
                 error={error}
               />
             )}
@@ -738,26 +1048,26 @@ export default function AdminSettings() {
               <div className="space-y-4">
                 {/* Modern Segmented Pill Toggle for RBAC */}
                 <div className="flex justify-center sm:justify-start">
-                   <div className="bg-gray-100/80 p-1.5 rounded-[1.5rem] flex items-center gap-1.5 backdrop-blur-md border border-gray-100 shadow-inner">
-                      {TABS.map(tab => {
-                        const Icon = rbacIcons[tab.icon];
-                        const isActive = rbacTab === tab.id;
-                        return (
-                          <button
-                            key={tab.id}
-                            onClick={() => setRbacTab(tab.id)}
-                            className={`flex items-center gap-3 px-10 py-3 text-xs font-black transition-all duration-300 rounded-[1.25rem] ${
-                              isActive
-                                ? 'bg-secondary text-white shadow-2xl shadow-secondary/30 scale-[1.02]'
-                                : 'text-gray-500 hover:text-secondary hover:bg-white/50'
-                            }`}
-                          >
-                            {Icon && <Icon size={20} />}
-                            {tab.label}
-                          </button>
-                        );
-                      })}
-                   </div>
+                  <div className="bg-gray-100/80 p-1.5 rounded-[1.5rem] flex items-center gap-1.5 backdrop-blur-md border border-gray-100 shadow-inner">
+                    {TABS.map((tab) => {
+                      const Icon = rbacIcons[tab.icon];
+                      const isActive = rbacTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setRbacTab(tab.id)}
+                          className={`flex items-center gap-3 px-10 py-3 text-xs font-black transition-all duration-300 rounded-[1.25rem] ${
+                            isActive
+                              ? "bg-secondary text-white shadow-2xl shadow-secondary/30 scale-[1.02]"
+                              : "text-gray-500 hover:text-secondary hover:bg-white/50"
+                          }`}
+                        >
+                          {Icon && <Icon size={20} />}
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -776,24 +1086,53 @@ export default function AdminSettings() {
               </div>
             )}
 
-              {configTab === "integrations" && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <MicrosoftConnect />
-                    <GoogleConnect />
-                  </div>
-                  <IntegrationCredentials />
+            {configTab === "integrations" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <MicrosoftConnect />
+                  <GoogleConnect />
                 </div>
-              )}
+                <IntegrationCredentials />
+              </div>
+            )}
 
             {configTab === "email" && (
               <EmailSettings
                 templates={emailTemplates}
                 loading={loading}
-                onAdd={() => { setEmailModalMode("add"); setEmailFormKey(""); setEmailFormSubject(""); setEmailFormBody(""); setEmailModalOpen(true); }}
-                onEdit={(key) => { const t = emailTemplates.find(x => x.template_key === key); setEmailModalMode("edit"); setEditingEmailKey(key); setEmailFormKey(t.template_key); setEmailFormSubject(t.subject); setEmailFormBody(t.body); setEmailModalOpen(true); }}
-                onDelete={async (key) => { const r = await Swal.fire({ title: "Delete Template?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteEmailTemplate(key); loadData(); } }}
-                onView={(key) => { setViewingTemplate(emailTemplates.find(x => x.template_key === key)); setViewEmailModalOpen(true); }}
+                onAdd={() => {
+                  setEmailModalMode("add");
+                  setEmailFormKey("");
+                  setEmailFormSubject("");
+                  setEmailFormBody("");
+                  setEmailModalOpen(true);
+                }}
+                onEdit={(key) => {
+                  const t = emailTemplates.find((x) => x.template_key === key);
+                  setEmailModalMode("edit");
+                  setEditingEmailKey(key);
+                  setEmailFormKey(t.template_key);
+                  setEmailFormSubject(t.subject);
+                  setEmailFormBody(t.body);
+                  setEmailModalOpen(true);
+                }}
+                onDelete={async (key) => {
+                  const r = await Swal.fire({
+                    title: "Delete Template?",
+                    icon: "warning",
+                    showCancelButton: true,
+                  });
+                  if (r.isConfirmed) {
+                    await deleteEmailTemplate(key);
+                    loadData();
+                  }
+                }}
+                onView={(key) => {
+                  setViewingTemplate(
+                    emailTemplates.find((x) => x.template_key === key),
+                  );
+                  setViewEmailModalOpen(true);
+                }}
                 error={error}
               />
             )}
@@ -802,8 +1141,12 @@ export default function AdminSettings() {
               <SmtpSettings
                 form={smtpForm}
                 meta={smtpMeta}
-                onChange={(key, val) => setSmtpForm((f) => ({ ...f, [key]: val }))}
-                onToggleEnabled={() => setSmtpForm((f) => ({ ...f, enabled: !f.enabled }))}
+                onChange={(key, val) =>
+                  setSmtpForm((f) => ({ ...f, [key]: val }))
+                }
+                onToggleEnabled={() =>
+                  setSmtpForm((f) => ({ ...f, enabled: !f.enabled }))
+                }
                 onSave={handleSmtpSave}
                 onTest={handleSmtpTest}
                 saving={saving}
@@ -816,8 +1159,15 @@ export default function AdminSettings() {
             {configTab === "payment" && (
               <PaymentSettings
                 config={paymentConfig}
-                onConfigChange={(key, val) => setPaymentConfig({...paymentConfig, [key]: val})}
-                onToggle={(key) => setPaymentConfig({...paymentConfig, [key]: !paymentConfig[key]})}
+                onConfigChange={(key, val) =>
+                  setPaymentConfig({ ...paymentConfig, [key]: val })
+                }
+                onToggle={(key) =>
+                  setPaymentConfig({
+                    ...paymentConfig,
+                    [key]: !paymentConfig[key],
+                  })
+                }
                 onSave={handlePaymentSave}
                 saving={saving}
                 loading={loading}
@@ -845,35 +1195,108 @@ export default function AdminSettings() {
               <SLASettings
                 rules={slaRules}
                 loading={loading}
-                onAdd={() => { setSlaModalMode("add"); setSlaFormName(""); setSlaFormDays(""); setSlaModalOpen(true); }}
-                onEdit={(id) => { const r = slaRules.find(x => x.id === id); setSlaModalMode("edit"); setEditingSlaId(id); setSlaFormName(r.name); setSlaFormDays(r.days); setSlaFormType(r.rule_type); setSlaModalOpen(true); }}
-                onDelete={async (id) => { const r = await Swal.fire({ title: "Delete SLA?", icon: "warning", showCancelButton: true }); if (r.isConfirmed) { await deleteSlaRule(id); loadData(); } }}
+                onAdd={() => {
+                  setSlaModalMode("add");
+                  setSlaFormName("");
+                  setSlaFormDays("");
+                  setSlaModalOpen(true);
+                }}
+                onEdit={(id) => {
+                  const r = slaRules.find((x) => x.id === id);
+                  setSlaModalMode("edit");
+                  setEditingSlaId(id);
+                  setSlaFormName(r.name);
+                  setSlaFormDays(r.days);
+                  setSlaFormType(r.rule_type);
+                  setSlaModalOpen(true);
+                }}
+                onDelete={async (id) => {
+                  const r = await Swal.fire({
+                    title: "Delete SLA?",
+                    icon: "warning",
+                    showCancelButton: true,
+                  });
+                  if (r.isConfirmed) {
+                    await deleteSlaRule(id);
+                    loadData();
+                  }
+                }}
                 error={error}
               />
             )}
+
+            {configTab === "billing" && <BillingSettings />}
           </motion.div>
         </AnimatePresence>
       </main>
 
       {/* Modals */}
-      <Modal open={visaModalOpen} onClose={() => setVisaModalOpen(false)} title="Visa Type Configuration">
+      <Modal
+        open={visaModalOpen}
+        onClose={() => setVisaModalOpen(false)}
+        title="Visa Type Configuration"
+      >
         <form onSubmit={submitVisaForm} className="space-y-4 p-2">
-          <Input label="Visa Designation" value={visaFormName} onChange={(e) => setVisaFormName(e.target.value)} error={visaFormError} placeholder="e.g. EB-1 Extraordinary Ability" autoFocus />
-          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Save Configuration</Button>
+          <Input
+            label="Visa Designation"
+            value={visaFormName}
+            onChange={(e) => setVisaFormName(e.target.value)}
+            error={visaFormError}
+            placeholder="e.g. EB-1 Extraordinary Ability"
+            autoFocus
+          />
+          <Button
+            type="submit"
+            className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20"
+          >
+            Save Configuration
+          </Button>
         </form>
       </Modal>
 
-      <Modal open={petitionModalOpen} onClose={() => setPetitionModalOpen(false)} title="Petition Type Setup">
+      <Modal
+        open={petitionModalOpen}
+        onClose={() => setPetitionModalOpen(false)}
+        title="Petition Type Setup"
+      >
         <form onSubmit={submitPetitionForm} className="space-y-4 p-2">
-          <Input label="Petition Identifier" value={petitionFormName} onChange={(e) => setPetitionFormName(e.target.value)} error={petitionFormError} placeholder="e.g. Form I-140" autoFocus />
-          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Initialize Petition</Button>
+          <Input
+            label="Petition Identifier"
+            value={petitionFormName}
+            onChange={(e) => setPetitionFormName(e.target.value)}
+            error={petitionFormError}
+            placeholder="e.g. Form I-140"
+            autoFocus
+          />
+          <Button
+            type="submit"
+            className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20"
+          >
+            Initialize Petition
+          </Button>
         </form>
       </Modal>
 
-      <Modal open={departmentModalOpen} onClose={() => setDepartmentModalOpen(false)} title="Department Management">
+      <Modal
+        open={departmentModalOpen}
+        onClose={() => setDepartmentModalOpen(false)}
+        title="Department Management"
+      >
         <form onSubmit={submitDepartmentForm} className="space-y-4 p-2">
-          <Input label="Department Designation" value={departmentFormName} onChange={(e) => setDepartmentFormName(e.target.value)} error={departmentFormError} placeholder="e.g. Legal Compliance" autoFocus />
-          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Update Registry</Button>
+          <Input
+            label="Department Designation"
+            value={departmentFormName}
+            onChange={(e) => setDepartmentFormName(e.target.value)}
+            error={departmentFormError}
+            placeholder="e.g. Legal Compliance"
+            autoFocus
+          />
+          <Button
+            type="submit"
+            className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20"
+          >
+            Update Registry
+          </Button>
         </form>
       </Modal>
 
@@ -894,7 +1317,15 @@ export default function AdminSettings() {
           }
         >
           <EmailTemplateEditor
-            initialData={emailModalMode === "add" ? null : { template_key: editingEmailKey, subject: emailFormSubject, body: emailFormBody }}
+            initialData={
+              emailModalMode === "add"
+                ? null
+                : {
+                    template_key: editingEmailKey,
+                    subject: emailFormSubject,
+                    body: emailFormBody,
+                  }
+            }
             mode={emailModalMode}
             onSave={submitEmailForm}
             onCancel={() => setEmailModalOpen(false)}
@@ -919,27 +1350,77 @@ export default function AdminSettings() {
         />
       </Modal>
 
-      <Modal open={slaModalOpen} onClose={() => setSlaModalOpen(false)} title="SLA Rule Matrix">
+      <Modal
+        open={slaModalOpen}
+        onClose={() => setSlaModalOpen(false)}
+        title="SLA Rule Matrix"
+      >
         <form onSubmit={submitSlaForm} className="space-y-4 p-2">
-          <Input label="Rule Designation" value={slaFormName} onChange={(e) => setSlaFormName(e.target.value)} placeholder="e.g. Standard Processing" autoFocus />
-          <Input label="Target Duration (Days)" type="number" value={slaFormDays} onChange={(e) => setSlaFormDays(e.target.value)} placeholder="45" />
+          <Input
+            label="Rule Designation"
+            value={slaFormName}
+            onChange={(e) => setSlaFormName(e.target.value)}
+            placeholder="e.g. Standard Processing"
+            autoFocus
+          />
+          <Input
+            label="Target Duration (Days)"
+            type="number"
+            value={slaFormDays}
+            onChange={(e) => setSlaFormDays(e.target.value)}
+            placeholder="45"
+          />
           <div className="flex flex-col gap-3">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Policy Scope</label>
-            <select className="w-full border-2 border-gray-100 rounded-2xl px-6 py-4 bg-white text-sm font-bold outline-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all" value={slaFormType} onChange={(e) => setSlaFormType(e.target.value)}>
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">
+              Policy Scope
+            </label>
+            <select
+              className="w-full border-2 border-gray-100 rounded-2xl px-6 py-4 bg-white text-sm font-bold outline-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all"
+              value={slaFormType}
+              onChange={(e) => setSlaFormType(e.target.value)}
+            >
               <option value="Visa">Visa Type Specific</option>
               <option value="Global">Global Enterprise Policy</option>
             </select>
           </div>
-          {slaFormError && <p className="text-xs text-red-500 font-black px-2 flex items-center gap-2"><FiX /> {slaFormError}</p>}
-          <Button type="submit" className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20">Enforce Policy</Button>
+          {slaFormError && (
+            <p className="text-xs text-red-500 font-black px-2 flex items-center gap-2">
+              <FiX /> {slaFormError}
+            </p>
+          )}
+          <Button
+            type="submit"
+            className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20"
+          >
+            Enforce Policy
+          </Button>
         </form>
       </Modal>
 
-      <Modal open={twoFactorModalOpen} onClose={() => setTwoFactorModalOpen(false)} title="" maxWidthClass="max-w-md" bodyClassName="p-0" footer={null}>
+      <Modal
+        open={twoFactorModalOpen}
+        onClose={() => setTwoFactorModalOpen(false)}
+        title=""
+        maxWidthClass="max-w-md"
+        bodyClassName="p-0"
+        footer={null}
+      >
         {twoFactorMode === "setup" ? (
-          <TwoFactorSetup onSetupComplete={() => { setTwoFactorModalOpen(false); loadData(); }} onCancel={() => setTwoFactorModalOpen(false)} />
+          <TwoFactorSetup
+            onSetupComplete={() => {
+              setTwoFactorModalOpen(false);
+              loadData();
+            }}
+            onCancel={() => setTwoFactorModalOpen(false)}
+          />
         ) : (
-          <TwoFactorDisable onDisableComplete={() => { setTwoFactorModalOpen(false); loadData(); }} onCancel={() => setTwoFactorModalOpen(false)} />
+          <TwoFactorDisable
+            onDisableComplete={() => {
+              setTwoFactorModalOpen(false);
+              loadData();
+            }}
+            onCancel={() => setTwoFactorModalOpen(false)}
+          />
         )}
       </Modal>
     </div>

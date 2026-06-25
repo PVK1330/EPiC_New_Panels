@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShieldCheck, FileText, Loader2, Trash2, Clock } from "lucide-react";
+import { ShieldCheck, FileText, Loader2, Trash2, Clock, Save } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
 import {
   createLicenceV2Draft,
@@ -148,6 +148,7 @@ export default function ApplyLicenceV2() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({ ...EMPTY });
   const [saving, setSaving] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitErrors, setSubmitErrors] = useState([]);
   const [deleting, setDeleting] = useState(null);
@@ -156,8 +157,11 @@ export default function ApplyLicenceV2() {
   const submitInFlight = useRef(false);
   // Track whether this was a brand-new draft (created by startNew) vs a resumed one
   const draftIsNew = useRef(false);
-  // Track whether any saves have been made — if not, delete the draft on unmount
-  const hasChanges = useRef(false);
+  // Track whether the sponsor explicitly committed this draft (Save Draft / Submit).
+  // Per-step "Save & Continue", profile-sync and document uploads write to the working
+  // row but do NOT count — a brand-new draft is discarded on exit unless it was
+  // explicitly saved or submitted.
+  const explicitlySaved = useRef(false);
   const appIdRef = useRef(null);
   const phaseRef = useRef("loading");
 
@@ -185,11 +189,19 @@ export default function ApplyLicenceV2() {
   useEffect(() => { appIdRef.current = appId; }, [appId]);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
 
-  // Delete ghost drafts: if the user opened a brand-new draft but navigated away
-  // without saving anything, clean it up so it doesn't pollute the history table.
+  // Discard-on-exit: a brand-new draft is the wizard's working area, but it must not
+  // linger in the sponsor's history unless they explicitly kept it. If the user leaves
+  // without clicking Save Draft / Submit, delete the draft (and any Step 4 uploads or
+  // profile-sync writes it accumulated). Resumed drafts (draftIsNew = false) are never
+  // auto-deleted; a submitted application (phase "submitted") is always kept.
   useEffect(() => {
     return () => {
-      if (draftIsNew.current && !hasChanges.current && appIdRef.current) {
+      if (
+        draftIsNew.current &&
+        !explicitlySaved.current &&
+        phaseRef.current !== "submitted" &&
+        appIdRef.current
+      ) {
         deleteLicenceV2Draft(appIdRef.current).catch(() => {});
       }
     };
@@ -201,7 +213,7 @@ export default function ApplyLicenceV2() {
       const r = await createLicenceV2Draft();
       const app = r.data.data;
       draftIsNew.current = true;
-      hasChanges.current = false;
+      explicitlySaved.current = false;
       setAppId(app.id);
       setFormData(appToFormData(app));
       setCurrentStep(app.currentStep || 1);
@@ -257,7 +269,6 @@ export default function ApplyLicenceV2() {
 
   const handleSyncFromProfile = async () => {
     if (!appId || syncing) return;
-    hasChanges.current = true;
     setSyncing(true);
     try {
       const r = await syncPersonnelFromProfile(appId);
@@ -283,7 +294,6 @@ export default function ApplyLicenceV2() {
   };
 
   const saveStep = async (patch, nextStep) => {
-    hasChanges.current = true;
     setSaving(true);
     try {
       const body = { currentStep: nextStep, ...patch };
@@ -320,9 +330,36 @@ export default function ApplyLicenceV2() {
     saveStep(patch, currentStep - 1);
   };
 
+  // Explicit, sponsor-initiated save. Together with Submit this is the only action
+  // that "keeps" a brand-new draft — without it the draft is discarded on exit.
+  const handleSaveDraft = async () => {
+    if (!appId || savingDraft) return;
+    const patch = {
+      routes: formData.routes,
+      sponsorSize: formData.sponsorSize || undefined,
+      organisationInfo: formData.organisationInfo,
+      cosRequirements: formData.cosRequirements,
+      authorisingOfficer: formData.authorisingOfficer,
+      keyContact: formData.keyContact,
+      level1Users: formData.level1Users,
+      declaration: formData.declaration,
+    };
+    setSavingDraft(true);
+    try {
+      const r = await saveLicenceV2Draft(appId, { currentStep, ...patch });
+      setFormData(appToFormData(r.data.data));
+      explicitlySaved.current = true;
+      showToast({ message: "Draft saved — you can safely leave and resume later.", variant: "success" });
+    } catch (err) {
+      showToast({ message: err?.response?.data?.message || "Failed to save draft", variant: "danger" });
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
   const handleSubmit = async (patch) => {
     if (submitInFlight.current) return;
-    hasChanges.current = true;
+    explicitlySaved.current = true;
     submitInFlight.current = true;
     setSubmitting(true); setSubmitErrors([]);
     try {
@@ -398,9 +435,19 @@ export default function ApplyLicenceV2() {
                 )}
               </div>
               {appId && (
-                <p className="text-center text-[10px] font-bold text-gray-400 flex items-center justify-center gap-1.5">
-                  <FileText size={11} /> Draft #{appId} — progress saved automatically on each step
-                </p>
+                <div className="flex flex-col items-center gap-2 pt-1 border-t border-gray-100">
+                  <button
+                    onClick={handleSaveDraft}
+                    disabled={savingDraft || saving}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-secondary/5 text-secondary font-black text-xs px-4 py-2 hover:bg-secondary/10 active:scale-95 transition-all disabled:opacity-40"
+                  >
+                    {savingDraft ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                    Save Draft
+                  </button>
+                  <p className="text-center text-[10px] font-bold text-gray-400 flex items-center justify-center gap-1.5">
+                    <FileText size={11} /> Draft #{appId} — your progress is only kept if you Save Draft or Submit
+                  </p>
+                </div>
               )}
             </>
           )}

@@ -1,6 +1,8 @@
 import { Loader2 } from "lucide-react";
 import ProfileSyncBanner from "./ProfileSyncBanner";
 import DatePicker from "../DatePicker";
+import NationalitySelect from "../NationalitySelect";
+import PhoneInput from "../PhoneInput";
 
 const TITLES = ["Mr", "Mrs", "Miss", "Ms", "Dr", "Prof"];
 const IMMIGRATION_STATUSES = [
@@ -50,7 +52,9 @@ export default function Step5AuthorisingOfficer({ data, onChange, onNext, onBack
           </select>
         </Field>
 
-        <div /> {/* spacer */}
+        <Field label="Designation">
+          <input value={ao.designation || ""} onChange={(e) => set("designation", e.target.value)} className={inp} placeholder="e.g. Director, HR Manager" />
+        </Field>
 
         <Field label="First Name" required>
           <input value={ao.firstName || ""} onChange={(e) => set("firstName", e.target.value)} className={inp} placeholder="First name" />
@@ -70,9 +74,14 @@ export default function Step5AuthorisingOfficer({ data, onChange, onNext, onBack
           />
         </Field>
 
-        <Field label="Nationality" required>
-          <input value={ao.nationality || ""} onChange={(e) => set("nationality", e.target.value)} className={inp} placeholder="e.g. British" />
-        </Field>
+        <NationalitySelect
+          name="nationality"
+          label="Nationality"
+          value={ao.nationality || ""}
+          onChange={(e) => set("nationality", e.target.value)}
+          placeholder="Select nationality"
+          required
+        />
 
         <Field label="National Insurance Number" required>
           <input value={ao.niNumber || ""} onChange={(e) => set("niNumber", e.target.value.toUpperCase())} className={inp} placeholder="AB 12 34 56 C" />
@@ -89,9 +98,14 @@ export default function Step5AuthorisingOfficer({ data, onChange, onNext, onBack
           <input type="email" value={ao.email || ""} onChange={(e) => set("email", e.target.value)} className={inp} placeholder="ao@company.com" />
         </Field>
 
-        <Field label="Phone">
-          <input type="tel" value={ao.phone || ""} onChange={(e) => set("phone", e.target.value)} className={inp} placeholder="+44 7700 000000" />
-        </Field>
+        <PhoneInput
+          name="phone"
+          label="Phone"
+          value={ao.phone || ""}
+          onChange={(e) => set("phone", e.target.value)}
+          defaultCountry="GB"
+          placeholder="Phone number"
+        />
       </div>
 
       {/* Convictions */}

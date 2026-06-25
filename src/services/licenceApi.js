@@ -56,8 +56,16 @@ export const deleteLicenceApplicationByAdmin = (id) => api.delete(`/api/admin/li
 export const generateLicenceCredentials = (id, data) => api.post(`/api/admin/licence/${id}/generate-credentials`, data);
 export const resendLicenceCredentials = (id) => api.post(`/api/admin/licence/${id}/resend-credentials`);
 
-// Sponsor: confirm UKVI portal credentials received
+// Sponsor: confirm UKVI portal credentials received (legacy)
 export const confirmSponsorGovCredentials = (id) => api.post(`/api/business/licence/${id}/government-credentials`);
+
+// Sponsor: submit UKVI credentials received via email from UKVI (flow v2)
+export const submitSponsorUkviCredentials = (id, data) =>
+  api.post(`/api/business/licence/${id}/submit-credentials`, data);
+
+// Sponsor: confirm UKVI licence fee payment made on UKVI portal (flow v2)
+export const confirmSponsorUkviPayment = (id) =>
+  api.post(`/api/business/licence/${id}/confirm-payment`);
 
 // Caseworker: government pipeline (Phase 3)
 export const startLicenceReview = (id) => api.post(`/api/caseworker/licence/${id}/start-review`);
@@ -65,6 +73,10 @@ export const startGovRegistration = (id) => api.post(`/api/caseworker/licence/${
 export const completeGovRegistration = (id, data) => api.post(`/api/caseworker/licence/${id}/government-registration/complete`, data);
 export const requestGovCredentials = (id) => api.post(`/api/caseworker/licence/${id}/request-government-credentials`);
 export const recordGovSubmission = (id, data) => api.post(`/api/caseworker/licence/${id}/government-submission`, data);
+
+// Caseworker: confirm physical documents dispatched to Home Office (flow v2)
+export const recordHomeOfficeDispatch = (id, data = {}) =>
+  api.post(`/api/caseworker/licence/${id}/home-office-dispatch`, data);
 
 // Dispatch documents (admin/caseworker → sponsor)
 export const dispatchDocumentToSponsor = (id, formData) =>
@@ -181,6 +193,12 @@ export const uploadLicenceV2AppendixDocument = (appId, docId, file) => {
     { headers: { "Content-Type": "multipart/form-data" } }
   );
 };
+
+export const previewLicenceV2AppendixDocument = (appId, docId) =>
+  api.get(
+    `/api/business/licence/v2/applications/${appId}/appendix-documents/${docId}/file`,
+    { responseType: "blob" }
+  );
 export const getLicenceV2FeePreview = (data) =>
   api.post("/api/business/licence/v2/fee/preview", data);
 export const syncPersonnelFromProfile = (id) =>
@@ -209,6 +227,13 @@ export const deleteComplianceDocument = (id) =>
 export const getEmployeeRecords = () =>
   api.get("/api/business/workers/employee-records");
 
+// Business: download a worker's documents.
+// Server streams a single file when there is one document, or a .zip for 2+.
+export const downloadWorkerDocuments = (candidateId) =>
+  api.get(`/api/business/workers/${candidateId}/documents/download`, {
+    responseType: "blob",
+  });
+
 // ── Intake: Information Form + Document Checklist ────────────────────────────
 
 // Sponsor: get intake summary (form + document checklist)
@@ -235,6 +260,20 @@ export const uploadIntakeDocument = (id, documentKey, file) => {
 // Sponsor: remove an uploaded intake document
 export const deleteIntakeDocument = (id, documentKey) =>
   api.delete(`/api/business/licence/${id}/intake/documents/${documentKey}`);
+
+// Sponsor: view/download an uploaded intake document
+export const viewSponsorIntakeDocument = (id, documentKey, { download = false } = {}) =>
+  api.get(`/api/business/licence/${id}/intake/documents/${documentKey}/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
+
+// Caseworker: view/download an intake document
+export const viewCaseworkerIntakeDocument = (id, documentKey, { download = false } = {}) =>
+  api.get(`/api/caseworker/licence/${id}/intake/documents/${documentKey}/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
 
 // Caseworker: get intake summary for review
 export const getCaseworkerIntakeSummary = (id) =>

@@ -83,7 +83,7 @@ const navSections = [
       { to: "/admin/notifications", label: "Notifications", icon: RiNotification2Line, moduleKey: "admin.dashboard" },
       { to: "/admin/messages",      label: "Messages",      icon: RiMessage2Line,      moduleKey: "admin.messages" },
       { to: "/admin/audit-logs",    label: "Audit Log",     icon: RiHistoryLine,       moduleKey: "admin.audit-logs" },
-      { to: "/admin/settings",      label: "Settings",      icon: RiSettings3Line,     moduleKey: "admin.settings" },
+      { to: "/admin/settings",      label: "Settings",      icon: RiSettings3Line,     moduleKey: "admin.dashboard" },
     ],
   },
 ];

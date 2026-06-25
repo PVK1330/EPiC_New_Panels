@@ -13,7 +13,7 @@
 import React, { useState, useRef } from "react";
 import {
   CheckCircle2, XCircle, AlertCircle, Clock, Upload,
-  FileText, ChevronDown, ChevronUp, RefreshCw, Link2,
+  FileText, ChevronDown, ChevronUp, RefreshCw, Link2, Eye, Loader2,
 } from "lucide-react";
 import {
   uploadIntakeDocument,
@@ -21,6 +21,8 @@ import {
   verifyIntakeDocument,
   rejectIntakeDocument,
   requestIntakeDocumentInfo,
+  viewSponsorIntakeDocument,
+  viewCaseworkerIntakeDocument,
 } from "../../services/licenceApi";
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
@@ -259,6 +261,26 @@ function DocumentRow({ doc, applicationId, viewerRole, onRefresh }) {
   const [expanded, setExpanded] = useState(
     ["rejected", "information_required"].includes(doc.status),
   );
+  const [viewing, setViewing] = useState(false);
+
+  async function handleView(e) {
+    e.stopPropagation();
+    if (viewing) return;
+    setViewing(true);
+    try {
+      const fetcher = viewerRole === "sponsor" ? viewSponsorIntakeDocument : viewCaseworkerIntakeDocument;
+      const res = await fetcher(applicationId, doc.documentKey);
+      const mimeType = res.headers?.["content-type"] || "application/octet-stream";
+      const blob = new Blob([res.data], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch {
+      // silently ignore — server already returns a meaningful HTTP error
+    } finally {
+      setViewing(false);
+    }
+  }
 
   return (
     <div className="border border-gray-200 rounded-lg p-3 bg-white">
@@ -278,6 +300,17 @@ function DocumentRow({ doc, applicationId, viewerRole, onRefresh }) {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <StatusBadge status={doc.status} />
+          {doc.fileName && (
+            <button
+              type="button"
+              onClick={handleView}
+              disabled={viewing}
+              title="Preview document"
+              className="flex items-center justify-center w-7 h-7 rounded-md text-blue-500 hover:bg-blue-50 disabled:opacity-50 transition-colors"
+            >
+              {viewing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+            </button>
+          )}
           {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getEmployeeRecords } from "../../services/licenceApi";
+import { getEmployeeRecords, downloadWorkerDocuments } from "../../services/licenceApi";
 import { motion } from "framer-motion";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -26,6 +26,7 @@ const EmployeeRecords = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employees, setEmployees] = useState([]);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   useEffect(() => {
     getEmployeeRecords()
@@ -34,6 +35,8 @@ const EmployeeRecords = () => {
         setEmployees(
           workers.map((w) => ({
             id: w.id ?? w.candidateId,
+            candidateId: w.candidateId ?? null,
+            documentFiles: Array.isArray(w.documentFiles) ? w.documentFiles : [],
             name: w.name || `${w.candidate?.first_name || ""} ${w.candidate?.last_name || ""}`.trim() || "Worker",
             email: w.email || w.candidate?.email || "",
             phone: w.phone || w.candidate?.mobile || "",
@@ -107,12 +110,69 @@ const EmployeeRecords = () => {
     setShowModal(true);
   };
 
-  const handleDownloadEmployee = (employee) => {
-    showToast({ message: `Downloading records for ${employee.name}…`, variant: "info" });
+  const parseFilename = (disposition, fallback) => {
+    if (!disposition) return fallback;
+    const star = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(disposition);
+    if (star) {
+      try {
+        return decodeURIComponent(star[1].trim().replace(/^["']|["']$/g, ""));
+      } catch {
+        return star[1].trim().replace(/^["']|["']$/g, "");
+      }
+    }
+    const plain = /filename="?([^";]+)"?/i.exec(disposition);
+    return plain ? plain[1].trim() : fallback;
+  };
+
+  const handleDownloadEmployee = async (employee) => {
+    const docCount = employee.documentFiles?.length || 0;
+    if (!employee.candidateId || docCount === 0) {
+      showToast({ message: `No documents available to download for ${employee.name}.`, variant: "warning" });
+      return;
+    }
+    if (downloadingId) return;
+
+    setDownloadingId(employee.id);
+    showToast({
+      message:
+        docCount === 1
+          ? `Downloading document for ${employee.name}…`
+          : `Preparing ${docCount} documents (zip) for ${employee.name}…`,
+      variant: "info",
+    });
+    try {
+      const res = await downloadWorkerDocuments(employee.candidateId);
+      const fallback = docCount > 1 ? `${employee.name}_Documents.zip` : `${employee.name}_document`;
+      const filename = parseFilename(res.headers?.["content-disposition"], fallback);
+      const url = window.URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      let message = "Failed to download documents.";
+      const blob = err?.response?.data;
+      if (blob instanceof Blob) {
+        try {
+          const parsed = JSON.parse(await blob.text());
+          if (parsed?.message) message = parsed.message;
+        } catch {
+          /* keep default message */
+        }
+      } else if (err?.response?.data?.message) {
+        message = err.response.data.message;
+      }
+      showToast({ message, variant: "error" });
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const handleDownloadAll = () => {
-    showToast({ message: "Downloading all documents for " + selectedEmployee?.name + "…", variant: "info" });
+    if (selectedEmployee) handleDownloadEmployee(selectedEmployee);
   };
 
   return (
@@ -284,10 +344,15 @@ const EmployeeRecords = () => {
                         </button>
                         <button
                           onClick={() => handleDownloadEmployee(employee)}
-                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"
-                          title="Download records"
+                          disabled={downloadingId === employee.id}
+                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={
+                            (employee.documentFiles?.length || 0) > 1
+                              ? `Download ${employee.documentFiles.length} documents (zip)`
+                              : "Download records"
+                          }
                         >
-                          <Download size={16} />
+                          <Download size={16} className={downloadingId === employee.id ? "animate-pulse" : ""} />
                         </button>
                       </div>
                     </td>
@@ -401,10 +466,15 @@ const EmployeeRecords = () => {
                 </button>
                 <button
                   onClick={handleDownloadAll}
-                  className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition flex items-center justify-center gap-2"
+                  disabled={downloadingId === selectedEmployee.id || (selectedEmployee.documentFiles?.length || 0) === 0}
+                  className="flex-1 bg-primary hover:bg-primary-dark text-white font-black rounded-xl px-6 py-3 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Download size={16} />
-                  Download All Documents
+                  <Download size={16} className={downloadingId === selectedEmployee.id ? "animate-pulse" : ""} />
+                  {(selectedEmployee.documentFiles?.length || 0) === 0
+                    ? "No Documents"
+                    : (selectedEmployee.documentFiles?.length || 0) > 1
+                    ? `Download All (${selectedEmployee.documentFiles.length}) as ZIP`
+                    : "Download Document"}
                 </button>
               </div>
             </div>
