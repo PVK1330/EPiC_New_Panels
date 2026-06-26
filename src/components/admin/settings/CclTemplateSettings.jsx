@@ -144,10 +144,11 @@ export default function CclTemplateSettings() {
           <p className="text-xs text-gray-400">Create one — until then, issued CCLs use the built-in fallback letter.</p>
         </div>
       ) : (
-        <div className="overflow-hidden border border-gray-100 rounded-3xl">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50/70">
-              <tr className="text-left text-[11px] font-black text-gray-400 uppercase tracking-wider">
+        <div className="overflow-auto max-h-[68vh] border border-gray-100 rounded-3xl">
+          <table className="w-full min-w-0 text-sm">
+            <thead className="sticky top-0 z-10">
+              <tr className="text-left text-[11px] font-black text-gray-400 uppercase tracking-wider bg-gray-50">
+                <th className="px-5 py-3">Sr No</th>
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Applies to</th>
                 <th className="px-5 py-3">Status</th>
@@ -155,8 +156,13 @@ export default function CclTemplateSettings() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {templates.map((tpl) => (
+              {templates.map((tpl, index) => (
                 <tr key={tpl.id} className="hover:bg-gray-50/40">
+                  <td className="px-5 py-3.5">
+                    <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
+                      {index + 1}
+                    </span>
+                  </td>
                   <td className="px-5 py-3.5 font-bold text-secondary">{tpl.name}</td>
                   <td className="px-5 py-3.5 text-gray-600 font-medium">
                     {tpl.visaTypeId

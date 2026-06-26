@@ -392,10 +392,11 @@ const SuperadminDashboard = () => {
               </button>
             </div>
           ) : (
-            <div className="overflow-x-auto flex-1">
-              <table className="w-full text-xs">
-                <thead>
+            <div className="overflow-auto max-h-[68vh] flex-1">
+              <table className="w-full min-w-0 text-xs">
+                <thead className="sticky top-0 z-10">
                   <tr className="bg-gray-50 border-b border-gray-150 text-left text-slate-600 font-bold">
+                    <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest">Sr No</th>
                     <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest">Organization</th>
                     <th className="px-5 py-3 text-[9px] font-black uppercase tracking-widest">Plan</th>
                     <th className="px-5 py-3 text-center text-[9px] font-black uppercase tracking-widest">Users</th>
@@ -404,8 +405,11 @@ const SuperadminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 font-bold text-slate-700">
-                  {recentOrgs.map((org) => (
+                  {recentOrgs.map((org, index) => (
                     <tr key={org.id} className="hover:bg-gray-50/40 transition-colors">
+                      <td className="px-5 py-3">
+                        <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">{index + 1}</span>
+                      </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-xl bg-primary/5 text-primary flex items-center justify-center font-black text-xs border border-primary/10">

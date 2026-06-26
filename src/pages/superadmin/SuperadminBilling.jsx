@@ -17,11 +17,10 @@ import {
   RiAlertLine,
   RiCloseLine,
   RiPrinterLine,
-  RiArrowRightSLine,
-  RiArrowLeftSLine,
 } from 'react-icons/ri';
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
+import Pagination from '../../components/common/Pagination';
 import PageHero, { HeroButton } from '../../components/superadmin/PageHero';
 import useBilling from '../../hooks/useBilling';
 import useDownloads from '../../hooks/useDownloads';
@@ -179,6 +178,7 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, 
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-primary text-white">
+                        <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Sr No</th>
                         <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Description</th>
                         <th className="text-center px-3 py-3 text-[11px] font-bold uppercase tracking-wider">Period</th>
                         <th className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">{taxEnabled ? "Unit Price" : "Amount"}</th>
@@ -188,6 +188,9 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, 
                     </thead>
                     <tbody>
                       <tr className="bg-blue-50/30">
+                        <td className="px-4 py-4 align-top">
+                          <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">1</span>
+                        </td>
                         <td className="px-4 py-4">
                           <p className="font-bold text-secondary text-sm">EPiC HRIS — {plan.name || 'Subscription'} Plan</p>
                           <p className="text-xs text-gray-400 mt-0.5">Payment via {invoice.payment_method || 'N/A'}</p>
@@ -293,7 +296,7 @@ const SuperadminBilling = () => {
   const currency = usePlatformCurrency();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [page, setPage] = useState(1);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [taxRate, setTaxRate] = useState(0);
   const [taxId, setTaxId] = useState(null);
@@ -301,6 +304,7 @@ const SuperadminBilling = () => {
   const {
     invoices,
     invoicesLoading,
+    invoicesPagination,
     fetchInvoices,
     fetchInvoiceById,
     dashboardStats,
@@ -310,8 +314,13 @@ const SuperadminBilling = () => {
 
   const { exportSuperadminFinancials, downloadSuperadminInvoicePdf, busy } = useDownloads();
 
+  // Server-paginated fetch for the ledger — re-runs whenever the page changes.
   useEffect(() => {
-    fetchInvoices();
+    fetchInvoices({ page, limit: ITEMS_PER_PAGE });
+  }, [fetchInvoices, page]);
+
+  // One-time fetch for the headline stat cards + gateway tax config.
+  useEffect(() => {
     fetchDashboardStats();
     getGatewayStatus().then(res => {
       const gw = res.data?.data?.gateway || {};
@@ -319,7 +328,7 @@ const SuperadminBilling = () => {
       setTaxRate(Number.isFinite(rate) && rate > 0 ? rate : 0);
       setTaxId(gw.tax_id || null);
     }).catch(() => {});
-  }, [fetchInvoices, fetchDashboardStats]);
+  }, [fetchDashboardStats]);
 
   const stats = [
     { title: 'Monthly Recurring', subtitle: 'MRR', value: fmtCurrency(dashboardStats?.revenue?.mrr || 0, currency),       icon: RiPulseLine,   bgClass: 'bg-blue-600' },
@@ -328,16 +337,16 @@ const SuperadminBilling = () => {
     { title: 'Active Subscriptions', subtitle: 'Live', value: dashboardStats?.subscriptions?.active ?? '0',               icon: RiBillLine, bgClass: 'bg-emerald-600' },
   ];
 
-  const filteredBilling = invoices.filter(item => {
+  // Rows come pre-paginated from the server; search/status narrow the current
+  // page client-side. The Sr No offset is derived from the live server limit.
+  const pageLimit = invoicesPagination.limit || ITEMS_PER_PAGE;
+  const displayedItems = invoices.filter(item => {
     const matchSearch =
       item.organisation?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = statusFilter === 'All' || item.status === statusFilter.toLowerCase();
     return matchSearch && matchStatus;
   });
-
-  const totalPages = Math.max(1, Math.ceil(filteredBilling.length / ITEMS_PER_PAGE));
-  const paginatedItems = filteredBilling.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleView = async (invoice) => {
     try {
@@ -422,14 +431,14 @@ const SuperadminBilling = () => {
                 type="text"
                 placeholder="Search invoice or org…"
                 value={searchTerm}
-                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
                 className="pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-secondary w-48 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-gray-300"
               />
             </div>
             {/* Status filter */}
             <select
               value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
               className="py-1.5 pl-3 pr-7 bg-white border border-gray-200 rounded-lg text-xs font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
               {['All', 'Paid', 'Pending', 'Overdue', 'Failed'].map(s => (
@@ -440,10 +449,11 @@ const SuperadminBilling = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50/60 text-[10px] text-gray-400 font-black uppercase tracking-widest border-b border-gray-100">
+        <div className="overflow-auto max-h-[68vh]">
+          <table className="w-full min-w-0 text-sm">
+            <thead className="sticky top-0 z-10 bg-gray-50 text-[10px] text-gray-400 font-black uppercase tracking-widest border-b border-gray-100">
               <tr>
+                <th scope="col" className="px-5 py-3 text-left">Sr No</th>
                 <th scope="col" className="px-5 py-3 text-left">Invoice</th>
                 <th scope="col" className="px-5 py-3 text-left">Organisation</th>
                 <th scope="col" className="px-5 py-3 text-left">Plan</th>
@@ -459,22 +469,22 @@ const SuperadminBilling = () => {
               {invoicesLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
-                    {Array.from({ length: taxRate > 0 ? 9 : 7 }).map((__, j) => (
+                    {Array.from({ length: taxRate > 0 ? 10 : 8 }).map((__, j) => (
                       <td key={j} className="px-5 py-4">
                         <div className="h-3 bg-gray-100 rounded animate-pulse" />
                       </td>
                     ))}
                   </tr>
                 ))
-              ) : paginatedItems.length === 0 ? (
+              ) : displayedItems.length === 0 ? (
                 <tr>
-                  <td colSpan={taxRate > 0 ? 9 : 7} className="py-16 text-center">
+                  <td colSpan={taxRate > 0 ? 10 : 8} className="py-16 text-center">
                     <RiBillLine size={32} className="mx-auto text-gray-200 mb-3" />
                     <p className="text-sm font-bold text-gray-300">No invoices found</p>
                   </td>
                 </tr>
               ) : (
-                paginatedItems.map((item, idx) => {
+                displayedItems.map((item, idx) => {
                   const net = parseFloat(item.amount || 0);
                   const vat = taxRate > 0 ? parseFloat((net * (taxRate / 100)).toFixed(2)) : 0;
                   const total = net + vat;
@@ -488,6 +498,11 @@ const SuperadminBilling = () => {
                       transition={{ delay: idx * 0.02 }}
                       className="hover:bg-blue-50/20 transition-colors group"
                     >
+                      <td className="px-5 py-3.5">
+                        <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
+                          {(page - 1) * pageLimit + idx + 1}
+                        </span>
+                      </td>
                       <td className="px-5 py-3.5">
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100 group-hover:border-primary/20 group-hover:bg-primary/5 group-hover:text-primary transition-all">
                           <RiBillLine size={11} />
@@ -558,38 +573,14 @@ const SuperadminBilling = () => {
         </div>
 
         {/* Pagination */}
-        <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
-          <p className="text-xs font-bold text-gray-400">
-            {filteredBilling.length === 0 ? 'No results' : `Showing ${Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredBilling.length)}–${Math.min(currentPage * ITEMS_PER_PAGE, filteredBilling.length)} of ${filteredBilling.length}`}
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-secondary hover:bg-white disabled:opacity-30 transition-all"
-            >
-              <RiArrowLeftSLine size={16} />
-            </button>
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-              const page = i + 1;
-              return (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${currentPage === page ? 'bg-primary text-white shadow-sm' : 'border border-gray-200 text-gray-400 hover:bg-white hover:text-secondary'}`}
-                >
-                  {page}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-secondary hover:bg-white disabled:opacity-30 transition-all"
-            >
-              <RiArrowRightSLine size={16} />
-            </button>
-          </div>
+        <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30">
+          <Pagination
+            page={page}
+            totalPages={invoicesPagination.totalPages}
+            total={invoicesPagination.total}
+            limit={pageLimit}
+            onPageChange={setPage}
+          />
         </div>
       </motion.div>
 

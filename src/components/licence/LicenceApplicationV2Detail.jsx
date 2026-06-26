@@ -477,11 +477,12 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
         {(app.cosRequirements || []).length === 0 ? (
           <p className="text-sm text-gray-400">No CoS requirements listed.</p>
         ) : (
-          <div className="overflow-x-auto -mx-1">
-            <table className="w-full text-sm min-w-[520px]">
-              <thead>
+          <div className="overflow-auto max-h-[68vh] -mx-1">
+            <table className="w-full text-sm min-w-[560px]">
+              <thead className="sticky top-0 z-10">
                 <tr className="bg-gray-50 rounded-lg">
-                  <th className="text-left px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider rounded-l-lg">SOC</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider rounded-l-lg">Sr No</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider">SOC</th>
                   <th className="text-left px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider">Role Title</th>
                   <th className="text-left px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider">Salary</th>
                   <th className="text-left px-3 py-2 text-[10px] font-black text-gray-400 uppercase tracking-wider">Duration</th>
@@ -491,6 +492,11 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
               <tbody>
                 {(app.cosRequirements || []).map((c, i) => (
                   <tr key={c.id} className={`border-b border-gray-50 last:border-0 ${i % 2 === 0 ? "" : "bg-gray-50/40"}`}>
+                    <td className="px-3 py-2.5">
+                      <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
+                        {i + 1}
+                      </span>
+                    </td>
                     <td className="px-3 py-2.5">
                       <span className="text-[11px] font-black text-secondary bg-gray-100 px-2 py-0.5 rounded font-mono">
                         {c.socCode || "—"}

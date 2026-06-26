@@ -26,6 +26,7 @@ import {
 import ComplianceStatusBadge from "./ComplianceStatusBadge";
 import ComplianceReviewModal from "./ComplianceReviewModal";
 import ComplianceTimeline from "./ComplianceTimeline";
+import Pagination from "../common/Pagination";
 
 const STATUS_FILTERS = ["All", "Submitted", "Under Review", "Information Requested", "Approved", "Rejected"];
 const REVIEWABLE = ["Submitted", "Under Review"];
@@ -42,6 +43,8 @@ export default function ComplianceReviewQueue({ title = "Compliance Review", sub
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
 
   const [detail, setDetail] = useState({ open: false, loading: false, record: null, history: [] });
   const [review, setReview] = useState({ open: false, action: "approve", record: null });
@@ -52,21 +55,36 @@ export default function ComplianceReviewQueue({ title = "Compliance Review", sub
   const fetchRecords = async () => {
     try {
       setLoading(true);
-      const params = statusFilter === "All" ? {} : { status: statusFilter };
+      const params = { page, limit: pagination.limit };
+      if (statusFilter !== "All") params.status = statusFilter;
       const res = await listReview(entity, params);
-      setRecords(res?.data?.data || []);
+      const rows = res?.data?.data || [];
+      setRecords(rows);
+      const meta = res?.data?.pagination;
+      // The generic compliance-review engine paginates server-side; the
+      // compliance-documents engine does not return pagination meta — fall back
+      // to a single page so the control simply hides itself.
+      setPagination(
+        meta || { total: rows.length, page: 1, limit: pagination.limit, totalPages: 1 }
+      );
     } catch (err) {
       showToast({ message: "Failed to load compliance items", variant: "danger" });
       setRecords([]);
+      setPagination({ total: 0, page: 1, limit: pagination.limit, totalPages: 0 });
     } finally {
       setLoading(false);
     }
   };
 
+  // Reset to the first page whenever the entity or status filter changes.
+  useEffect(() => {
+    setPage(1);
+  }, [entity, statusFilter]);
+
   useEffect(() => {
     fetchRecords();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entity, statusFilter]);
+  }, [entity, statusFilter, page]);
 
   const refreshAll = () => {
     fetchRecords();
@@ -174,23 +192,30 @@ export default function ComplianceReviewQueue({ title = "Compliance Review", sub
         <>
           {/* Desktop Table View */}
           <div className="hidden md:block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <table className="w-full text-left table-auto">
-              <thead>
-                <tr className="bg-gray-50/75 border-b border-gray-100">
-                  {["Sponsor", "Item", "Status", "Submitted", "Reviewer", "Actions"].map((h) => (
-                    <th key={h} className={`px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400 ${h === "Actions" ? "text-right" : ""}`}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filtered.map((r) => {
-                  const status = recordStatus(entity, r);
-                  const canReview = REVIEWABLE.includes(status);
-                  return (
-                    <tr key={r.id} className="hover:bg-gray-50/50 transition-colors group">
-                      <td className="px-6 py-4">
+            <div className="overflow-auto max-h-[68vh]">
+              <table className="w-full min-w-0 text-left table-auto">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400">Sr No</th>
+                    {["Sponsor", "Item", "Status", "Submitted", "Reviewer", "Actions"].map((h) => (
+                      <th key={h} className={`px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400 ${h === "Actions" ? "text-right" : ""}`}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filtered.map((r, idx) => {
+                    const status = recordStatus(entity, r);
+                    const canReview = REVIEWABLE.includes(status);
+                    return (
+                      <tr key={r.id} className="hover:bg-gray-50/50 transition-colors group">
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
+                            {(page - 1) * pagination.limit + idx + 1}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
                         <p className="text-sm font-black text-secondary group-hover:text-primary transition-colors">
                           {fullName(r.sponsor) || `Sponsor #${r.sponsorId}`}
                         </p>
@@ -252,11 +277,12 @@ export default function ComplianceReviewQueue({ title = "Compliance Review", sub
                           )}
                         </div>
                       </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Mobile Card View */}
@@ -341,6 +367,15 @@ export default function ComplianceReviewQueue({ title = "Compliance Review", sub
               );
             })}
           </div>
+
+          {/* Server-side pagination (generic compliance-review entities) */}
+          <Pagination
+            page={page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={setPage}
+          />
         </>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center shadow-sm">

@@ -8,9 +8,10 @@ import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 import useDownloads from "../../hooks/useDownloads";
 import { formatDateLong } from "../../utils/datetime";
 import DatePicker from "../../components/DatePicker";
+import Pagination from "../../components/common/Pagination";
 
 const DOC_TYPES = DOCUMENT_TYPE_OPTIONS;
-
+const PAGE_SIZE = 100;
 
 
 
@@ -44,6 +45,8 @@ export default function CaseworkerDocuments() {
   const [allDocuments, setAllDocuments] = useState([]);
   const [reviewDocuments, setReviewDocuments] = useState([]);
   const [missingDocuments, setMissingDocuments] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: PAGE_SIZE });
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -66,7 +69,6 @@ export default function CaseworkerDocuments() {
 
   useEffect(() => {
     fetchCases();
-    fetchAllDocuments();
     fetchReviewDocuments();
     fetchMissingDocuments();
   }, []);
@@ -79,11 +81,17 @@ export default function CaseworkerDocuments() {
 
   useEffect(() => {
     if (caseId) {
-      fetchAllDocuments();
+      setPage(1);
       fetchReviewDocuments();
       fetchMissingDocuments();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId]);
+
+  useEffect(() => {
+    fetchAllDocuments(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, caseId]);
 
   const fetchCases = async () => {
     try {
@@ -98,24 +106,36 @@ export default function CaseworkerDocuments() {
     }
   };
 
-  const fetchAllDocuments = async () => {
+  const fetchAllDocuments = async (pageArg = page) => {
     try {
       setLoading(true);
       if (!caseId) {
         setAllDocuments([]);
+        setPagination({ total: 0, page: 1, limit: PAGE_SIZE });
         return;
       }
       const response = await api.get(`/api/caseworker/documents/case/${caseId}`, {
         params: {
-          limit: 100,
-          page: 1
-        }
+          limit: PAGE_SIZE,
+          page: pageArg,
+        },
       });
       const documents = response.data.data.documents || [];
       setAllDocuments(documents);
+      const meta = response.data.data.pagination;
+      if (meta) {
+        setPagination({
+          total: meta.total ?? documents.length,
+          page: meta.page ?? pageArg,
+          limit: meta.limit ?? PAGE_SIZE,
+        });
+      } else {
+        setPagination({ total: documents.length, page: pageArg, limit: PAGE_SIZE });
+      }
     } catch (error) {
       console.error("Error fetching documents:", error);
       setAllDocuments([]);
+      setPagination({ total: 0, page: 1, limit: PAGE_SIZE });
     } finally {
       setLoading(false);
     }
@@ -128,12 +148,12 @@ export default function CaseworkerDocuments() {
         setReviewDocuments([]);
         return;
       }
-      
+
       const response = await api.get(`/api/caseworker/documents/case/${caseId}`);
       const documents = response.data.data.documents || [];
-      
+
       // Filter for pending review (uploaded status)
-      const pendingDocs = documents.filter(d => 
+      const pendingDocs = documents.filter(d =>
         d.status === 'uploaded'
       );
       setReviewDocuments(pendingDocs);
@@ -149,26 +169,26 @@ export default function CaseworkerDocuments() {
         setMissingDocuments([]);
         return;
       }
-      
+
       const selectedCase = cases.find(c => c.id.toString() === caseId.toString());
       if (!selectedCase) {
         setMissingDocuments([]);
         return;
       }
-      
+
       try {
         const response = await getCaseChecklist(selectedCase.id);
         if (response.data?.status === 'success' && response.data.data) {
           const checklist = response.data.data;
           const checklistItems = checklist.checklist ? Object.values(checklist.checklist).flat() : [];
-          
+
           const missingItems = checklistItems.filter(item => item.status === 'missing').map(item => ({
             ...item,
             caseId: selectedCase.id,
             caseIdDisplay: selectedCase.caseId,
             candidateName: selectedCase.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : 'Unknown',
           }));
-          
+
           setMissingDocuments(missingItems);
         } else {
           setMissingDocuments([]);
@@ -422,6 +442,9 @@ export default function CaseworkerDocuments() {
     return `${c.caseId} — ${candidateName}`;
   };
 
+  const totalPages = Math.max(1, Math.ceil((pagination.total || 0) / (pagination.limit || PAGE_SIZE)));
+  const pageClamped = Math.min(page, totalPages);
+
   return (
     <div className="space-y-8 pb-10 animate-in fade-in duration-500">
       <div>
@@ -648,10 +671,13 @@ export default function CaseworkerDocuments() {
           </button>
         </div>
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[68vh]">
             <table className="w-full min-w-0">
-              <thead>
+              <thead className="sticky top-0 z-10">
                 <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="py-3 px-4 text-left text-[10px] font-black uppercase tracking-wider text-gray-500 whitespace-nowrap">
+                    Sr No
+                  </th>
                   {[
                     "Document name",
                     "Type",
@@ -675,19 +701,24 @@ export default function CaseworkerDocuments() {
               <tbody className="divide-y divide-gray-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-8 text-center">
+                    <td colSpan={10} className="px-6 py-8 text-center">
                       <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </td>
                   </tr>
                 ) : allDocuments.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-sm font-bold text-gray-500">
+                    <td colSpan={10} className="px-6 py-8 text-center text-sm font-bold text-gray-500">
                       No documents found
                     </td>
                   </tr>
                 ) : (
-                  allDocuments.map((d) => (
+                  allDocuments.map((d, idx) => (
                     <tr key={d.id} className="hover:bg-gray-50/80">
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
+                          {(page - 1) * pagination.limit + idx + 1}
+                        </span>
+                      </td>
                       <td className="py-3 px-4 text-sm font-bold text-gray-900">{d.userFileName || d.documentName}</td>
                       <td className="py-3 px-4">
                         <span
@@ -727,6 +758,17 @@ export default function CaseworkerDocuments() {
               </tbody>
             </table>
           </div>
+          {totalPages > 1 && (
+            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/80">
+              <Pagination
+                page={pageClamped}
+                totalPages={totalPages}
+                total={pagination.total}
+                limit={pagination.limit || PAGE_SIZE}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
         </div>
       </section>
 

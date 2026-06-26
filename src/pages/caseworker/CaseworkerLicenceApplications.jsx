@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShieldCheck, Search, Eye, Download, Building2, Mail, Phone, AlertCircle,
+  ShieldCheck, Search, Eye, EyeOff, Download, Building2, Mail, Phone, AlertCircle,
   Check, X, FileText, MessageSquare, Loader2, Play, Globe, Key, Send,
-  ClipboardCheck, Calendar, Landmark, Hash, ExternalLink, Upload,
+  ClipboardCheck, Calendar, Landmark, Hash, ExternalLink, Upload, RefreshCw, BadgeCheck,
 } from "lucide-react";
 import api from "../../services/api";
+import socketService from "../../services/socket.service";
 import {
   downloadCaseworkerLicenceDocument,
   startLicenceReview,
@@ -17,6 +18,9 @@ import {
   getCaseworkerIntakeSummary,
   getIntakeReadiness,
   dispatchDocumentToCaseworker,
+  getCaseworkerSubmittedCredentials,
+  verifyCaseworkerCredentials,
+  requestCaseworkerCredentialsResubmission,
 } from "../../services/licenceApi";
 import { triggerDownload } from "../../services/documentApi";
 import LicenceStages from "../../components/licence/LicenceStages";
@@ -89,6 +93,12 @@ const CaseworkerLicenceApplications = () => {
   const [cwDispatchFile, setCwDispatchFile] = useState(null);
   const [cwDispatchLoading, setCwDispatchLoading] = useState(false);
 
+  // Sponsor-submitted credentials view
+  const [submittedCreds,      setSubmittedCreds]      = useState(null);
+  const [credsLoading,        setCredsLoading]        = useState(false);
+  const [showCredsPassword,   setShowCredsPassword]   = useState(false);
+  const [credsActionLoading,  setCredsActionLoading]  = useState(false);
+
   // ── Data fetching ────────────────────────────────────────────────────────────
   const fetchApplications = async () => {
     try {
@@ -103,6 +113,13 @@ const CaseworkerLicenceApplications = () => {
   };
 
   useEffect(() => { fetchApplications(); }, []);
+
+  // Re-fetch list when any licence stage updates so the caseworker panel
+  // reflects the new state without a manual refresh.
+  useEffect(() => {
+    socketService.on("licence:stage_updated", fetchApplications);
+    return () => socketService.off("licence:stage_updated", fetchApplications);
+  }, []);
 
   // Reset modal sub-state when a different app is selected
   useEffect(() => {
@@ -121,6 +138,24 @@ const CaseworkerLicenceApplications = () => {
         setIntakeReadiness(readRes?.data?.data || readRes?.data || null);
       } catch { /* ignore */ }
       finally { if (active) setIntakeLoading(false); }
+    })();
+    return () => { active = false; };
+  }, [selectedApp?.id]);
+
+  // Fetch sponsor-submitted credentials whenever the selected app is in the credentials stage
+  useEffect(() => {
+    if (!selectedApp?.id) { setSubmittedCreds(null); return; }
+    setSubmittedCreds(null);
+    setShowCredsPassword(false);
+    let active = true;
+    (async () => {
+      try {
+        setCredsLoading(true);
+        const res = await getCaseworkerSubmittedCredentials(selectedApp.id).catch(() => null);
+        if (active) setSubmittedCreds(res?.data?.data || null);
+      } finally {
+        if (active) setCredsLoading(false);
+      }
     })();
     return () => { active = false; };
   }, [selectedApp?.id]);
@@ -613,7 +648,7 @@ const CaseworkerLicenceApplications = () => {
                   <div>
                     {/* Sub-tabs */}
                     <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit mb-4">
-                      {[{ id: "govpipeline", label: "Pipeline Actions" }, { id: "intake", label: "Intake & Documents" }, { id: "dispatch", label: "Send Document" }].map(({ id, label }) => (
+                      {[{ id: "govpipeline", label: "Pipeline Actions" }, { id: "credentials", label: "Credentials" }, { id: "intake", label: "Intake & Documents" }, { id: "dispatch", label: "Send Document" }].map(({ id, label }) => (
                         <button
                           key={id}
                           onClick={() => setIntakeTab(id)}
@@ -711,6 +746,109 @@ const CaseworkerLicenceApplications = () => {
                             <p className="text-xs font-bold text-orange-800">
                               The application has been submitted to UKVI. Awaiting their decision — typically 8–12 weeks. No action required at this stage.
                             </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Sponsor-submitted UKVI Credentials */}
+                    {intakeTab === "credentials" && (
+                      <div className="rounded-xl border border-violet-100 bg-violet-50/60 p-4 space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Key className="text-violet-500 shrink-0" size={14} />
+                          <p className="text-[10px] font-black uppercase tracking-widest text-violet-500">Sponsor-Submitted UKVI Credentials</p>
+                        </div>
+
+                        {credsLoading ? (
+                          <div className="flex items-center gap-2 text-xs text-gray-400">
+                            <Loader2 size={14} className="animate-spin" /> Loading…
+                          </div>
+                        ) : !submittedCreds ? (
+                          <div className="rounded-xl border border-violet-100 bg-white px-4 py-3 text-xs text-gray-500">
+                            The sponsor has not yet submitted their UKVI portal credentials.
+                            <p className="mt-1 text-[10px] text-gray-400">Use Pipeline Actions → Send Credentials to Sponsor to prompt them.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="text-[10px] font-black uppercase tracking-widest text-green-600 flex items-center gap-1">
+                                <Check size={11} /> Submitted {submittedCreds.submittedAt ? new Date(submittedCreds.submittedAt).toLocaleString("en-GB") : ""}
+                              </div>
+                              {submittedCreds.caseworkerVerifiedAt && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-[10px] font-black">
+                                  <BadgeCheck size={11} /> Verified
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Portal User ID */}
+                            <div className="rounded-xl bg-white border border-violet-100 px-4 py-3">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">UKVI Portal User ID</p>
+                              <p className="text-sm font-black text-secondary">{submittedCreds.ukviPortalUserId || "—"}</p>
+                            </div>
+
+                            {/* Password */}
+                            <div className="rounded-xl bg-white border border-violet-100 px-4 py-3">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">UKVI Portal Password</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-black text-secondary flex-1 break-all">
+                                  {showCredsPassword ? (submittedCreds.ukviPortalPassword || "—") : "••••••••"}
+                                </p>
+                                <button
+                                  onClick={() => setShowCredsPassword((v) => !v)}
+                                  className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                                >
+                                  {showCredsPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            {submittedCreds.caseworkerVerifiedAt ? (
+                              <div className="flex items-center gap-2 rounded-xl bg-green-50 border border-green-200 px-4 py-2.5 text-xs font-black text-green-700">
+                                <BadgeCheck size={15} />
+                                Credentials verified{submittedCreds.caseworkerVerifiedAt ? ` on ${new Date(submittedCreds.caseworkerVerifiedAt).toLocaleString("en-GB")}` : ""}. Sponsor has been notified.
+                              </div>
+                            ) : (
+                              <div className="flex gap-2 pt-1">
+                                <button
+                                  disabled={credsActionLoading}
+                                  onClick={async () => {
+                                    try {
+                                      setCredsActionLoading(true);
+                                      await verifyCaseworkerCredentials(selectedApp.id);
+                                      const res = await getCaseworkerSubmittedCredentials(selectedApp.id).catch(() => null);
+                                      setSubmittedCreds(res?.data?.data || null);
+                                      showToast({ message: "Credentials verified — sponsor notified", variant: "success" });
+                                      fetchApplications();
+                                    } catch {
+                                      showToast({ message: "Failed to verify credentials", variant: "danger" });
+                                    } finally { setCredsActionLoading(false); }
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-600 text-white text-xs font-black py-2.5 hover:bg-green-700 disabled:opacity-50 transition-colors"
+                                >
+                                  {credsActionLoading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                                  Mark as Verified
+                                </button>
+                                <button
+                                  disabled={credsActionLoading}
+                                  onClick={async () => {
+                                    try {
+                                      setCredsActionLoading(true);
+                                      await requestCaseworkerCredentialsResubmission(selectedApp.id);
+                                      setSubmittedCreds(null);
+                                      showToast({ message: "Sponsor notified to resubmit credentials", variant: "success" });
+                                    } catch {
+                                      showToast({ message: "Failed to send resubmission request", variant: "danger" });
+                                    } finally { setCredsActionLoading(false); }
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 text-orange-700 text-xs font-black py-2.5 hover:bg-orange-100 disabled:opacity-50 transition-colors"
+                                >
+                                  <RefreshCw size={13} />
+                                  Request Resubmission
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

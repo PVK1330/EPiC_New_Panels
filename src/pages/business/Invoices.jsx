@@ -4,6 +4,7 @@ import { LayoutDashboard, FileText, DollarSign, Search, Filter, Download, Eye, C
 import { getBusinessPayments } from "../../services/businessProfileApi";
 import { formatDate } from "../../utils/datetime";
 import { useToast } from "../../context/ToastContext";
+import Pagination from "../../components/common/Pagination";
 
 const money = (n) => `£${Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -14,11 +15,15 @@ const Invoices = () => {
   const [invoices, setInvoices] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [downloading, setDownloading] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
 
   useEffect(() => {
     const load = async () => {
-      const res = await getBusinessPayments().catch(() => null);
+      const res = await getBusinessPayments({ page, limit: pagination.limit }).catch(() => null);
       const rows = res?.data?.data?.payments || [];
+      const meta = res?.data?.data?.pagination;
+      if (meta) setPagination((prev) => ({ ...prev, ...meta }));
       setInvoices(
         rows.map((p) => ({
           id: p.id,
@@ -35,7 +40,7 @@ const Invoices = () => {
       );
     };
     load();
-  }, []);
+  }, [page, pagination.limit]);
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -155,10 +160,11 @@ const Invoices = () => {
             <p className="text-sm font-black text-gray-400">No invoices found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
+          <div className="overflow-auto max-h-[68vh]">
+            <table className="w-full min-w-0">
+              <thead className="sticky top-0 z-10">
                 <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Sr No</th>
                   <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Invoice ID</th>
                   <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Case Ref</th>
                   <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Description</th>
@@ -169,8 +175,11 @@ const Invoices = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredInvoices.map((invoice) => (
+                {filteredInvoices.map((invoice, idx) => (
                   <tr key={invoice.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition">
+                    <td className="px-3 py-2">
+                      <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">{(page - 1) * pagination.limit + idx + 1}</span>
+                    </td>
                     <td className="px-3 py-2 text-sm font-black text-secondary">{invoice.invoiceId}</td>
                     <td className="px-3 py-2 text-xs font-bold text-gray-600">{invoice.caseRef}</td>
                     <td className="px-3 py-2 text-xs font-bold text-gray-600">{invoice.case}</td>
@@ -205,6 +214,17 @@ const Invoices = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {pagination.totalPages > 1 && (
+          <div className="px-5 pb-5 pt-1">
+            <Pagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              limit={pagination.limit}
+              onPageChange={setPage}
+            />
           </div>
         )}
       </motion.div>

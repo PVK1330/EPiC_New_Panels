@@ -57,6 +57,7 @@ import {
 import { formatDate, formatDateTime } from "../../utils/datetime";
 import { useToast } from "../../context/ToastContext";
 import { getBusinessProfile } from "../../services/businessProfileApi";
+import socketService from "../../services/socket.service";
 import PhoneInput from "../../components/PhoneInput";
 import CountrySelect from "../../components/CountrySelect";
 
@@ -292,6 +293,31 @@ const LicenceProcess = () => {
     return () => {
       active = false;
     };
+  }, []);
+
+  // Re-fetch whenever a stage completes or the licence status changes so the
+  // sponsor never needs to manually refresh the page.
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        const list = await listLicenceV2Applications();
+        const apps = list?.data?.data || [];
+        if (!apps.length) return;
+        const latest = apps.reduce((a, b) => (Number(b.id) > Number(a.id) ? b : a), apps[0]);
+        const isV2 = latest.applicationVersion === 2;
+        const [full, stages] = await Promise.all([
+          isV2 ? getLicenceV2Application(latest.id).catch(() => null) : Promise.resolve(null),
+          getLicenceStages("sponsor", latest.id).catch(() => null),
+        ]);
+        setApp(full?.data?.data || latest);
+        setStagesData(stages?.data?.data || null);
+      } catch {
+        /* silent — stale data is better than an error banner on background refresh */
+      }
+    };
+
+    socketService.on("licence:stage_updated", refresh);
+    return () => socketService.off("licence:stage_updated", refresh);
   }, []);
 
   const activeTab = useMemo(() => {

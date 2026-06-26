@@ -26,12 +26,11 @@ import {
   RiAlertLine,
   RiRefundLine,
   RiCalendarLine,
-  RiArrowLeftSLine,
-  RiArrowRightSLine,
   RiReceiptLine,
 } from 'react-icons/ri';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import Pagination from '../../components/common/Pagination';
 import PageHero, { HeroButton, HeroGhostButton } from '../../components/superadmin/PageHero';
 import { formatDate, formatDateTime } from '../../utils/datetime';
 import { formatCurrencyExact } from '../../utils/currencyFormatter';
@@ -178,6 +177,7 @@ function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRat
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-primary text-white">
+                        <th scope="col" className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Sr No</th>
                         <th scope="col" className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Description</th>
                         <th scope="col" className="text-center px-3 py-3 text-[11px] font-bold uppercase tracking-wider">Gateway Ref</th>
                         {taxEnabled && <th scope="col" className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">VAT ({taxRate}%)</th>}
@@ -186,6 +186,9 @@ function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRat
                     </thead>
                     <tbody>
                       <tr className="bg-blue-50/20">
+                        <td className="px-4 py-4 align-top">
+                          <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">{0 + 1}</span>
+                        </td>
                         <td className="px-4 py-4">
                           <p className="font-bold text-secondary text-sm">EPiC HRIS — Subscription Payment</p>
                           {txn.invoice?.invoice_number && (
@@ -316,6 +319,8 @@ const SuperadminPayments = () => {
     webhook_secret: '',
   });
 
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: ITEMS_PER_PAGE, totalPages: 0 });
+
   const {
     transactions,
     transactionsLoading,
@@ -333,11 +338,40 @@ const SuperadminPayments = () => {
 
   const { downloadTransactionReceiptPdf, busy } = useDownloads();
 
+  // Map the active tab + status dropdown onto the single `status` param the
+  // backend understands. The Refunds tab is always refunded-only; on the
+  // Transactions tab a concrete status filter narrows the server query.
+  const serverStatus =
+    activeTab === 'Refunds'
+      ? 'refunded'
+      : statusFilter !== 'All'
+        ? statusFilter.toLowerCase()
+        : undefined;
+
+  // Server-side paginated fetch. Page/tab/status drive the request; the
+  // returned pagination meta feeds the Sr No offset and the pager.
   useEffect(() => {
-    fetchTransactions();
+    let cancelled = false;
+    (async () => {
+      const params = { page: currentPage, limit: ITEMS_PER_PAGE };
+      if (serverStatus) params.status = serverStatus;
+      const res = await fetchTransactions(params);
+      if (!cancelled && res?.ok && res.pagination) {
+        setPagination({
+          total: res.pagination.total ?? 0,
+          page: res.pagination.page ?? currentPage,
+          limit: res.pagination.limit ?? ITEMS_PER_PAGE,
+          totalPages: res.pagination.totalPages ?? 0,
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [fetchTransactions, currentPage, serverStatus]);
+
+  useEffect(() => {
     fetchGatewayStatus();
     fetchDashboardStats();
-  }, [fetchTransactions, fetchGatewayStatus, fetchDashboardStats]);
+  }, [fetchGatewayStatus, fetchDashboardStats]);
 
   const stats = [
     { title: 'Gross Volume',    value: fmtGbp(dashboardStats?.transactions?.grossVolume  || 0, currency), icon: RiMoneyPoundCircleLine, bgClass: 'bg-blue-600',    delay: 0 },
@@ -346,22 +380,16 @@ const SuperadminPayments = () => {
     { title: 'Refund Rate',     value: `${dashboardStats?.transactions?.refundRate    || '0'}%`,           icon: RiExchangeLine,       bgClass: 'bg-amber-500',   delay: 0.15 },
   ];
 
-  const filteredData = transactions
-    .filter(t => {
-      if (activeTab === 'Transactions') return t.status !== 'refunded';
-      if (activeTab === 'Refunds')      return t.status === 'refunded';
-      return false;
-    })
-    .filter(t => {
-      const matchSearch = !searchTerm ||
-        t.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.organisation?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchStatus = statusFilter === 'All' || t.status === statusFilter.toLowerCase();
-      return matchSearch && matchStatus;
-    });
-
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / ITEMS_PER_PAGE));
-  const pageData = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  // Search remains client-side over the current server page (the API has no
+  // free-text search param). Tab/status are already applied server-side.
+  const pageData = transactions.filter(t => {
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      t.reference?.toLowerCase().includes(q) ||
+      t.organisation?.name?.toLowerCase().includes(q)
+    );
+  });
 
   const handleExport = async () => {
     if (exporting) return;
@@ -495,10 +523,11 @@ const SuperadminPayments = () => {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto flex-1">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50/60 text-[10px] text-gray-400 font-black border-b border-gray-100 uppercase tracking-widest">
+          <div className="overflow-auto max-h-[68vh] flex-1">
+            <table className="w-full min-w-0 text-sm">
+              <thead className="sticky top-0 z-10 bg-gray-50 text-[10px] text-gray-400 font-black border-b border-gray-100 uppercase tracking-widest">
                 <tr>
+                  <th scope="col" className="px-5 py-3 text-left">Sr No</th>
                   <th scope="col" className="px-5 py-3 text-left">Reference</th>
                   <th scope="col" className="px-5 py-3 text-left">Organisation</th>
                   <th scope="col" className="px-5 py-3 text-right">Amount</th>
@@ -512,7 +541,7 @@ const SuperadminPayments = () => {
                 {transactionsLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
-                      {Array.from({ length: 7 }).map((__, j) => (
+                      {Array.from({ length: 8 }).map((__, j) => (
                         <td key={j} className="px-5 py-4">
                           <div className="h-3 bg-gray-100 rounded animate-pulse" />
                         </td>
@@ -521,7 +550,7 @@ const SuperadminPayments = () => {
                   ))
                 ) : pageData.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-16 text-center">
+                    <td colSpan={8} className="py-16 text-center">
                       <RiReceiptLine size={32} className="mx-auto text-gray-200 mb-3" />
                       <p className="text-sm font-bold text-gray-300">No transactions found</p>
                     </td>
@@ -535,6 +564,11 @@ const SuperadminPayments = () => {
                       transition={{ delay: idx * 0.02 }}
                       className="hover:bg-blue-50/20 transition-colors group cursor-pointer"
                     >
+                      <td className="px-5 py-3.5">
+                        <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
+                          {(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}
+                        </span>
+                      </td>
                       <td className="px-5 py-3.5">
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100 group-hover:border-primary/20 group-hover:bg-primary/5 group-hover:text-primary transition-all font-mono">
                           {formatRef(txn.reference)}
@@ -597,22 +631,15 @@ const SuperadminPayments = () => {
             </table>
           </div>
 
-          {/* Pagination */}
-          <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
-            <p className="text-xs font-bold text-gray-400">
-              {filteredData.length === 0 ? 'No results' : `Showing ${Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredData.length)}–${Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} of ${filteredData.length}`}
-            </p>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-secondary hover:bg-white disabled:opacity-30 transition-all">
-                <RiArrowLeftSLine size={16} />
-              </button>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
-                <button key={p} onClick={() => setCurrentPage(p)} className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${currentPage === p ? 'bg-primary text-white shadow-sm' : 'border border-gray-200 text-gray-400 hover:bg-white hover:text-secondary'}`}>{p}</button>
-              ))}
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-secondary hover:bg-white disabled:opacity-30 transition-all">
-                <RiArrowRightSLine size={16} />
-              </button>
-            </div>
+          {/* Pagination (server-side) */}
+          <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30">
+            <Pagination
+              page={currentPage}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              limit={pagination.limit}
+              onPageChange={setCurrentPage}
+            />
           </div>
         </motion.div>
 

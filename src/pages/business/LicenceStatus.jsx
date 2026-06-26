@@ -36,6 +36,7 @@ import {
 } from "../../services/licenceApi";
 import { triggerDownload } from "../../services/documentApi";
 import LicenceWorkflowTimeline from "../../components/licence/LicenceWorkflowTimeline";
+import Pagination from "../../components/common/Pagination";
 import { useToast } from "../../context/ToastContext";
 import { formatDate, formatDateLong } from "../../utils/datetime";
 
@@ -44,6 +45,8 @@ const LicenceStatus = () => {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [applications, setApplications] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
 
   const [summaryStats, setSummaryStats] = useState({
     licenceId: "Pending",
@@ -75,11 +78,12 @@ const LicenceStatus = () => {
     try {
       setLoading(true);
       const [appsRes, summaryRes] = await Promise.all([
-        getMyLicenceApplications(),
+        getMyLicenceApplications({ page, limit: pagination.limit }),
         getLicenceSummary().catch(() => null),
       ]);
       const data = appsRes.data.data;
       setApplications(data);
+      if (appsRes.data?.pagination) setPagination(appsRes.data.pagination);
 
       if (summaryRes?.data?.data) {
         const s = summaryRes.data.data;
@@ -133,7 +137,8 @@ const LicenceStatus = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   // Documents stream through an authenticated endpoint (no static serving).
   const handleDocument = async (index, mode) => {
@@ -461,10 +466,11 @@ const LicenceStatus = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
+            <div className="overflow-auto max-h-[68vh]">
+              <table className="w-full min-w-0 text-left">
+                <thead className="sticky top-0 z-10">
                   <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Sr No</th>
                     <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Type / ID</th>
                     <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
                     <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Submitted</th>
@@ -475,17 +481,22 @@ const LicenceStatus = () => {
                   {loading ? (
                     [1, 2, 3].map(i => (
                       <tr key={i}>
-                        <td colSpan={4} className="px-3 py-2">
+                        <td colSpan={5} className="px-3 py-2">
                           <div className="animate-pulse bg-gray-200 h-12 w-full rounded-xl" />
                         </td>
                       </tr>
                     ))
                   ) : applications.length > 0 ? (
-                    applications.map((app) => {
+                    applications.map((app, index) => {
                       const isV2 = Number(app.applicationVersion) === 2;
                       return (
                       <Fragment key={app.id}>
                       <tr className="border-b border-gray-100 last:border-0 group hover:bg-gray-50/50 transition-colors">
+                        <td className="px-3 py-2">
+                          <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
+                            {(page - 1) * pagination.limit + index + 1}
+                          </span>
+                        </td>
                         <td className="px-3 py-2">
                           <p className="text-xs font-black text-secondary flex items-center gap-1.5">
                             {app.type} Application
@@ -549,7 +560,7 @@ const LicenceStatus = () => {
                       </tr>
                       {isV2 && (
                         <tr className="bg-primary/5 border-b border-gray-100 last:border-0">
-                          <td colSpan={4} className="px-3 py-2">
+                          <td colSpan={5} className="px-3 py-2">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                               <p className="text-[11px] font-bold text-secondary/70 flex-1">
                                 This application uses the new V2 process. View full details and stages on the Licence Tracking page.
@@ -570,7 +581,7 @@ const LicenceStatus = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={4} className="px-3 py-8 text-center">
+                      <td colSpan={5} className="px-3 py-8 text-center">
                         <FileText className="mx-auto text-gray-200 mb-3" size={36} />
                         <p className="text-xs font-bold text-gray-400">No applications found. Click "New Application" to begin.</p>
                       </td>
@@ -578,6 +589,15 @@ const LicenceStatus = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+            <div className="px-5 pb-4">
+              <Pagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                limit={pagination.limit}
+                onPageChange={setPage}
+              />
             </div>
           </motion.div>
 

@@ -35,6 +35,7 @@ import {
   BadgeCheck,
   CircleDot,
   Upload,
+  RefreshCw,
 } from "lucide-react";
 import {
   getAllLicenceApplications,
@@ -47,11 +48,15 @@ import {
   generateLicenceCredentials,
   resendLicenceCredentials,
   dispatchDocumentToSponsor,
+  getAdminSubmittedCredentials,
+  verifyAdminSubmittedCredentials,
+  requestAdminCredentialsResubmission,
 } from "../../services/licenceApi";
 import { triggerDownload } from "../../services/documentApi";
 import LicenceStages from "../../components/licence/LicenceStages";
 import LicenceWorkflowTimeline from "../../components/licence/LicenceWorkflowTimeline";
 import api from "../../services/api";
+import socketService from "../../services/socket.service";
 import { getCaseworkers } from "../../services/caseWorker";
 import { useToast } from "../../context/ToastContext";
 import { formatDateLong, formatTime } from "../../utils/datetime";
@@ -81,11 +86,17 @@ const AdminLicenceApplications = () => {
   const [showPwd, setShowPwd] = useState(false);
   const [credLoading, setCredLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [grantForm, setGrantForm] = useState({ expiryDate: "", cosAllocation: "" });
+  const [grantForm, setGrantForm] = useState({ licenceNumber: "", expiryDate: "", cosAllocation: "" });
   const [showDispatch, setShowDispatch] = useState(false);
   const [dispatchForm, setDispatchForm] = useState({ documentType: "supporting_document", documentName: "", message: "" });
   const [dispatchFile, setDispatchFile] = useState(null);
   const [dispatchLoading, setDispatchLoading] = useState(false);
+
+  // Sponsor-submitted UKVI credentials (admin view)
+  const [adminSubmittedCreds,     setAdminSubmittedCreds]     = useState(null);
+  const [adminCredsLoading,       setAdminCredsLoading]       = useState(false);
+  const [showAdminCredsPassword,  setShowAdminCredsPassword]  = useState(false);
+  const [adminCredsActionLoading, setAdminCredsActionLoading] = useState(false);
 
   const fetchApplications = async () => {
     try {
@@ -113,6 +124,31 @@ const AdminLicenceApplications = () => {
     fetchCaseworkers();
   }, []);
 
+  // Re-fetch list when any licence stage updates so the admin panel reflects
+  // the new state without a manual refresh.
+  useEffect(() => {
+    socketService.on("licence:stage_updated", fetchApplications);
+    return () => socketService.off("licence:stage_updated", fetchApplications);
+  }, []);
+
+  // Fetch sponsor-submitted credentials whenever the selected app changes.
+  useEffect(() => {
+    if (!selectedApp?.id) { setAdminSubmittedCreds(null); return; }
+    setAdminSubmittedCreds(null);
+    setShowAdminCredsPassword(false);
+    let active = true;
+    (async () => {
+      try {
+        setAdminCredsLoading(true);
+        const res = await getAdminSubmittedCredentials(selectedApp.id).catch(() => null);
+        if (active) setAdminSubmittedCreds(res?.data?.data || null);
+      } finally {
+        if (active) setAdminCredsLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [selectedApp?.id]);
+
   // Open the action modal for a specific application + action, seeding any
   // action-specific state. Keeps a single source of truth for the target app.
   const openAction = (app, type) => {
@@ -128,7 +164,7 @@ const AdminLicenceApplications = () => {
       setShowPwd(false);
     }
     if (type === "Approved") {
-      setGrantForm({ expiryDate: "", cosAllocation: "" });
+      setGrantForm({ licenceNumber: "", expiryDate: "", cosAllocation: "" });
     }
     setShowActionModal(true);
   };
@@ -174,12 +210,17 @@ const AdminLicenceApplications = () => {
         });
         showToast({ message: "Information request sent to business", variant: "success" });
       } else if (actionType === 'Approved') {
+        if (!grantForm.licenceNumber?.trim()) {
+          showToast({ message: "Enter the UKVI licence number before granting", variant: "error" });
+          return;
+        }
         await grantLicence(selectedApp?.id, {
+          licenceNumber: grantForm.licenceNumber.trim(),
           notes: adminNotes || undefined,
           ...(grantForm.expiryDate    && { expiryDate:    grantForm.expiryDate }),
           ...(grantForm.cosAllocation && { cosAllocation: Number(grantForm.cosAllocation) }),
         });
-        showToast({ message: "Licence granted — sponsor account is now active", variant: "success" });
+        showToast({ message: "Licence granted — sponsor has been notified by email", variant: "success" });
       } else {
         await updateLicenceApplicationStatus(selectedApp?.id, {
           status: actionType,
@@ -808,13 +849,24 @@ const AdminLicenceApplications = () => {
                     <div>
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Authorising Officer</label>
                       <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                        <p className="text-sm font-black text-secondary">{selectedApp.contactName}</p>
-                        <p className="text-xs font-bold text-gray-500 flex items-center gap-2">
-                          <Mail size={14} /> {selectedApp.contactEmail}
+                        <p className="text-sm font-black text-secondary">
+                          {selectedApp.intakeForm?.namedPersonOnLicence || selectedApp.contactName}
                         </p>
                         <p className="text-xs font-bold text-gray-500 flex items-center gap-2">
-                          <Phone size={14} /> {selectedApp.contactPhone}
+                          <Mail size={14} /> {selectedApp.intakeForm?.emailAddress || selectedApp.contactEmail}
                         </p>
+                        <p className="text-xs font-bold text-gray-500 flex items-center gap-2">
+                          <Phone size={14} /> {selectedApp.intakeForm?.phoneNumber || selectedApp.contactPhone}
+                        </p>
+                        {selectedApp.intakeForm?.niNumber && (
+                          <p className="text-xs font-bold text-gray-500 flex items-center gap-2">
+                            <Key size={14} />
+                            <span>NI Number: </span>
+                            <span className="font-mono font-black text-secondary tracking-widest">
+                              {selectedApp.intakeForm.niNumber}
+                            </span>
+                          </p>
+                        )}
                       </div>
                     </div>
                     {selectedApp.reason && (
@@ -943,6 +995,87 @@ const AdminLicenceApplications = () => {
                           </div>
                         </div>
                       </div>
+
+                      {/* Sponsor-submitted credentials panel */}
+                      {(adminSubmittedCreds || adminCredsLoading) && (
+                        <div className="pt-3 border-t border-violet-100 space-y-3">
+                          <p className="text-[10px] font-black text-violet-500 uppercase tracking-widest flex items-center gap-1">
+                            <Key size={11} /> Sponsor-Submitted UKVI Credentials
+                          </p>
+                          {adminCredsLoading ? (
+                            <div className="flex items-center gap-2 text-xs text-gray-400"><Loader2 size={13} className="animate-spin" /> Loading…</div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-[10px] font-black text-green-600 flex items-center gap-1">
+                                  <Check size={11} /> Submitted {adminSubmittedCreds.submittedAt ? new Date(adminSubmittedCreds.submittedAt).toLocaleString("en-GB") : ""}
+                                </div>
+                                {adminSubmittedCreds.adminVerifiedAt && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-[10px] font-black">
+                                    <BadgeCheck size={11} /> Verified
+                                  </span>
+                                )}
+                              </div>
+                              <div className="rounded-xl bg-white border border-violet-100 px-3 py-2">
+                                <p className="text-[10px] font-black text-gray-400 mb-1">Portal User ID</p>
+                                <p className="text-sm font-black text-secondary">{adminSubmittedCreds.ukviPortalUserId || "—"}</p>
+                              </div>
+                              <div className="rounded-xl bg-white border border-violet-100 px-3 py-2">
+                                <p className="text-[10px] font-black text-gray-400 mb-1">Password</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-black text-secondary flex-1 break-all">
+                                    {showAdminCredsPassword ? (adminSubmittedCreds.ukviPortalPassword || "—") : "••••••••"}
+                                  </p>
+                                  <button onClick={() => setShowAdminCredsPassword((v) => !v)} className="p-1 rounded-lg bg-gray-100 hover:bg-gray-200">
+                                    {showAdminCredsPassword ? <EyeOff size={12} /> : <Eye size={12} />}
+                                  </button>
+                                </div>
+                              </div>
+                              {adminSubmittedCreds.adminVerifiedAt ? (
+                                <div className="flex items-center gap-2 rounded-xl bg-green-50 border border-green-200 px-3 py-2 text-xs font-black text-green-700">
+                                  <BadgeCheck size={14} />
+                                  Verified{adminSubmittedCreds.adminVerifiedAt ? ` on ${new Date(adminSubmittedCreds.adminVerifiedAt).toLocaleString("en-GB")}` : ""}. Sponsor notified.
+                                </div>
+                              ) : (
+                                <div className="flex gap-2 pt-1">
+                                  <button
+                                    disabled={adminCredsActionLoading}
+                                    onClick={async () => {
+                                      try {
+                                        setAdminCredsActionLoading(true);
+                                        await verifyAdminSubmittedCredentials(selectedApp.id);
+                                        const res = await getAdminSubmittedCredentials(selectedApp.id).catch(() => null);
+                                        setAdminSubmittedCreds(res?.data?.data || null);
+                                        showToast({ message: "Credentials verified — sponsor notified", variant: "success" });
+                                        fetchApplications();
+                                      } catch { showToast({ message: "Failed to verify", variant: "danger" }); }
+                                      finally { setAdminCredsActionLoading(false); }
+                                    }}
+                                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-green-600 text-white text-xs font-black py-2 hover:bg-green-700 disabled:opacity-50"
+                                  >
+                                    {adminCredsActionLoading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Verify
+                                  </button>
+                                  <button
+                                    disabled={adminCredsActionLoading}
+                                    onClick={async () => {
+                                      try {
+                                        setAdminCredsActionLoading(true);
+                                        await requestAdminCredentialsResubmission(selectedApp.id);
+                                        setAdminSubmittedCreds(null);
+                                        showToast({ message: "Sponsor notified to resubmit", variant: "success" });
+                                      } catch { showToast({ message: "Failed to send request", variant: "danger" }); }
+                                      finally { setAdminCredsActionLoading(false); }
+                                    }}
+                                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 text-orange-700 text-xs font-black py-2 hover:bg-orange-100 disabled:opacity-50"
+                                  >
+                                    <RefreshCw size={12} /> Request Resubmission
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Portal User ID + Resend button (only once credentials exist) */}
                       {selectedApp.governmentTracking?.ukviPortalUserId && (
@@ -1420,30 +1553,45 @@ const AdminLicenceApplications = () => {
                     )}
 
                     {actionType === 'Approved' && (
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-3">
                         <div>
                           <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
-                            Licence Expiry <span className="font-bold normal-case text-gray-300">(optional)</span>
+                            UKVI Licence Number <span className="text-red-500 ml-0.5">*</span>
                           </label>
                           <input
-                            type="date"
-                            value={grantForm.expiryDate}
-                            onChange={(e) => setGrantForm((g) => ({ ...g, expiryDate: e.target.value }))}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none"
+                            type="text"
+                            value={grantForm.licenceNumber}
+                            onChange={(e) => setGrantForm((g) => ({ ...g, licenceNumber: e.target.value }))}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-300 font-mono"
+                            placeholder="e.g. 1A-TECH-2025-00142"
                           />
+                          <p className="text-[10px] text-gray-400 mt-1.5">Enter the licence number assigned by UKVI — this will appear in the grant email sent to the sponsor.</p>
                         </div>
-                        <div>
-                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
-                            CoS Allocation <span className="font-bold normal-case text-gray-300">(optional)</span>
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={grantForm.cosAllocation}
-                            onChange={(e) => setGrantForm((g) => ({ ...g, cosAllocation: e.target.value }))}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none"
-                            placeholder="e.g. 10"
-                          />
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                              Licence Expiry <span className="font-bold normal-case text-gray-300">(optional)</span>
+                            </label>
+                            <input
+                              type="date"
+                              value={grantForm.expiryDate}
+                              onChange={(e) => setGrantForm((g) => ({ ...g, expiryDate: e.target.value }))}
+                              className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                              CoS Allocation <span className="font-bold normal-case text-gray-300">(optional)</span>
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={grantForm.cosAllocation}
+                              onChange={(e) => setGrantForm((g) => ({ ...g, cosAllocation: e.target.value }))}
+                              className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none"
+                              placeholder="e.g. 10"
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
