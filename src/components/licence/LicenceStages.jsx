@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   CheckCircle2, Circle, Loader2, XCircle, ChevronDown, Check, User,
-  AlertCircle, ArrowRight, Clock, CalendarDays, UserCog, AlertTriangle,
+  AlertCircle, ArrowRight, Clock, CalendarDays, UserCog, AlertTriangle, Upload,
 } from "lucide-react";
 import { LICENCE_STAGES, STAGE_ROLES, deriveStageStatuses, getSponsorStageAction } from "../../constants/licenceStages";
 import { getLicenceStages, completeLicenceStageTask } from "../../services/licenceStageApi";
 import { useToast } from "../../context/ToastContext";
+import api from "../../services/api";
 
 // ── SLA helpers ───────────────────────────────────────────────────────────────
 
@@ -152,6 +153,8 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState({});
   const [busyKey, setBusyKey] = useState(null); // `${stageKey}:${role}` while completing
+  const [paymentFile, setPaymentFile] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   const staticModel = useMemo(() => (applicationId ? null : buildStaticModel(app)), [applicationId, app]);
 
@@ -197,6 +200,26 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
       showToast({ message: err?.response?.data?.message || "Couldn't complete this task.", variant: "danger" });
     } finally {
       setBusyKey(null);
+    }
+  };
+
+  const handlePaymentReceiptUpload = async () => {
+    if (!paymentFile || paymentLoading || !applicationId) return;
+    setPaymentLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("receipt", paymentFile);
+      await api.post(`/api/business/licence/v2/applications/${applicationId}/stages/payment/receipt`, fd);
+      const res = await completeLicenceStageTask("sponsor", applicationId, "payment", "sponsor");
+      const next = res.data?.data || null;
+      setModel(next);
+      onChange?.(next);
+      setPaymentFile(null);
+      showToast({ message: "Receipt uploaded. Payment stage marked complete.", variant: "success" });
+    } catch (err) {
+      showToast({ message: err?.response?.data?.message || "Upload failed — please try again.", variant: "danger" });
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -345,6 +368,34 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
                           )}
                         </div>
                         <p className="text-xs font-bold leading-snug text-secondary">{task.title}</p>
+
+                        {/* Payment receipt upload — sponsor only, payment stage, not yet complete */}
+                        {stage.key === "payment" && task.role === "sponsor" && !isDone && viewerRole === "sponsor" && interactive && (
+                          <div className="mt-2 space-y-1.5">
+                            <label className="flex items-center gap-2 cursor-pointer bg-white border border-dashed border-primary/30 rounded-lg px-3 py-2 hover:bg-primary/5 transition-all">
+                              <Upload size={12} className="text-primary shrink-0" />
+                              <span className="text-[10px] font-black text-primary truncate">
+                                {paymentFile ? paymentFile.name : "Upload payment receipt (PDF / image)"}
+                              </span>
+                              <input
+                                type="file"
+                                className="hidden"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                onChange={(e) => setPaymentFile(e.target.files[0] || null)}
+                              />
+                            </label>
+                            {paymentFile && (
+                              <button
+                                onClick={handlePaymentReceiptUpload}
+                                disabled={paymentLoading}
+                                className="w-full text-[10px] font-black px-2.5 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-dark transition-all disabled:opacity-50 flex items-center justify-center gap-1"
+                              >
+                                {paymentLoading ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                                Submit Receipt &amp; Complete
+                              </button>
+                            )}
+                          </div>
+                        )}
 
                         {interactive && (task.assigneeName || task.status || action || showButton) && (
                           <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">

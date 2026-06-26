@@ -98,6 +98,23 @@ const AdminLicenceApplications = () => {
   const [showAdminCredsPassword,  setShowAdminCredsPassword]  = useState(false);
   const [adminCredsActionLoading, setAdminCredsActionLoading] = useState(false);
 
+  // Pagination + "New" badge tracking (plain object — Set state is unreliable in React)
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 15;
+  const [viewedMap, setViewedMap] = useState({});
+
+  const markViewed = (id) => {
+    setViewedMap(prev => {
+      if (prev[id]) return prev;          // no change → same reference → no re-render
+      return { ...prev, [id]: true };     // new object → forces re-render
+    });
+  };
+
+  // "New" = created within last 48 h AND not yet clicked open this session
+  const isNew = (app) =>
+    !viewedMap[app.id] &&
+    Date.now() - new Date(app.createdAt).getTime() < 48 * 3600000;
+
   const fetchApplications = async () => {
     try {
       setLoading(true);
@@ -414,7 +431,7 @@ const AdminLicenceApplications = () => {
 
   const filteredApps = applications.filter(app => {
     const matchesFilter = filter === "All" || app.status === filter;
-    
+
     let matchesType = true;
     if (typeFilter === "CoS Requests") {
       matchesType = String(app.reason || "").startsWith("CoS Request:");
@@ -428,6 +445,13 @@ const AdminLicenceApplications = () => {
       String(app.contactName || "").toLowerCase().includes(term);
     return matchesFilter && matchesType && matchesSearch;
   });
+
+  // Reset to page 1 whenever filters / search change
+  useEffect(() => { setPage(1); }, [filter, typeFilter, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredApps.length / PER_PAGE));
+  const pagedApps  = filteredApps.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const newCount   = applications.filter(isNew).length;
 
   // Resolve assigned caseworker IDs to their loaded records (for showing names).
   const getAssignedCaseworkers = (app) => {
@@ -452,13 +476,14 @@ const AdminLicenceApplications = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Approved':              return 'bg-emerald-100 text-emerald-700';
-      case 'Rejected':              return 'bg-red-100 text-red-700';
-      case 'Under Review':          return 'bg-blue-100 text-blue-700';
-      case 'Information Requested': return 'bg-amber-100 text-amber-700';
-      case 'Government Processing': return 'bg-violet-100 text-violet-700';
-      case 'Decision Pending':      return 'bg-orange-100 text-orange-700';
-      default:                      return 'bg-gray-100 text-gray-500';
+      case 'Approved':              return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+      case 'Rejected':              return 'bg-red-100 text-red-700 border-red-200';
+      case 'Under Review':          return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'Information Requested': return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'Pending':               return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'Government Processing': return 'bg-violet-100 text-violet-700 border-violet-200';
+      case 'Decision Pending':      return 'bg-orange-100 text-orange-700 border-orange-200';
+      default:                      return 'bg-gray-100 text-gray-500 border-gray-200';
     }
   };
 
@@ -551,6 +576,7 @@ const AdminLicenceApplications = () => {
             <table className="w-full text-left table-auto">
               <thead>
                 <tr className="bg-gray-50/75 border-b border-gray-100">
+                  <th className="px-4 py-4 text-xs font-black uppercase tracking-wider text-gray-400 w-10">#</th>
                   <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400">Company / Type</th>
                   <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400">Contact</th>
                   <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400">Requested At</th>
@@ -560,16 +586,24 @@ const AdminLicenceApplications = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredApps.map((app) => (
+                {pagedApps.map((app, idx) => (
                   <tr key={app.id} className="hover:bg-gray-50/50 transition-colors group">
+                    <td className="px-4 py-4 text-xs font-black text-gray-400 text-center">
+                      {(page - 1) * PER_PAGE + idx + 1}
+                    </td>
                     <td className="px-6 py-4">
                       <div>
-                        <p className="text-sm font-black text-secondary group-hover:text-primary transition-colors">{app.companyName}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-black text-secondary group-hover:text-primary transition-colors">{app.companyName}</p>
+                          {isNew(app) && (
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-primary text-white uppercase tracking-wide">New</span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${app.type === 'Renewal' ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-blue-50 text-blue-600 border border-blue-200/50'}`}>
-                            {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type}
+                            {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type === "New" ? "Initial" : app.type}
                           </span>
-                          {app.cosAllocation && (
+                          {(String(app.reason || "").startsWith("CoS Request:") || Number(app.cosAllocation) > 1) && (
                             <span className="text-[10px] font-black text-primary bg-primary/5 border border-primary/10 px-2 py-0.5 rounded-full">
                               Alloc: {app.cosAllocation}
                             </span>
@@ -622,7 +656,7 @@ const AdminLicenceApplications = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => setSelectedApp(app)}
+                          onClick={() => { setSelectedApp(app); markViewed(app.id); }}
                           className="p-2 bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-primary rounded-xl transition-all border border-gray-100"
                           title="View Details"
                         >
@@ -673,27 +707,70 @@ const AdminLicenceApplications = () => {
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+                <p className="text-xs font-bold text-gray-400">
+                  Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filteredApps.length)} of {filteredApps.length}
+                </p>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                    className="px-3 py-1.5 rounded-xl text-xs font-black text-gray-500 bg-gray-50 border border-gray-100 hover:bg-gray-100 disabled:opacity-40 transition-all">
+                    ←
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+                    .reduce((acc, n, i, arr) => {
+                      if (i > 0 && n - arr[i - 1] > 1) acc.push("…");
+                      acc.push(n);
+                      return acc;
+                    }, [])
+                    .map((n, i) =>
+                      n === "…" ? (
+                        <span key={`ellipsis-${i}`} className="px-2 text-xs text-gray-300">…</span>
+                      ) : (
+                        <button key={n} onClick={() => setPage(n)}
+                          className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${n === page ? "bg-primary text-white shadow-sm" : "text-gray-500 bg-gray-50 border border-gray-100 hover:bg-gray-100"}`}>
+                          {n}
+                        </button>
+                      )
+                    )}
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                    className="px-3 py-1.5 rounded-xl text-xs font-black text-gray-500 bg-gray-50 border border-gray-100 hover:bg-gray-100 disabled:opacity-40 transition-all">
+                    →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Mobile Card View */}
           <div className="block md:hidden space-y-4">
-            {filteredApps.map((app) => (
+            {pagedApps.map((app, idx) => (
               <div key={app.id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-black text-gray-400">#{(page - 1) * PER_PAGE + idx + 1}</span>
+                      {isNew(app) && (
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-primary text-white uppercase tracking-wide">New</span>
+                      )}
+                    </div>
                     <h3 className="text-base font-black text-secondary">{app.companyName}</h3>
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${app.type === 'Renewal' ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-blue-50 text-blue-600 border border-blue-200/50'}`}>
-                        {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type}
+                        {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type === "New" ? "Initial" : app.type}
                       </span>
-                      {app.cosAllocation && (
+                      {(String(app.reason || "").startsWith("CoS Request:") || Number(app.cosAllocation) > 1) && (
                         <span className="text-[10px] font-black text-primary bg-primary/5 border border-primary/10 px-2 py-0.5 rounded-full">
                           Alloc: {app.cosAllocation}
                         </span>
                       )}
                     </div>
                   </div>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${getStatusColor(app.status)} shrink-0`}>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${getStatusColor(app.status)} shrink-0`}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
                     {app.status}
                   </span>
                 </div>
@@ -732,7 +809,7 @@ const AdminLicenceApplications = () => {
 
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => setSelectedApp(app)}
+                      onClick={() => { setSelectedApp(app); markViewed(app.id); }}
                       className="p-2.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-xl transition-all border border-gray-100"
                       title="View Details"
                     >

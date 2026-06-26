@@ -32,13 +32,13 @@ const ACTIVE_STATUSES   = ["Pending", "Under Review", "Government Processing", "
 const TERMINAL_STATUSES = ["Approved", "Rejected"];
 
 const STATUS_COLOR = {
-  "Approved":              "bg-emerald-100 text-emerald-700",
-  "Rejected":              "bg-red-100 text-red-700",
-  "Under Review":          "bg-blue-100 text-blue-700",
-  "Information Requested": "bg-amber-100 text-amber-700",
-  "Government Processing": "bg-violet-100 text-violet-700",
-  "Decision Pending":      "bg-orange-100 text-orange-700",
-  "Pending":               "bg-amber-100 text-amber-700",
+  "Approved":              "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  "Rejected":              "bg-red-100 text-red-700 border border-red-200",
+  "Under Review":          "bg-blue-100 text-blue-700 border border-blue-200",
+  "Information Requested": "bg-amber-100 text-amber-700 border border-amber-200",
+  "Government Processing": "bg-violet-100 text-violet-700 border border-violet-200",
+  "Decision Pending":      "bg-orange-100 text-orange-700 border border-orange-200",
+  "Pending":               "bg-amber-100 text-amber-700 border border-amber-200",
 };
 
 const inp = "w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-bold text-secondary outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20";
@@ -98,6 +98,23 @@ const CaseworkerLicenceApplications = () => {
   const [credsLoading,        setCredsLoading]        = useState(false);
   const [showCredsPassword,   setShowCredsPassword]   = useState(false);
   const [credsActionLoading,  setCredsActionLoading]  = useState(false);
+
+  // Pagination + "New" badge tracking (plain object — Set state is unreliable in React)
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 15;
+  const [viewedMap, setViewedMap] = useState({});
+
+  const markViewed = (id) => {
+    setViewedMap(prev => {
+      if (prev[id]) return prev;
+      return { ...prev, [id]: true };
+    });
+  };
+
+  // "New" = created within last 48 h AND not yet clicked open this session
+  const isNew = (app) =>
+    !viewedMap[app.id] &&
+    Date.now() - new Date(app.createdAt).getTime() < 48 * 3600000;
 
   // ── Data fetching ────────────────────────────────────────────────────────────
   const fetchApplications = async () => {
@@ -313,6 +330,13 @@ const CaseworkerLicenceApplications = () => {
     return matchFilter && matchSearch;
   });
 
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [filter, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredApps.length / PER_PAGE));
+  const pagedApps  = filteredApps.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const newCount   = applications.filter(isNew).length;
+
   const pipelineCounts = {
     pending:     applications.filter((a) => a.status === "Pending").length,
     underReview: applications.filter((a) => a.status === "Under Review").length,
@@ -337,6 +361,21 @@ const CaseworkerLicenceApplications = () => {
         <p className="text-sm font-bold text-gray-400 mt-0.5">
           Review and progress sponsor licence applications assigned to you.
         </p>
+      </div>
+
+      {/* Stats overview */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Total Assigned",  value: applications.length,                                  color: "text-secondary" },
+          { label: "Needs Review",    value: pipelineCounts.pending,                               color: "text-amber-600" },
+          { label: "Under Review",    value: pipelineCounts.underReview,                           color: "text-blue-600" },
+          { label: "Gov. Processing", value: pipelineCounts.govProcess + pipelineCounts.decision,  color: "text-violet-600" },
+        ].map((stat) => (
+          <div key={stat.label} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">{stat.label}</p>
+            <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
+          </div>
+        ))}
       </div>
 
       {/* Pipeline dashboard */}
@@ -400,6 +439,7 @@ const CaseworkerLicenceApplications = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60">
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 w-10">#</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Company / Type</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Contact</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Updated</th>
@@ -411,7 +451,7 @@ const CaseworkerLicenceApplications = () => {
               {loading ? (
                 [...Array(4)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    {[1,2,3,4,5].map((c) => (
+                    {[1,2,3,4,5,6].map((c) => (
                       <td key={c} className="px-5 py-4">
                         <div className="h-4 bg-gray-100 rounded-lg w-3/4" />
                       </td>
@@ -419,22 +459,31 @@ const CaseworkerLicenceApplications = () => {
                   </tr>
                 ))
               ) : filteredApps.length > 0 ? (
-                filteredApps.map((app) => {
+                pagedApps.map((app, idx) => {
                   const isV2 = Number(app.applicationVersion) === 2;
                   return (
                     <tr key={app.id} className="hover:bg-gray-50/40 transition-colors group">
+                      <td className="px-4 py-3.5 text-xs font-black text-gray-400 text-center">
+                        {(page - 1) * PER_PAGE + idx + 1}
+                      </td>
                       <td className="px-5 py-3.5">
-                        <p className="text-sm font-black text-secondary">{app.companyName || "—"}</p>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <p className="text-sm font-black text-secondary">{app.companyName || "—"}</p>
+                          {isNew(app) && (
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-primary text-white uppercase tracking-wide">New</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${app.type === "Renewal" ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"}`}>
-                            {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type}
+                            {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type === "New" ? "Initial" : app.type}
                           </span>
-                          {isV2 && (
+                          {isV2 && isActive(app.status) && app.status !== "Pending" ? (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">V2 · Pipeline</span>
+                          ) : isV2 ? (
                             <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/10 text-primary">V2</span>
-                          )}
-                          {isActive(app.status) && app.status !== "Pending" && (
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">Gov. Pipeline</span>
-                          )}
+                          ) : isActive(app.status) && app.status !== "Pending" ? (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">Gov. Pipeline</span>
+                          ) : null}
                         </div>
                       </td>
                       <td className="px-5 py-3.5">
@@ -445,14 +494,15 @@ const CaseworkerLicenceApplications = () => {
                         <p className="text-xs font-bold text-secondary">{formatDate(app.updatedAt)}</p>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black ${STATUS_COLOR[app.status] || "bg-gray-100 text-gray-600"}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black ${STATUS_COLOR[app.status] || "bg-gray-100 text-gray-600 border border-gray-200"}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
                           {app.status}
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => setSelectedApp(app)}
+                            onClick={() => { setSelectedApp(app); markViewed(app.id); }}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white text-[11px] font-black transition-all"
                           >
                             <Eye size={13} /> Review
@@ -473,7 +523,7 @@ const CaseworkerLicenceApplications = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center">
+                  <td colSpan={6} className="px-5 py-12 text-center">
                     <ShieldCheck className="mx-auto text-gray-200 mb-3" size={36} />
                     <p className="text-sm font-bold text-gray-400">No assigned reviews found.</p>
                   </td>
@@ -481,6 +531,42 @@ const CaseworkerLicenceApplications = () => {
               )}
             </tbody>
           </table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
+              <p className="text-xs font-bold text-gray-400">
+                Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filteredApps.length)} of {filteredApps.length}
+              </p>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                  className="px-3 py-1.5 rounded-xl text-xs font-black text-gray-500 bg-gray-50 border border-gray-100 hover:bg-gray-100 disabled:opacity-40 transition-all">
+                  ←
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+                  .reduce((acc, n, i, arr) => {
+                    if (i > 0 && n - arr[i - 1] > 1) acc.push("…");
+                    acc.push(n);
+                    return acc;
+                  }, [])
+                  .map((n, i) =>
+                    n === "…" ? (
+                      <span key={`e-${i}`} className="px-2 text-xs text-gray-300">…</span>
+                    ) : (
+                      <button key={n} onClick={() => setPage(n)}
+                        className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${n === page ? "bg-primary text-white shadow-sm" : "text-gray-500 bg-gray-50 border border-gray-100 hover:bg-gray-100"}`}>
+                        {n}
+                      </button>
+                    )
+                  )}
+                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                  className="px-3 py-1.5 rounded-xl text-xs font-black text-gray-500 bg-gray-50 border border-gray-100 hover:bg-gray-100 disabled:opacity-40 transition-all">
+                  →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -512,7 +598,8 @@ const CaseworkerLicenceApplications = () => {
                       <h2 className="text-sm font-black text-secondary truncate">
                         {selectedApp.companyName || `Application #${selectedApp.id}`}
                       </h2>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${STATUS_COLOR[selectedApp.status] || "bg-gray-100 text-gray-500"}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${STATUS_COLOR[selectedApp.status] || "bg-gray-100 text-gray-500 border border-gray-200"}`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
                         {selectedApp.status}
                       </span>
                       {Number(selectedApp.applicationVersion) === 2 && (
