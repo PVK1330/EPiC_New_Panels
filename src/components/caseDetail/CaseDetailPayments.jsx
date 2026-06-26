@@ -299,11 +299,11 @@ const CaseDetailPayments = ({ payments, onReload }) => {
           <h4 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">
             Payment History
           </h4>
-          <div className="overflow-x-auto rounded-xl border border-gray-100">
-            <table className="w-full text-sm">
-              <thead>
+          <div className="overflow-auto max-h-[68vh] rounded-xl border border-gray-100">
+            <table className="w-full min-w-0 text-sm">
+              <thead className="sticky top-0 z-10">
                 <tr className="bg-gray-50 text-left">
-                  {["Date", "Amount", "Method", "Invoice"].map((h) => (
+                  {["Sr No", "Date", "Amount", "Method", "Invoice"].map((h) => (
                     <th
                       key={h}
                       className="px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-wider"
@@ -316,13 +316,18 @@ const CaseDetailPayments = ({ payments, onReload }) => {
               <tbody className="divide-y divide-gray-50">
                 {(payments?.history?.length ?? 0) === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-400">
+                    <td colSpan={5} className="px-4 py-6 text-center text-sm text-gray-400">
                       No payment records yet.
                     </td>
                   </tr>
                 ) : (
                   (payments?.history || []).map((row, i) => (
                     <tr key={i} className="hover:bg-gray-50/80">
+                      <td className="px-4 py-2.5">
+                        <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
+                          {i + 1}
+                        </span>
+                      </td>
                       <td className="px-4 py-2.5 text-gray-600">{row.date}</td>
                       <td className="px-4 py-2.5 text-green-600 font-bold">{row.amount}</td>
                       <td className="px-4 py-2.5 text-gray-600">{row.method}</td>

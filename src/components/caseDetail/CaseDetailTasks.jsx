@@ -180,11 +180,11 @@ const CaseDetailTasks = ({ tasks = [], loading = false, onAdd, onEdit, onDelete 
           Add Task
         </Button>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
+      <div className="overflow-auto max-h-[68vh]">
+        <table className="w-full min-w-0">
+          <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 text-left">
-              {["Task", "Assigned To", "Due Date", "Priority", "Status", " "].map((h, idx) => (
+              {["Sr No", "Task", "Assigned To", "Due Date", "Priority", "Status", " "].map((h, idx) => (
                 <th key={idx} className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">
                   {h.trim() || ""}
                 </th>
@@ -194,20 +194,23 @@ const CaseDetailTasks = ({ tasks = [], loading = false, onAdd, onEdit, onDelete 
           <tbody className="divide-y divide-gray-50">
             {loading && tasks.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
                   Loading tasks…
                 </td>
               </tr>
             )}
             {!loading && tasks.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
                   No tasks yet. Click “Add Task” to create one.
                 </td>
               </tr>
             )}
-            {tasks.map((t) => (
+            {tasks.map((t, index) => (
               <tr key={t.id} className="hover:bg-gray-50/80">
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">{index + 1}</span>
+                </td>
                 <td className="px-4 py-3 text-sm font-semibold text-secondary max-w-[200px]">{t.task}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{t.assigned}</td>
                 <td className={`px-4 py-3 text-xs font-mono whitespace-nowrap ${t.dueClass}`}>{t.due}</td>

@@ -20,6 +20,7 @@ import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/Input';
 import TableActionButton from '../../components/common/TableActionButton';
+import Pagination from '../../components/common/Pagination';
 import {
   fetchOrganisations,
   fetchOrganisationById,
@@ -68,6 +69,7 @@ const StatCard = ({ title, value, icon: Icon, color, delay = 0 }) => (
 
 const SkeletonRow = () => (
   <tr className="animate-pulse">
+    <td className="px-4 py-3"><div className="h-6 w-7 bg-gray-100 rounded-lg" /></td>
     <td className="px-5 py-3">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 bg-gray-100 rounded-lg" />
@@ -100,22 +102,34 @@ const SuperadminOrganisations = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [orgs, setOrgs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  // Server-side pagination: GET /superadmin/organisations paginates by ?page & ?limit
+  // and returns a { total, page, limit, totalPages } meta block alongside the rows.
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit, totalPages: 0 });
 
   const loadOrgs = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchOrganisations();
-      const list = res.data?.data?.organisations ?? res.data?.organisations ?? [];
+      const res = await fetchOrganisations({ page, limit });
+      const payload = res.data?.data ?? res.data ?? {};
+      const list = payload.organisations ?? res.data?.organisations ?? [];
+      const meta = res.data?.pagination ?? payload.pagination ?? null;
       setOrgs(Array.isArray(list) ? list.map(mapApiOrgToRow) : []);
+      setPagination({
+        total: meta?.total ?? (Array.isArray(list) ? list.length : 0),
+        page: meta?.page ?? page,
+        limit: meta?.limit ?? limit,
+        totalPages: meta?.totalPages ?? 1,
+      });
     } catch (e) {
       toast.error(e?.response?.data?.message || e.message || 'Failed to load organisations');
       setOrgs([]);
+      setPagination({ total: 0, page: 1, limit, totalPages: 0 });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     loadOrgs();
@@ -123,26 +137,22 @@ const SuperadminOrganisations = () => {
 
   const tabs = ['All', 'Active', 'Trial', 'Suspended'];
 
+  // Tab + search refine the rows of the current server page on the client. The
+  // backend list endpoint does not accept status/search params, so filtering is
+  // applied to the page already fetched.
   const filteredOrgs = orgs.filter(org => {
     const tab = activeTab.toLowerCase();
     const st = (org.status || '').toLowerCase();
     const matchesTab = activeTab === 'All' || st === tab.toLowerCase();
-    const matchesSearch = org.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch = org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          org.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          String(org.country).toLowerCase().includes(searchTerm.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, searchTerm]);
-
-  const totalPages = Math.ceil(filteredOrgs.length / itemsPerPage);
-  const paginatedOrgs = filteredOrgs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
   const countByStatus = (status) => orgs.filter((o) => (o.status || '').toLowerCase() === status).length;
   const stats = {
-    total: orgs.length,
+    total: pagination.total || orgs.length,
     active: countByStatus('active'),
     trial: countByStatus('trial'),
     suspended: countByStatus('suspended'),
@@ -592,10 +602,11 @@ const SuperadminOrganisations = () => {
 
       {/* Organisations Table */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto no-scrollbar">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50/50 text-[10px] uppercase text-gray-400 tracking-widest font-bold border-b border-gray-50">
-              <tr>
+        <div className="overflow-auto max-h-[68vh] no-scrollbar">
+          <table className="w-full min-w-0 text-sm">
+            <thead className="sticky top-0 z-10 text-[10px] uppercase text-gray-400 tracking-widest font-bold">
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <th scope="col" className="px-4 py-3 text-left">Sr No</th>
                 <th scope="col" className="px-5 py-3 text-left">Organisation</th>
                 <th scope="col" className="px-5 py-3 text-left">Tier</th>
                 <th scope="col" className="px-5 py-3 text-center">Users</th>
@@ -606,9 +617,9 @@ const SuperadminOrganisations = () => {
             <tbody className="divide-y divide-gray-50/50">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
-              ) : paginatedOrgs.length === 0 ? (
+              ) : filteredOrgs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center">
+                  <td colSpan={6} className="px-5 py-12 text-center">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
                       No organisations yet
                     </p>
@@ -618,8 +629,13 @@ const SuperadminOrganisations = () => {
                   </td>
                 </tr>
               ) : (
-              paginatedOrgs.map((org) => (
+              filteredOrgs.map((org, index) => (
                 <tr key={org.id} className="hover:bg-gray-50/50 transition-colors group/row">
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
+                      {(page - 1) * pagination.limit + index + 1}
+                    </span>
+                  </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-gray-400 font-black text-xs group-hover/row:bg-primary group-hover/row:text-white transition-all">
@@ -702,26 +718,20 @@ const SuperadminOrganisations = () => {
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-4 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
-          <p className="text-xs font-bold text-gray-400">Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredOrgs.length)} to {Math.min(currentPage * itemsPerPage, filteredOrgs.length)} of {filteredOrgs.length} results</p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(p => p - 1)}
-              className="px-4 py-2 rounded-lg text-xs font-bold bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50 disabled:hover:bg-white"
-            >
-              Prev
-            </button>
-            <button
-              type="button"
-              disabled={currentPage === totalPages || totalPages === 0}
-              onClick={() => setCurrentPage(p => p + 1)}
-              className="px-4 py-2 rounded-lg text-xs font-bold bg-white border border-gray-200 text-secondary hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50 disabled:hover:bg-white"
-            >
-              Next
-            </button>
-          </div>
+        <div className="px-5 py-4 border-t border-gray-50 bg-gray-50/30">
+          {pagination.totalPages > 1 ? (
+            <Pagination
+              page={page}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              limit={pagination.limit}
+              onPageChange={setPage}
+            />
+          ) : (
+            <p className="text-xs font-bold text-gray-400">
+              Showing {pagination.total === 0 ? 0 : (page - 1) * pagination.limit + 1} to {Math.min(page * pagination.limit, pagination.total)} of {pagination.total} results
+            </p>
+          )}
         </div>
       </div>
     </div>

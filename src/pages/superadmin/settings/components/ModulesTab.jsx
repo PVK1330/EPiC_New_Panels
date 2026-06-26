@@ -98,19 +98,23 @@ const ModulesTab = ({
                 {modules[panel].length} modules
               </span>
             </div>
-            <div className="overflow-hidden rounded-xl border border-gray-100">
-              <table className="w-full text-sm">
-                <thead>
+            <div className="overflow-auto max-h-[68vh] rounded-xl border border-gray-100">
+              <table className="w-full min-w-0 text-sm">
+                <thead className="sticky top-0 z-10">
                   <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="text-left px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Key</th>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Label</th>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                    <th className="px-4 py-2.5 w-12" />
+                    <th className="text-left px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50">Sr No</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50">Key</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50">Label</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50">Status</th>
+                    <th className="px-4 py-2.5 w-12 bg-gray-50" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {modules[panel].map((mod) => (
+                  {modules[panel].map((mod, index) => (
                     <tr key={mod.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">{index + 1}</span>
+                      </td>
                       <td className="px-4 py-3">
                         <code className="text-xs font-black text-primary bg-primary/5 px-2 py-0.5 rounded-md">{mod.key}</code>
                       </td>

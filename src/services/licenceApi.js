@@ -171,8 +171,9 @@ export const requestCosAllocation = (data) =>
   api.post("/api/business/cos/request", data);
 
 // Canonical CoS request endpoints (the /licence/cos-requests aliases are deprecated).
-export const getCosRequests = () =>
-  api.get("/api/business/cos/requests");
+// Server-side paginated via ?page & ?limit.
+export const getCosRequests = (params = {}) =>
+  api.get("/api/business/cos/requests", { params });
 
 export const updateCosRequest = (id, data) =>
   api.put(`/api/business/cos/requests/${id}`, data);

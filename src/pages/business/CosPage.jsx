@@ -7,6 +7,7 @@ import useDownloads from "../../hooks/useDownloads";
 import { formatDate } from "../../utils/datetime";
 import useSponsorLicence from "../../hooks/useSponsorLicence";
 import LicenceGateBanner from "../../components/business/LicenceGateBanner";
+import Pagination from "../../components/common/Pagination";
 import {
   LayoutDashboard,
   Hash,
@@ -41,6 +42,8 @@ const COSPage = () => {
   const [cosList, setCosList] = useState([]);
   const [requests, setRequests] = useState([]);
   const [statusFilter, setStatusFilter] = useState("All");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [visaTypeOptions, setVisaTypeOptions] = useState([]);
@@ -51,9 +54,14 @@ const COSPage = () => {
 
   useEffect(() => {
     fetchCosSummary();
-    fetchRequests();
     loadVisaTypes();
   }, []);
+
+  // Request History is server-side paginated — re-fetch whenever the page changes.
+  useEffect(() => {
+    fetchRequests(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const loadVisaTypes = async () => {
     try {
@@ -78,10 +86,19 @@ const COSPage = () => {
     }
   };
 
-  const fetchRequests = async () => {
+  const fetchRequests = async (targetPage = page) => {
     try {
-      const res = await getCosRequests();
+      const res = await getCosRequests({ page: targetPage, limit: pagination.limit });
       setRequests(res.data?.data || []);
+      const meta = res.data?.pagination;
+      if (meta) {
+        setPagination((prev) => ({
+          total: meta.total ?? prev.total,
+          page: meta.page ?? targetPage,
+          limit: meta.limit ?? prev.limit,
+          totalPages: meta.totalPages ?? prev.totalPages,
+        }));
+      }
     } catch (err) {
       console.error("Requests error:", err);
     }
@@ -102,7 +119,7 @@ const COSPage = () => {
     try {
       await deleteCosRequest(id);
       toast.success("Request deleted");
-      fetchRequests();
+      fetchRequests(page);
       fetchCosSummary();
     } catch (err) {
       toast.error("Failed to delete request");
@@ -342,11 +359,12 @@ const COSPage = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            {activeTab === 'summary' ? (
-              <table className="w-full text-left">
-                <thead>
+          {activeTab === 'summary' ? (
+            <div className="overflow-auto max-h-[68vh]">
+              <table className="w-full min-w-0 text-left">
+                <thead className="sticky top-0 z-10">
                   <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left px-4 py-3 font-black text-gray-500 uppercase tracking-wider text-[10px]">Sr No</th>
                     <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Visa Type</th>
                     <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Allocated</th>
                     <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Used</th>
@@ -358,7 +376,7 @@ const COSPage = () => {
                   </tr>
                 </thead>
 
-                <tbody>
+                <tbody className="divide-y divide-gray-100">
                   {filteredCosList.map((item, index) => {
                     const initials = getInitials(item.visaType || "?");
                     const bgColor = avatarColors[index % avatarColors.length];
@@ -391,6 +409,11 @@ const COSPage = () => {
                         key={`${item.visaType}-${index}`}
                         className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition"
                       >
+                        <td className="px-4 py-2">
+                          <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
+                            {index + 1}
+                          </span>
+                        </td>
                         <td className="px-3 py-2 flex items-center gap-2">
                           <div
                             className={`w-7 h-7 flex items-center justify-center text-white rounded-xl text-xs font-black ${bgColor}`}
@@ -447,81 +470,116 @@ const COSPage = () => {
                       </tr>
                     );
                   })}
-                </tbody>
-              </table>
-            ) : (
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Request ID</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Visa Type</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Requested</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Date</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRequests.map((r) => (
-                    <tr key={r.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition">
-                      <td className="px-3 py-2 text-xs font-black text-secondary">#REQ-{r.id}</td>
-                      <td className="px-3 py-2 text-xs font-bold text-gray-700">{r.visaType}</td>
-                      <td className="px-3 py-2 text-xs font-black text-primary">
-                        {r.requestedAmount} Slots
-                        {r.status === 'Approved' && r.approvedAmount != null && (
-                          <span className="block text-[10px] font-bold text-emerald-600">
-                            Approved: {r.approvedAmount}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        <span
-                          title={r.reviewNotes || ''}
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                            r.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' :
-                            r.status === 'Rejected' ? 'bg-red-50 text-red-600' :
-                            r.status === 'Under Review' ? 'bg-blue-50 text-blue-600' :
-                            'bg-amber-50 text-amber-600'
-                          }`}
-                        >
-                          {r.status}
-                        </span>
-                        {r.reviewNotes && (r.status === 'Rejected' || r.status === 'Information Requested') && (
-                          <p
-                            className="text-[10px] font-bold text-gray-400 mt-1 max-w-[180px] truncate"
-                            title={r.reviewNotes}
-                          >
-                            {r.reviewNotes}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-[10px] font-bold text-gray-500">
-                        {formatDate(r.created_at)}
-                      </td>
-                      <td className="px-3 py-2 flex gap-1.5">
-                        {['Pending', 'Under Review'].includes(r.status) && (
-                          <>
-                            <button
-                              onClick={() => handleEditRequest(r)}
-                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteRequest(r.id)}
-                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-600 transition"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </>
-                        )}
+                  {filteredCosList.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="px-3 py-8 text-center text-xs font-bold text-gray-400">
+                        No allocations found.
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
-            )}
-          </div>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-auto max-h-[68vh]">
+                <table className="w-full min-w-0 text-left">
+                  <thead className="sticky top-0 z-10">
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <th className="text-left px-4 py-3 font-black text-gray-500 uppercase tracking-wider text-[10px]">Sr No</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Request ID</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Visa Type</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Requested</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Date</th>
+                      <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredRequests.map((r, index) => (
+                      <tr key={r.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition">
+                        <td className="px-4 py-2">
+                          <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
+                            {(page - 1) * pagination.limit + index + 1}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-xs font-black text-secondary">#REQ-{r.id}</td>
+                        <td className="px-3 py-2 text-xs font-bold text-gray-700">{r.visaType}</td>
+                        <td className="px-3 py-2 text-xs font-black text-primary">
+                          {r.requestedAmount} Slots
+                          {r.status === 'Approved' && r.approvedAmount != null && (
+                            <span className="block text-[10px] font-bold text-emerald-600">
+                              Approved: {r.approvedAmount}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span
+                            title={r.reviewNotes || ''}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                              r.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' :
+                              r.status === 'Rejected' ? 'bg-red-50 text-red-600' :
+                              r.status === 'Under Review' ? 'bg-blue-50 text-blue-600' :
+                              'bg-amber-50 text-amber-600'
+                            }`}
+                          >
+                            {r.status}
+                          </span>
+                          {r.reviewNotes && (r.status === 'Rejected' || r.status === 'Information Requested') && (
+                            <p
+                              className="text-[10px] font-bold text-gray-400 mt-1 max-w-[180px] truncate"
+                              title={r.reviewNotes}
+                            >
+                              {r.reviewNotes}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-[10px] font-bold text-gray-500">
+                          {formatDate(r.created_at)}
+                        </td>
+                        <td className="px-3 py-2 flex gap-1.5">
+                          {['Pending', 'Under Review'].includes(r.status) && (
+                            <>
+                              <button
+                                onClick={() => handleEditRequest(r)}
+                                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-secondary transition"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRequest(r.id)}
+                                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-600 transition"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredRequests.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-3 py-8 text-center text-xs font-bold text-gray-400">
+                          No requests found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {pagination.totalPages > 1 && (
+                <div className="mt-4">
+                  <Pagination
+                    page={page}
+                    totalPages={pagination.totalPages}
+                    total={pagination.total}
+                    limit={pagination.limit}
+                    onPageChange={setPage}
+                  />
+                </div>
+              )}
+            </>
+          )}
         </div>
       </motion.div>
 
@@ -611,7 +669,7 @@ const COSPage = () => {
                         setEditingRequest(null);
                         setRequestData({ visaType: "", requestedAmount: "", reason: "" });
                         fetchCosSummary();
-                        fetchRequests();
+                        fetchRequests(page);
                       } catch (err) {
                         toast.error(err.response?.data?.message || "Operation failed");
                       } finally {

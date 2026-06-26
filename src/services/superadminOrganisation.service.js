@@ -1,6 +1,7 @@
 import api from "./api";
 
-export const fetchOrganisations = () => api.get("/api/superadmin/organisations");
+export const fetchOrganisations = (params = {}) =>
+  api.get("/api/superadmin/organisations", { params });
 
 export const fetchOrganisationById = (id) => api.get(`/api/superadmin/organisations/${id}`);
 

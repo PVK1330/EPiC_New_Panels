@@ -18,6 +18,7 @@ import { formatDateLong } from "../../utils/datetime";
 import CosStatusBadge from "./CosStatusBadge";
 import CosReviewModal from "./CosReviewModal";
 import CosHistoryPanel from "./CosHistoryPanel";
+import Pagination from "../common/Pagination";
 
 const STATUS_FILTERS = ["All", "Pending", "Under Review", "Approved", "Allocated", "Rejected"];
 const REVIEWABLE = ["Pending", "Under Review"];
@@ -48,18 +49,30 @@ export default function CosReviewQueue({
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 1 });
 
   const [historyRequest, setHistoryRequest] = useState(null);
   const [review, setReview] = useState({ open: false, request: null, action: "approve" });
   const [assign, setAssign] = useState({ open: false, request: null, ids: [] });
   const [busy, setBusy] = useState(false);
 
-  const fetchRequests = async () => {
+  const fetchRequests = async (targetPage = page) => {
     try {
       setLoading(true);
-      const params = statusFilter === "All" ? {} : { status: statusFilter };
+      const params = { page: targetPage, limit: pagination.limit };
+      if (statusFilter !== "All") params.status = statusFilter;
       const res = await loadRequests(params);
       setRequests(res?.data?.data || []);
+      const meta = res?.data?.pagination;
+      if (meta) {
+        setPagination((prev) => ({
+          total: meta.total ?? prev.total,
+          page: meta.page ?? targetPage,
+          limit: meta.limit ?? prev.limit,
+          totalPages: meta.totalPages ?? prev.totalPages,
+        }));
+      }
     } catch (err) {
       showToast({ message: "Failed to load CoS requests", variant: "danger" });
     } finally {
@@ -67,10 +80,15 @@ export default function CosReviewQueue({
     }
   };
 
+  // Reset to the first page whenever the status filter changes.
   useEffect(() => {
-    fetchRequests();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setPage(1);
   }, [statusFilter]);
+
+  useEffect(() => {
+    fetchRequests(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, page]);
 
   const refreshAll = () => {
     fetchRequests();
@@ -204,22 +222,28 @@ export default function CosReviewQueue({
         <>
           {/* Desktop Table View */}
           <div className="hidden md:block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <table className="w-full text-left table-auto">
-              <thead>
-                <tr className="bg-gray-50/75 border-b border-gray-100">
-                  {["Sponsor", "Visa Type", "Requested / Approved", "Status", "Requested Date", "Reviewer", "Actions"].map((h) => (
-                    <th key={h} className={`px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400 ${h === "Actions" ? "text-right" : ""}`}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filtered.map((r) => {
-                  const canReview = REVIEWABLE.includes(r.status);
-                  return (
-                    <tr key={r.id} className="hover:bg-gray-50/50 transition-colors group">
-                      <td className="px-6 py-4">
+            <div className="overflow-auto max-h-[68vh]">
+              <table className="w-full min-w-0 text-left table-auto">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    {["Sr No", "Sponsor", "Visa Type", "Requested / Approved", "Status", "Requested Date", "Reviewer", "Actions"].map((h) => (
+                      <th key={h} className={`px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400 ${h === "Actions" ? "text-right" : ""}`}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filtered.map((r, idx) => {
+                    const canReview = REVIEWABLE.includes(r.status);
+                    return (
+                      <tr key={r.id} className="hover:bg-gray-50/50 transition-colors group">
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
+                            {(page - 1) * pagination.limit + idx + 1}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
                         <p className="text-sm font-black text-secondary group-hover:text-primary transition-colors">
                           {fullName(r.sponsor) || `Sponsor #${r.sponsorId}`}
                         </p>
@@ -293,8 +317,9 @@ export default function CosReviewQueue({
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Mobile Card View */}
@@ -385,6 +410,15 @@ export default function CosReviewQueue({
               );
             })}
           </div>
+
+          {/* Pagination (shared by both desktop table and mobile cards) */}
+          <Pagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={setPage}
+          />
         </>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center shadow-sm">

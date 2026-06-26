@@ -104,10 +104,11 @@ const UsersAndRolesPanel = () => {
 
       {/* Users Table */}
       <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/20 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50 border-b border-gray-100">
+        <div className="overflow-auto max-h-[68vh]">
+          <table className="w-full min-w-0 border-collapse">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="px-8 py-6 text-left text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Sr No</th>
                 <th className="px-8 py-6 text-left text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">User Profile</th>
                 <th className="px-8 py-6 text-left text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Governance</th>
                 <th className="px-8 py-6 text-left text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Permissions</th>
@@ -116,8 +117,8 @@ const UsersAndRolesPanel = () => {
             </thead>
             <tbody className="divide-y divide-gray-50">
               <AnimatePresence>
-                {filteredUsers.map(user => (
-                  <motion.tr 
+                {filteredUsers.map((user, index) => (
+                  <motion.tr
                     key={user.id}
                     layout
                     initial={{ opacity: 0 }}
@@ -125,6 +126,9 @@ const UsersAndRolesPanel = () => {
                     exit={{ opacity: 0 }}
                     className="hover:bg-gray-50/50 transition-all group"
                   >
+                    <td className="px-8 py-6">
+                      <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">{index + 1}</span>
+                    </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-5">
                         <div className="w-14 h-14 rounded-3xl bg-gradient-to-br from-secondary to-indigo-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-lg shadow-secondary/20 group-hover:scale-110 transition-all">

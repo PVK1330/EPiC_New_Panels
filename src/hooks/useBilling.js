@@ -22,6 +22,7 @@ import {
 export default function useBilling() {
   const [subscriptions, setSubscriptions] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [invoicesPagination, setInvoicesPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
   const [transactions, setTransactions] = useState([]);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [gatewayStatus, setGatewayStatus] = useState(null);
@@ -70,11 +71,20 @@ export default function useBilling() {
     return renewSubscription(id);
   }, []);
 
-  const fetchInvoices = useCallback(async () => {
+  const fetchInvoices = useCallback(async (params = {}) => {
     setInvoicesLoading(true);
     try {
-      const res = await getInvoices();
+      const res = await getInvoices(params);
       setInvoices(res.data?.data?.invoices || []);
+      const meta = res.data?.data?.pagination;
+      if (meta) {
+        setInvoicesPagination({
+          total: meta.total ?? 0,
+          page: meta.page ?? params.page ?? 1,
+          limit: meta.limit ?? params.limit ?? 20,
+          totalPages: meta.totalPages ?? 0,
+        });
+      }
       return { ok: true };
     } catch (e) {
       setInvoices([]);
@@ -109,8 +119,9 @@ export default function useBilling() {
     setTransactionsLoading(true);
     try {
       const res = await getTransactions(params);
-      setTransactions(res.data?.data?.transactions || []);
-      return { ok: true };
+      const data = res.data?.data || {};
+      setTransactions(data.transactions || []);
+      return { ok: true, pagination: data.pagination || null };
     } catch (e) {
       setTransactions([]);
       return { ok: false, error: e };
@@ -175,6 +186,7 @@ export default function useBilling() {
     renewSub,
     invoices,
     invoicesLoading,
+    invoicesPagination,
     fetchInvoices,
     fetchInvoiceById,
     changeInvoiceStatus,

@@ -19,7 +19,7 @@ import {
 import Button from "../../components/Button";
 import CaseWorkflowBadge from "../../components/case/CaseWorkflowBadge";
 import { formatDate } from "../../utils/datetime";
-import { getApiError } from "../../utils/apiError";
+import { getApiError as getApiErrorMessage } from "../../utils/apiError";
 import AdminCaseFormModal from "../../components/admin/AdminCaseFormModal";
 import {
   getCases,

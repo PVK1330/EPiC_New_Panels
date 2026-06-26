@@ -12,7 +12,7 @@ export const cancelSubscription = (id) => api.post(`/api/superadmin/subscription
 
 export const renewSubscription = (id) => api.post(`/api/superadmin/subscriptions/${id}/renew`);
 
-export const getInvoices = () => api.get("/api/superadmin/invoices");
+export const getInvoices = (params = {}) => api.get("/api/superadmin/invoices", { params });
 
 export const getInvoiceById = (id) => api.get(`/api/superadmin/invoices/${id}`);
 

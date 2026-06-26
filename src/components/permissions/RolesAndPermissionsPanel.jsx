@@ -16,7 +16,7 @@ import {
 import Button from '../Button';
 import { DEFAULT_MODULES } from './permissionsData';
 
-const PermissionRow = ({ module, permissions, onChange }) => {
+const PermissionRow = ({ module, permissions, onChange, index }) => {
   const actions = ['View', 'Add', 'Edit', 'Delete'];
   const Icon = {
     "Dashboard": RiDashboardLine,
@@ -28,9 +28,12 @@ const PermissionRow = ({ module, permissions, onChange }) => {
     "Security": RiLockLine,
     "Audit Log": RiFileListLine
   }[module.name] || RiLayoutGridLine;
-  
+
   return (
     <tr className="group hover:bg-gray-50/50 transition-colors border-b border-gray-50/50">
+      <td className="py-3 px-4 text-center align-middle">
+        <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">{index + 1}</span>
+      </td>
       <td className="py-3 px-6">
         <div className="flex items-center gap-3">
           <Icon size={18} className="text-gray-400 group-hover:text-secondary transition-colors" />
@@ -157,10 +160,11 @@ const RolesAndPermissionsPanel = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50 border-b border-gray-100">
+        <div className="overflow-auto max-h-[68vh]">
+          <table className="w-full min-w-0 border-collapse">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="py-4 px-4 text-center text-[11px] font-black text-gray-400 uppercase tracking-widest w-16">Sr No</th>
                 <th className="py-4 px-6 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest">Module</th>
                 <th className="py-4 px-2 text-center text-[11px] font-black text-gray-400 uppercase tracking-widest w-28">View</th>
                 <th className="py-4 px-2 text-center text-[11px] font-black text-gray-400 uppercase tracking-widest w-28">Add</th>
@@ -169,12 +173,13 @@ const RolesAndPermissionsPanel = () => {
               </tr>
             </thead>
             <tbody>
-              {modulePermissions.map(mod => (
-                <PermissionRow 
-                  key={mod.module.name} 
-                  module={mod.module} 
-                  permissions={mod.permissions} 
+              {modulePermissions.map((mod, index) => (
+                <PermissionRow
+                  key={mod.module.name}
+                  module={mod.module}
+                  permissions={mod.permissions}
                   onChange={handlePermissionChange}
+                  index={index}
                 />
               ))}
             </tbody>
