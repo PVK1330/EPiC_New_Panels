@@ -237,6 +237,13 @@ export const uploadComplianceDocument = (data) => {
 export const deleteComplianceDocument = (id) =>
   api.delete(`/api/business/compliance-documents/${id}`);
 
+// Streams a compliance document's file. The uploads/ tree is not served
+// statically, so this authenticated route is the only way to fetch the file.
+export const downloadComplianceDocument = (id) =>
+  api.get(`/api/business/compliance-documents/${id}/download`, {
+    responseType: "blob",
+  });
+
 // Business: Employee records (sponsored workers with compliance info)
 export const getEmployeeRecords = () =>
   api.get("/api/business/workers/employee-records");
@@ -312,6 +319,11 @@ export const requestIntakeDocumentInfo = (id, documentKey, notes) =>
 // Business: Reporting obligations
 export const getReportingObligations = () =>
   api.get("/api/business/worker-events");
+
+// Business: stream a worker-event's evidence file. The storage tree isn't served
+// statically, so this authenticated route is the only way to fetch the file.
+export const downloadWorkerEventEvidence = (id) =>
+  api.get(`/api/business/worker-events/${id}/evidence`, { responseType: "blob" });
 
 // Business: Submit/Update a reporting obligation
 export const submitReportingObligation = (data) => {

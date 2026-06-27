@@ -5,6 +5,14 @@ export const getSponsors = (page = 1, limit = 10, search = "", status = "") =>
 
 export const getSponsorById = (id) => api.get(`/api/sponsors/${id}`);
 
+// Streams one of a sponsor's uploaded registration documents (admin Documents
+// tab). `field` is one of: sponsorLetter, insuranceCertificate, hrPolicies,
+// organisationalChart, recruitmentDocs. Returns an axios blob response.
+export const downloadSponsorDocument = (id, field) =>
+  api.get(`/api/sponsors/${id}/documents/${field}/download`, {
+    responseType: "blob",
+  });
+
 export const createSponsor = (data) => api.post(`/api/sponsors/`, data);
 
 export const updateSponsor = (id, data) => api.put(`/api/sponsors/${id}`, data);

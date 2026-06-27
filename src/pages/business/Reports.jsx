@@ -14,6 +14,7 @@ import { getCosSummary, getComplianceSummary } from "../../services/licenceApi";
 import { getBusinessPayments } from "../../services/businessProfileApi";
 import { getSponsoredWorkers } from "../../services/sponsoredWorkerApi";
 import { useToast } from "../../context/ToastContext";
+import useDownloads from "../../hooks/useDownloads";
 
 const cardVariants = {
   hidden: { opacity: 0, y: 16 },
@@ -52,8 +53,13 @@ const StatCard = ({ label, value, color = "gray" }) => {
   );
 };
 
+// Only the CoS Utilisation report has a backend export endpoint today. The other
+// tabs have no export route, so the button honestly reports that for them.
+const EXPORTABLE_REPORTS = new Set(["cos-utilization"]);
+
 const Reports = () => {
   const { showToast } = useToast();
+  const { downloadCosSummaryExcel } = useDownloads();
   const [selectedReport, setSelectedReport] = useState("cos-utilization");
   const [dateRange, setDateRange] = useState("last-30-days");
   const [loading, setLoading] = useState(true);
@@ -129,18 +135,24 @@ const Reports = () => {
   );
 
   const handleDownload = async () => {
+    // Only some reports have a backend export. Be honest for the rest instead of
+    // failing with a confusing error.
+    if (!EXPORTABLE_REPORTS.has(selectedReport)) {
+      showToast({ message: "Export is not available for this report yet.", variant: "warning" });
+      return;
+    }
+
     setDownloading(true);
     try {
-      const { downloadCosSummaryExcel } = await import("../../services/downloadApi");
-      const res = await downloadCosSummaryExcel();
-      const url = URL.createObjectURL(res.data);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `report-${selectedReport}-${dateRange}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      showToast({ message: "Export not available for this report", variant: "warning" });
+      // The hook handles the {blob, filename} response shape and triggers the
+      // browser download; it returns { ok, message } rather than throwing.
+      const result = await downloadCosSummaryExcel();
+      if (!result.ok) {
+        showToast({
+          message: result.message || "Failed to export the report. Please try again.",
+          variant: "danger",
+        });
+      }
     } finally {
       setDownloading(false);
     }
@@ -224,8 +236,13 @@ const Reports = () => {
             </select>
             <button
               onClick={handleDownload}
-              disabled={downloading}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm disabled:opacity-60"
+              disabled={downloading || !EXPORTABLE_REPORTS.has(selectedReport)}
+              title={
+                EXPORTABLE_REPORTS.has(selectedReport)
+                  ? "Download this report as Excel"
+                  : "Export is not available for this report yet"
+              }
+              className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <Download size={13} className={downloading ? "animate-pulse" : ""} />
               {downloading ? "Exporting…" : "Download"}

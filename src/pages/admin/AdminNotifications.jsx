@@ -18,6 +18,7 @@ import { RiNotification3Line } from "react-icons/ri";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import Modal from "../../components/Modal";
+import Pagination from "../../components/common/Pagination";
 import { DateTimePicker } from "../../components/DatePicker";
 import {
   getNotifications,
@@ -161,12 +162,16 @@ const cardVariants = {
 
 const FORM_ID = "create-notification-form";
 
+const PAGE_SIZE = 10;
+
 export default function AdminNotifications() {
   const { user, token } = useSelector((state) => state.auth);
   const [modalOpen, setModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [viewAll, setViewAll] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: PAGE_SIZE, pages: 0 });
   const [formData, setFormData] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [newUserInput, setNewUserInput] = useState("");
@@ -190,10 +195,18 @@ export default function AdminNotifications() {
     [stats.total, stats.unread, readCount],
   );
 
+  // Reset to the first page whenever the My/All scope changes so we never land
+  // on a page index that no longer exists for the new list.
+  useEffect(() => {
+    setPage(1);
+  }, [viewAll]);
+
   useEffect(() => {
     fetchNotifications();
     fetchStats();
-  }, [viewAll]);
+    // fetchNotifications reads the latest `page`/`viewAll` from its closure on
+    // each render, so re-running on both keeps the list in sync with paging.
+  }, [viewAll, page]);
 
   useEffect(() => {
     fetchPreferences();
@@ -249,12 +262,14 @@ export default function AdminNotifications() {
   const fetchNotifications = async () => {
     setIsFetching(true);
     try {
+      const params = { page, limit: PAGE_SIZE };
       const res = viewAll
-        ? await getAllNotifications()
-        : await getNotifications();
+        ? await getAllNotifications(params)
+        : await getNotifications(params);
 
       if (res.data?.status === "success") {
-        const mappedNotifications = (res.data.data.notifications || []).map(n => ({
+        const data = res.data.data || {};
+        const mappedNotifications = (data.notifications || []).map(n => ({
           id: n.id,
           title: n.title,
           message: n.message,
@@ -269,6 +284,14 @@ export default function AdminNotifications() {
           metadata: n.metadata,
         }));
         setNotifications(mappedNotifications);
+
+        // Normalize the two response shapes: the "My" endpoint returns flat
+        // { total, page, totalPages }; the "All" endpoint nests { pagination }.
+        const p = data.pagination || {};
+        const total = p.total ?? data.total ?? 0;
+        const limit = p.limit ?? PAGE_SIZE;
+        const pages = p.pages ?? data.totalPages ?? (limit ? Math.ceil(total / limit) : 0);
+        setPagination({ total, page: p.page ?? data.page ?? page, limit, pages });
       }
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -618,7 +641,23 @@ export default function AdminNotifications() {
               </motion.div>
             );
           })}
+          {!isFetching && notifications.length === 0 && (
+            <div className="p-10 text-center text-sm text-gray-400">
+              No notifications to display.
+            </div>
+          )}
         </div>
+        {pagination.pages > 1 && (
+          <div className="px-6 pb-4">
+            <Pagination
+              page={pagination.page}
+              totalPages={pagination.pages}
+              total={pagination.total}
+              limit={pagination.limit}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </motion.div>
 
       <motion.div

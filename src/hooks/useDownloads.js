@@ -13,7 +13,7 @@ import {
 import { exportDashboardPDF as fetchDashboardPdf } from "../services/dashboardApi";
 import { exportAdmins } from "../services/adminService";
 import { exportCaseworkers } from "../services/caseWorker";
-import { exportSponsors } from "../services/sponsorApi";
+import { exportSponsors, downloadSponsorDocument as fetchSponsorDocument } from "../services/sponsorApi";
 import {
   exportCandidates,
   exportCandidateApplicationsExcel,
@@ -463,6 +463,16 @@ export default function useDownloads() {
     [wrapAxiosBlob],
   );
 
+  const downloadSponsorDoc = useCallback(
+    (sponsorId, field, filename) =>
+      wrapAxiosBlob(
+        `sponsorDoc_${sponsorId}_${field}`,
+        () => fetchSponsorDocument(sponsorId, field),
+        filename || field,
+      ),
+    [wrapAxiosBlob],
+  );
+
   const downloadCosSummaryExcel = useCallback(
     () => wrapBlobPair("cosSummaryExcel", fetchCosSummaryExcel),
     [wrapBlobPair],
@@ -511,5 +521,6 @@ export default function useDownloads() {
     downloadTransactionReceiptPdf,
     downloadCosSummaryExcel,
     downloadCosRequestsExcel,
+    downloadSponsorDoc,
   };
 }

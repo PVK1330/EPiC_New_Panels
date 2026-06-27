@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { RiNotification3Line, RiCheckDoubleLine, RiFilter3Line, RiSettings4Line, RiHistoryLine } from 'react-icons/ri';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { RiNotification3Line, RiCheckDoubleLine, RiFilter3Line, RiSettings4Line, RiHistoryLine, RiCheckLine } from 'react-icons/ri';
 import Button from '../../components/Button';
 import Modal from '../../components/common/Modal';
+import Pagination from '../../components/common/Pagination';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import {
@@ -22,11 +23,27 @@ const DEFAULT_PREFS = {
   system_updates:      false,
 };
 
+const PAGE_SIZE = 15;
+
+// Filter options mirror the PlatformNotification `type` ENUM. "" means no filter.
+const TYPE_FILTER_OPTIONS = [
+  { value: '', label: 'All types' },
+  { value: 'info', label: 'Info' },
+  { value: 'success', label: 'Success' },
+  { value: 'warning', label: 'Warning' },
+  { value: 'error', label: 'Error' },
+];
+
 const SuperadminNotifications = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: PAGE_SIZE, pages: 0 });
   const [loading, setLoading] = useState(true);
+  const [typeFilter, setTypeFilter] = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef(null);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState(DEFAULT_PREFS);
   const [prefsLoading, setPrefsLoading] = useState(false);
@@ -61,20 +78,50 @@ const SuperadminNotifications = () => {
     setLoading(true);
     try {
       const res = await fetchPlatformNotifications({
-        unreadOnly: activeTab === 'Unread' ? 'true' : 'false'
+        unreadOnly: activeTab === 'Unread' ? 'true' : 'false',
+        ...(typeFilter ? { type: typeFilter } : {}),
+        page,
+        limit: PAGE_SIZE,
       });
-      const list = res.data?.data?.notifications || [];
-      setNotifications(list);
+      const data = res.data?.data || {};
+      setNotifications(data.notifications || []);
+      const p = data.pagination || {};
+      const total = p.total ?? (data.notifications || []).length;
+      const limit = p.limit ?? PAGE_SIZE;
+      setPagination({
+        total,
+        page: p.page ?? page,
+        limit,
+        pages: p.pages ?? (limit ? Math.ceil(total / limit) : 0),
+      });
     } catch (e) {
       console.error("Failed to load platform notifications:", e);
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, page, typeFilter]);
+
+  // Switching the All/Unread tab or the type filter restarts paging from page 1
+  // so we never request a page index that no longer exists for the new set.
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, typeFilter]);
 
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
+
+  // Close the filter dropdown when clicking outside of it.
+  useEffect(() => {
+    if (!filterOpen) return undefined;
+    const handleClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [filterOpen]);
 
   const handleNotificationClick = async (notif) => {
     setSelectedNotification(notif);
@@ -141,9 +188,50 @@ const SuperadminNotifications = () => {
               </button>
             ))}
           </div>
-          <button type="button" className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-secondary transition-colors">
-            <RiFilter3Line size={14} className="inline mr-1" /> Filter
-          </button>
+          <div className="relative" ref={filterRef}>
+            <button
+              type="button"
+              onClick={() => setFilterOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={filterOpen}
+              className={`text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 ${
+                typeFilter || filterOpen ? 'text-secondary' : 'text-gray-400 hover:text-secondary'
+              }`}
+            >
+              <RiFilter3Line size={14} className="inline" />
+              {typeFilter
+                ? TYPE_FILTER_OPTIONS.find((o) => o.value === typeFilter)?.label
+                : 'Filter'}
+            </button>
+
+            {filterOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 mt-2 w-44 rounded-lg border border-gray-100 bg-white shadow-lg z-20 py-1"
+              >
+                {TYPE_FILTER_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value || 'all'}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={typeFilter === opt.value}
+                    onClick={() => {
+                      setTypeFilter(opt.value);
+                      setFilterOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold tracking-wide transition-colors ${
+                      typeFilter === opt.value
+                        ? 'text-secondary bg-secondary/5'
+                        : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    {opt.label}
+                    {typeFilter === opt.value && <RiCheckLine size={14} className="text-secondary" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Notifications List */}
@@ -194,11 +282,42 @@ const SuperadminNotifications = () => {
               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-200 mb-4 border border-gray-100 shadow-inner">
                 <RiNotification3Line size={32} />
               </div>
-              <p className="text-xs font-black text-secondary uppercase tracking-widest">You're all caught up</p>
-              <p className="text-[10px] text-gray-400 mt-1 font-bold uppercase tracking-widest">No system alerts to display</p>
+              {typeFilter ? (
+                <>
+                  <p className="text-xs font-black text-secondary uppercase tracking-widest">No matching alerts</p>
+                  <p className="text-[10px] text-gray-400 mt-1 font-bold uppercase tracking-widest">
+                    No {TYPE_FILTER_OPTIONS.find((o) => o.value === typeFilter)?.label} alerts to display
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setTypeFilter('')}
+                    className="mt-3 text-[10px] font-black text-primary uppercase tracking-widest hover:underline"
+                  >
+                    Clear filter
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-black text-secondary uppercase tracking-widest">You're all caught up</p>
+                  <p className="text-[10px] text-gray-400 mt-1 font-bold uppercase tracking-widest">No system alerts to display</p>
+                </>
+              )}
             </div>
           )}
         </div>
+
+        {/* Pagination (auto-hidden when there's a single page) */}
+        {!loading && pagination.pages > 1 && (
+          <div className="border-t border-gray-50 px-4 py-3 bg-gray-50/30">
+            <Pagination
+              page={pagination.page}
+              totalPages={pagination.pages}
+              total={pagination.total}
+              limit={pagination.limit}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* Notification Detail Modal */}
