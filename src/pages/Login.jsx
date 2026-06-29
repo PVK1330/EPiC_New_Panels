@@ -337,7 +337,6 @@ const Login = () => {
     try {
       const res = await verifyTwoFactor({
         email: pendingLogin.email,
-        password: pendingLogin.password,
         token: twoFactorCode,
       });
 
