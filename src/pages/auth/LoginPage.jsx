@@ -334,7 +334,6 @@ export default function LoginPage() {
     try {
       const res = await verifyTwoFactor({
         email: pendingLogin.email,
-        password: pendingLogin.password,
         token: twoFactorCode,
       });
 
