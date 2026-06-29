@@ -48,6 +48,10 @@ export const getLicenceDocuments = () => api.get("/api/business/licence/document
 export const getAllLicenceApplications = (params = {}) => api.get("/api/admin/licence/all", { params });
 export const updateLicenceApplicationStatus = (id, data) => api.patch(`/api/admin/licence/update-status/${id}`, data);
 export const grantLicence = (id, data) => api.post(`/api/admin/licence/${id}/grant`, data, { timeout: 30000 });
+// Caseworker: grant/close or reject the licence once the sponsor has confirmed the
+// UKVI decision (the grant gate is enforced server-side in grantLicence()).
+export const grantLicenceCaseworker = (id, data) => api.post(`/api/caseworker/licence/${id}/grant`, data, { timeout: 30000 });
+export const rejectLicenceCaseworker = (id, data) => api.post(`/api/caseworker/licence/${id}/reject-final`, data);
 export const getAdminLicenceApplicationDetails = (id) => api.get(`/api/admin/licence/details/${id}`);
 export const requestLicenceInfo = (id, data) => api.patch(`/api/admin/licence/request-info/${id}`, data);
 export const assignLicenceCaseworker = (id, data) => api.post(`/api/admin/licence/assign-caseworker/${id}`, data);
@@ -63,9 +67,44 @@ export const confirmSponsorGovCredentials = (id) => api.post(`/api/business/lice
 export const submitSponsorUkviCredentials = (id, data) =>
   api.post(`/api/business/licence/${id}/submit-credentials`, data);
 
-// Sponsor: confirm UKVI licence fee payment made on UKVI portal (flow v2)
-export const confirmSponsorUkviPayment = (id) =>
-  api.post(`/api/business/licence/${id}/confirm-payment`);
+// Sponsor: confirm UKVI licence fee payment made on UKVI portal (flow v2).
+// An optional payment slip (PDF/image) may be attached as proof — sent as
+// multipart when provided, plain JSON otherwise.
+export const confirmSponsorUkviPayment = (id, file = null) => {
+  if (file) {
+    const fd = new FormData();
+    fd.append("paymentProof", file);
+    return api.post(`/api/business/licence/${id}/confirm-payment`, fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  }
+  return api.post(`/api/business/licence/${id}/confirm-payment`);
+};
+
+// Sponsor: confirm the UKVI decision received (UKVI emails it directly). An
+// optional decision/grant letter may be attached as proof — multipart when present.
+export const confirmSponsorUkviDecision = (id, file = null) => {
+  if (file) {
+    const fd = new FormData();
+    fd.append("decisionLetter", file);
+    return api.post(`/api/business/licence/${id}/confirm-decision`, fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  }
+  return api.post(`/api/business/licence/${id}/confirm-decision`);
+};
+
+// Admin / Caseworker: stream the sponsor-uploaded UKVI decision letter (blob).
+export const downloadAdminDecisionLetter = (id, { download = false } = {}) =>
+  api.get(`/api/admin/licence/${id}/decision-letter/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
+export const downloadCaseworkerDecisionLetter = (id, { download = false } = {}) =>
+  api.get(`/api/caseworker/licence/${id}/decision-letter/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
 
 // Caseworker: government pipeline (Phase 3)
 export const startLicenceReview = (id) => api.post(`/api/caseworker/licence/${id}/start-review`);
@@ -136,6 +175,19 @@ export const downloadSponsorLicenceDocument = (id, index, { download = false } =
     responseType: "blob",
   });
 
+// Admin / Caseworker: stream the sponsor-uploaded UKVI payment slip (blob).
+// Pass { download: true } to force a download disposition (inline preview otherwise).
+export const downloadAdminPaymentProof = (id, { download = false } = {}) =>
+  api.get(`/api/admin/licence/${id}/payment-proof/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
+export const downloadCaseworkerPaymentProof = (id, { download = false } = {}) =>
+  api.get(`/api/caseworker/licence/${id}/payment-proof/download`, {
+    params: download ? { download: 1 } : {},
+    responseType: "blob",
+  });
+
 // All roles: pending licence stage tasks for the authenticated user's role
 export const getMyLicenceStageTasks = () => api.get("/api/tasks/my-stage-tasks");
 
@@ -180,6 +232,9 @@ export const updateCosRequest = (id, data) =>
 
 export const deleteCosRequest = (id) =>
   api.delete(`/api/business/cos/requests/${id}`);
+
+export const getCosAllocations = () =>
+  api.get("/api/business/cos/allocations");
 
 // Business: Renew licence
 export const renewLicence = (id, data = {}) =>
@@ -236,6 +291,13 @@ export const uploadComplianceDocument = (data) => {
 
 export const deleteComplianceDocument = (id) =>
   api.delete(`/api/business/compliance-documents/${id}`);
+
+// Streams a compliance document's file. The uploads/ tree is not served
+// statically, so this authenticated route is the only way to fetch the file.
+export const downloadComplianceDocument = (id) =>
+  api.get(`/api/business/compliance-documents/${id}/download`, {
+    responseType: "blob",
+  });
 
 // Business: Employee records (sponsored workers with compliance info)
 export const getEmployeeRecords = () =>
@@ -312,6 +374,11 @@ export const requestIntakeDocumentInfo = (id, documentKey, notes) =>
 // Business: Reporting obligations
 export const getReportingObligations = () =>
   api.get("/api/business/worker-events");
+
+// Business: stream a worker-event's evidence file. The storage tree isn't served
+// statically, so this authenticated route is the only way to fetch the file.
+export const downloadWorkerEventEvidence = (id) =>
+  api.get(`/api/business/worker-events/${id}/evidence`, { responseType: "blob" });
 
 // Business: Submit/Update a reporting obligation
 export const submitReportingObligation = (data) => {

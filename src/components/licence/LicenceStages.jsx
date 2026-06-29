@@ -190,8 +190,14 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
     try {
       const res = await completeLicenceStageTask(viewerRole, applicationId, stageKey, role);
       const next = res.data?.data || null;
-      setModel(next);
-      onChange?.(next);
+      if (next) {
+        setModel(next);
+        onChange?.(next);
+      } else {
+        // Completion succeeded but the server couldn't rebuild the panel in the
+        // same round-trip — refetch so the UI reflects the new state.
+        load();
+      }
       showToast({ message: "Task marked complete. The team has been notified.", variant: "success" });
     } catch (err) {
       showToast({ message: err?.response?.data?.message || "Couldn't complete this task.", variant: "danger" });
@@ -199,6 +205,7 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
       setBusyKey(null);
     }
   };
+
 
   if (loading) {
     return (
@@ -325,7 +332,13 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
                     if (!meta) return null;
                     const isViewer = viewerRole && viewerRole === task.role;
                     const isDone = task.status === "completed";
-                    const showButton = canComplete(task);
+                    // Payment confirmation must go through the dedicated confirm-payment
+                    // flow (which records the UKVI fee confirmation and lets the sponsor
+                    // attach a payment slip), not a bare "mark complete" here. Route the
+                    // sponsor to that page via the deep-link action instead.
+                    const isSponsorPaymentTask =
+                      stage.key === "payment_confirmation" && task.role === "sponsor" && viewerRole === "sponsor";
+                    const showButton = canComplete(task) && !isSponsorPaymentTask;
                     const busy = busyKey === `${stage.key}:${task.role}`;
                     // Sponsor's own incomplete task → deep-link to the page to do it.
                     const action =
@@ -345,6 +358,10 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
                           )}
                         </div>
                         <p className="text-xs font-bold leading-snug text-secondary">{task.title}</p>
+
+                        {/* Payment confirmation (incl. optional payment-slip upload) is
+                            handled on the Licence Process page via the confirm-payment
+                            flow; the sponsor is routed there by the deep-link action below. */}
 
                         {interactive && (task.assigneeName || task.status || action || showButton) && (
                           <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">

@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import {
   Bell,
@@ -17,8 +19,11 @@ import {
   deleteNotification,
 } from "../../services/notificationApi";
 import { formatDateLong } from "../../utils/datetime";
+import { resolveNotificationTarget } from "../../utils/notificationHelpers";
 
 const BusinessNotifications = () => {
+  const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
   const [filterType, setFilterType] = useState("all");
   const [notifications, setNotifications] = useState([]);
   const [stats, setStats] = useState({ total: 0, unread: 0, read: 0 });
@@ -41,6 +46,13 @@ const BusinessNotifications = () => {
           message: n.message,
           timestamp: formatTime(n.createdAt),
           read: n.isRead,
+          // Routing fields — required by resolveNotificationTarget
+          entityType: n.entityType,
+          entityId: n.entityId,
+          actionType: n.actionType,
+          category: n.category,
+          metadata: n.metadata,
+          actionUrl: n.actionUrl,
         }));
         setNotifications(mappedNotifications);
       }
@@ -130,6 +142,14 @@ const BusinessNotifications = () => {
       fetchStats();
     } catch (error) {
       console.error("Failed to mark as read:", error);
+    }
+  };
+
+  const handleNotifClick = async (notif) => {
+    if (!notif.read) await handleMarkAsRead(notif.id);
+    const target = resolveNotificationTarget(notif, user);
+    if (target?.path) {
+      navigate(target.path, target.state ? { state: target.state } : undefined);
     }
   };
 
@@ -232,7 +252,7 @@ const BusinessNotifications = () => {
               className={`border rounded-xl px-3 py-2.5 flex items-start gap-3 transition-colors cursor-pointer ${getNotificationColor(notif.type)} ${
                 !notif.read ? "border-l-4 border-l-primary" : ""
               }`}
-              onClick={() => handleMarkAsRead(notif.id)}
+              onClick={() => handleNotifClick(notif)}
             >
               <div className="mt-1">{getNotificationIcon(notif.type)}</div>
               <div className="flex-1 min-w-0">

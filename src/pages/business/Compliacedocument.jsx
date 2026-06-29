@@ -139,7 +139,16 @@ const DocumentList = () => {
 
   const handleDownload = async (doc) => {
     if (!doc.path) return showToast({ message: "No file available for this document.", variant: "warning" });
-    const result = await downloadAssetFile(doc.path, doc.name);
+    // Use the original filename (with its extension) from the stored path so the
+    // saved file opens correctly; fall back to the display name.
+    const originalName = doc.path.split("/").pop().replace(/^\d+-/, "");
+    // The uploads/ tree isn't served statically, so hitting the file path 404s.
+    // Stream the file through the authenticated, sponsor-scoped download route
+    // (downloadAssetFile issues an auth'd blob GET against the given API path).
+    const result = await downloadAssetFile(
+      `api/business/compliance-documents/${doc.id}/download`,
+      originalName || doc.name,
+    );
     if (!result.ok) {
       showToast({ message: result.message || "Failed to download document", variant: "danger" });
     }

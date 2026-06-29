@@ -170,7 +170,13 @@ export function resolveNotificationTarget(notification, user = null) {
   if (entityType === 'cos_request' || category === 'cos') {
     if (role === 'admin') return { path: '/admin/cos-requests' };
     if (role === 'caseworker') return { path: '/caseworker/cos-requests' };
-    if (role === 'business') return { path: '/business/cosallocation' };
+    if (role === 'business') {
+      // For info requests, allocation decisions, and rejections, take the sponsor
+      // directly to the Request History tab where the message/status is visible.
+      const historyActions = ['cos_info_requested', 'cos_allocated', 'cos_rejected'];
+      const toHistory = historyActions.includes(actionType);
+      return { path: toHistory ? '/business/cosallocation?tab=history' : '/business/cosallocation' };
+    }
   }
 
   // 4. Compliance reviews (compliance docs, right-to-work, reviewed worker

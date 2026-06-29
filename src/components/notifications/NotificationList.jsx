@@ -8,6 +8,7 @@ import {
   clearError
 } from '../../store/slices/notificationSlice';
 import NotificationItem from './NotificationItem';
+import Pagination from '../common/Pagination';
 
 const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
   // `onClose` is passed when rendered inside the bell dropdown. In that mode the
@@ -27,23 +28,31 @@ const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
 
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState(showUnreadOnly ? 'unread' : 'all');
-  const [filters, setFilters] = useState({
-    limit: 20,
-    unread_only: false
-  });
+  const limit = 20;
+
+  // The "unread" tab is filtered server-side so paging + totals are accurate for
+  // that view. ("read" has no dedicated server filter, so it stays a client-side
+  // filter over the current page — see filteredNotifications below.)
+  const unreadOnly = viewMode === 'unread';
 
   useEffect(() => {
-    dispatch(fetchNotifications({ ...filters, page }));
+    dispatch(fetchNotifications({ limit, page, unreadOnly: unreadOnly ? 'true' : 'false' }));
     dispatch(fetchUnreadCount());
-  }, [dispatch, page, filters]);
+  }, [dispatch, page, unreadOnly]);
 
   useEffect(() => {
     setViewMode(showUnreadOnly ? 'unread' : 'all');
     setPage(1);
   }, [showUnreadOnly]);
 
+  // Changing tab restarts paging from the first page of that filtered set.
+  const changeViewMode = (mode) => {
+    setViewMode(mode);
+    setPage(1);
+  };
+
   const handleRefresh = () => {
-    dispatch(fetchNotifications({ ...filters, page }));
+    dispatch(fetchNotifications({ limit, page, unreadOnly: unreadOnly ? 'true' : 'false' }));
     dispatch(fetchUnreadCount());
   };
 
@@ -53,6 +62,8 @@ const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
 
   const safePagination = pagination || { total: 0, page: 1, limit: 20, pages: 0 };
 
+  // Dropdown keeps the lightweight "Load More" (cramped space); the full page
+  // gets a numbered pager.
   const handleLoadMore = () => {
     if (page < safePagination.pages) {
       setPage(prev => prev + 1);
@@ -130,19 +141,19 @@ const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
       {/* Tabs */}
       <div className="flex border-b border-gray-200 bg-gray-50/50">
         <button
-          onClick={() => setViewMode('all')}
+          onClick={() => changeViewMode('all')}
           className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${viewMode === 'all' ? 'text-blue-600 border-b-2 border-blue-600 bg-white' : 'text-gray-500 hover:text-gray-800'}`}
         >
           All
         </button>
         <button
-          onClick={() => setViewMode('unread')}
+          onClick={() => changeViewMode('unread')}
           className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${viewMode === 'unread' ? 'text-blue-600 border-b-2 border-blue-600 bg-white' : 'text-gray-500 hover:text-gray-800'}`}
         >
           Unread
         </button>
         <button
-          onClick={() => setViewMode('read')}
+          onClick={() => changeViewMode('read')}
           className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${viewMode === 'read' ? 'text-blue-600 border-b-2 border-blue-600 bg-white' : 'text-gray-500 hover:text-gray-800'}`}
         >
           Read
@@ -183,8 +194,9 @@ const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
               />
             ))}
             
-            {/* Load More */}
-            {safePagination.page < safePagination.pages && (
+            {/* Dropdown keeps the lightweight "Load More"; the full page uses the
+                numbered pager in the footer below. */}
+            {isDropdown && safePagination.page < safePagination.pages && (
               <div className="text-center pt-4">
                 <button
                   onClick={handleLoadMore}
@@ -200,12 +212,17 @@ const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
       </div>
 
       {/* Footer — hidden in dropdown mode where the dropdown owns the footer
-          ("View all notifications"), so we don't stack two footers. */}
-      {!isDropdown && safePagination.total > 0 && (
+          ("View all notifications"), so we don't stack two footers. The full
+          page shows a numbered pager (auto-hidden when there's a single page). */}
+      {!isDropdown && safePagination.pages > 1 && (
         <div className="border-t border-gray-200 px-4 py-3 bg-gray-50">
-          <p className="text-xs text-gray-500">
-            Showing {safeNotifications.length} of {safePagination.total} notifications
-          </p>
+          <Pagination
+            page={safePagination.page}
+            totalPages={safePagination.pages}
+            total={safePagination.total}
+            limit={safePagination.limit}
+            onPageChange={setPage}
+          />
         </div>
       )}
     </div>

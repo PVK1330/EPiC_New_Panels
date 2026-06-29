@@ -17,6 +17,7 @@ import {
   Loader2
 } from "lucide-react";
 import { getSponsoredWorkers, deleteSponsoredWorker } from "../../services/sponsoredWorkerApi";
+
 import { toast } from "react-hot-toast";
 import useSponsorLicence from "../../hooks/useSponsorLicence";
 import LicenceGateBanner from "../../components/business/LicenceGateBanner";
@@ -27,7 +28,7 @@ const BusinessWorkers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   // CRIT-03: modal-driven delete — replaces window.confirm()
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, candidateId: null, workerName: "" });
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, workerId: null, workerName: "" });
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const { ready: licenceReady, licenceStatus, canSponsorWorkers } = useSponsorLicence();
@@ -54,18 +55,18 @@ const BusinessWorkers = () => {
   }, [fetchWorkers]);
 
   // CRIT-03: open modal instead of native confirm
-  const openDeleteConfirm = (candidateId, worker) => {
-    const name = `${worker.candidate?.first_name || ""} ${worker.candidate?.last_name || ""}`.trim() || "this worker";
-    setDeleteConfirm({ open: true, candidateId, workerName: name });
+  const openDeleteConfirm = (workerId, worker) => {
+    const name = `${worker.workerFirstName || ""} ${worker.workerLastName || ""}`.trim() || "this worker";
+    setDeleteConfirm({ open: true, workerId, workerName: name });
   };
 
   const confirmDeleteWorker = async () => {
     setDeleting(true);
     try {
-      const response = await deleteSponsoredWorker(deleteConfirm.candidateId);
+      const response = await deleteSponsoredWorker(deleteConfirm.workerId);
       if (response.data.status === "success") {
         toast.success("Worker removed successfully");
-        setDeleteConfirm({ open: false, candidateId: null, workerName: "" });
+        setDeleteConfirm({ open: false, workerId: null, workerName: "" });
         fetchWorkers();
       }
     } catch (error) {
@@ -77,13 +78,12 @@ const BusinessWorkers = () => {
   };
 
   const filteredWorkers = workers.filter((worker) => {
-    const candidateName = `${worker.candidate?.first_name || ''} ${worker.candidate?.last_name || ''}`.toLowerCase();
-    const candidateEmail = (worker.candidate?.email || '').toLowerCase();
+    const workerName = `${worker.workerFirstName || ''} ${worker.workerLastName || ''}`.toLowerCase();
+    const workerEmail = (worker.workerEmail || '').toLowerCase();
 
     const matchesSearch =
-      candidateName.includes(searchTerm.toLowerCase()) ||
-      candidateEmail.includes(searchTerm.toLowerCase()) ||
-      (worker.caseId || '').toLowerCase().includes(searchTerm.toLowerCase());
+      workerName.includes(searchTerm.toLowerCase()) ||
+      workerEmail.includes(searchTerm.toLowerCase());
 
     const matchesFilter =
       filterStatus === "all" || (worker.status || "").toLowerCase() === filterStatus.toLowerCase();
@@ -93,42 +93,44 @@ const BusinessWorkers = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "Approved":
-      case "Active":
-      case "Completed":
+      case "Visa Granted":
         return "bg-emerald-100 text-emerald-700";
-      case "Rejected":
-      case "Cancelled":
+      case "Visa Rejected":
         return "bg-red-100 text-red-700";
-      case "Pending":
-      case "Under Review":
-      case "Docs Pending":
+      case "Registered":
+        return "bg-blue-100 text-blue-700";
+      case "CoS Assigned":
+      case "Immigration Assessment":
+      case "Visa Preparation":
+      case "Compliance Review":
+      case "Visa Decision":
         return "bg-amber-100 text-amber-700";
       default:
-        return "bg-blue-100 text-blue-700";
+        return "bg-gray-100 text-gray-600";
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "Approved":
-      case "Active":
-      case "Completed":
+      case "Visa Granted":
         return <CheckCircle2 size={16} className="text-emerald-600" />;
-      case "Rejected":
-      case "Cancelled":
+      case "Visa Rejected":
         return <AlertCircle size={16} className="text-red-600" />;
-      case "Pending":
-      case "Under Review":
-      case "Docs Pending":
-        return <AlertCircle size={16} className="text-amber-600" />;
+      case "Registered":
+        return <Briefcase size={16} className="text-blue-500" />;
+      case "CoS Assigned":
+      case "Immigration Assessment":
+      case "Visa Preparation":
+      case "Compliance Review":
+      case "Visa Decision":
+        return <AlertTriangle size={16} className="text-amber-500" />;
       default:
         return null;
     }
   };
 
-  const activeCount = workers.filter((w) => ["Active", "Approved", "Completed"].includes(w.status)).length;
-  const pendingCount = workers.filter((w) => ["Pending", "Under Review", "Docs Pending"].includes(w.status)).length;
+  const awaitingCosCount = workers.filter((w) => w.status === "Registered").length;
+  const cosAssignedCount = workers.filter((w) => w.workerCosNumber != null).length;
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -171,29 +173,29 @@ const BusinessWorkers = () => {
         animate="visible"
       >
         <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-          <div className="flex items-center gap-3 mb-3 text-gray-900">
-            <Users size={20} className="text-primary" />
-            <span className="font-black text-sm">Total Workers</span>
+          <div className="flex items-center gap-2 mb-2">
+            <Users size={18} className="text-primary" />
+            <span className="font-black text-xs text-gray-600">Total Workers</span>
           </div>
           <p className="text-3xl font-black text-secondary">{workers.length}</p>
         </motion.div>
 
         <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-          <div className="flex items-center gap-3 mb-3 text-gray-900">
-            <ShieldCheck size={20} className="text-emerald-600" />
-            <span className="font-black text-sm">Active / Approved</span>
+          <div className="flex items-center gap-2 mb-2">
+            <Briefcase size={18} className="text-blue-500" />
+            <span className="font-black text-xs text-gray-600">Awaiting CoS</span>
           </div>
-          <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
-            {activeCount}
-          </span>
+          <p className="text-3xl font-black text-secondary">{awaitingCosCount}</p>
+          <p className="text-[10px] font-bold text-gray-400 mt-0.5">Registered, no CoS assigned</p>
         </motion.div>
 
         <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-          <div className="flex items-center gap-3 mb-3 text-gray-900">
-            <AlertCircle size={20} className="text-amber-500" />
-            <span className="font-black text-sm">Pending Review</span>
+          <div className="flex items-center gap-2 mb-2">
+            <ShieldCheck size={18} className="text-emerald-600" />
+            <span className="font-black text-xs text-gray-600">CoS Assigned</span>
           </div>
-          <p className="text-3xl font-black text-secondary">{pendingCount}</p>
+          <p className="text-3xl font-black text-secondary">{cosAssignedCount}</p>
+          <p className="text-[10px] font-bold text-gray-400 mt-0.5">Workers with CoS reference number</p>
         </motion.div>
       </motion.div>
 
@@ -212,7 +214,7 @@ const BusinessWorkers = () => {
               <input
                 type="text"
                 aria-label="Search workers"
-                placeholder="Search by name, email or case ID..."
+                placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 px-3 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
@@ -226,22 +228,21 @@ const BusinessWorkers = () => {
                 className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
               >
                 <option value="all">All Status</option>
-                <option value="Active">Active</option>
-                <option value="Approved">Approved</option>
-                <option value="Completed">Completed</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Pending">Pending</option>
-                <option value="Under Review">Under Review</option>
-                <option value="Docs Pending">Docs Pending</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Cancelled">Cancelled</option>
+                <option value="Registered">Registered (Awaiting CoS)</option>
+                <option value="CoS Assigned">CoS Assigned</option>
+                <option value="Immigration Assessment">Immigration Assessment</option>
+                <option value="Visa Preparation">Visa Preparation</option>
+                <option value="Compliance Review">Compliance Review</option>
+                <option value="Visa Decision">Visa Decision</option>
+                <option value="Visa Granted">Visa Granted</option>
+                <option value="Visa Rejected">Visa Rejected</option>
               </select>
             </div>
             <button
               onClick={()=>{ if (!workerBlocked) navigate("/business/sponsored-workers"); }}
               disabled={workerBlocked}
               title={workerBlocked ? "Your Sponsorship Licence is not active." : "Add Worker"}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
               <Plus size={16} />
               Add Worker
@@ -264,11 +265,10 @@ const BusinessWorkers = () => {
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Candidate</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Job Title</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Case ID</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Salary</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Stage</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Worker</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Nationality</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Visa Type</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">CoS Number</th>
                     <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
                     <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px] text-right">Actions</th>
                   </tr>
@@ -279,18 +279,25 @@ const BusinessWorkers = () => {
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black text-xs uppercase">
-                            {worker.candidate?.first_name?.charAt(0)}{worker.candidate?.last_name?.charAt(0)}
+                            {worker.workerFirstName?.charAt(0)}{worker.workerLastName?.charAt(0)}
                           </div>
                           <div>
-                            <p className="text-sm font-black text-secondary">{worker.candidate?.first_name} {worker.candidate?.last_name}</p>
-                            <p className="text-xs font-bold text-gray-600">{worker.candidate?.email}</p>
+                            <p className="text-sm font-black text-secondary">{worker.workerFirstName} {worker.workerLastName}</p>
+                            <p className="text-xs font-bold text-gray-600">{worker.workerEmail}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-sm font-bold text-gray-700">{worker.jobTitle || "Not specified"}</td>
-                      <td className="px-3 py-2 text-xs font-bold text-gray-600 font-mono">{worker.caseId || "N/A"}</td>
-                      <td className="px-3 py-2 text-sm font-bold text-gray-700">£{Number(worker.salaryOffered).toLocaleString()}</td>
-                      <td className="px-3 py-2 text-xs font-bold text-gray-600">{worker.caseStage}</td>
+                      <td className="px-3 py-2 text-sm font-bold text-gray-700">{worker.workerNationality || "—"}</td>
+                      <td className="px-3 py-2 text-sm font-bold text-gray-700">{worker.visaType || "—"}</td>
+                      <td className="px-3 py-2">
+                        {worker.workerCosNumber ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-mono">
+                            {worker.workerCosNumber}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-bold text-gray-400">Not assigned</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
                           {getStatusIcon(worker.status)}
@@ -302,7 +309,7 @@ const BusinessWorkers = () => {
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-2">
                           <button
-                            onClick={() => navigate("/business/worker-details", { state: { candidateId: worker.candidateId } })}
+                            onClick={() => navigate("/business/worker-details", { state: { workerId: worker.id } })}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm"
                             title="View details"
                           >
@@ -310,7 +317,7 @@ const BusinessWorkers = () => {
                             View
                           </button>
                           <button
-                            onClick={() => openDeleteConfirm(worker.candidateId, worker)}
+                            onClick={() => openDeleteConfirm(worker.id, worker)}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-black text-red-600 transition hover:bg-red-200"
                             title="Remove Worker"
                           >
@@ -364,13 +371,13 @@ const BusinessWorkers = () => {
               <div>
                 <h3 className="text-base font-black text-gray-900">Remove Worker</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  Are you sure you want to remove <span className="font-black text-secondary">{deleteConfirm.workerName}</span>? This will delete their case association and cannot be undone.
+                  Are you sure you want to remove <span className="font-black text-secondary">{deleteConfirm.workerName}</span>? This action cannot be undone.
                 </p>
               </div>
             </div>
             <div className="flex gap-2 mt-5">
               <button
-                onClick={() => setDeleteConfirm({ open: false, candidateId: null, workerName: "" })}
+                onClick={() => setDeleteConfirm({ open: false, workerId: null, workerName: "" })}
                 disabled={deleting}
                 className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-black text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
               >

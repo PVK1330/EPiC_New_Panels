@@ -7,8 +7,11 @@ import { isValidPhone } from "../../utils/countries";
 import eliteLogo from "../../assets/elitepic_logo.png";
 import useAuth from "../../hooks/useAuth";
 
+// role_id values MUST match the backend ROLES map: candidate = 1, business = 4.
+// (Previously "Candidate" was mis-mapped to value 3, which is the ADMIN role —
+// silently granting admin to every self-registered candidate.)
 const ROLE_OPTIONS = [
-  { value: 3, label: "Candidate" },
+  { value: 1, label: "Candidate" },
   { value: 4, label: "Business" },
 ];
 
@@ -24,7 +27,7 @@ export default function RegisterPage() {
     confirmPassword: "",
     country_code: "+44",
     mobile: "",
-    role_id: 3,
+    role_id: 1, // candidate (was 3 = admin — privilege-escalation bug)
   });
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState("");
@@ -43,7 +46,16 @@ export default function RegisterPage() {
     if (!form.email.trim()) errs.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = "Enter a valid email";
     if (!form.password) errs.password = "Password is required";
-    else if (form.password.length < 8) errs.password = "At least 8 characters";
+    // Mirror the backend strong-password policy (12+ chars with upper, lower,
+    // digit and special character) so users see the rule before submitting.
+    else if (
+      form.password.length < 12 ||
+      !/[a-z]/.test(form.password) ||
+      !/[A-Z]/.test(form.password) ||
+      !/[0-9]/.test(form.password) ||
+      !/[^A-Za-z0-9]/.test(form.password)
+    )
+      errs.password = "Min 12 characters with upper, lower, number & symbol";
     if (form.password !== form.confirmPassword) errs.confirmPassword = "Passwords do not match";
     if (!form.country_code.trim()) errs.country_code = "Country code is required";
     if (!form.mobile.trim()) errs.mobile = "Mobile number is required";

@@ -20,6 +20,7 @@ import Button from "../../components/Button";
 import { isValidPhone } from "../../utils/countries";
 import { getApiError } from "../../utils/apiError";
 import useSponsor from "../../hooks/useSponsor";
+import useDownloads from "../../hooks/useDownloads";
 import { useToast } from "../../context/ToastContext";
 import {
   createSponsor,
@@ -50,6 +51,17 @@ const RISK_CHIPS = {
   High: "bg-orange-100 text-orange-600",
   Critical: "bg-red-100 text-red-600",
 };
+
+// Registration documents the sponsor uploads on the Documents & Billing step of
+// business registration. Each maps to a STRING column on sponsorProfile holding
+// a private file path — streamed to admins via the authenticated download route.
+const SPONSOR_DOC_FIELDS = [
+  { field: "sponsorLetter", label: "Sponsor Licence Approval Letter" },
+  { field: "insuranceCertificate", label: "Insurance Certificate" },
+  { field: "hrPolicies", label: "HR Policies" },
+  { field: "organisationalChart", label: "Organisational Chart" },
+  { field: "recruitmentDocs", label: "Recruitment Process Documents" },
+];
 
 const STATUS_FILTER_OPTIONS = [
   { value: "All", label: "All" },
@@ -96,6 +108,7 @@ function formatStatusLabel(status) {
 export default function AdminBusinesses() {
   const { showToast } = useToast();
   const { sponsors, pagination, loading, fetchSponsors } = useSponsor();
+  const { downloadSponsorDoc, busy: downloadBusy } = useDownloads();
 
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -438,6 +451,13 @@ export default function AdminBusinesses() {
       showToast({ message: getApiError(e), variant: "danger" });
     } finally {
       setResendId(null);
+    }
+  };
+
+  const handleDownloadDoc = async (sponsorId, field, label) => {
+    const r = await downloadSponsorDoc(sponsorId, field, label);
+    if (!r.ok) {
+      showToast({ message: r.message || "Could not open document", variant: "danger" });
     }
   };
 
@@ -1163,12 +1183,56 @@ export default function AdminBusinesses() {
                   </div>
                 )}
 
-                {detailTab === "documents" && (
-                  <div className="text-center py-8">
-                    <FiFolder size={48} className="text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500">No documents uploaded yet</p>
-                  </div>
-                )}
+                {detailTab === "documents" && (() => {
+                  const docs = SPONSOR_DOC_FIELDS.filter((d) => profile[d.field]);
+                  if (docs.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <FiFolder size={48} className="text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm text-gray-500">No documents uploaded yet</p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="space-y-2">
+                      {docs.map((d) => {
+                        const path = profile[d.field];
+                        const filename = String(path).split(/[\\/]/).pop();
+                        const downloading = downloadBusy[`sponsorDoc_${b.id}_${d.field}`];
+                        return (
+                          <div
+                            key={d.field}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50/60 px-4 py-3"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-9 h-9 rounded-lg bg-secondary/10 flex items-center justify-center shrink-0">
+                                <FiFolder size={16} className="text-secondary" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-gray-900 truncate">{d.label}</p>
+                                <p className="text-[11px] text-gray-400 truncate">{filename}</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadDoc(b.id, d.field, filename)}
+                              disabled={downloading}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/5 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                              title="Download / view document"
+                            >
+                              {downloading ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : (
+                                <FiDownload size={13} />
+                              )}
+                              {downloading ? "Opening…" : "Download"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             </>
           );

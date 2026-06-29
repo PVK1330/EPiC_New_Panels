@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
-import { getReportingObligations, updateReportingObligation } from "../../services/licenceApi";
-import { resolveAssetUrl } from "../../utils/assetUrl";
+import {
+  getReportingObligations,
+  updateReportingObligation,
+  downloadWorkerEventEvidence,
+} from "../../services/licenceApi";
 import DatePicker, { DateTimePicker } from "../../components/DatePicker";
 import { motion } from "framer-motion";
 import {
@@ -31,6 +34,7 @@ const ReportingObligations = () => {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewingEvidenceId, setViewingEvidenceId] = useState(null);
   const [formData, setFormData] = useState({
     workerId: "",
     eventType: "",
@@ -180,6 +184,34 @@ const ReportingObligations = () => {
       alert("Failed to submit report. Please try again.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // The evidence file is not publicly served — fetch it through the authenticated
+  // route (which carries the auth header) as a blob, then open it in a new tab.
+  const handleViewEvidence = async (event) => {
+    if (!event?.id) return;
+    setViewingEvidenceId(event.id);
+    try {
+      const res = await downloadWorkerEventEvidence(event.id);
+      const url = window.URL.createObjectURL(res.data);
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        // Pop-up blocked — fall back to a direct navigation/download.
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      // Revoke after a delay so the new tab has time to load the blob.
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch {
+      alert("Could not open the evidence file. It may have been removed.");
+    } finally {
+      setViewingEvidenceId(null);
     }
   };
 
@@ -356,15 +388,15 @@ const ReportingObligations = () => {
                     </td>
                     <td className="px-3 py-2 text-xs font-bold text-gray-600">
                       {event.evidenceFile ? (
-                        <a
-                          href={resolveAssetUrl(event.evidenceFile)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-primary hover:underline font-black text-xs"
+                        <button
+                          type="button"
+                          onClick={() => handleViewEvidence(event)}
+                          disabled={viewingEvidenceId === event.id}
+                          className="inline-flex items-center gap-1 text-primary hover:underline font-black text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Paperclip size={12} />
-                          View
-                        </a>
+                          {viewingEvidenceId === event.id ? "Opening…" : "View"}
+                        </button>
                       ) : (
                         "-"
                       )}

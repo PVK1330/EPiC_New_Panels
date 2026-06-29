@@ -4,16 +4,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldCheck, Search, Eye, EyeOff, Download, Building2, Mail, Phone, AlertCircle,
   Check, X, FileText, MessageSquare, Loader2, Play, Globe, Key, Send,
-  ClipboardCheck, Calendar, Landmark, Hash, ExternalLink, Upload, RefreshCw, BadgeCheck,
+  ClipboardCheck, Calendar, Landmark, Hash, ExternalLink, Upload, RefreshCw, BadgeCheck, Pencil,
 } from "lucide-react";
 import api from "../../services/api";
 import socketService from "../../services/socket.service";
 import {
   downloadCaseworkerLicenceDocument,
+  downloadCaseworkerPaymentProof,
+  downloadCaseworkerDecisionLetter,
+  grantLicenceCaseworker,
+  rejectLicenceCaseworker,
   startLicenceReview,
   startGovRegistration,
   completeGovRegistration,
-  requestGovCredentials,
+  // requestGovCredentials, // Removed: "Send Credentials to Sponsor" not required in the sponsor flow
   recordGovSubmission,
   getCaseworkerIntakeSummary,
   getIntakeReadiness,
@@ -32,13 +36,13 @@ const ACTIVE_STATUSES   = ["Pending", "Under Review", "Government Processing", "
 const TERMINAL_STATUSES = ["Approved", "Rejected"];
 
 const STATUS_COLOR = {
-  "Approved":              "bg-emerald-100 text-emerald-700",
-  "Rejected":              "bg-red-100 text-red-700",
-  "Under Review":          "bg-blue-100 text-blue-700",
-  "Information Requested": "bg-amber-100 text-amber-700",
-  "Government Processing": "bg-violet-100 text-violet-700",
-  "Decision Pending":      "bg-orange-100 text-orange-700",
-  "Pending":               "bg-amber-100 text-amber-700",
+  "Approved":              "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  "Rejected":              "bg-red-100 text-red-700 border border-red-200",
+  "Under Review":          "bg-blue-100 text-blue-700 border border-blue-200",
+  "Information Requested": "bg-amber-100 text-amber-700 border border-amber-200",
+  "Government Processing": "bg-violet-100 text-violet-700 border border-violet-200",
+  "Decision Pending":      "bg-orange-100 text-orange-700 border border-orange-200",
+  "Pending":               "bg-amber-100 text-amber-700 border border-amber-200",
 };
 
 const inp = "w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-bold text-secondary outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20";
@@ -47,7 +51,9 @@ const GOV_MODAL_META = {
   startReview:  { title: "Start Review",                 Icon: Play },
   startGovReg:  { title: "Start Government Registration", Icon: Globe },
   completeReg:  { title: "Complete SMS Registration",     Icon: ClipboardCheck },
-  requestCreds: { title: "Send Credentials to Sponsor",   Icon: Key },
+  // Removed: "Send Credentials to Sponsor" — not required in the sponsor flow.
+  // UKVI sends portal credentials directly to the sponsor's registered email.
+  // requestCreds: { title: "Send Credentials to Sponsor",   Icon: Key },
   submitUKVI:   { title: "Submit Application to UKVI",    Icon: Send },
 };
 
@@ -88,6 +94,12 @@ const CaseworkerLicenceApplications = () => {
   const [regForm,   setRegForm]   = useState({ smsRegistrationRef: "", governmentRegistrationRef: "" });
   const [subForm,   setSubForm]   = useState({ submissionRef: "", submissionDate: "" });
 
+  // Final decision modal (grant / reject) — available once the sponsor confirms the UKVI decision
+  const [decisionModal,  setDecisionModal]  = useState(null); // { type: "grant" | "reject" }
+  const [decisionLoading,setDecisionLoading]= useState(false);
+  const [grantForm,      setGrantForm]      = useState({ licenceNumber: "", expiryDate: "", cosAllocation: "" });
+  const [rejectReason,   setRejectReason]   = useState("");
+
   // Document dispatch (caseworker → sponsor)
   const [cwDispatch,     setCwDispatch]     = useState({ documentType: "sponsor_licence", documentName: "", message: "" });
   const [cwDispatchFile, setCwDispatchFile] = useState(null);
@@ -98,6 +110,23 @@ const CaseworkerLicenceApplications = () => {
   const [credsLoading,        setCredsLoading]        = useState(false);
   const [showCredsPassword,   setShowCredsPassword]   = useState(false);
   const [credsActionLoading,  setCredsActionLoading]  = useState(false);
+
+  // Pagination + "New" badge tracking (plain object — Set state is unreliable in React)
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 15;
+  const [viewedMap, setViewedMap] = useState({});
+
+  const markViewed = (id) => {
+    setViewedMap(prev => {
+      if (prev[id]) return prev;
+      return { ...prev, [id]: true };
+    });
+  };
+
+  // "New" = created within last 48 h AND not yet clicked open this session
+  const isNew = (app) =>
+    !viewedMap[app.id] &&
+    Date.now() - new Date(app.createdAt).getTime() < 48 * 3600000;
 
   // ── Data fetching ────────────────────────────────────────────────────────────
   const fetchApplications = async () => {
@@ -201,6 +230,105 @@ const CaseworkerLicenceApplications = () => {
     }
   };
 
+  // Open / download the sponsor-uploaded UKVI payment slip (proof of fee payment).
+  const handlePaymentProof = async (mode) => {
+    if (!selectedApp || docBusy) return;
+    try {
+      setDocBusy(`payment-proof:${mode}`);
+      const res = await downloadCaseworkerPaymentProof(selectedApp.id, { download: mode === "download" });
+      const blob = res.data;
+      const cd   = res.headers?.["content-disposition"] || "";
+      const match = cd.match(/filename="?([^"]+)"?/i);
+      const filename = match ? match[1] : `payment-slip-${selectedApp.id}`;
+      if (mode === "download") {
+        triggerDownload(blob, filename);
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) triggerDownload(blob, filename);
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      }
+    } catch (err) {
+      let message = err?.response?.data?.message;
+      if (!message && err?.response?.data instanceof Blob) {
+        try { message = JSON.parse(await err.response.data.text())?.message; } catch { /* ignore */ }
+      }
+      showToast({ message: message || "Unable to open the payment slip", variant: "danger" });
+    } finally {
+      setDocBusy(null);
+    }
+  };
+
+  // Open / download the sponsor-uploaded UKVI decision letter.
+  const handleDecisionLetter = async (mode) => {
+    if (!selectedApp || docBusy) return;
+    try {
+      setDocBusy(`decision-letter:${mode}`);
+      const res = await downloadCaseworkerDecisionLetter(selectedApp.id, { download: mode === "download" });
+      const blob = res.data;
+      const cd   = res.headers?.["content-disposition"] || "";
+      const match = cd.match(/filename="?([^"]+)"?/i);
+      const filename = match ? match[1] : `decision-letter-${selectedApp.id}`;
+      if (mode === "download") {
+        triggerDownload(blob, filename);
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) triggerDownload(blob, filename);
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      }
+    } catch (err) {
+      let message = err?.response?.data?.message;
+      if (!message && err?.response?.data instanceof Blob) {
+        try { message = JSON.parse(await err.response.data.text())?.message; } catch { /* ignore */ }
+      }
+      showToast({ message: message || "Unable to open the decision letter", variant: "danger" });
+    } finally {
+      setDocBusy(null);
+    }
+  };
+
+  // ── Final decision (grant / reject) — gated on the sponsor's UKVI confirmation ──
+  const openDecisionModal = (type) => {
+    setGrantForm({ licenceNumber: "", expiryDate: "", cosAllocation: "" });
+    setRejectReason("");
+    setDecisionModal({ type });
+  };
+  const closeDecisionModal = () => { setDecisionModal(null); setDecisionLoading(false); };
+
+  const handleDecision = async () => {
+    if (!decisionModal || !selectedApp || decisionLoading) return;
+    const { type } = decisionModal;
+    try {
+      setDecisionLoading(true);
+      if (type === "grant") {
+        if (!grantForm.licenceNumber.trim()) {
+          showToast({ message: "Enter the UKVI licence number before granting", variant: "warning" });
+          setDecisionLoading(false); return;
+        }
+        await grantLicenceCaseworker(selectedApp.id, {
+          licenceNumber: grantForm.licenceNumber.trim(),
+          ...(grantForm.expiryDate    && { expiryDate:    grantForm.expiryDate }),
+          ...(grantForm.cosAllocation && { cosAllocation: Number(grantForm.cosAllocation) }),
+        });
+        showToast({ message: "Licence granted — sponsor has been notified by email", variant: "success" });
+      } else {
+        if (!rejectReason.trim()) {
+          showToast({ message: "A rejection reason is required", variant: "warning" });
+          setDecisionLoading(false); return;
+        }
+        await rejectLicenceCaseworker(selectedApp.id, { rejectionReason: rejectReason.trim() });
+        showToast({ message: "Application rejected — sponsor has been notified", variant: "success" });
+      }
+      closeDecisionModal();
+      setSelectedApp(null);
+      fetchApplications();
+    } catch (err) {
+      showToast({ message: err?.response?.data?.message || "Action failed — please try again", variant: "danger" });
+      setDecisionLoading(false);
+    }
+  };
+
   // ── Review action (Approve / Reject / Info) ──────────────────────────────────
   const handleAction = async () => {
     if (!actionType) return;
@@ -225,7 +353,13 @@ const CaseworkerLicenceApplications = () => {
 
   // ── Gov pipeline modal ───────────────────────────────────────────────────────
   const openGovModal = (type, app) => {
-    setRegForm({ smsRegistrationRef: "", governmentRegistrationRef: "" });
+    // Pre-fill the SMS registration form when editing an already-recorded entry
+    // so the caseworker can amend the saved references instead of retyping them.
+    const gt = app?.governmentTracking;
+    setRegForm({
+      smsRegistrationRef: type === "completeReg" ? (gt?.smsRegistrationRef || "") : "",
+      governmentRegistrationRef: type === "completeReg" ? (gt?.governmentRegistrationRef || "") : "",
+    });
     setSubForm({ submissionRef: "", submissionDate: "" });
     setGovModal({ type, app });
   };
@@ -257,10 +391,12 @@ const CaseworkerLicenceApplications = () => {
           });
           msg = "SMS registration recorded";
           break;
-        case "requestCreds":
-          await requestGovCredentials(app.id);
-          msg = "Credentials sent to sponsor";
-          break;
+        // Removed: "Send Credentials to Sponsor" — not required in the sponsor flow.
+        // UKVI sends portal credentials directly to the sponsor's registered email.
+        // case "requestCreds":
+        //   await requestGovCredentials(app.id);
+        //   msg = "Credentials sent to sponsor";
+        //   break;
         case "submitUKVI":
           if (!subForm.submissionRef.trim() || !subForm.submissionDate) {
             showToast({ message: "Both submission reference and date are required", variant: "warning" });
@@ -313,6 +449,13 @@ const CaseworkerLicenceApplications = () => {
     return matchFilter && matchSearch;
   });
 
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [filter, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredApps.length / PER_PAGE));
+  const pagedApps  = filteredApps.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const newCount   = applications.filter(isNew).length;
+
   const pipelineCounts = {
     pending:     applications.filter((a) => a.status === "Pending").length,
     underReview: applications.filter((a) => a.status === "Under Review").length,
@@ -337,6 +480,21 @@ const CaseworkerLicenceApplications = () => {
         <p className="text-sm font-bold text-gray-400 mt-0.5">
           Review and progress sponsor licence applications assigned to you.
         </p>
+      </div>
+
+      {/* Stats overview */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Total Assigned",  value: applications.length,                                  color: "text-secondary" },
+          { label: "Needs Review",    value: pipelineCounts.pending,                               color: "text-amber-600" },
+          { label: "Under Review",    value: pipelineCounts.underReview,                           color: "text-blue-600" },
+          { label: "Gov. Processing", value: pipelineCounts.govProcess + pipelineCounts.decision,  color: "text-violet-600" },
+        ].map((stat) => (
+          <div key={stat.label} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">{stat.label}</p>
+            <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
+          </div>
+        ))}
       </div>
 
       {/* Pipeline dashboard */}
@@ -400,6 +558,7 @@ const CaseworkerLicenceApplications = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60">
+                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 w-10">#</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Company / Type</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Contact</th>
                 <th className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Updated</th>
@@ -411,7 +570,7 @@ const CaseworkerLicenceApplications = () => {
               {loading ? (
                 [...Array(4)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    {[1,2,3,4,5].map((c) => (
+                    {[1,2,3,4,5,6].map((c) => (
                       <td key={c} className="px-5 py-4">
                         <div className="h-4 bg-gray-100 rounded-lg w-3/4" />
                       </td>
@@ -419,22 +578,31 @@ const CaseworkerLicenceApplications = () => {
                   </tr>
                 ))
               ) : filteredApps.length > 0 ? (
-                filteredApps.map((app) => {
+                pagedApps.map((app, idx) => {
                   const isV2 = Number(app.applicationVersion) === 2;
                   return (
                     <tr key={app.id} className="hover:bg-gray-50/40 transition-colors group">
+                      <td className="px-4 py-3.5 text-xs font-black text-gray-400 text-center">
+                        {(page - 1) * PER_PAGE + idx + 1}
+                      </td>
                       <td className="px-5 py-3.5">
-                        <p className="text-sm font-black text-secondary">{app.companyName || "—"}</p>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <p className="text-sm font-black text-secondary">{app.companyName || "—"}</p>
+                          {isNew(app) && (
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-primary text-white uppercase tracking-wide">New</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${app.type === "Renewal" ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"}`}>
-                            {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type}
+                            {String(app.reason || "").startsWith("CoS Request:") ? "CoS Request" : app.type === "New" ? "Initial" : app.type}
                           </span>
-                          {isV2 && (
+                          {isV2 && isActive(app.status) && app.status !== "Pending" ? (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">V2 · Pipeline</span>
+                          ) : isV2 ? (
                             <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/10 text-primary">V2</span>
-                          )}
-                          {isActive(app.status) && app.status !== "Pending" && (
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">Gov. Pipeline</span>
-                          )}
+                          ) : isActive(app.status) && app.status !== "Pending" ? (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">Gov. Pipeline</span>
+                          ) : null}
                         </div>
                       </td>
                       <td className="px-5 py-3.5">
@@ -445,14 +613,15 @@ const CaseworkerLicenceApplications = () => {
                         <p className="text-xs font-bold text-secondary">{formatDate(app.updatedAt)}</p>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black ${STATUS_COLOR[app.status] || "bg-gray-100 text-gray-600"}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black ${STATUS_COLOR[app.status] || "bg-gray-100 text-gray-600 border border-gray-200"}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
                           {app.status}
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => setSelectedApp(app)}
+                            onClick={() => { setSelectedApp(app); markViewed(app.id); }}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white text-[11px] font-black transition-all"
                           >
                             <Eye size={13} /> Review
@@ -473,7 +642,7 @@ const CaseworkerLicenceApplications = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center">
+                  <td colSpan={6} className="px-5 py-12 text-center">
                     <ShieldCheck className="mx-auto text-gray-200 mb-3" size={36} />
                     <p className="text-sm font-bold text-gray-400">No assigned reviews found.</p>
                   </td>
@@ -481,6 +650,42 @@ const CaseworkerLicenceApplications = () => {
               )}
             </tbody>
           </table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
+              <p className="text-xs font-bold text-gray-400">
+                Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filteredApps.length)} of {filteredApps.length}
+              </p>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                  className="px-3 py-1.5 rounded-xl text-xs font-black text-gray-500 bg-gray-50 border border-gray-100 hover:bg-gray-100 disabled:opacity-40 transition-all">
+                  ←
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+                  .reduce((acc, n, i, arr) => {
+                    if (i > 0 && n - arr[i - 1] > 1) acc.push("…");
+                    acc.push(n);
+                    return acc;
+                  }, [])
+                  .map((n, i) =>
+                    n === "…" ? (
+                      <span key={`e-${i}`} className="px-2 text-xs text-gray-300">…</span>
+                    ) : (
+                      <button key={n} onClick={() => setPage(n)}
+                        className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${n === page ? "bg-primary text-white shadow-sm" : "text-gray-500 bg-gray-50 border border-gray-100 hover:bg-gray-100"}`}>
+                        {n}
+                      </button>
+                    )
+                  )}
+                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                  className="px-3 py-1.5 rounded-xl text-xs font-black text-gray-500 bg-gray-50 border border-gray-100 hover:bg-gray-100 disabled:opacity-40 transition-all">
+                  →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -512,7 +717,8 @@ const CaseworkerLicenceApplications = () => {
                       <h2 className="text-sm font-black text-secondary truncate">
                         {selectedApp.companyName || `Application #${selectedApp.id}`}
                       </h2>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${STATUS_COLOR[selectedApp.status] || "bg-gray-100 text-gray-500"}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${STATUS_COLOR[selectedApp.status] || "bg-gray-100 text-gray-500 border border-gray-200"}`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
                         {selectedApp.status}
                       </span>
                       {Number(selectedApp.applicationVersion) === 2 && (
@@ -719,33 +925,152 @@ const CaseworkerLicenceApplications = () => {
                             <p className="text-xs font-bold text-indigo-800 mb-3">
                               Government portal processing is active. Complete each step in order.
                             </p>
-                            {[
-                              { type: "completeReg",  Icon: ClipboardCheck, label: "Complete SMS Registration",    hint: "Record SMS & Gov. ref." },
-                              { type: "requestCreds", Icon: Key,            label: "Send Credentials to Sponsor",   hint: "Admin must generate first" },
-                              { type: "submitUKVI",   Icon: Send,           label: "Submit Application to UKVI",    hint: "→ Decision Pending", primary: true },
-                            ].map(({ type, Icon, label, hint, primary }) => (
+
+                            {/* SMS Registration — once recorded, show a completed card with an Edit option. */}
+                            {selectedApp.governmentTracking?.smsRegistrationRef ? (
+                              <div className="w-full rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <BadgeCheck size={15} className="text-green-600 shrink-0" />
+                                  <span className="text-xs font-black text-green-800">SMS Registration Completed</span>
+                                  <button
+                                    onClick={() => openGovModal("completeReg", selectedApp)}
+                                    className="ml-auto flex items-center gap-1 text-[11px] font-black text-violet-700 hover:text-violet-900"
+                                  >
+                                    <Pencil size={12} /> Edit
+                                  </button>
+                                </div>
+                                <div className="mt-2 grid grid-cols-1 gap-1">
+                                  <p className="text-[11px] font-bold text-green-700">
+                                    SMS Ref: <span className="font-mono text-green-900">{selectedApp.governmentTracking.smsRegistrationRef}</span>
+                                  </p>
+                                  {selectedApp.governmentTracking.governmentRegistrationRef && (
+                                    <p className="text-[11px] font-bold text-green-700">
+                                      Gov. Reg. Ref: <span className="font-mono text-green-900">{selectedApp.governmentTracking.governmentRegistrationRef}</span>
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
                               <button
-                                key={type}
-                                onClick={() => openGovModal(type, selectedApp)}
-                                className={`w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-black transition-all ${
-                                  primary
-                                    ? "bg-violet-600 text-white hover:bg-violet-700 active:scale-95"
-                                    : "bg-white text-violet-700 border border-violet-200 hover:bg-violet-50"
-                                }`}
+                                onClick={() => openGovModal("completeReg", selectedApp)}
+                                className="w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-black transition-all bg-white text-violet-700 border border-violet-200 hover:bg-violet-50"
                               >
-                                <Icon size={14} className="shrink-0" />
-                                <span>{label}</span>
-                                <span className={`ml-auto text-[10px] ${primary ? "text-violet-200" : "text-gray-400"}`}>{hint}</span>
+                                <ClipboardCheck size={14} className="shrink-0" />
+                                <span>Complete SMS Registration</span>
+                                <span className="ml-auto text-[10px] text-gray-400">Record SMS &amp; Gov. ref.</span>
                               </button>
-                            ))}
+                            )}
+
+                            {/* Removed: "Send Credentials to Sponsor" — not required in the sponsor flow.
+                                UKVI sends portal credentials directly to the sponsor's registered email. */}
+
+                            <button
+                              onClick={() => openGovModal("submitUKVI", selectedApp)}
+                              className="w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-black transition-all bg-violet-600 text-white hover:bg-violet-700 active:scale-95"
+                            >
+                              <Send size={14} className="shrink-0" />
+                              <span>Submit Application to UKVI</span>
+                              <span className="ml-auto text-[10px] text-violet-200">→ Decision Pending</span>
+                            </button>
                           </div>
                         )}
 
                         {selectedApp.status === "Decision Pending" && (
-                          <div className="rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
-                            <p className="text-xs font-bold text-orange-800">
-                              The application has been submitted to UKVI. Awaiting their decision — typically 8–12 weeks. No action required at this stage.
+                          <div className="space-y-2">
+                            <div className="rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
+                              <p className="text-xs font-bold text-orange-800">
+                                The application has been submitted to UKVI. UKVI sends their decision directly to the sponsor.
+                              </p>
+                            </div>
+
+                            {/* UKVI Decision — sponsor confirmation gates the grant */}
+                            {selectedApp.ukviDecisionConfirmedAt ? (
+                              <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <BadgeCheck size={14} className="text-green-600 shrink-0" />
+                                  <span className="text-[11px] font-black text-green-800">
+                                    Sponsor confirmed the UKVI decision on {new Date(selectedApp.ukviDecisionConfirmedAt).toLocaleString("en-GB")}
+                                  </span>
+                                </div>
+                                {selectedApp.ukviDecisionLetterPath ? (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleDecisionLetter("preview")}
+                                      disabled={docBusy === "decision-letter:preview"}
+                                      className="flex items-center gap-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-[11px] font-black px-2.5 py-1.5 transition disabled:opacity-60"
+                                    >
+                                      {docBusy === "decision-letter:preview" ? <Loader2 size={12} className="animate-spin" /> : <Eye size={12} />}
+                                      View Decision Letter
+                                    </button>
+                                    <button
+                                      onClick={() => handleDecisionLetter("download")}
+                                      disabled={docBusy === "decision-letter:download"}
+                                      className="flex items-center gap-1.5 rounded-lg border border-green-300 bg-white text-green-700 text-[11px] font-black px-2.5 py-1.5 hover:bg-green-50 transition disabled:opacity-60"
+                                    >
+                                      {docBusy === "decision-letter:download" ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                                      Download
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <p className="text-[11px] font-bold text-gray-400">No decision letter was attached by the sponsor.</p>
+                                )}
+                                <div className="flex gap-2 pt-1">
+                                  <button
+                                    onClick={() => openDecisionModal("grant")}
+                                    className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black py-2 transition active:scale-95"
+                                  >
+                                    <Check size={13} /> Grant &amp; Close
+                                  </button>
+                                  <button
+                                    onClick={() => openDecisionModal("reject")}
+                                    className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-black py-2 hover:bg-red-100 transition active:scale-95"
+                                  >
+                                    <X size={13} /> Reject
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+                                <p className="text-xs font-bold text-amber-800">
+                                  Waiting for the sponsor to confirm they received the UKVI decision. You can grant &amp; close the case once they confirm on their portal.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* UKVI Licence Fee Payment — sponsor confirmation + uploaded slip */}
+                        {selectedApp.ukviPaymentConfirmedAt && (
+                          <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <BadgeCheck size={14} className="text-green-600 shrink-0" />
+                              <p className="text-[10px] font-black uppercase tracking-widest text-green-700">UKVI Licence Fee Payment</p>
+                            </div>
+                            <p className="text-xs font-bold text-green-900">
+                              Sponsor confirmed payment on {new Date(selectedApp.ukviPaymentConfirmedAt).toLocaleString("en-GB")}.
                             </p>
+                            {selectedApp.ukviPaymentProofPath ? (
+                              <div className="mt-2 flex items-center gap-2">
+                                <button
+                                  onClick={() => handlePaymentProof("preview")}
+                                  disabled={docBusy === "payment-proof:preview"}
+                                  className="flex items-center gap-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-black px-3 py-1.5 transition disabled:opacity-60"
+                                >
+                                  {docBusy === "payment-proof:preview" ? <Loader2 size={12} className="animate-spin" /> : <Eye size={12} />}
+                                  View Payment Slip
+                                </button>
+                                <button
+                                  onClick={() => handlePaymentProof("download")}
+                                  disabled={docBusy === "payment-proof:download"}
+                                  className="flex items-center gap-1.5 rounded-lg border border-green-300 bg-white text-green-700 text-xs font-black px-3 py-1.5 hover:bg-green-50 transition disabled:opacity-60"
+                                >
+                                  {docBusy === "payment-proof:download" ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                                  Download
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="mt-1 text-[11px] font-bold text-gray-400">No payment slip was attached by the sponsor.</p>
+                            )}
                           </div>
                         )}
                       </div>
@@ -766,7 +1091,7 @@ const CaseworkerLicenceApplications = () => {
                         ) : !submittedCreds ? (
                           <div className="rounded-xl border border-violet-100 bg-white px-4 py-3 text-xs text-gray-500">
                             The sponsor has not yet submitted their UKVI portal credentials.
-                            <p className="mt-1 text-[10px] text-gray-400">Use Pipeline Actions → Send Credentials to Sponsor to prompt them.</p>
+                            <p className="mt-1 text-[10px] text-gray-400">UKVI sends portal credentials directly to the sponsor's registered email. Once received, the sponsor submits them here.</p>
                           </div>
                         ) : (
                           <div className="space-y-3">
@@ -1191,14 +1516,15 @@ const CaseworkerLicenceApplications = () => {
                     </>
                   )}
 
-                  {/* Request / Send Credentials */}
+                  {/* Removed: "Send Credentials to Sponsor" — not required in the sponsor flow.
+                      UKVI sends portal credentials directly to the sponsor's registered email.
                   {govModal.type === "requestCreds" && (
                     <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
                       <p className="text-sm font-bold text-amber-800">
                         This will forward UKVI portal credentials to the sponsor. <strong>Credentials must have been generated by an admin first.</strong>
                       </p>
                     </div>
-                  )}
+                  )} */}
 
                   {/* Submit to UKVI */}
                   {govModal.type === "submitUKVI" && (
@@ -1257,6 +1583,126 @@ const CaseworkerLicenceApplications = () => {
             </motion.div>
           );
         })()}
+      </AnimatePresence>
+
+      {/* Final decision modal — grant & close or reject */}
+      <AnimatePresence>
+        {decisionModal && selectedApp && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-md p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.96, y: 16 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.96, y: 16 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className={`px-5 py-4 ${decisionModal.type === "grant" ? "bg-gradient-to-br from-emerald-600 to-green-700" : "bg-gradient-to-br from-red-600 to-rose-700"}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-black text-white">
+                      {decisionModal.type === "grant" ? "Grant Licence & Close Case" : "Reject Application"}
+                    </h3>
+                    <p className="text-[10px] font-bold text-white/80 mt-0.5 truncate">{selectedApp.companyName} · #LIC-{selectedApp.id}</p>
+                  </div>
+                  <button onClick={closeDecisionModal} className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-4">
+                {decisionModal.type === "grant" ? (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">
+                        UKVI Licence Number <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={grantForm.licenceNumber}
+                        onChange={(e) => setGrantForm((f) => ({ ...f, licenceNumber: e.target.value }))}
+                        className={inp}
+                        placeholder="e.g. ABCD1234E"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-1.5">Appears in the grant email sent to the sponsor.</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">
+                          Expiry Date <span className="text-gray-300 normal-case font-bold">(optional)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={grantForm.expiryDate}
+                          onChange={(e) => setGrantForm((f) => ({ ...f, expiryDate: e.target.value }))}
+                          className={inp}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">
+                          CoS Allocation <span className="text-gray-300 normal-case font-bold">(optional)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={grantForm.cosAllocation}
+                          onChange={(e) => setGrantForm((f) => ({ ...f, cosAllocation: e.target.value }))}
+                          className={inp}
+                          placeholder="e.g. 10"
+                        />
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                      <p className="text-xs font-bold text-emerald-800">
+                        This activates the sponsor licence, notifies the sponsor by email, and closes the case.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">
+                        Rejection Reason <span className="text-red-400">*</span>
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        className={`${inp} resize-none`}
+                        placeholder="Enter the reason provided by UKVI…"
+                      />
+                    </div>
+                    <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+                      <p className="text-xs font-bold text-red-700">
+                        This rejects the application and notifies the sponsor. A 6-month reapplication cooldown applies.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    onClick={handleDecision}
+                    disabled={decisionLoading}
+                    className={`flex-[2] text-white font-black py-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 ${decisionModal.type === "grant" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}`}
+                  >
+                    {decisionLoading ? <Loader2 size={16} className="animate-spin" /> : (decisionModal.type === "grant" ? "Grant & Close" : "Reject")}
+                  </button>
+                  <button
+                    onClick={closeDecisionModal}
+                    className="flex-1 bg-gray-100 text-gray-500 font-black py-2.5 rounded-xl hover:bg-gray-200 transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

@@ -1,19 +1,19 @@
 import api from "./api";
 
 export const addSponsoredWorker = (workerData) =>
-  api.post("/api/business/workers", workerData);
+  api.post("/api/business/visa-workers", workerData);
 
 export const getSponsoredWorkers = () =>
-  api.get("/api/business/workers");
+  api.get("/api/business/visa-workers");
 
 export const getSponsoredWorkerDetails = (id) =>
-  api.get(`/api/business/workers/${id}`);
-
-export const updateSponsoredWorker = (id, workerData) =>
-  api.put(`/api/business/workers/${id}`, workerData);
+  api.get(`/api/business/visa-workers/${id}`);
 
 export const deleteSponsoredWorker = (id) =>
-  api.delete(`/api/business/workers/${id}`);
+  api.delete(`/api/business/visa-workers/${id}`);
 
-export const updateWorkerStatus = (id, statusData) =>
-  api.patch(`/api/business/workers/${id}/status`, statusData);
+export const getWorkerAuditTrail = (id) =>
+  api.get(`/api/business/visa-workers/${id}/audit`);
+
+export const assignCosToWorker = (id, data) =>
+  api.post(`/api/business/visa-workers/${id}/assign-cos`, data);
