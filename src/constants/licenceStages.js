@@ -338,6 +338,8 @@ export const SPONSOR_STAGE_ACTIONS = {
   government_portal_credentials: { label: "Confirm credentials received",  to: "/business/licence-process" },
   government_application_forms:  { label: "View application status",       to: "/business/licence-process" },
   government_submission:         { label: "View submission status",         to: "/business/licence-process" },
+  home_office_document_dispatch: { label: "View dispatch status",            to: "/business/licence-process" },
+  payment_confirmation:          { label: "Confirm payment & upload slip",   to: "/business/licence-process#confirm-ukvi-payment" },
   // Outcome
   submission:                    { label: "Review & submit",                to: "/business/apply-licence-v2" },
   decision_activation:           { label: "View licence & CoS",            to: "/business/cosallocation" },

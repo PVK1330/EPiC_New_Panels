@@ -45,8 +45,10 @@ import {
   assignLicenceCaseworker,
   deleteLicenceApplicationByAdmin,
   downloadAdminLicenceDocument,
-  generateLicenceCredentials,
-  resendLicenceCredentials,
+  downloadAdminPaymentProof,
+  downloadAdminDecisionLetter,
+  // Removed: generateLicenceCredentials, resendLicenceCredentials —
+  // staff no longer generate/send UKVI portal credentials (sponsor receives them from UKVI).
   dispatchDocumentToSponsor,
   getAdminSubmittedCredentials,
   verifyAdminSubmittedCredentials,
@@ -318,6 +320,66 @@ const AdminLicenceApplications = () => {
     }
   };
 
+  // Open / download the sponsor-uploaded UKVI payment slip (proof of fee payment).
+  const handlePaymentProof = async (mode) => {
+    if (!selectedApp || docBusy) return;
+    try {
+      setDocBusy(`payment-proof:${mode}`);
+      const res = await downloadAdminPaymentProof(selectedApp.id, { download: mode === "download" });
+      const blob = res.data;
+      const cd = res.headers?.["content-disposition"] || "";
+      const match = cd.match(/filename="?([^"]+)"?/i);
+      const filename = match ? match[1] : `payment-slip-${selectedApp.id}`;
+
+      if (mode === "download") {
+        triggerDownload(blob, filename);
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) triggerDownload(blob, filename);
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      }
+    } catch (err) {
+      let message = err?.response?.data?.message;
+      if (!message && err?.response?.data instanceof Blob) {
+        try { message = JSON.parse(await err.response.data.text())?.message; } catch { /* ignore */ }
+      }
+      showToast({ message: message || "Unable to open the payment slip", variant: "danger" });
+    } finally {
+      setDocBusy(null);
+    }
+  };
+
+  // Open / download the sponsor-uploaded UKVI decision letter.
+  const handleDecisionLetter = async (mode) => {
+    if (!selectedApp || docBusy) return;
+    try {
+      setDocBusy(`decision-letter:${mode}`);
+      const res = await downloadAdminDecisionLetter(selectedApp.id, { download: mode === "download" });
+      const blob = res.data;
+      const cd = res.headers?.["content-disposition"] || "";
+      const match = cd.match(/filename="?([^"]+)"?/i);
+      const filename = match ? match[1] : `decision-letter-${selectedApp.id}`;
+
+      if (mode === "download") {
+        triggerDownload(blob, filename);
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) triggerDownload(blob, filename);
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      }
+    } catch (err) {
+      let message = err?.response?.data?.message;
+      if (!message && err?.response?.data instanceof Blob) {
+        try { message = JSON.parse(await err.response.data.text())?.message; } catch { /* ignore */ }
+      }
+      showToast({ message: message || "Unable to open the decision letter", variant: "danger" });
+    } finally {
+      setDocBusy(null);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget || deleteLoading) return;
     try {
@@ -334,52 +396,9 @@ const AdminLicenceApplications = () => {
     }
   };
 
-  const handleGenerateCredentials = async () => {
-    if (credLoading || !selectedApp) return;
-    if (!credForm.ukviPortalUserId.trim() || !credForm.ukviPortalPassword.trim()) {
-      showToast({ message: "UKVI Portal User ID and password are required", variant: "warning" });
-      return;
-    }
-    if (credForm.ukviPortalPassword.length < 8) {
-      showToast({ message: "Password must be at least 8 characters", variant: "warning" });
-      return;
-    }
-    try {
-      setCredLoading(true);
-      await generateLicenceCredentials(selectedApp.id, {
-        ukviPortalUserId: credForm.ukviPortalUserId.trim(),
-        ukviPortalPassword: credForm.ukviPortalPassword,
-        ...(credForm.smsPortalUsername.trim() && { smsPortalUsername: credForm.smsPortalUsername.trim() }),
-      });
-      showToast({ message: "Credentials generated. Caseworkers have been notified.", variant: "success" });
-      closeActionModal();
-      fetchApplications();
-    } catch (err) {
-      const message = err?.response?.data?.message || "Failed to generate credentials";
-      showToast({ message, variant: "danger" });
-    } finally {
-      setCredLoading(false);
-    }
-  };
-
-  const handleResendCredentials = async (appId) => {
-    if (resendLoading) return;
-    try {
-      setResendLoading(true);
-      await resendLicenceCredentials(appId);
-      showToast({ message: "Credentials resent to sponsor.", variant: "success" });
-      const res = await getAllLicenceApplications();
-      const updated = res.data.data;
-      setApplications(updated);
-      const refreshed = updated.find((a) => a.id === appId);
-      if (refreshed) setSelectedApp(refreshed);
-    } catch (err) {
-      const message = err?.response?.data?.message || "Failed to resend credentials";
-      showToast({ message, variant: "danger" });
-    } finally {
-      setResendLoading(false);
-    }
-  };
+  // Removed: handleGenerateCredentials / handleResendCredentials.
+  // Staff no longer generate or send UKVI portal credentials — UKVI issues them
+  // directly to the sponsor, who submits them to the case team.
 
   const handleDispatchDocument = async () => {
     if (dispatchLoading || !selectedApp) return;
@@ -1154,23 +1173,8 @@ const AdminLicenceApplications = () => {
                         </div>
                       )}
 
-                      {/* Portal User ID + Resend button (only once credentials exist) */}
-                      {selectedApp.governmentTracking?.ukviPortalUserId && (
-                        <div className="pt-3 border-t border-violet-100 flex items-center justify-between gap-4">
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-1">SMS Portal User ID</p>
-                            <p className="text-sm font-black text-secondary font-mono truncate">{selectedApp.governmentTracking.ukviPortalUserId}</p>
-                          </div>
-                          <button
-                            onClick={() => handleResendCredentials(selectedApp.id)}
-                            disabled={resendLoading}
-                            className="shrink-0 flex items-center gap-2 px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-xl transition-all active:scale-95 disabled:opacity-60 disabled:active:scale-100 shadow-sm shadow-violet-200"
-                          >
-                            {resendLoading ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-                            Resend Credentials
-                          </button>
-                        </div>
-                      )}
+                      {/* Removed: staff-generated portal User ID + "Resend Credentials".
+                          UKVI issues the credentials directly to the sponsor, who submits them to the case team. */}
 
                       {selectedApp.governmentSubmissionDate && (
                         <div className="pt-3 border-t border-violet-100 flex items-center gap-2 text-xs font-bold text-violet-500">
@@ -1179,6 +1183,86 @@ const AdminLicenceApplications = () => {
                         </div>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {/* UKVI Decision — sponsor confirmation gates the grant */}
+                {selectedApp.status === "Decision Pending" && (
+                  <div className={`mb-4 rounded-xl border p-4 ${selectedApp.ukviDecisionConfirmedAt ? "border-emerald-100 bg-emerald-50/50" : "border-amber-100 bg-amber-50/50"}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      {selectedApp.ukviDecisionConfirmedAt
+                        ? <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                        : <Loader2 size={14} className="text-amber-500 shrink-0" />}
+                      <p className={`text-[10px] font-black uppercase tracking-widest ${selectedApp.ukviDecisionConfirmedAt ? "text-emerald-600" : "text-amber-600"}`}>UKVI Decision Confirmation</p>
+                    </div>
+                    {selectedApp.ukviDecisionConfirmedAt ? (
+                      <>
+                        <p className="text-xs font-bold text-secondary">
+                          Sponsor confirmed the UKVI decision on {new Date(selectedApp.ukviDecisionConfirmedAt).toLocaleString("en-GB")}. You can now grant &amp; close the case.
+                        </p>
+                        {selectedApp.ukviDecisionLetterPath ? (
+                          <div className="mt-3 flex items-center gap-2">
+                            <button
+                              onClick={() => handleDecisionLetter("preview")}
+                              disabled={docBusy === "decision-letter:preview"}
+                              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3 py-1.5 transition disabled:opacity-60"
+                            >
+                              {docBusy === "decision-letter:preview" ? <Loader2 size={13} className="animate-spin" /> : <Eye size={13} />}
+                              View Decision Letter
+                            </button>
+                            <button
+                              onClick={() => handleDecisionLetter("download")}
+                              disabled={docBusy === "decision-letter:download"}
+                              className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white text-emerald-700 text-xs font-black px-3 py-1.5 hover:bg-emerald-50 transition disabled:opacity-60"
+                            >
+                              {docBusy === "decision-letter:download" ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                              Download
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-[11px] font-bold text-gray-400">No decision letter was attached by the sponsor.</p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs font-bold text-amber-800">
+                        Waiting for the sponsor to confirm they received the UKVI decision. The licence can only be granted once they confirm on their portal.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* UKVI Licence Fee Payment — sponsor confirmation + uploaded slip */}
+                {selectedApp.ukviPaymentConfirmedAt && (
+                  <div className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">UKVI Licence Fee Payment</p>
+                    </div>
+                    <p className="text-xs font-bold text-secondary">
+                      Sponsor confirmed payment on {new Date(selectedApp.ukviPaymentConfirmedAt).toLocaleString("en-GB")}.
+                    </p>
+                    {selectedApp.ukviPaymentProofPath ? (
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          onClick={() => handlePaymentProof("preview")}
+                          disabled={docBusy === "payment-proof:preview"}
+                          className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3 py-1.5 transition disabled:opacity-60"
+                        >
+                          {docBusy === "payment-proof:preview" ? <Loader2 size={13} className="animate-spin" /> : <Eye size={13} />}
+                          View Payment Slip
+                        </button>
+                        <button
+                          onClick={() => handlePaymentProof("download")}
+                          disabled={docBusy === "payment-proof:download"}
+                          className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white text-emerald-700 text-xs font-black px-3 py-1.5 hover:bg-emerald-50 transition disabled:opacity-60"
+                        >
+                          {docBusy === "payment-proof:download" ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                          Download
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-[11px] font-bold text-gray-400">No payment slip was attached by the sponsor.</p>
+                    )}
                   </div>
                 )}
 
@@ -1195,31 +1279,21 @@ const AdminLicenceApplications = () => {
                       actionType: "Assign",
                       cta: noAssignment ? "Assign" : "Re-assign",
                     },
-                    ...(selectedApp.status === "Government Processing" && !selectedApp.governmentTracking?.credentialsGeneratedAt ? [{
-                      key: "credentials",
-                      label: "Generate UKVI portal credentials for the sponsor",
-                      icon: Key,
-                      urgency: "violet",
-                      actionType: "GenerateCredentials",
-                      cta: "Generate",
-                    }] : []),
-                    ...(selectedApp.governmentTracking?.credentialsGeneratedAt && !selectedApp.governmentTracking?.credentialsSentAt ? [{
-                      key: "resend",
-                      label: "Portal credentials generated — send them to the sponsor",
-                      icon: Send,
-                      urgency: "violet",
-                      actionType: "Resend",
-                      cta: "Resend",
-                    }] : []),
-                    ...(selectedApp.status === "Decision Pending" ? [
+                    // Removed: staff no longer generate UKVI portal credentials for the sponsor.
+                    // UKVI issues the credentials directly to the sponsor, who submits them to the case team.
+                    // Approve is gated: it only appears once the sponsor confirms the
+                    // UKVI decision (the backend enforces the same prerequisite).
+                    ...(selectedApp.status === "Decision Pending" && selectedApp.ukviDecisionConfirmedAt ? [
                       {
                         key: "decision-approve",
-                        label: "UKVI decision received — approve the licence",
+                        label: "Sponsor confirmed the UKVI decision — grant the licence",
                         icon: CheckCircle2,
                         urgency: "emerald",
                         actionType: "Approved",
-                        cta: "Approve",
+                        cta: "Grant",
                       },
+                    ] : []),
+                    ...(selectedApp.status === "Decision Pending" ? [
                       {
                         key: "decision-reject",
                         label: "UKVI decision received — reject the licence",
@@ -1254,16 +1328,10 @@ const AdminLicenceApplications = () => {
                                 <p className="text-sm font-black text-secondary truncate">{task.label}</p>
                               </div>
                               <button
-                                onClick={() => task.actionType === "Resend"
-                                  ? handleResendCredentials(selectedApp.id)
-                                  : openAction(selectedApp, task.actionType)
-                                }
-                                disabled={task.actionType === "Resend" && resendLoading}
+                                onClick={() => openAction(selectedApp, task.actionType)}
                                 className={`ml-3 shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-black text-white transition-all active:scale-95 disabled:opacity-60 ${s.btn}`}
                               >
-                                {task.actionType === "Resend" && resendLoading
-                                  ? <Loader2 size={13} className="animate-spin" />
-                                  : task.cta}
+                                {task.cta}
                               </button>
                             </div>
                           );
@@ -1308,25 +1376,8 @@ const AdminLicenceApplications = () => {
                         <MessageSquare size={18} /> Request Info
                       </button>
                     </div>
-                    {selectedApp.status === "Government Processing" && (
-                      <button
-                        onClick={() => openAction(selectedApp, "GenerateCredentials")}
-                        className="w-full bg-violet-50 text-violet-700 hover:bg-violet-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2"
-                      >
-                        <Key size={18} />
-                        {selectedApp.governmentTracking?.credentialsGeneratedAt ? "Re-generate Credentials" : "Generate Portal Credentials"}
-                      </button>
-                    )}
-                    {selectedApp.governmentTracking?.credentialsGeneratedAt && (
-                      <button
-                        onClick={() => handleResendCredentials(selectedApp.id)}
-                        disabled={resendLoading}
-                        className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                      >
-                        {resendLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                        Resend Credentials to Sponsor
-                      </button>
-                    )}
+                    {/* Removed: staff no longer generate or send UKVI portal credentials.
+                        UKVI issues the credentials directly to the sponsor, who submits them to the case team. */}
 
                     {/* Send Document to Sponsor */}
                     <button
@@ -1389,10 +1440,11 @@ const AdminLicenceApplications = () => {
                     <div className="flex gap-3">
                       <button
                         onClick={() => openAction(selectedApp, "Approved")}
-                        disabled={selectedApp.status !== 'Decision Pending'}
+                        disabled={selectedApp.status !== 'Decision Pending' || !selectedApp.ukviDecisionConfirmedAt}
+                        title={selectedApp.status === 'Decision Pending' && !selectedApp.ukviDecisionConfirmedAt ? "Waiting for the sponsor to confirm the UKVI decision" : undefined}
                         className="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        <Check size={18} /> Approve
+                        <Check size={18} /> Grant
                       </button>
                       <button
                         onClick={() => openAction(selectedApp, "Rejected")}
@@ -1429,7 +1481,6 @@ const AdminLicenceApplications = () => {
                     {actionType === 'Approved'             ? 'Confirm Approval' :
                      actionType === 'Rejected'             ? 'Confirm Rejection' :
                      actionType === 'Assign'               ? 'Assign Caseworker' :
-                     actionType === 'GenerateCredentials'  ? 'Generate UKVI Credentials' :
                      'Request More Evidence'}
                   </h3>
                   <p className="text-xs font-bold text-gray-400 mt-1 truncate max-w-[20rem]">
@@ -1446,85 +1497,9 @@ const AdminLicenceApplications = () => {
               </div>
 
               <div className="space-y-5">
-                {actionType === 'GenerateCredentials' ? (
-                  <div className="space-y-4">
-                    <p className="text-xs font-bold text-gray-500 leading-relaxed -mt-2">
-                      Generate secure UKVI portal credentials for this sponsor. The password is encrypted before storage. Assigned caseworkers will be notified to send them securely to the sponsor.
-                    </p>
-
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
-                        SMS Portal Username <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={credForm.ukviPortalUserId}
-                        onChange={(e) => setCredForm({ ...credForm, ukviPortalUserId: e.target.value })}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all"
-                        placeholder="e.g. sponsor@sms.ukvi.gov.uk"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
-                        Temporary Password <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showPwd ? "text" : "password"}
-                          value={credForm.ukviPortalPassword}
-                          onChange={(e) => setCredForm({ ...credForm, ukviPortalPassword: e.target.value })}
-                          className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 pr-12 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all"
-                          placeholder="Min. 8 characters"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPwd(!showPwd)}
-                          className="absolute right-3 top-3.5 text-gray-400 hover:text-secondary transition-colors"
-                        >
-                          {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
-                        SMS Reference <span className="text-gray-300 font-bold normal-case tracking-normal">(optional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={credForm.smsPortalUsername}
-                        onChange={(e) => setCredForm({ ...credForm, smsPortalUsername: e.target.value })}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all"
-                        placeholder="e.g. REF-2024-001"
-                      />
-                    </div>
-
-                    <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-2">
-                      <Lock size={14} className="text-amber-500 shrink-0 mt-0.5" />
-                      <p className="text-xs font-bold text-amber-700 leading-snug">
-                        The password is AES-256 encrypted before being stored. Only authorised users can request it to be sent to the sponsor.
-                      </p>
-                    </div>
-
-                    <div className="flex gap-3 pt-1">
-                      <button
-                        onClick={handleGenerateCredentials}
-                        disabled={credLoading}
-                        className="flex-[2] bg-violet-600 hover:bg-violet-700 text-white font-black py-3 rounded-xl shadow-lg shadow-violet-100 flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60 disabled:active:scale-100"
-                      >
-                        {credLoading ? <Loader2 className="animate-spin" size={18} /> : <><Key size={18} /> Generate Credentials</>}
-                      </button>
-                      <button
-                        onClick={closeActionModal}
-                        disabled={credLoading}
-                        className="flex-1 bg-gray-50 text-gray-500 font-black py-3 rounded-xl disabled:opacity-40"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : actionType === 'Assign' ? (
+                {/* Removed: staff "Generate UKVI Credentials" modal.
+                    UKVI issues the credentials directly to the sponsor, who submits them to the case team. */}
+                {actionType === 'Assign' ? (
                   <div className="space-y-5">
                     <div>
                       <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">

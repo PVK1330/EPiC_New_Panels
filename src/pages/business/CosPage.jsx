@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { getCosSummary, requestCosAllocation, getCosRequests, updateCosRequest, deleteCosRequest } from "../../services/licenceApi";
 import toast from "react-hot-toast";
@@ -28,6 +29,7 @@ import {
 } from "lucide-react";
 
 const COSPage = () => {
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [requestData, setRequestData] = useState({
@@ -36,7 +38,9 @@ const COSPage = () => {
     reason: '',
   });
   const [editingRequest, setEditingRequest] = useState(null);
-  const [activeTab, setActiveTab] = useState('summary'); // 'summary' or 'history'
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get('tab') === 'history' ? 'history' : 'summary'
+  );
 
   const [stats, setStats] = useState({ total: 0, used: 0, remaining: 0 });
   const [cosList, setCosList] = useState([]);
@@ -176,7 +180,7 @@ const COSPage = () => {
     return counts;
   }, [requests]);
 
-  const STATUS_FILTERS = ["All", "Pending", "Under Review", "Information Requested", "Approved", "Rejected"];
+  const STATUS_FILTERS = ["All", "Pending", "Under Review", "Allocated", "Rejected"];
 
   // Utility to generate initials
   const getInitials = (text) => {
@@ -507,32 +511,42 @@ const COSPage = () => {
                         <td className="px-3 py-2 text-xs font-bold text-gray-700">{r.visaType}</td>
                         <td className="px-3 py-2 text-xs font-black text-primary">
                           {r.requestedAmount} Slots
-                          {r.status === 'Approved' && r.approvedAmount != null && (
+                          {['Approved', 'Allocated'].includes(r.status) && r.approvedAmount != null && (
                             <span className="block text-[10px] font-bold text-emerald-600">
-                              Approved: {r.approvedAmount}
+                              Allocated: {r.approvedAmount}
                             </span>
                           )}
                         </td>
                         <td className="px-3 py-2">
-                          <span
-                            title={r.reviewNotes || ''}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                              r.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' :
-                              r.status === 'Rejected' ? 'bg-red-50 text-red-600' :
-                              r.status === 'Under Review' ? 'bg-blue-50 text-blue-600' :
-                              'bg-amber-50 text-amber-600'
-                            }`}
-                          >
-                            {r.status}
-                          </span>
-                          {r.reviewNotes && (r.status === 'Rejected' || r.status === 'Information Requested') && (
-                            <p
-                              className="text-[10px] font-bold text-gray-400 mt-1 max-w-[180px] truncate"
-                              title={r.reviewNotes}
-                            >
-                              {r.reviewNotes}
-                            </p>
-                          )}
+                          {(() => {
+                            const infoNeeded = r.status === 'Under Review' && !!r.reviewNotes;
+                            const badgeClass = ['Approved', 'Allocated'].includes(r.status)
+                              ? 'bg-emerald-50 text-emerald-600'
+                              : r.status === 'Rejected'
+                              ? 'bg-red-50 text-red-600'
+                              : infoNeeded
+                              ? 'bg-amber-50 text-amber-700'
+                              : r.status === 'Under Review'
+                              ? 'bg-blue-50 text-blue-600'
+                              : 'bg-amber-50 text-amber-600';
+                            return (
+                              <>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${badgeClass}`}>
+                                  {infoNeeded ? 'Info Required' : r.status}
+                                </span>
+                                {r.reviewNotes && (r.status === 'Under Review' || r.status === 'Rejected') && (
+                                  <p
+                                    className={`text-[10px] font-bold mt-1 max-w-[200px] truncate ${
+                                      infoNeeded ? 'text-amber-600' : 'text-gray-400'
+                                    }`}
+                                    title={r.reviewNotes}
+                                  >
+                                    {r.reviewNotes}
+                                  </p>
+                                )}
+                              </>
+                            );
+                          })()}
                         </td>
                         <td className="px-3 py-2 text-[10px] font-bold text-gray-500">
                           {formatDate(r.created_at)}
@@ -613,7 +627,9 @@ const COSPage = () => {
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Visa Type *</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">
+                    Visa Type <span className="text-red-500">*</span>
+                  </label>
                   <select
                     value={requestData.visaType}
                     onChange={(e) => setRequestData({ ...requestData, visaType: e.target.value })}
@@ -628,17 +644,25 @@ const COSPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Requested Amount *</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1 block">
+                    No. of Additional CoS Slots Needed <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-[10px] font-bold text-gray-400 mb-2">
+                    How many additional Certificates of Sponsorship do you need for this visa type?
+                  </p>
                   <input
                     type="number"
+                    min="1"
                     value={requestData.requestedAmount}
                     onChange={(e) => setRequestData({ ...requestData, requestedAmount: e.target.value })}
                     className="w-full border border-gray-200 rounded-xl px-3 py-2 pr-10 text-xs font-bold text-secondary placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all bg-gray-50/40"
-                    placeholder="Enter requested amount"
+                    placeholder="e.g. 5"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">Reason for Request *</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2 block">
+                    Reason for Request <span className="text-red-500">*</span>
+                  </label>
                   <textarea
                     value={requestData.reason}
                     onChange={(e) => setRequestData({ ...requestData, reason: e.target.value })}

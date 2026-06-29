@@ -42,6 +42,7 @@ import {
   getSponsorGovCredentials,
   submitSponsorUkviCredentials,
   confirmSponsorUkviPayment,
+  confirmSponsorUkviDecision,
   getSponsorIntakeSummary,
   updateSponsorIntakeForm,
   submitSponsorIntakeForm as submitIntakeFormApi,
@@ -184,6 +185,9 @@ const LicenceProcess = () => {
   const [credSubmitPwdVisible, setCredSubmitPwdVisible] = useState(false);
   const [credSubmitting, setCredSubmitting] = useState(false);
   const [paymentConfirming, setPaymentConfirming] = useState(false);
+  const [paymentProofFile, setPaymentProofFile] = useState(null);
+  const [decisionConfirming, setDecisionConfirming] = useState(false);
+  const [decisionLetterFile, setDecisionLetterFile] = useState(null);
 
   // Download a dispatched document through `api` (not a plain <a href>) so the CSRF
   // token and org-slug headers are attached. Filename comes from Content-Disposition.
@@ -568,9 +572,19 @@ const LicenceProcess = () => {
     if (!app?.id || paymentConfirming) return;
     try {
       setPaymentConfirming(true);
-      await confirmSponsorUkviPayment(app.id);
-      setApp((prev) => ({ ...prev, ukviPaymentConfirmedAt: new Date().toISOString() }));
-      showToast({ message: "UKVI payment confirmed — your case team has been notified.", variant: "success" });
+      await confirmSponsorUkviPayment(app.id, paymentProofFile);
+      setApp((prev) => ({
+        ...prev,
+        ukviPaymentConfirmedAt: new Date().toISOString(),
+        ukviPaymentProofUploaded: prev.ukviPaymentProofUploaded || !!paymentProofFile,
+      }));
+      setPaymentProofFile(null);
+      showToast({
+        message: paymentProofFile
+          ? "Payment confirmed with proof attached — your case team has been notified."
+          : "UKVI payment confirmed — your case team has been notified.",
+        variant: "success",
+      });
       // Refresh stage tracker so the timeline advances immediately.
       getLicenceStages("sponsor", app.id)
         .then((r) => setStagesData(r?.data?.data || null))
@@ -579,6 +593,33 @@ const LicenceProcess = () => {
       showToast({ message: err?.response?.data?.message || "Failed to confirm payment — please try again.", variant: "danger" });
     } finally {
       setPaymentConfirming(false);
+    }
+  };
+
+  const handleConfirmUkviDecision = async () => {
+    if (!app?.id || decisionConfirming) return;
+    try {
+      setDecisionConfirming(true);
+      await confirmSponsorUkviDecision(app.id, decisionLetterFile);
+      setApp((prev) => ({
+        ...prev,
+        ukviDecisionConfirmedAt: new Date().toISOString(),
+        hasUkviDecisionLetter: prev.hasUkviDecisionLetter || !!decisionLetterFile,
+      }));
+      setDecisionLetterFile(null);
+      showToast({
+        message: decisionLetterFile
+          ? "Decision confirmed with letter attached — your case team will finalise your licence."
+          : "UKVI decision confirmed — your case team will finalise your licence.",
+        variant: "success",
+      });
+      getLicenceStages("sponsor", app.id)
+        .then((r) => setStagesData(r?.data?.data || null))
+        .catch(() => {});
+    } catch (err) {
+      showToast({ message: err?.response?.data?.message || "Failed to confirm decision — please try again.", variant: "danger" });
+    } finally {
+      setDecisionConfirming(false);
     }
   };
 
@@ -860,14 +901,15 @@ const LicenceProcess = () => {
         </motion.div>
       )}
 
-      {app.status === "Decision Pending" && !app.ukviPaymentConfirmedAt && (
+      {["Government Processing", "Decision Pending"].includes(app.status) && !app.ukviPaymentConfirmedAt && (
         <motion.div
+          id="confirm-ukvi-payment"
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           className="rounded-2xl border border-emerald-100 bg-emerald-50/60 shadow-sm overflow-hidden relative"
         >
           <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-600" />
-          <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="p-5 space-y-3">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-emerald-100 rounded-lg shrink-0">
                 <Landmark className="text-emerald-600" size={18} />
@@ -877,17 +919,122 @@ const LicenceProcess = () => {
                   Action Required — Confirm UKVI Licence Fee Payment
                 </h3>
                 <p className="text-xs font-bold text-gray-500 mt-0.5">
-                  Please pay the sponsor licence fee directly on the UKVI portal, then confirm payment here.
+                  Please pay the sponsor licence fee directly on the UKVI portal, then confirm payment here. You can attach the payment slip as proof.
                 </p>
               </div>
             </div>
+
+            {/* Optional payment slip upload — proof of the UKVI portal payment. */}
+            <div className="bg-white rounded-xl border border-emerald-100 p-3 space-y-2">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500">
+                Payment Slip <span className="text-gray-400 font-bold normal-case tracking-normal">(optional — PDF or image)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer bg-emerald-50/60 border border-dashed border-emerald-300 rounded-lg px-3 py-2 hover:bg-emerald-50 transition">
+                <Upload size={13} className="text-emerald-600 shrink-0" />
+                <span className="text-[11px] font-black text-emerald-700 truncate">
+                  {paymentProofFile ? paymentProofFile.name : "Choose a payment slip to attach as verification"}
+                </span>
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  disabled={paymentConfirming}
+                  onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)}
+                />
+              </label>
+              {paymentProofFile && (
+                <button
+                  type="button"
+                  onClick={() => setPaymentProofFile(null)}
+                  disabled={paymentConfirming}
+                  className="text-[10px] font-black text-gray-400 hover:text-red-500 transition disabled:opacity-50"
+                >
+                  Remove file
+                </button>
+              )}
+            </div>
+
             <button
               onClick={handleConfirmUkviPayment}
               disabled={paymentConfirming}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-black text-white transition shadow-sm shrink-0 disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-black text-white transition shadow-sm disabled:opacity-60 active:scale-95"
             >
               {paymentConfirming ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-              Confirm Payment
+              {paymentConfirming
+                ? "Confirming…"
+                : paymentProofFile
+                ? "Confirm Payment & Upload Slip"
+                : "Confirm Payment"}
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Confirm UKVI Decision Received ── */}
+      {app.status === "Decision Pending" && !app.ukviDecisionConfirmedAt && (
+        <motion.div
+          id="confirm-ukvi-decision"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-indigo-100 bg-indigo-50/60 shadow-sm overflow-hidden relative"
+        >
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-400 to-indigo-600" />
+          <div className="p-5 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 rounded-lg shrink-0">
+                <Landmark className="text-indigo-600" size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-secondary">
+                  Action Required — Confirm UKVI Decision Received
+                </h3>
+                <p className="text-xs font-bold text-gray-500 mt-0.5">
+                  UKVI sends their decision directly to your registered email. Once you receive it, confirm here so your case team can finalise and close your application. You can attach the decision letter as proof.
+                </p>
+              </div>
+            </div>
+
+            {/* Optional decision letter upload. */}
+            <div className="bg-white rounded-xl border border-indigo-100 p-3 space-y-2">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500">
+                UKVI Decision Letter <span className="text-gray-400 font-bold normal-case tracking-normal">(optional — PDF or image)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer bg-indigo-50/60 border border-dashed border-indigo-300 rounded-lg px-3 py-2 hover:bg-indigo-50 transition">
+                <Upload size={13} className="text-indigo-600 shrink-0" />
+                <span className="text-[11px] font-black text-indigo-700 truncate">
+                  {decisionLetterFile ? decisionLetterFile.name : "Choose the UKVI decision letter to attach"}
+                </span>
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  disabled={decisionConfirming}
+                  onChange={(e) => setDecisionLetterFile(e.target.files?.[0] || null)}
+                />
+              </label>
+              {decisionLetterFile && (
+                <button
+                  type="button"
+                  onClick={() => setDecisionLetterFile(null)}
+                  disabled={decisionConfirming}
+                  className="text-[10px] font-black text-gray-400 hover:text-red-500 transition disabled:opacity-50"
+                >
+                  Remove file
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={handleConfirmUkviDecision}
+              disabled={decisionConfirming}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 text-xs font-black text-white transition shadow-sm disabled:opacity-60 active:scale-95"
+            >
+              {decisionConfirming ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+              {decisionConfirming
+                ? "Confirming…"
+                : decisionLetterFile
+                ? "Confirm Decision & Upload Letter"
+                : "Confirm UKVI Decision Received"}
             </button>
           </div>
         </motion.div>
@@ -942,7 +1089,7 @@ const LicenceProcess = () => {
             )}
             <div className="flex gap-2">
               <Link
-                to="/business/cos-requests"
+                to="/business/cosallocation"
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black shadow-sm hover:bg-emerald-700 transition-all active:scale-95"
               >
                 <ArrowRight size={13} /> Issue Certificate of Sponsorship
@@ -1264,18 +1411,16 @@ const LicenceProcess = () => {
                         </span>
                       </div>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <p className="text-xs font-bold text-gray-500 leading-relaxed">
-                          The sponsor licence fee must be paid directly on the UKVI portal. Once you have completed payment on the UKVI website, confirm it here to allow the process to continue.
+                          The sponsor licence fee must be paid directly on the UKVI portal. Confirm payment and (optionally) attach the payment slip using the <span className="font-black text-emerald-700">Confirm UKVI Licence Fee Payment</span> panel at the top of this page.
                         </p>
-                        <button
-                          onClick={handleConfirmUkviPayment}
-                          disabled={paymentConfirming}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-black text-white transition shadow-sm disabled:opacity-60 active:scale-95"
+                        <a
+                          href="#confirm-ukvi-payment"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-black text-white transition shadow-sm active:scale-95"
                         >
-                          {paymentConfirming ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-                          {paymentConfirming ? "Confirming…" : "I Have Paid on UKVI Portal"}
-                        </button>
+                          <ArrowRight size={13} /> Go to payment confirmation
+                        </a>
                       </div>
                     )}
                   </div>

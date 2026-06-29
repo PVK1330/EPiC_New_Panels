@@ -132,6 +132,7 @@ export default function BusinessDashboard() {
       {
         label: "Available CoS",
         value: dashboard?.cos?.available ?? 0,
+        sub: dashboard?.cos ? `${dashboard.cos.used} used of ${dashboard.cos.total} total` : null,
         icon: Briefcase,
         bg: "bg-emerald-100",
         color: "text-emerald-600",
@@ -256,7 +257,7 @@ export default function BusinessDashboard() {
       )}
 
       <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" variants={containerVariants} initial="hidden" animate="visible">
-        {stats.map(({ label, value, icon: Icon, bg, color }) => (
+        {stats.map(({ label, value, sub, icon: Icon, bg, color }) => (
           <motion.div key={label} variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm flex items-center gap-3">
             <div className={`p-2 ${bg} rounded-xl`}>
               <Icon className={`${color} h-5 w-5`} />
@@ -264,6 +265,7 @@ export default function BusinessDashboard() {
             <div>
               <p className="text-xs font-bold text-gray-600">{label}</p>
               <p className="text-2xl font-black text-secondary">{value}</p>
+              {sub && <p className="text-[10px] font-bold text-gray-400 mt-0.5">{sub}</p>}
             </div>
           </motion.div>
         ))}

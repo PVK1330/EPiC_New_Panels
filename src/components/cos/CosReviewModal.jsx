@@ -79,7 +79,7 @@ export default function CosReviewModal({ open, request, action, onClose, onSubmi
             {isApprove && (
               <div>
                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">
-                  Approved Amount *
+                  Approved Amount <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"

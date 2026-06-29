@@ -1,5 +1,5 @@
 import React from "react";
-import { Send, UserCheck, CheckCircle2, XCircle } from "lucide-react";
+import { Send, UserCheck, CheckCircle2, XCircle, MessageSquare } from "lucide-react";
 import { formatDateLong, formatTime } from "../../utils/datetime";
 
 const fullName = (u) =>
@@ -37,12 +37,24 @@ export default function CosHistoryPanel({ request }) {
     });
   }
 
-  if (request.status === "Approved") {
+  // Info request: status stays "Under Review" but reviewNotes is set by staff.
+  if (request.status === "Under Review" && request.reviewNotes) {
+    events.push({
+      icon: MessageSquare,
+      ring: "bg-amber-50 text-amber-600",
+      title: "Information Requested",
+      detail: reviewer ? `Requested by ${reviewer}` : "Additional information requested from sponsor",
+      at: request.reviewedAt || request.updated_at,
+      notes: request.reviewNotes,
+    });
+  }
+
+  if (["Approved", "Allocated"].includes(request.status)) {
     events.push({
       icon: CheckCircle2,
       ring: "bg-emerald-50 text-emerald-600",
-      title: "Approved",
-      detail: `${request.approvedAmount ?? request.requestedAmount} CoS approved${reviewer ? ` by ${reviewer}` : ""}`,
+      title: "Approved & Allocated",
+      detail: `${request.approvedAmount ?? request.requestedAmount} CoS allocated${reviewer ? ` by ${reviewer}` : ""}`,
       at: request.reviewedAt,
       notes: request.reviewNotes,
     });

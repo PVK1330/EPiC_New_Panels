@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { io } from "socket.io-client";
 import { motion } from "framer-motion";
@@ -33,6 +34,7 @@ import {
   updateNotificationPreferences,
 } from "../../services/notificationApi";
 import { formatDateLong } from "../../utils/datetime";
+import { resolveNotificationTarget } from "../../utils/notificationHelpers";
 
 const ICON_MAP = {
   info: FiInfo,
@@ -165,6 +167,7 @@ const FORM_ID = "create-notification-form";
 const PAGE_SIZE = 10;
 
 export default function AdminNotifications() {
+  const navigate = useNavigate();
   const { user, token } = useSelector((state) => state.auth);
   const [modalOpen, setModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -282,6 +285,12 @@ export default function AdminNotifications() {
           userRole: viewAll && n.user?.role ? n.user.role.name : null,
           priority: n.priority,
           metadata: n.metadata,
+          // Routing fields — required by resolveNotificationTarget
+          entityType: n.entityType,
+          entityId: n.entityId,
+          actionType: n.actionType,
+          category: n.category,
+          actionUrl: n.actionUrl,
         }));
         setNotifications(mappedNotifications);
 
@@ -571,7 +580,12 @@ export default function AdminNotifications() {
                 }`}
                 onClick={() => {
                   if (item.unread) markRead(item.id);
-                  setSelectedNotif(item);
+                  const target = resolveNotificationTarget(item, user);
+                  if (target?.path) {
+                    navigate(target.path, target.state ? { state: target.state } : undefined);
+                  } else {
+                    setSelectedNotif(item);
+                  }
                 }}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
