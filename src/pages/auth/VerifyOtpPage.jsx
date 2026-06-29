@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
-import eliteLogo from "../../assets/elitepic_logo.png";
+import eliteLogo from "../../assets/elitepic-logo.png";
 import useOtp from "../../hooks/useOtp";
 
 export default function VerifyOtpPage() {

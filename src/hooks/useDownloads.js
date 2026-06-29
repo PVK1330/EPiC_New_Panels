@@ -34,6 +34,14 @@ import { downloadDocument as fetchDocument } from "../services/documentApi";
 import { downloadCandidateCcl } from "../services/workflowApi";
 import { fetchPlatformAuditLogsExport } from "../services/superadminAudit.service";
 import {
+  exportTeamMembersExcel as fetchTeamMembersExcel,
+  exportTeamMembersPdf as fetchTeamMembersPdf,
+} from "../services/superadminTeam.service";
+import {
+  exportOrganisationsExcel as fetchOrganisationsExcel,
+  exportOrganisationsPdf as fetchOrganisationsPdf,
+} from "../services/superadminOrganisation.service";
+import {
   exportFinancials,
   exportInvoicesPdf,
   downloadInvoicePdf as fetchInvoicePdf,
@@ -421,6 +429,50 @@ export default function useDownloads() {
     [wrapAxiosBlob],
   );
 
+  const exportTeamMembersExcel = useCallback(
+    (defaultFilename) =>
+      wrapAxiosBlob(
+        "exportTeamMembersExcel",
+        fetchTeamMembersExcel,
+        defaultFilename ||
+          `team_members_${new Date().toISOString().split("T")[0]}.xlsx`,
+      ),
+    [wrapAxiosBlob],
+  );
+
+  const exportTeamMembersPdf = useCallback(
+    (defaultFilename) =>
+      wrapAxiosBlob(
+        "exportTeamMembersPdf",
+        fetchTeamMembersPdf,
+        defaultFilename ||
+          `team_members_${new Date().toISOString().split("T")[0]}.pdf`,
+      ),
+    [wrapAxiosBlob],
+  );
+
+  const exportOrganisationsExcel = useCallback(
+    (defaultFilename) =>
+      wrapAxiosBlob(
+        "exportOrganisationsExcel",
+        fetchOrganisationsExcel,
+        defaultFilename ||
+          `organisations_${new Date().toISOString().split("T")[0]}.xlsx`,
+      ),
+    [wrapAxiosBlob],
+  );
+
+  const exportOrganisationsPdf = useCallback(
+    (defaultFilename) =>
+      wrapAxiosBlob(
+        "exportOrganisationsPdf",
+        fetchOrganisationsPdf,
+        defaultFilename ||
+          `organisations_${new Date().toISOString().split("T")[0]}.pdf`,
+      ),
+    [wrapAxiosBlob],
+  );
+
   const exportSuperadminFinancials = useCallback(
     (defaultFilename) =>
       wrapAxiosBlob(
@@ -515,6 +567,10 @@ export default function useDownloads() {
     exportCaseDetailPdf,
     exportCaseDetailExcel,
     exportPlatformAuditLogs,
+    exportTeamMembersExcel,
+    exportTeamMembersPdf,
+    exportOrganisationsExcel,
+    exportOrganisationsPdf,
     exportSuperadminFinancials,
     exportSuperadminInvoicesPdf,
     downloadSuperadminInvoicePdf,

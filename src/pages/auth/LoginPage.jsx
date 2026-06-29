@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 import DatePicker from "../../components/DatePicker";
-import eliteLogo from "../../assets/elitepic_logo.png";
+import eliteLogo from "../../assets/elitepic-logo.png";
 import { setCredentials } from "../../store/slices/authSlice";
 import {
   loginUser,
@@ -13,7 +13,11 @@ import {
   forgotPassword,
   verifyTwoFactor,
 } from "../../services/auth.service";
-import { getAuthUserAndToken, getDashboardRouteForUser, resolveLoginRole } from "../../utils/authResponse";
+import {
+  getAuthUserAndToken,
+  getDashboardRouteForUser,
+  resolveLoginRole,
+} from "../../utils/authResponse";
 import { API_BASE_URL } from "../../utils/constants";
 import { getOrganisationSlugFromHost } from "../../utils/organisationHost";
 import api from "../../services/api";
@@ -118,7 +122,10 @@ export default function LoginPage() {
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
   const [pendingLogin, setPendingLogin] = useState(null);
 
-  const [resetPasswordForm, setResetPasswordForm] = useState({ password: "", confirmPassword: "" });
+  const [resetPasswordForm, setResetPasswordForm] = useState({
+    password: "",
+    confirmPassword: "",
+  });
   const [resetPasswordError, setResetPasswordError] = useState("");
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [pendingResetData, setPendingResetData] = useState(null);
@@ -212,10 +219,16 @@ export default function LoginPage() {
         setPendingLogin({ email: form.email, password: form.password });
         setView(VIEWS.twoFactor);
       } else {
-        const { user: userData, token, allowedModules } = getAuthUserAndToken(res);
+        const {
+          user: userData,
+          token,
+          allowedModules,
+        } = getAuthUserAndToken(res);
 
         if (!userData) {
-          throw new Error(res.message || "Invalid credentials or response structure");
+          throw new Error(
+            res.message || "Invalid credentials or response structure",
+          );
         }
 
         const role = resolveLoginRole(userData);
@@ -225,7 +238,10 @@ export default function LoginPage() {
           organisation_id: userData.organisation_id ?? null,
         };
 
-        const forceReset = res?.data?.force_password_reset || res?.data?.data?.force_password_reset || res?.force_password_reset;
+        const forceReset =
+          res?.data?.force_password_reset ||
+          res?.data?.data?.force_password_reset ||
+          res?.force_password_reset;
 
         const subscriptionExpired =
           res?.data?.subscription_expired ||
@@ -314,7 +330,9 @@ export default function LoginPage() {
     }
     setResetPasswordLoading(true);
     try {
-      await api.post('/api/user/change-password', { new_password: resetPasswordForm.password });
+      await api.post("/api/user/change-password", {
+        new_password: resetPasswordForm.password,
+      });
       dispatch(setCredentials(pendingResetData));
       navigate(getDashboardRouteForUser(pendingResetData.user));
     } catch (err) {
@@ -341,7 +359,11 @@ export default function LoginPage() {
         throw new Error("No response received from 2FA server");
       }
 
-      const { user: userData, token, allowedModules } = getAuthUserAndToken(res);
+      const {
+        user: userData,
+        token,
+        allowedModules,
+      } = getAuthUserAndToken(res);
 
       if (!userData) {
         throw new Error(res.message || "Invalid 2FA code or server response");
@@ -381,7 +403,11 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4 py-10">
       <div className={shellClass}>
         <div className="text-center mb-7 flex flex-col items-center">
-          <img src={eliteLogo} alt="ElitePic Logo" className="h-14 w-auto mb-2" />
+          <img
+            src={eliteLogo}
+            alt="ElitePic Logo"
+            className="h-14 w-auto mb-2"
+          />
           <p className="text-gray-400 text-[10px] font-bold tracking-[0.2em] uppercase">
             Customer Relationship Management
           </p>
@@ -389,7 +415,9 @@ export default function LoginPage() {
 
         {view === VIEWS.login && (
           <>
-            <h1 className="text-lg font-black text-secondary text-center mb-6">Sign in</h1>
+            <h1 className="text-lg font-black text-secondary text-center mb-6">
+              Sign in
+            </h1>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 label="Email"
@@ -415,7 +443,11 @@ export default function LoginPage() {
                 <div className="flex justify-end mt-1">
                   <button
                     type="button"
-                    onClick={() => { setForgotEmail(form.email); setForgotError(""); setView(VIEWS.forgot); }}
+                    onClick={() => {
+                      setForgotEmail(form.email);
+                      setForgotError("");
+                      setView(VIEWS.forgot);
+                    }}
                     className="text-xs font-bold text-secondary hover:text-primary hover:underline"
                   >
                     Forgot password?
@@ -430,7 +462,10 @@ export default function LoginPage() {
               New candidate?{" "}
               <button
                 type="button"
-                onClick={() => { setRegisterErrors({}); setView(VIEWS.register); }}
+                onClick={() => {
+                  setRegisterErrors({});
+                  setView(VIEWS.register);
+                }}
                 className="font-black text-secondary hover:text-primary hover:underline"
               >
                 Create an account
@@ -441,9 +476,12 @@ export default function LoginPage() {
 
         {view === VIEWS.register && (
           <>
-            <h1 className="text-lg font-black text-secondary text-center mb-1">Candidate registration</h1>
+            <h1 className="text-lg font-black text-secondary text-center mb-1">
+              Candidate registration
+            </h1>
             <p className="text-center text-xs font-bold text-gray-500 mb-6">
-              Register to access the candidate portal. Caseworkers and admins are invited separately.
+              Register to access the candidate portal. Caseworkers and admins
+              are invited separately.
             </p>
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
               <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
@@ -459,14 +497,37 @@ export default function LoginPage() {
                   required
                 />
                 <p className="text-xs text-blue-600 mt-1.5 font-medium">
-                  Your organisation ID is provided by your immigration adviser or administrator.
+                  Your organisation ID is provided by your immigration adviser
+                  or administrator.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Input label="First name" name="firstName" value={registerForm.firstName} onChange={handleRegisterChange} placeholder="First name" error={registerErrors.firstName} required />
-                <Input label="Middle name" name="middleName" value={registerForm.middleName} onChange={handleRegisterChange} placeholder="Middle name (optional)" />
-                <Input label="Last name" name="lastName" value={registerForm.lastName} onChange={handleRegisterChange} placeholder="Last name" error={registerErrors.lastName} required />
+                <Input
+                  label="First name"
+                  name="firstName"
+                  value={registerForm.firstName}
+                  onChange={handleRegisterChange}
+                  placeholder="First name"
+                  error={registerErrors.firstName}
+                  required
+                />
+                <Input
+                  label="Middle name"
+                  name="middleName"
+                  value={registerForm.middleName}
+                  onChange={handleRegisterChange}
+                  placeholder="Middle name (optional)"
+                />
+                <Input
+                  label="Last name"
+                  name="lastName"
+                  value={registerForm.lastName}
+                  onChange={handleRegisterChange}
+                  placeholder="Last name"
+                  error={registerErrors.lastName}
+                  required
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -476,12 +537,23 @@ export default function LoginPage() {
                   value={registerForm.dob}
                   onChange={handleRegisterChange}
                   error={registerErrors.dob}
-                  max={(() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split("T")[0]; })()}
-                  min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 120); return d.toISOString().split("T")[0]; })()}
+                  max={(() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 1);
+                    return d.toISOString().split("T")[0];
+                  })()}
+                  min={(() => {
+                    const d = new Date();
+                    d.setFullYear(d.getFullYear() - 120);
+                    return d.toISOString().split("T")[0];
+                  })()}
                   required
                 />
                 <div>
-                  <label htmlFor="register-country-code" className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2 block">
+                  <label
+                    htmlFor="register-country-code"
+                    className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2 block"
+                  >
                     Phone number <span className="text-primary ml-1">*</span>
                   </label>
                   <div className="flex gap-2">
@@ -490,43 +562,140 @@ export default function LoginPage() {
                         id="register-country-code"
                         value={selectedCountry.code}
                         onChange={(e) => {
-                          const country = COUNTRIES.find((c) => c.code === e.target.value);
+                          const country = COUNTRIES.find(
+                            (c) => c.code === e.target.value,
+                          );
                           if (country) handleCountryCodeChange(country);
                         }}
                         className="appearance-none bg-white border border-gray-200 rounded-xl px-3 py-2 pr-8 text-sm font-bold text-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30 cursor-pointer"
                       >
                         {COUNTRIES.map((country) => (
-                          <option key={country.name} value={country.code}>{country.code}</option>
+                          <option key={country.name} value={country.code}>
+                            {country.code}
+                          </option>
                         ))}
                       </select>
-                      <ChevronDown size={16} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                      <ChevronDown
+                        size={16}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+                      />
                     </div>
-                    <Input name="phone" type="tel" value={registerForm.phone} onChange={handleRegisterChange} placeholder="7911123456" error={registerErrors.phone} required className="flex-1" />
+                    <Input
+                      name="phone"
+                      type="tel"
+                      value={registerForm.phone}
+                      onChange={handleRegisterChange}
+                      placeholder="7911123456"
+                      error={registerErrors.phone}
+                      required
+                      className="flex-1"
+                    />
                   </div>
-                  {registerErrors.phone && <span className="text-xs text-primary mt-1 block">{registerErrors.phone}</span>}
+                  {registerErrors.phone && (
+                    <span className="text-xs text-primary mt-1 block">
+                      {registerErrors.phone}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <Input label="Email" name="email" type="email" value={registerForm.email} onChange={handleRegisterChange} placeholder="you@example.com" error={registerErrors.email} required />
-              <Input label="Address" name="address" value={registerForm.address} onChange={handleRegisterChange} placeholder="Your street address" error={registerErrors.address} required />
+              <Input
+                label="Email"
+                name="email"
+                type="email"
+                value={registerForm.email}
+                onChange={handleRegisterChange}
+                placeholder="you@example.com"
+                error={registerErrors.email}
+                required
+              />
+              <Input
+                label="Address"
+                name="address"
+                value={registerForm.address}
+                onChange={handleRegisterChange}
+                placeholder="Your street address"
+                error={registerErrors.address}
+                required
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input label="City" name="city" value={registerForm.city} onChange={handleRegisterChange} placeholder="Your city" error={registerErrors.city} required />
-                <Input label="State / Region" name="state" value={registerForm.state} onChange={handleRegisterChange} placeholder="Your state or region" error={registerErrors.state} required />
+                <Input
+                  label="City"
+                  name="city"
+                  value={registerForm.city}
+                  onChange={handleRegisterChange}
+                  placeholder="Your city"
+                  error={registerErrors.city}
+                  required
+                />
+                <Input
+                  label="State / Region"
+                  name="state"
+                  value={registerForm.state}
+                  onChange={handleRegisterChange}
+                  placeholder="Your state or region"
+                  error={registerErrors.state}
+                  required
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input label="Country" name="country" value={registerForm.country} onChange={handleRegisterChange} placeholder="Your country" error={registerErrors.country} required />
-                <Input label="Pincode / Postal code" name="pincode" value={registerForm.pincode} onChange={handleRegisterChange} placeholder="Your pincode" error={registerErrors.pincode} required />
+                <Input
+                  label="Country"
+                  name="country"
+                  value={registerForm.country}
+                  onChange={handleRegisterChange}
+                  placeholder="Your country"
+                  error={registerErrors.country}
+                  required
+                />
+                <Input
+                  label="Pincode / Postal code"
+                  name="pincode"
+                  value={registerForm.pincode}
+                  onChange={handleRegisterChange}
+                  placeholder="Your pincode"
+                  error={registerErrors.pincode}
+                  required
+                />
               </div>
 
-              <Input label="Nationality" name="nationality" value={registerForm.nationality} onChange={handleRegisterChange} placeholder="Your nationality" error={registerErrors.nationality} required />
+              <Input
+                label="Nationality"
+                name="nationality"
+                value={registerForm.nationality}
+                onChange={handleRegisterChange}
+                placeholder="Your nationality"
+                error={registerErrors.nationality}
+                required
+              />
 
               <div className="border-t border-gray-200 pt-4 mt-4">
-                <h3 className="text-sm font-black text-secondary mb-4">Account credentials</h3>
+                <h3 className="text-sm font-black text-secondary mb-4">
+                  Account credentials
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input label="Password" name="password" type="password" value={registerForm.password} onChange={handleRegisterChange} placeholder="At least 8 characters" error={registerErrors.password} required />
-                  <Input label="Confirm password" name="confirmPassword" type="password" value={registerForm.confirmPassword} onChange={handleRegisterChange} placeholder="Repeat password" error={registerErrors.confirmPassword} required />
+                  <Input
+                    label="Password"
+                    name="password"
+                    type="password"
+                    value={registerForm.password}
+                    onChange={handleRegisterChange}
+                    placeholder="At least 8 characters"
+                    error={registerErrors.password}
+                    required
+                  />
+                  <Input
+                    label="Confirm password"
+                    name="confirmPassword"
+                    type="password"
+                    value={registerForm.confirmPassword}
+                    onChange={handleRegisterChange}
+                    placeholder="Repeat password"
+                    error={registerErrors.confirmPassword}
+                    required
+                  />
                 </div>
               </div>
 
@@ -536,13 +705,23 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <Button type="submit" disabled={registerLoading} className="w-full">
-                {registerLoading ? "Creating account…" : "Create candidate account"}
+              <Button
+                type="submit"
+                disabled={registerLoading}
+                className="w-full"
+              >
+                {registerLoading
+                  ? "Creating account…"
+                  : "Create candidate account"}
               </Button>
             </form>
             <p className="mt-5 text-center text-sm text-gray-600">
               Already have an account?{" "}
-              <button type="button" onClick={() => setView(VIEWS.login)} className="font-black text-secondary hover:text-primary hover:underline">
+              <button
+                type="button"
+                onClick={() => setView(VIEWS.login)}
+                className="font-black text-secondary hover:text-primary hover:underline"
+              >
                 Sign in
               </button>
             </p>
@@ -551,7 +730,9 @@ export default function LoginPage() {
 
         {view === VIEWS.forgot && (
           <>
-            <h1 className="text-lg font-black text-secondary text-center mb-1">Reset password</h1>
+            <h1 className="text-lg font-black text-secondary text-center mb-1">
+              Reset password
+            </h1>
             <p className="text-center text-xs font-bold text-gray-500 mb-6">
               Enter the email you use for ElitePic and we'll send a reset code.
             </p>
@@ -561,7 +742,10 @@ export default function LoginPage() {
                 name="forgot-email"
                 type="email"
                 value={forgotEmail}
-                onChange={(e) => { setForgotEmail(e.target.value); setForgotError(""); }}
+                onChange={(e) => {
+                  setForgotEmail(e.target.value);
+                  setForgotError("");
+                }}
                 placeholder="you@example.com"
                 error={forgotError}
                 required
@@ -571,7 +755,11 @@ export default function LoginPage() {
               </Button>
             </form>
             <p className="mt-5 text-center text-sm text-gray-600">
-              <button type="button" onClick={() => setView(VIEWS.login)} className="font-black text-secondary hover:text-primary hover:underline">
+              <button
+                type="button"
+                onClick={() => setView(VIEWS.login)}
+                className="font-black text-secondary hover:text-primary hover:underline"
+              >
                 Back to sign in
               </button>
             </p>
@@ -580,9 +768,12 @@ export default function LoginPage() {
 
         {view === VIEWS.forceReset && (
           <>
-            <h1 className="text-lg font-black text-secondary text-center mb-1">Update Password Required</h1>
+            <h1 className="text-lg font-black text-secondary text-center mb-1">
+              Update Password Required
+            </h1>
             <p className="text-center text-xs font-bold text-gray-500 mb-6">
-              Since this is your first time logging in, please update your password.
+              Since this is your first time logging in, please update your
+              password.
             </p>
             <form onSubmit={handleForceResetSubmit} className="space-y-4">
               <Input
@@ -590,7 +781,13 @@ export default function LoginPage() {
                 name="reset-password"
                 type="password"
                 value={resetPasswordForm.password}
-                onChange={(e) => { setResetPasswordForm((prev) => ({ ...prev, password: e.target.value })); setResetPasswordError(""); }}
+                onChange={(e) => {
+                  setResetPasswordForm((prev) => ({
+                    ...prev,
+                    password: e.target.value,
+                  }));
+                  setResetPasswordError("");
+                }}
                 placeholder="Enter new password"
                 required
               />
@@ -599,19 +796,32 @@ export default function LoginPage() {
                 name="reset-confirm-password"
                 type="password"
                 value={resetPasswordForm.confirmPassword}
-                onChange={(e) => { setResetPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value })); setResetPasswordError(""); }}
+                onChange={(e) => {
+                  setResetPasswordForm((prev) => ({
+                    ...prev,
+                    confirmPassword: e.target.value,
+                  }));
+                  setResetPasswordError("");
+                }}
                 placeholder="Confirm new password"
                 error={resetPasswordError}
                 required
               />
-              <Button type="submit" disabled={resetPasswordLoading} className="w-full">
+              <Button
+                type="submit"
+                disabled={resetPasswordLoading}
+                className="w-full"
+              >
                 {resetPasswordLoading ? "Updating…" : "Update password"}
               </Button>
             </form>
             <p className="mt-5 text-center text-sm text-gray-600">
               <button
                 type="button"
-                onClick={() => { setPendingResetData(null); setView(VIEWS.login); }}
+                onClick={() => {
+                  setPendingResetData(null);
+                  setView(VIEWS.login);
+                }}
                 className="font-black text-secondary hover:text-primary hover:underline"
               >
                 Back to sign in
@@ -622,7 +832,9 @@ export default function LoginPage() {
 
         {view === VIEWS.twoFactor && (
           <>
-            <h1 className="text-lg font-black text-secondary text-center mb-1">Two-factor authentication</h1>
+            <h1 className="text-lg font-black text-secondary text-center mb-1">
+              Two-factor authentication
+            </h1>
             <p className="text-center text-xs font-bold text-gray-500 mb-6">
               Enter the 6-digit code from your authenticator app
             </p>
@@ -632,17 +844,30 @@ export default function LoginPage() {
                 name="twoFactorCode"
                 type="text"
                 value={twoFactorCode}
-                onChange={(e) => { setTwoFactorCode(e.target.value.replace(/\D/g, "").slice(0, 6)); setTwoFactorError(""); }}
+                onChange={(e) => {
+                  setTwoFactorCode(
+                    e.target.value.replace(/\D/g, "").slice(0, 6),
+                  );
+                  setTwoFactorError("");
+                }}
                 placeholder="123456"
                 error={twoFactorError}
                 required
               />
-              <Button type="submit" disabled={twoFactorLoading} className="w-full">
+              <Button
+                type="submit"
+                disabled={twoFactorLoading}
+                className="w-full"
+              >
                 {twoFactorLoading ? "Verifying…" : "Verify"}
               </Button>
             </form>
             <p className="mt-5 text-center text-sm text-gray-600">
-              <button type="button" onClick={handleBackToLogin} className="font-black text-secondary hover:text-primary hover:underline">
+              <button
+                type="button"
+                onClick={handleBackToLogin}
+                className="font-black text-secondary hover:text-primary hover:underline"
+              >
                 Back to sign in
               </button>
             </p>

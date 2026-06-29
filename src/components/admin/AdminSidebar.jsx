@@ -36,7 +36,7 @@ import {
   RiMoneyPoundCircleLine,
   RiMegaphoneLine,
 } from "react-icons/ri";
-import eliteLogo from "../../assets/elitepic_logo.png";
+import eliteLogo from "../../assets/elitepic-logo.png";
 import { resolveAssetUrl } from "../../utils/assetUrl";
 
 const navSections = [

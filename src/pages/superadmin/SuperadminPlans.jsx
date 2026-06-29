@@ -137,11 +137,21 @@ const SuperadminPlans = () => {
   };
 
   const handleSavePlan = async () => {
+    if (!formData.name?.trim()) {
+      toast.error('Plan name is required');
+      return;
+    }
+    const priceValue = parseFloat(formData.price);
+    if (formData.price === '' || Number.isNaN(priceValue) || priceValue < 0) {
+      toast.error('Please enter a valid price (0 or more)');
+      return;
+    }
+
     try {
       const payload = {
         name: formData.name,
         description: formData.description,
-        price: parseFloat(formData.price),
+        price: priceValue,
         billing_cycle: formData.interval === 'month' ? 'monthly' : 'yearly',
         features: formData.selectedModuleIds,
         is_public: formData.isFeatured,

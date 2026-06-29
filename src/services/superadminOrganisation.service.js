@@ -3,6 +3,12 @@ import api from "./api";
 export const fetchOrganisations = (params = {}) =>
   api.get("/api/superadmin/organisations", { params });
 
+export const exportOrganisationsExcel = () =>
+  api.get("/api/superadmin/organisations/export/excel", { responseType: "blob" });
+
+export const exportOrganisationsPdf = () =>
+  api.get("/api/superadmin/organisations/export/pdf", { responseType: "blob" });
+
 export const fetchOrganisationById = (id) => api.get(`/api/superadmin/organisations/${id}`);
 
 export const createOrganisation = (data) => api.post("/api/superadmin/organisations", data);

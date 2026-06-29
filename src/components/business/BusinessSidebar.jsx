@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { performLogout } from "../../utils/performLogout";
-import eliteLogo from "../../assets/elitepic_logo.png";
+import eliteLogo from "../../assets/elitepic-logo.png";
 import useModuleAccess from "../../hooks/useModuleAccess";
 import { resolveAssetUrl } from "../../utils/assetUrl";
 

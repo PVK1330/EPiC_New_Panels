@@ -17,7 +17,7 @@ export const getIdentitySettings = () =>
 /**
  * PATCH /api/superadmin/settings/identity
  * @param {Object} data - Partial object with any of:
- *   platform_name, support_email, default_locale, timezone,
+ *   platform_name, support_email, platform_address, default_locale, timezone,
  *   maintenance_mode, signups_enabled, analytics_enabled
  */
 export const updateIdentitySettings = (data) =>

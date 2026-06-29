@@ -21,8 +21,12 @@ import {
   RiEditLine,
   RiDeleteBinLine,
   RiAlertLine,
+  RiFileExcel2Line,
+  RiFilePdf2Line,
+  RiLoader4Line,
 } from "react-icons/ri";
 import Button from "../../components/Button";
+import useDownloads from "../../hooks/useDownloads";
 import Modal from "../../components/common/Modal";
 import Input from "../../components/Input";
 import PageHero, {
@@ -72,6 +76,12 @@ const SuperadminTeam = () => {
   const [roles, setRoles] = useState([]);
   const [stats, setStats] = useState({ total: 0, active: 0, mfa_enabled: 0 });
   const [loadError, setLoadError] = useState(null);
+
+  const {
+    busy: downloadBusy,
+    exportTeamMembersExcel,
+    exportTeamMembersPdf,
+  } = useDownloads();
 
   const loadData = useCallback(async () => {
     try {
@@ -238,6 +248,20 @@ const SuperadminTeam = () => {
     setIsRoleModalOpen(true);
   };
 
+  const handleExportExcel = async () => {
+    const result = await exportTeamMembersExcel();
+    if (!result.ok) {
+      toast.error(result.message || "Excel export failed");
+    }
+  };
+
+  const handleExportPdf = async () => {
+    const result = await exportTeamMembersPdf();
+    if (!result.ok) {
+      toast.error(result.message || "PDF export failed");
+    }
+  };
+
   const confirmDeleteRole = (role) => {
     setEditingRole(role);
     setIsDeleteModalOpen(true);
@@ -348,6 +372,28 @@ const SuperadminTeam = () => {
         title="Administrative Team"
         subtitle="Manage internal accounts and access levels"
       >
+        <HeroGhostButton
+          onClick={handleExportExcel}
+          disabled={downloadBusy.exportTeamMembersExcel}
+        >
+          {downloadBusy.exportTeamMembersExcel ? (
+            <RiLoader4Line size={16} className="animate-spin" />
+          ) : (
+            <RiFileExcel2Line size={16} />
+          )}
+          Excel
+        </HeroGhostButton>
+        <HeroGhostButton
+          onClick={handleExportPdf}
+          disabled={downloadBusy.exportTeamMembersPdf}
+        >
+          {downloadBusy.exportTeamMembersPdf ? (
+            <RiLoader4Line size={16} className="animate-spin" />
+          ) : (
+            <RiFilePdf2Line size={16} />
+          )}
+          PDF
+        </HeroGhostButton>
         <HeroGhostButton onClick={handleCreateRole}>
           <RiShieldUserLine size={16} /> Create Role
         </HeroGhostButton>

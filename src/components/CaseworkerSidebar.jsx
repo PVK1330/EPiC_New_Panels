@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { performLogout } from "../utils/performLogout";
 import { LogOut, X } from "lucide-react";
-import eliteLogo from "../assets/elitepic_logo.png";
+import eliteLogo from "../assets/elitepic-logo.png";
 import { caseworkerNavSections } from "./caseworkerNavSections";
 import { useState, useEffect } from "react";
 import api from "../services/api";

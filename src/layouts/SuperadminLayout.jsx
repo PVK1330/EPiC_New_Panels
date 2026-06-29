@@ -39,26 +39,43 @@ const SuperadminLayout = () => {
     : user?.name || user?.email?.split('@')[0] || "User";
   const profilePicUrl = user?.profile_pic || user?.avatar_url ? resolveAssetUrl(user?.profile_pic || user?.avatar_url) : null;
 
-  // Load platform branding once on mount so the sidebar logo + browser favicon
-  // reflect the uploaded assets everywhere — not only after visiting Settings.
+  // Load platform branding on mount — and again whenever the tab regains focus —
+  // so the sidebar logo + browser favicon reflect the uploaded assets everywhere,
+  // not only after visiting Settings. The focus refresh means that if the logo is
+  // changed in another tab/session, switching back here picks it up without a
+  // hard reload (fixes the "still showing the default logo" inconsistency).
   useEffect(() => {
     let cancelled = false;
-    getIdentitySettings()
-      .then((res) => {
-        const s = res.data?.data?.settings;
-        if (s && !cancelled) {
-          dispatch(
-            setBranding({
-              platform_name: s.platform_name,
-              logo_url: s.logo_url ?? null,
-              favicon_url: s.favicon_url ?? null,
-            }),
-          );
-        }
-      })
-      .catch(() => {});
+
+    const refreshBranding = () => {
+      getIdentitySettings()
+        .then((res) => {
+          const s = res.data?.data?.settings;
+          if (s && !cancelled) {
+            dispatch(
+              setBranding({
+                platform_name: s.platform_name,
+                logo_url: s.logo_url ?? null,
+                favicon_url: s.favicon_url ?? null,
+              }),
+            );
+          }
+        })
+        .catch(() => {});
+    };
+
+    refreshBranding();
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshBranding();
+    };
+    window.addEventListener("focus", refreshBranding);
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", refreshBranding);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [dispatch]);
 

@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { performLogout } from "../../utils/performLogout";
+import { getIdentitySettings } from "../../services/platformSettingsApi";
 import {
   RiDashboardLine,
   RiBuilding4Line,
@@ -17,10 +19,12 @@ import {
   RiLogoutBoxRLine,
   RiCloseLine,
 } from "react-icons/ri";
-import eliteLogo from "../../assets/elitepic_logo.png";
+import eliteLogo from "../../assets/elitepic-logo.png";
 import {
+  setBranding,
   selectPlatformName,
   selectLogoUrl,
+  selectBrandingLoaded,
 } from "../../store/slices/platformBrandingSlice";
 import useModuleAccess from "../../hooks/useModuleAccess";
 import { resolveAssetUrl } from "../../utils/assetUrl";
@@ -75,8 +79,34 @@ const SuperadminSidebar = ({ isOpen, onClose }) => {
   const profilePicUrl = user?.profile_pic || user?.avatar_url ? resolveAssetUrl(user?.profile_pic || user?.avatar_url) : null;
 
   // Live branding from Redux — updated instantly when IdentityTab saves/uploads
-  const platformName = useSelector(selectPlatformName);
-  const logoUrl      = useSelector(selectLogoUrl);
+  const platformName  = useSelector(selectPlatformName);
+  const logoUrl       = useSelector(selectLogoUrl);
+  const brandingLoaded = useSelector(selectBrandingLoaded);
+
+  // Self-heal: if branding hasn't been hydrated yet (e.g. this session loaded
+  // before the logo was uploaded, or Redux was reset), fetch it once so the
+  // sidebar shows the configured logo instead of the bundled default.
+  useEffect(() => {
+    if (brandingLoaded) return;
+    let cancelled = false;
+    getIdentitySettings()
+      .then((res) => {
+        const s = res.data?.data?.settings;
+        if (s && !cancelled) {
+          dispatch(
+            setBranding({
+              platform_name: s.platform_name,
+              logo_url: s.logo_url ?? null,
+              favicon_url: s.favicon_url ?? null,
+            }),
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [brandingLoaded, dispatch]);
 
   const logoSrc = resolveAssetUrl(logoUrl) || eliteLogo;
   const { canAccess } = useModuleAccess();
