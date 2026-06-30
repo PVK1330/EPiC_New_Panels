@@ -1049,7 +1049,7 @@ export default function AdminCandidates() {
                   value={newCustomLabel}
                   onChange={(e) => setNewCustomLabel(e.target.value)}
                   placeholder="e.g. Previous UK employer name"
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                 />
               </div>
               <div className="w-full sm:w-40">
@@ -1057,7 +1057,7 @@ export default function AdminCandidates() {
                 <select
                   value={newCustomType}
                   onChange={(e) => setNewCustomType(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                 >
                   {CUSTOM_FIELD_TYPE_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -1107,19 +1107,19 @@ export default function AdminCandidates() {
               placeholder="Search by name, nationality…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-gray-50 placeholder:text-gray-400"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
             />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <select value={visaFilter} onChange={(e) => setVisaFilter(e.target.value)} className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 text-gray-600">
+            <select value={visaFilter} onChange={(e) => setVisaFilter(e.target.value)} className="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all">
               <option value="All">All Visa Types</option>
               {VISA_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 text-gray-600">
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all">
               <option value="All">All Status</option>
               {STATUS_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <select value={payFilter} onChange={(e) => setPayFilter(e.target.value)} className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 text-gray-600">
+            <select value={payFilter} onChange={(e) => setPayFilter(e.target.value)} className="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all">
               <option value="All">All Payment Status</option>
               {PAYMENT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
@@ -1445,7 +1445,7 @@ export default function AdminCandidates() {
               value={assignBusinessId}
               onChange={(e) => setAssignBusinessId(e.target.value)}
               disabled={businessesLoading}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-gray-700 disabled:opacity-60"
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white text-slate-700 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all disabled:opacity-60"
             >
               <option value="">
                 {businessesLoading ? "Loading businesses…" : "— No business (unassign) —"}

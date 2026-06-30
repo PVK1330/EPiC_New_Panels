@@ -1,4 +1,3 @@
-import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, Fragment } from "react";
 import {
@@ -38,11 +37,13 @@ import { triggerDownload } from "../../services/documentApi";
 import LicenceWorkflowTimeline from "../../components/licence/LicenceWorkflowTimeline";
 import Pagination from "../../components/common/Pagination";
 import { useToast } from "../../context/ToastContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import { formatDate, formatDateLong } from "../../utils/datetime";
 
 const LicenceStatus = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [applications, setApplications] = useState([]);
   const [page, setPage] = useState(1);
@@ -170,16 +171,14 @@ const LicenceStatus = () => {
   };
 
   const handleDelete = async (id) => {
-    const result = await Swal.fire({
+    const confirmed = await confirm({
       title: "Delete application?",
-      text: "This will permanently remove the licence application. This action cannot be undone.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Yes, delete it",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#ef4444",
+      message:
+        "This will permanently remove the licence application. This action cannot be undone.",
+      confirmLabel: "Yes, delete it",
+      variant: "danger",
     });
-    if (!result.isConfirmed) return;
+    if (!confirmed) return;
     try {
       await deleteMyLicenceApplication(id);
       showToast({ message: "Application deleted successfully", variant: "success" });

@@ -85,19 +85,14 @@ export default function AdminAnnouncements() {
           required
         />
 
-        <div>
-          <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">
-            Message
-          </label>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            rows={6}
-            className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-y min-h-[140px]"
-            placeholder="Write your announcement…"
-            required
-          />
-        </div>
+        <Input
+          label="Message"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          rows={6}
+          placeholder="Write your announcement…"
+          required
+        />
 
         <div>
           <p className="text-xs font-bold text-gray-600 mb-3 uppercase tracking-wide">

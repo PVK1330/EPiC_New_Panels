@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { FiTrash2 } from "react-icons/fi";
 import Input from "../Input";
 import Button from "../Button";
 
@@ -47,8 +48,14 @@ const CaseDetailNotes = ({ notes, loading, onAdd, onDelete }) => {
                 {n.author} · {n.date}
               </p>
               {onDelete && n.id && (
-                <button onClick={() => onDelete(n.id)} className="text-xs text-red-500 hover:text-red-700 font-bold transition-colors">
-                  Delete
+                <button
+                  type="button"
+                  onClick={() => onDelete(n.id)}
+                  title="Delete"
+                  aria-label="Delete"
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                >
+                  <FiTrash2 size={15} />
                 </button>
               )}
             </div>

@@ -35,7 +35,7 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
         <span className="text-gray-400 font-normal ml-1">(1–2 workers)</span>
       </label>
       <button type="button" onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-left text-sm bg-white border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary ${error ? "border-red-400" : ""}`}>
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-left text-sm bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all ${error ? "border-red-500" : "border-slate-200"}`}>
         <span className={value.length ? "text-gray-900 font-semibold" : "text-gray-400"}>
           {value.length ? summaryText : "Choose caseworkers…"}
         </span>
@@ -118,7 +118,7 @@ function AdminCaseFormModal({
                       setFormData((prev) => ({ ...prev, candidateId: e.target.value, candidateName: selectedCandidate ? `${selectedCandidate.first_name} ${selectedCandidate.last_name}` : "" }));
                       if (errors.candidateId) setErrors((prev) => ({ ...prev, candidateId: "" }));
                     }}
-                    className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${errors.candidateId ? "border-red-400" : "border-gray-300"}`}>
+                    className={`w-full border rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all ${errors.candidateId ? "border-red-500" : "border-slate-200"}`}>
                     <option value="">Select candidate</option>
                     {candidates.map((c, idx) => <option key={`${c.id}-${idx}`} value={c.id}>{c.first_name} {c.last_name}</option>)}
                   </select>
@@ -130,7 +130,7 @@ function AdminCaseFormModal({
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">Department</label>
                   <select name="department" value={formData.department} onChange={onChange}
-                    className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary">
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all">
                     <option value="">Select department</option>
                     {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
@@ -148,7 +148,7 @@ function AdminCaseFormModal({
                       setFormData((prev) => ({ ...prev, businessId: e.target.value, businessName: selectedSponsor ? `${selectedSponsor.first_name} ${selectedSponsor.last_name}` : "" }));
                       if (errors.businessId) setErrors((prev) => ({ ...prev, businessId: "" }));
                     }}
-                    className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${errors.businessId ? "border-red-400" : "border-gray-300"}`}>
+                    className={`w-full border rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all ${errors.businessId ? "border-red-500" : "border-slate-200"}`}>
                     <option value="">Select sponsor</option>
                     {sponsors.map((s) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}
                   </select>
@@ -165,7 +165,7 @@ function AdminCaseFormModal({
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">Visa Type <span className="text-red-500">*</span></label>
                 <select name="visaTypeId" value={formData.visaTypeId} onChange={onChange}
-                  className={`border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${errors.visaTypeId ? "border-red-400" : "border-gray-300"}`}>
+                  className={`w-full border rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all ${errors.visaTypeId ? "border-red-500" : "border-slate-200"}`}>
                   <option value="">Select visa type</option>
                   {visaTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
@@ -174,7 +174,7 @@ function AdminCaseFormModal({
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">Petition Type</label>
                 <select name="petitionTypeId" value={formData.petitionTypeId} onChange={onChange}
-                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary">
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all">
                   <option value="">Select type</option>
                   {petitionTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
@@ -182,7 +182,7 @@ function AdminCaseFormModal({
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">Priority Level <span className="text-red-500">*</span></label>
                 <select name="priority" value={formData.priority} onChange={onChange}
-                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary">
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all">
                   {priorityLevels.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
                 </select>
               </div>
@@ -220,7 +220,7 @@ function AdminCaseFormModal({
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Additional Notes</label>
             <textarea name="notes" value={formData.notes} onChange={onChange} rows={3} placeholder="Any notes or comments..."
-              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary resize-none" />
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all resize-none" />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">

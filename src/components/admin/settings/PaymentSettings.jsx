@@ -141,7 +141,7 @@ export default function PaymentSettings({
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">Active Online Gateway</label>
                   <select
-                    className="w-full border border-gray-200 rounded-2xl px-4 py-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all font-bold"
+                    className="w-full border border-slate-200 rounded-2xl px-4 py-3 bg-white text-sm text-slate-800 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                     value={config.active_gateway}
                     onChange={(e) => onConfigChange('active_gateway', e.target.value)}
                   >

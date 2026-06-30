@@ -477,7 +477,7 @@ export default function AdminCclFeeApprovals() {
                       onChange={(e) => setAdminNotes(e.target.value)}
                       placeholder="Add any feedback or approval notes here (optional)"
                       rows={3}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none resize-none"
+                      className="w-full border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-800 placeholder:text-slate-400 focus:border-secondary focus:ring-2 focus:ring-secondary/30 outline-none transition-all resize-none"
                     />
                   ) : (
                     <p className="text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-xl p-3 italic">

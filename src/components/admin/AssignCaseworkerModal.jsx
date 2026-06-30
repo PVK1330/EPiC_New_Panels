@@ -209,7 +209,7 @@ export default function AssignCaseworkerModal({
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
                 placeholder="Why is this caseworker being assigned?"
-                className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none resize-none"
+                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-secondary focus:ring-2 focus:ring-secondary/30 outline-none transition-all resize-none"
               />
               {reasonErr && (
                 <p className="text-xs text-red-500 mt-1">{reasonErr}</p>

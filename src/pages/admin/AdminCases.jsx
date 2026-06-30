@@ -933,7 +933,7 @@ export default function AdminCases() {
                 placeholder="Search cases..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                className="w-full border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-secondary focus:ring-2 focus:ring-secondary/30 outline-none transition-all"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -941,7 +941,7 @@ export default function AdminCases() {
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:border-secondary focus:ring-2 focus:ring-secondary/30 outline-none transition-all"
               >
                 <option value="all">All Statuses</option>
                 <option value="approved">Approved</option>
@@ -955,7 +955,7 @@ export default function AdminCases() {
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:border-secondary focus:ring-2 focus:ring-secondary/30 outline-none transition-all"
               >
                 <option value="all">All Priorities</option>
                 <option value="low">Low</option>
@@ -969,7 +969,7 @@ export default function AdminCases() {
               <select
                 value={visaTypeFilter}
                 onChange={(e) => setVisaTypeFilter(e.target.value)}
-                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:border-secondary focus:ring-2 focus:ring-secondary/30 outline-none transition-all"
               >
                 <option value="all">All Visa Types</option>
                 {visaTypes.map((type) => (
