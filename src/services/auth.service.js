@@ -9,6 +9,17 @@ const extractError = (error, fallback) => {
     throw new Error(fallback || "An unknown error occurred");
   }
   const d = error.response?.data;
+
+  // Prefer specific field-level validation messages over the generic top-level
+  // "Validation failed" message so the user sees the actual reason.
+  const fieldErrors = d?.errors;
+  if (Array.isArray(fieldErrors) && fieldErrors.length) {
+    const messages = fieldErrors
+      .map((e) => (typeof e === "string" ? e : e?.message))
+      .filter(Boolean);
+    if (messages.length) throw new Error(messages.join(", "));
+  }
+
   if (typeof d?.message === "string" && d.message.trim()) {
     throw new Error(d.message);
   }

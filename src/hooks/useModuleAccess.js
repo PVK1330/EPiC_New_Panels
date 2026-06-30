@@ -18,8 +18,9 @@ export default function useModuleAccess() {
       if (!allowedModules || !Array.isArray(allowedModules)) return false;
       return allowedModules.includes(moduleKey) || allowedModules.includes('*');
     }
-    // Tenant users fallback
-    if (!allowedModules || !Array.isArray(allowedModules) || allowedModules.length === 0) return true;
+    // Tenant users: fail closed while modules are loading (empty list = not yet resolved)
+    if (!allowedModules || !Array.isArray(allowedModules)) return false;
+    if (allowedModules.length === 0) return false;
     if (allowedModules.includes('*')) return true;
     return allowedModules.includes(moduleKey);
   };

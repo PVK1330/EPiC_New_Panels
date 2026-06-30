@@ -17,6 +17,7 @@ import {
   RiFileExcel2Line,
   RiFilePdf2Line,
   RiLoader4Line,
+  RiMoneyDollarCircleLine,
 } from "react-icons/ri";
 import CreateOrganizationModal from "../../components/superadmin/CreateOrganizationModal";
 import Button from "../../components/Button";
@@ -31,6 +32,7 @@ import {
   updateOrganisation,
   deleteOrganisation,
   activateOrganisation,
+  markOrganisationAsPaid,
   impersonateOrganisation,
 } from "../../services/superadminOrganisation.service";
 import { fetchPlans } from "../../services/superadminPlan.service";
@@ -49,7 +51,8 @@ const mapApiOrgToRow = (o) => ({
   id: o.id,
   name: o.name,
   slug: o.slug,
-  plan: capitalize(o.plan?.name || o.plan || "Starter"),
+  plan: capitalize(o.plan?.name || o.plan || "—"),
+  plan_id: o.plan?.id ?? o.plan_id ?? "",
   users: Array.isArray(o.users) ? o.users.length : 0,
   status: capitalize(o.status || "trial"),
   country: o.country || "—",
@@ -112,6 +115,10 @@ const SuperadminOrganisations = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isMarkPaidModalOpen, setIsMarkPaidModalOpen] = useState(false);
+  const [markPaidOrg, setMarkPaidOrg] = useState(null);
+  const [markPaidMethod, setMarkPaidMethod] = useState("bank_transfer");
+  const [markPaidLoading, setMarkPaidLoading] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   // BUG-050: require the org name to be typed before the destructive delete is enabled.
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -335,6 +342,22 @@ const SuperadminOrganisations = () => {
       );
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleMarkAsPaid = async () => {
+    if (!markPaidOrg?.id) return;
+    setMarkPaidLoading(true);
+    try {
+      await markOrganisationAsPaid(markPaidOrg.id, markPaidMethod);
+      toast.success(`${markPaidOrg.name} marked as paid. Invoice generated and emailed.`);
+      setIsMarkPaidModalOpen(false);
+      setMarkPaidOrg(null);
+      await loadOrgs();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e.message || "Failed to mark as paid");
+    } finally {
+      setMarkPaidLoading(false);
     }
   };
 
@@ -589,6 +612,49 @@ const SuperadminOrganisations = () => {
                 <option>Suspended</option>
               </select>
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Mark as Paid Modal */}
+      <Modal
+        isOpen={isMarkPaidModalOpen}
+        onClose={() => { setIsMarkPaidModalOpen(false); setMarkPaidOrg(null); }}
+        title="Mark as Paid"
+      >
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-gray-600">
+            This will activate <span className="font-semibold">{markPaidOrg?.name}</span>'s
+            subscription, generate a paid invoice, and email it to the organisation.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Payment method</label>
+            <select
+              value={markPaidMethod}
+              onChange={(e) => setMarkPaidMethod(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="card">Card</option>
+              <option value="cash">Cash</option>
+              <option value="cheque">Cheque</option>
+              <option value="manual">Manual / Other</option>
+            </select>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => { setIsMarkPaidModalOpen(false); setMarkPaidOrg(null); }}
+              className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleMarkAsPaid}
+              disabled={markPaidLoading}
+              className="flex-1 bg-primary text-white py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+            >
+              {markPaidLoading ? "Processing…" : "Confirm & Generate Invoice"}
+            </button>
           </div>
         </div>
       </Modal>
@@ -954,6 +1020,19 @@ const SuperadminOrganisations = () => {
                             />
                           </TableActionButton>
                         )}
+                        {(org.status === "Suspended" || org.status === "Trial") && org._raw?.plan_id && (
+                          <TableActionButton
+                            label="Mark as Paid"
+                            onClick={() => {
+                              setMarkPaidOrg(org);
+                              setMarkPaidMethod("bank_transfer");
+                              setIsMarkPaidModalOpen(true);
+                            }}
+                            disabled={actionLoading}
+                          >
+                            <RiMoneyDollarCircleLine size={17} className="text-blue-600" />
+                          </TableActionButton>
+                        )}
                         <TableActionButton
                           label="View"
                           onClick={() => openView(org)}
@@ -973,7 +1052,7 @@ const SuperadminOrganisations = () => {
                           onClick={() => {
                             setSelectedOrg({
                               ...org,
-                              plan_id: org._raw?.plan_id ?? "",
+                              plan_id: org.plan_id ? String(org.plan_id) : (org._raw?.plan_id ? String(org._raw.plan_id) : ""),
                             });
                             setIsEditModalOpen(true);
                           }}

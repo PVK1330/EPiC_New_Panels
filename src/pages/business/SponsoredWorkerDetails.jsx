@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { getSponsoredWorkerDetails, getWorkerAuditTrail, assignCosToWorker } from "../../services/sponsoredWorkerApi";
+import WorkerAbsenceTab from "./WorkerAbsenceTab";
 import { getCosAllocations } from "../../services/licenceApi";
 import { toast } from "react-hot-toast";
 import { formatDate } from "../../utils/datetime";
@@ -199,7 +200,11 @@ const SponsoredWorkerDetails = () => {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 overflow-x-auto no-scrollbar">
-        {[["details", "Worker Details"], ["history", "Activity History"]].map(([key, label]) => (
+        {[
+          ["details", "Worker Details"],
+          ["absence", "Absence Monitoring"],
+          ["history", "Activity History"],
+        ].map(([key, label]) => (
           <button key={key} onClick={() => setActiveTab(key)}
             className={`px-6 py-3 text-sm font-black border-b-2 transition whitespace-nowrap ${
               activeTab === key ? "border-primary text-primary" : "border-transparent text-gray-400 hover:text-gray-600"
@@ -283,6 +288,13 @@ const SponsoredWorkerDetails = () => {
             )}
           </SectionCard>
 
+        </motion.div>
+      )}
+
+      {/* ABSENCE MONITORING TAB */}
+      {activeTab === "absence" && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <WorkerAbsenceTab workerId={workerId} />
         </motion.div>
       )}
 

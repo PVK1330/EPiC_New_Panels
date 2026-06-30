@@ -292,6 +292,34 @@ export const uploadComplianceDocument = (data) => {
 export const deleteComplianceDocument = (id) =>
   api.delete(`/api/business/compliance-documents/${id}`);
 
+// ── Section K: Multi-Company / Linked Entities ────────────────────────────
+
+/** Return all entities in the caller's company group (parent + subsidiaries). */
+export const getLinkedEntities = () =>
+  api.get("/api/business/linked-entities");
+
+/**
+ * Link a sponsor profile as a subsidiary.
+ * @param {{ childSponsorProfileId: number, relationshipType?: string, notes?: string }} data
+ */
+export const linkSubsidiary = (data) =>
+  api.post("/api/business/linked-entities", data);
+
+/** Remove a subsidiary link by its id. */
+export const unlinkSubsidiary = (id) =>
+  api.delete(`/api/business/linked-entities/${id}`);
+
+/** Consolidated risk dashboard aggregated across all entities in the group. */
+export const getConsolidatedDashboard = () =>
+  api.get("/api/business/linked-entities/dashboard");
+
+/**
+ * Search for a sponsor profile to link.
+ * @param {string} q Search term (company name or registration number)
+ */
+export const searchSponsorProfiles = (q) =>
+  api.get("/api/business/linked-entities/search", { params: { q } });
+
 // Streams a compliance document's file. The uploads/ tree is not served
 // statically, so this authenticated route is the only way to fetch the file.
 export const downloadComplianceDocument = (id) =>

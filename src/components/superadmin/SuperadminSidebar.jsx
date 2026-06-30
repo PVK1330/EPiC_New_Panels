@@ -18,6 +18,7 @@ import {
   RiShieldKeyholeLine,
   RiLogoutBoxRLine,
   RiCloseLine,
+  RiFileShieldLine,
 } from "react-icons/ri";
 import eliteLogo from "../../assets/elitepic-logo.png";
 import {
@@ -39,7 +40,7 @@ const navSections = [
   {
     items: [
       { label: "Dashboard", to: "/superadmin/dashboard", icon: RiDashboardLine, moduleKey: "dashboard" },
-      { label: "Organizations", to: "/superadmin/organisations", icon: RiBuilding4Line, moduleKey: "organizations" },
+      { label: "Organisations", to: "/superadmin/organisations", icon: RiBuilding4Line, moduleKey: "organisations" },
       { label: "Announcements", to: "/superadmin/announcements", icon: RiMegaphoneLine, moduleKey: "announcements" },
     ],
   },
@@ -55,6 +56,7 @@ const navSections = [
     label: "Security",
     items: [
       { label: "Audit Log", to: "/superadmin/audit-log", icon: RiHistoryLine, moduleKey: "audit-logs" },
+      { label: "GDPR & Privacy", to: "/superadmin/gdpr", icon: RiFileShieldLine, moduleKey: "audit-logs" },
       { label: "Staff", to: "/superadmin/team", icon: RiShieldUserLine, moduleKey: "team" },
     ],
   },

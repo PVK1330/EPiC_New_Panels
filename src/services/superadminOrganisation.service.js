@@ -27,6 +27,9 @@ export const suspendOrganisation = (id) => api.post(`/api/superadmin/organisatio
 
 export const activateOrganisation = (id) => api.post(`/api/superadmin/organisations/${id}/activate`);
 
+export const markOrganisationAsPaid = (id, paymentMethod) =>
+  api.post(`/api/superadmin/organisations/${id}/mark-paid`, { payment_method: paymentMethod });
+
 export const createOrganisationAdmin = (orgId, data) => api.post(`/api/superadmin/organisations/${orgId}/admins`, data);
 
 export const impersonateOrganisation = (orgId) => api.post(`/api/superadmin/organisations/${orgId}/impersonate`);
