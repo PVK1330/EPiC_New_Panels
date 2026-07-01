@@ -394,7 +394,14 @@ const AppRouter = () => {
           <Route path="plans" element={<SuperadminPlans />} />
           <Route path="billing" element={<SuperadminBilling />} />
           <Route path="audit-log" element={<SuperadminAuditLog />} />
-          <Route path="gdpr" element={<SuperadminGDPR />} />
+          <Route
+            path="gdpr"
+            element={
+              <ProtectedRoute allowedRoleIds={[5]}>
+                <SuperadminGDPR />
+              </ProtectedRoute>
+            }
+          />
           <Route path="settings" element={<SuperadminSettings />} />
           <Route path="notifications" element={<SuperadminNotifications />} />
           <Route path="payments" element={<SuperadminPayments />} />
