@@ -36,7 +36,7 @@ import {
 import useDownloads from "../../hooks/useDownloads";
 import useCandidate from "../../hooks/useCandidate";
 import { resolveCaseStage } from "../../constants/immigrationCaseProcess";
-import { getDecisionDocuments } from "../../services/workflowApi";
+import { getDecisionDocuments, requestFinalDocuments } from "../../services/workflowApi";
 import { downloadDocument, triggerDownload } from "../../services/documentApi";
 import { formatDateLong } from "../../utils/datetime";
 import { resolveAssetUrl } from "../../utils/assetUrl";
@@ -154,6 +154,12 @@ const FINAL_ITEMS = [
     docType: "Visa Copy",
     meta: "Available upon approval",
   },
+  {
+    icon: ScrollText,
+    name: "Case closure letter",
+    docType: "Case Closure Letter",
+    meta: "Available when your case is closed",
+  },
 ];
 
 function initialsFromName(name) {
@@ -223,6 +229,19 @@ const CandidateAccount = () => {
   const decisionDocsUnlocked = DECISION_UNLOCK_STAGES.has(caseStage);
   const [decisionDocs, setDecisionDocs] = useState([]);
   const [decisionDocBusy, setDecisionDocBusy] = useState(null);
+  const [requestDocsBusy, setRequestDocsBusy] = useState(false);
+
+  const handleRequestFinalDocuments = async () => {
+    setRequestDocsBusy(true);
+    try {
+      await requestFinalDocuments();
+      showToast({ message: "Request sent — your case team will share your final documents." });
+    } catch (error) {
+      showToast({ variant: "danger", message: apiErrorMessage(error) });
+    } finally {
+      setRequestDocsBusy(false);
+    }
+  };
 
   const handleDecisionDownload = async (doc) => {
     if (!doc?.id) return;
@@ -269,7 +288,10 @@ const CandidateAccount = () => {
       return;
     }
     getDecisionDocuments()
-      .then((res) => setDecisionDocs(res.data?.data?.documents || []))
+      // `unwrap` already returns the payload ({ unlocked, documents, ... }),
+      // so read `documents` directly — the previous res.data.data double-unwrap
+      // was always undefined, leaving every final document stuck on "Pending".
+      .then((res) => setDecisionDocs(res?.documents || []))
       .catch(() => setDecisionDocs([]));
   }, [tab, decisionDocsUnlocked]);
 
@@ -910,6 +932,22 @@ const CandidateAccount = () => {
                 );
               })}
             </div>
+            {decisionDocsUnlocked && (
+              <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-gray-50/70 p-3">
+                <p className="text-xs font-bold text-gray-500">
+                  Missing a document or need it re-sent? Request your final
+                  documents and your case team will email them to you.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRequestFinalDocuments}
+                  disabled={requestDocsBusy}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-secondary/30 bg-secondary/10 px-4 py-2.5 text-xs font-black text-secondary hover:bg-secondary hover:text-white shrink-0 disabled:opacity-50"
+                >
+                  {requestDocsBusy ? "Sending…" : "Request final documents"}
+                </button>
+              </div>
+            )}
           </section>
         </div>
       )}

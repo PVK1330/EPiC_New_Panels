@@ -25,7 +25,7 @@ const Input = ({
   const inputType = isPasswordType ? (showPassword ? "text" : "password") : type;
 
   const isReadOnly = readOnly || disabled;
-  const fieldCls = `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-400 ${
+  const fieldCls = `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 focus:border-secondary transition-all placeholder:text-slate-400 ${
     isReadOnly ? "bg-slate-50 cursor-not-allowed text-slate-500" : "bg-white"
   } ${error ? "border-red-500" : "border-slate-200"} ${isPasswordType ? "pr-10" : ""}`;
 

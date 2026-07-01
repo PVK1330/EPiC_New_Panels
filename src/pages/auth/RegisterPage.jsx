@@ -4,7 +4,7 @@ import Input from "../../components/Input";
 import PhoneInput from "../../components/PhoneInput";
 import Button from "../../components/Button";
 import { isValidPhone } from "../../utils/countries";
-import eliteLogo from "../../assets/elitepic_logo.png";
+import eliteLogo from "../../assets/elitepic-logo.png";
 import useAuth from "../../hooks/useAuth";
 
 // role_id values MUST match the backend ROLES map: candidate = 1, business = 4.

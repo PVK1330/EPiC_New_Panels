@@ -1,32 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
 import CandidateApplicationForm from "../../components/CandidateApplicationForm/CandidateApplicationForm";
-import DraftReviewBanner from "../../components/candidate/DraftReviewBanner";
-import { getCandidateWorkflowProcess } from "../../services/workflowApi";
 
+// The draft-review prompt, form locking, and "No — I need to make changes"
+// unlock flow are all handled inside CandidateApplicationForm (single source of
+// truth). A previous outer <fieldset disabled> + DraftReviewBanner wrapper here
+// double-locked the form: clicking "No" on the inner prompt unlocked the form's
+// own state but left the outer fieldset disabled, so the candidate could never
+// edit. Rendering the form directly resolves that.
 const Application = () => {
-  const [formLocked, setFormLocked] = useState(false);
-
-  const refreshLock = useCallback(async () => {
-    try {
-      const data = await getCandidateWorkflowProcess();
-      const inDraftReview = data?.caseStage === "draft_application_review";
-      const confirmed = data?.workflowState?.draftReview?.confirmed;
-      setFormLocked(inDraftReview && confirmed !== false);
-    } catch {
-      setFormLocked(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshLock();
-  }, [refreshLock]);
-
   return (
     <div className="pb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-      <DraftReviewBanner onUnlocked={() => setFormLocked(false)} onResponded={refreshLock} />
-      <fieldset disabled={formLocked} className={formLocked ? "opacity-90 pointer-events-none" : ""}>
-        <CandidateApplicationForm />
-      </fieldset>
+      <CandidateApplicationForm />
     </div>
   );
 };

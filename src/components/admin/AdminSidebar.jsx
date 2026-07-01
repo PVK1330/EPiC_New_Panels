@@ -36,8 +36,9 @@ import {
   RiMoneyPoundCircleLine,
   RiMegaphoneLine,
 } from "react-icons/ri";
-import eliteLogo from "../../assets/elitepic_logo.png";
-import { resolveAssetUrl } from "../../utils/assetUrl";
+import eliteLogo from "../../assets/elitepic-logo.png";
+import { resolveAssetUrl, resolveOrganisationLogoUrl } from "../../utils/assetUrl";
+import { getOrganisationBranding } from "../../services/settingsService";
 
 const navSections = [
   {
@@ -108,6 +109,35 @@ const AdminSidebar = ({ isOpen, onClose }) => {
   const { canAccess } = useModuleAccess();
   const [enquiryCount, setEnquiryCount] = useState(0);
   const [cclApprovalCount, setCclApprovalCount] = useState(0);
+  const [orgLogoUrl, setOrgLogoUrl] = useState(null);
+  const [orgName, setOrgName] = useState("");
+
+  // Pull the organisation's logo + name set in /admin/settings so the sidebar
+  // brand matches the tenant instead of the hardcoded ElitePic default. Re-fetch
+  // when settings broadcast `organisation-branding-updated` so it updates live.
+  useEffect(() => {
+    let cancelled = false;
+    const loadBranding = async () => {
+      try {
+        const res = await getOrganisationBranding();
+        const organisation = res.data?.data?.organisation;
+        if (cancelled) return;
+        setOrgLogoUrl(resolveOrganisationLogoUrl(organisation));
+        setOrgName(organisation?.name || "");
+      } catch {
+        if (cancelled) return;
+        setOrgLogoUrl(null);
+        setOrgName("");
+      }
+    };
+    loadBranding();
+    const onBrandingUpdated = () => loadBranding();
+    window.addEventListener("organisation-branding-updated", onBrandingUpdated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("organisation-branding-updated", onBrandingUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     Promise.all([getPipelineCases(), getPendingCclFeeApprovals().catch(() => null)])
@@ -149,19 +179,19 @@ const AdminSidebar = ({ isOpen, onClose }) => {
       >
         {/* Brand */}
         <div className="px-6 py-5 flex items-center justify-between border-b border-gray-100 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-50 rounded-xl border border-gray-100 shadow-inner group transition-all hover:bg-white hover:shadow-md">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 bg-gray-50 rounded-xl border border-gray-100 shadow-inner group transition-all hover:bg-white hover:shadow-md shrink-0">
               <img
-                src={eliteLogo}
-                alt="ElitePic"
-                className="h-8 w-auto transition-transform group-hover:scale-110"
+                src={orgLogoUrl || eliteLogo}
+                alt={orgName || "ElitePic"}
+                className="h-8 w-auto max-w-[120px] object-contain transition-transform group-hover:scale-110"
               />
             </div>
-            <div>
-              <h2 className="text-base font-black text-secondary leading-none tracking-tight">
-                ElitePic
+            <div className="min-w-0">
+              <h2 className="text-base font-black text-secondary leading-tight tracking-tight truncate">
+                {orgName || "ElitePic"}
               </h2>
-              <p className="text-[10px] font-black text-primary tracking-wide mt-1.5 opacity-80">
+              <p className="text-[10px] font-black text-primary tracking-wide mt-1 opacity-80">
                 Admin Panel
               </p>
             </div>

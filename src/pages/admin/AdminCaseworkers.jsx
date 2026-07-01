@@ -136,6 +136,14 @@ export default function AdminCaseworkers() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [deptFilter, setDeptFilter] = useState("All");
   const [departments, setDepartments] = useState([]);
+  // Options for the create/edit modal selects: a leading placeholder so an
+  // unselected department shows as an empty value the validator can catch
+  // (the raw `departments` list is still used by the table filter, which has
+  // its own "All Departments" option).
+  const departmentOptions = [
+    { value: "", label: "Select department" },
+    ...departments,
+  ];
 
   const [modal, setModal] = useState({ type: null, data: null });
   const [createForm, setCreateForm] = useState(EMPTY_CREATE);
@@ -325,6 +333,8 @@ export default function AdminCaseworkers() {
     if (!createForm.mobile.trim()) errs.mobile = "Mobile is required";
     else if (!isValidPhone(createForm.country_code, createForm.mobile))
       errs.mobile = "Enter a valid phone number for the selected country";
+    if (!createForm.department || !createForm.department.trim())
+      errs.department = "Department is required";
     return errs;
   };
 
@@ -340,6 +350,8 @@ export default function AdminCaseworkers() {
     if (!editForm.mobile.trim()) errs.mobile = "Mobile is required";
     else if (!isValidPhone(editForm.country_code, editForm.mobile))
       errs.mobile = "Enter a valid phone number for the selected country";
+    if (!editForm.department || !editForm.department.trim())
+      errs.department = "Department is required";
     return errs;
   };
 
@@ -891,8 +903,9 @@ export default function AdminCaseworkers() {
               name="department"
               value={createForm.department}
               onChange={handleCreateChange}
-              options={departments}
+              options={departmentOptions}
               required
+              error={errors.department}
             />
           </div>
         )}
@@ -948,8 +961,9 @@ export default function AdminCaseworkers() {
               name="department"
               value={editForm.department}
               onChange={handleEditChange}
-              options={departments}
+              options={departmentOptions}
               required
+              error={errors.department}
             />
             <Input
               label="Status"

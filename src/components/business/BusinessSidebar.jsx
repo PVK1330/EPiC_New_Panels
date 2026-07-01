@@ -20,10 +20,13 @@ import {
   FileWarning,
   Receipt,
   UserCog,
+  Link2,
+  CalendarCheck,
+  BadgeCheck,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { performLogout } from "../../utils/performLogout";
-import eliteLogo from "../../assets/elitepic_logo.png";
+import eliteLogo from "../../assets/elitepic-logo.png";
 import useModuleAccess from "../../hooks/useModuleAccess";
 import { resolveAssetUrl } from "../../utils/assetUrl";
 
@@ -68,10 +71,14 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
     {
       label: "Compliance",
       items: [
-        { to: "/business/compliance",             label: "Compliance Dashboard",  icon: Activity,      moduleKey: "business.compliance" },
-        { to: "/business/compliance-documents",   label: "Compliance Documents",  icon: ClipboardCheck, moduleKey: "business.compliance" },
-        { to: "/business/reporting-obligations",  label: "Reporting Obligations", icon: FileWarning,   moduleKey: "business.reporting-obligations" },
-        { to: "/business/compliance-review",      label: "Review Status",         icon: ClipboardCheck, moduleKey: "business.compliance" },
+        { to: "/business/compliance",                   label: "Compliance Dashboard",  icon: Activity,       moduleKey: "business.compliance" },
+        { to: "/business/compliance-documents",         label: "Compliance Documents",  icon: ClipboardCheck, moduleKey: "business.compliance" },
+        { to: "/business/reporting-obligations",        label: "Reporting Obligations", icon: FileWarning,    moduleKey: "business.reporting-obligations" },
+        { to: "/business/compliance-review",            label: "Review Status",         icon: ClipboardCheck, moduleKey: "business.compliance" },
+        { to: "/business/monthly-compliance-review",    label: "Monthly Review",        icon: CalendarCheck,  moduleKey: "business.compliance" },
+        { to: "/business/linked-entities",              label: "Linked Entities",       icon: Link2,          moduleKey: "business.compliance" },
+        { to: "/business/right-to-work",                label: "Right to Work",         icon: BadgeCheck,     moduleKey: "business.compliance" },
+        { to: "/business/audit-log",                    label: "Audit Log",             icon: ClipboardCheck, moduleKey: "business.compliance" },
       ],
     },
     {

@@ -18,3 +18,11 @@ export const verifySubscriptionSession = (sessionId) =>
   api
     .post(`/api/billing/verify-session/${encodeURIComponent(sessionId)}`)
     .then(unwrap);
+
+/** All invoices for the authenticated org admin's organisation. */
+export const getMyInvoices = () =>
+  api.get("/api/billing/invoices").then(unwrap);
+
+/** Download an invoice PDF by ID (returns a Blob). */
+export const downloadMyInvoice = (id) =>
+  api.get(`/api/billing/invoices/${id}/download`, { responseType: "blob" });

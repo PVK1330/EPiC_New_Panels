@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Input from "./Input";
 import Button from "./Button";
-import eliteLogo from "../assets/elitepic_logo.png";
+import eliteLogo from "../assets/elitepic-logo.png";
 import { setup2fa, verify2faSetup } from "../services/auth2faService";
 import { getApiError } from "../utils/apiError";
 

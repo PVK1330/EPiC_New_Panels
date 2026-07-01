@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { DollarSign, Clock, CheckCircle, TrendingUp, CreditCard, Landmark, Globe, X, RefreshCw } from "lucide-react";
+import { DollarSign, Clock, CheckCircle, TrendingUp, CreditCard, Landmark, Globe, X, RefreshCw, Eye } from "lucide-react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import DatePicker from "../../components/DatePicker";
@@ -374,7 +374,14 @@ export default function AdminFinance() {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{date}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    <button className="text-primary font-bold hover:underline">View</button>
+                    <button
+                      type="button"
+                      title="View"
+                      aria-label="View"
+                      className="text-primary hover:text-primary/80 transition-colors"
+                    >
+                      <Eye size={18} />
+                    </button>
                   </td>
                 </motion.tr>
               ))}
@@ -562,7 +569,7 @@ export default function AdminFinance() {
                         name="paymentTerms"
                         value={formData.paymentTerms}
                         onChange={handleInputChange}
-                        className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                       >
                         {paymentTermsOptions.map((term) => (
                           <option key={term} value={term}>{term}</option>
@@ -602,7 +609,7 @@ export default function AdminFinance() {
                             value={item.description}
                             onChange={(e) => handleItemChange(index, "description", e.target.value)}
                             placeholder="Item description"
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                           />
                         </div>
                         <div className="col-span-2">
@@ -611,7 +618,7 @@ export default function AdminFinance() {
                             min="1"
                             value={item.quantity}
                             onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 0)}
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                           />
                         </div>
                         <div className="col-span-2">
@@ -621,7 +628,7 @@ export default function AdminFinance() {
                             step="0.01"
                             value={item.rate}
                             onChange={(e) => handleItemChange(index, "rate", parseFloat(e.target.value) || 0)}
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                           />
                         </div>
                         <div className="col-span-2">
@@ -668,7 +675,7 @@ export default function AdminFinance() {
                           onChange={(e) => handleTaxRateChange(e.target.value)}
                           min="0"
                           max="100"
-                          className="w-16 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                          className="w-16 border border-slate-200 rounded-lg px-2 py-1 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                         />
                         <span>%</span>
                       </div>
@@ -690,7 +697,7 @@ export default function AdminFinance() {
                     onChange={handleInputChange}
                     rows={3}
                     placeholder="Enter any additional notes or payment instructions..."
-                    className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all resize-none"
                   />
                 </div>
 

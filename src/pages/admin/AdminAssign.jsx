@@ -264,7 +264,7 @@ const AdminAssign = () => {
                   placeholder="Search cases..."
                   value={caseSearch}
                   onChange={(e) => setCaseSearch(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                  className="w-full border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-secondary focus:ring-2 focus:ring-secondary/30 outline-none transition-all"
                 />
               </div>
             </div>
@@ -279,7 +279,7 @@ const AdminAssign = () => {
                 value={caseId}
                 onChange={(e) => setCaseId(e.target.value)}
                 disabled={fetchLoading}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none disabled:opacity-60 disabled:cursor-wait"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:border-secondary focus:ring-2 focus:ring-secondary/30 outline-none transition-all disabled:opacity-60 disabled:cursor-wait"
               >
                 <option value="">Select a case</option>
                 {filteredCaseOptions.map((c) => (
@@ -295,7 +295,7 @@ const AdminAssign = () => {
                 type="text"
                 value={current.caseworker || "Unassigned"}
                 readOnly
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 bg-gray-50"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-500 bg-slate-50 cursor-not-allowed"
               />
             </div>
 
@@ -364,7 +364,7 @@ const AdminAssign = () => {
                   placeholder="e.g. 1500.00"
                   value={proposedAmount}
                   onChange={(e) => setProposedAmount(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg pl-8 pr-4 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
+                  className="w-full border border-slate-200 rounded-lg pl-8 pr-4 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-secondary focus:ring-2 focus:ring-secondary/30 outline-none transition-all"
                 />
               </div>
               <p className="text-xs text-gray-500">
@@ -380,7 +380,7 @@ const AdminAssign = () => {
                 onChange={(e) => { setReason(e.target.value); setReasonErr(""); }}
                 rows={4}
                 placeholder="Enter reason (e.g. leave, capacity, expertise)…"
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all resize-none"
               />
               {reasonErr && <span className="text-xs text-red-500">{reasonErr}</span>}
             </div>

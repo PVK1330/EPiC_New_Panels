@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import Swal from "sweetalert2";
 import { Check, Clock, X, FileText, Pencil, Trash2 } from "lucide-react";
 import Modal from "../../../components/Modal";
 import DatePicker from "../../../components/DatePicker";
 import { useToast } from "../../../context/ToastContext";
+import { useConfirm } from "../../../context/ConfirmContext";
 import {
   getCaseDocuments,
   uploadDocument,
@@ -75,6 +75,7 @@ function getBadgeColor(status) {
 
 function CasesDocumentsTab({ caseId, candidateId }) {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [checklist, setChecklist] = useState(null);
@@ -165,16 +166,13 @@ function CasesDocumentsTab({ caseId, candidateId }) {
 
   const handleDeleteChecklistItem = useCallback(async (itemId) => {
     if (!caseId || !itemId) return;
-    const result = await Swal.fire({
+    const confirmed = await confirm({
       title: "Are you sure?",
-      text: "Remove this document requirement from the case checklist?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, remove it!",
+      message: "Remove this document requirement from the case checklist?",
+      confirmLabel: "Yes, remove it",
+      variant: "danger",
     });
-    if (!result.isConfirmed) return;
+    if (!confirmed) return;
     setChecklistSaving(true);
     try {
       await deleteCaseChecklistItem(itemId);
@@ -185,7 +183,7 @@ function CasesDocumentsTab({ caseId, candidateId }) {
     } finally {
       setChecklistSaving(false);
     }
-  }, [fetchChecklist, showToast]);
+  }, [fetchChecklist, showToast, confirm]);
 
   const handleToggleRequired = useCallback(async (item) => {
     if (!item?.id) return;

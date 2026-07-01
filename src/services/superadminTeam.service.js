@@ -4,6 +4,12 @@ export const fetchPlatformModules = () => api.get("/api/superadmin/team/modules"
 
 export const fetchTeamMembers = () => api.get("/api/superadmin/team");
 
+export const exportTeamMembersExcel = () =>
+  api.get("/api/superadmin/team/export/excel", { responseType: "blob" });
+
+export const exportTeamMembersPdf = () =>
+  api.get("/api/superadmin/team/export/pdf", { responseType: "blob" });
+
 export const inviteTeamMember = (body) => api.post("/api/superadmin/team", body);
 
 export const updateTeamMember = (id, body) => api.patch(`/api/superadmin/team/${id}`, body);

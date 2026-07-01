@@ -9,8 +9,9 @@ import {
 import { setBranding } from "../store/slices/platformBrandingSlice";
 
 const DEFAULTS = {
-  platform_name: "EPiC CRM",
+  platform_name: "ElitePic",
   support_email: "",
+  platform_address: "",
   default_locale: "en-GB",
   timezone: "Europe/London",
   maintenance_mode: false,

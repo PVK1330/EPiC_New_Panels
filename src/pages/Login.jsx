@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import DatePicker from "../components/DatePicker";
-import eliteLogo from "../assets/elitepic_logo.png";
+import eliteLogo from "../assets/elitepic-logo.png";
 import { setCredentials } from "../store/slices/authSlice";
 import {
   loginUser,
@@ -13,7 +13,11 @@ import {
   forgotPassword,
   verifyTwoFactor,
 } from "../services/auth.service";
-import { getAuthUserAndToken, getDashboardRouteForUser, resolveLoginRole } from "../utils/authResponse";
+import {
+  getAuthUserAndToken,
+  getDashboardRouteForUser,
+  resolveLoginRole,
+} from "../utils/authResponse";
 import { API_BASE_URL } from "../utils/constants";
 import { getOrganisationSlugFromHost } from "../utils/organisationHost";
 import api from "../services/api";
@@ -88,7 +92,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-
   const [registerForm, setRegisterForm] = useState({
     organisationId: "",
     firstName: "",
@@ -119,7 +122,10 @@ const Login = () => {
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
   const [pendingLogin, setPendingLogin] = useState(null);
 
-  const [resetPasswordForm, setResetPasswordForm] = useState({ password: "", confirmPassword: "" });
+  const [resetPasswordForm, setResetPasswordForm] = useState({
+    password: "",
+    confirmPassword: "",
+  });
   const [resetPasswordError, setResetPasswordError] = useState("");
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [pendingResetData, setPendingResetData] = useState(null);
@@ -213,10 +219,16 @@ const Login = () => {
         setPendingLogin({ email: form.email, password: form.password });
         setView(VIEWS.twoFactor);
       } else {
-        const { user: userData, token, allowedModules } = getAuthUserAndToken(res);
+        const {
+          user: userData,
+          token,
+          allowedModules,
+        } = getAuthUserAndToken(res);
 
         if (!userData) {
-          throw new Error(res.message || "Invalid credentials or response structure");
+          throw new Error(
+            res.message || "Invalid credentials or response structure",
+          );
         }
 
         const role = resolveLoginRole(userData);
@@ -226,7 +238,10 @@ const Login = () => {
           organisation_id: userData.organisation_id ?? null,
         };
 
-        const forceReset = res?.data?.force_password_reset || res?.data?.data?.force_password_reset || res?.force_password_reset;
+        const forceReset =
+          res?.data?.force_password_reset ||
+          res?.data?.data?.force_password_reset ||
+          res?.force_password_reset;
 
         const subscriptionExpired =
           res?.data?.subscription_expired ||
@@ -316,7 +331,9 @@ const Login = () => {
     }
     setResetPasswordLoading(true);
     try {
-      await api.post('/api/user/change-password', { new_password: resetPasswordForm.password });
+      await api.post("/api/user/change-password", {
+        new_password: resetPasswordForm.password,
+      });
 
       dispatch(setCredentials(pendingResetData));
       navigate(getDashboardRouteForUser(pendingResetData.user));
@@ -344,7 +361,11 @@ const Login = () => {
         throw new Error("No response received from 2FA server");
       }
 
-      const { user: userData, token, allowedModules } = getAuthUserAndToken(res);
+      const {
+        user: userData,
+        token,
+        allowedModules,
+      } = getAuthUserAndToken(res);
 
       if (!userData) {
         throw new Error(res.message || "Invalid 2FA code or server response");
@@ -387,7 +408,7 @@ const Login = () => {
           <img
             src={eliteLogo}
             alt="ElitePic Logo"
-            className="h-14 w-auto mb-2"
+            className="h-20 w-auto mb-2"
           />
           <p className="text-gray-400 text-[10px] font-bold tracking-[0.2em] uppercase">
             Customer Relationship Management
@@ -481,7 +502,8 @@ const Login = () => {
                   required
                 />
                 <p className="text-xs text-blue-600 mt-1.5 font-medium">
-                  Your organisation ID is provided by your immigration adviser or administrator.
+                  Your organisation ID is provided by your immigration adviser
+                  or administrator.
                 </p>
               </div>
 
@@ -520,12 +542,23 @@ const Login = () => {
                   value={registerForm.dob}
                   onChange={handleRegisterChange}
                   error={registerErrors.dob}
-                  max={(() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split("T")[0]; })()}
-                  min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 120); return d.toISOString().split("T")[0]; })()}
+                  max={(() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 1);
+                    return d.toISOString().split("T")[0];
+                  })()}
+                  min={(() => {
+                    const d = new Date();
+                    d.setFullYear(d.getFullYear() - 120);
+                    return d.toISOString().split("T")[0];
+                  })()}
                   required
                 />
                 <div>
-                  <label htmlFor="register-country-code" className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2 block">
+                  <label
+                    htmlFor="register-country-code"
+                    className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2 block"
+                  >
                     Phone number <span className="text-primary ml-1">*</span>
                   </label>
                   <div className="flex gap-2">
@@ -746,7 +779,8 @@ const Login = () => {
               Update Password Required
             </h1>
             <p className="text-center text-xs font-bold text-gray-500 mb-6">
-              Since this is your first time logging in, please update your password.
+              Since this is your first time logging in, please update your
+              password.
             </p>
             <form onSubmit={handleForceResetSubmit} className="space-y-4">
               <Input
@@ -755,7 +789,10 @@ const Login = () => {
                 type="password"
                 value={resetPasswordForm.password}
                 onChange={(e) => {
-                  setResetPasswordForm((prev) => ({ ...prev, password: e.target.value }));
+                  setResetPasswordForm((prev) => ({
+                    ...prev,
+                    password: e.target.value,
+                  }));
                   setResetPasswordError("");
                 }}
                 placeholder="Enter new password"
@@ -767,14 +804,21 @@ const Login = () => {
                 type="password"
                 value={resetPasswordForm.confirmPassword}
                 onChange={(e) => {
-                  setResetPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }));
+                  setResetPasswordForm((prev) => ({
+                    ...prev,
+                    confirmPassword: e.target.value,
+                  }));
                   setResetPasswordError("");
                 }}
                 placeholder="Confirm new password"
                 error={resetPasswordError}
                 required
               />
-              <Button type="submit" disabled={resetPasswordLoading} className="w-full">
+              <Button
+                type="submit"
+                disabled={resetPasswordLoading}
+                className="w-full"
+              >
                 {resetPasswordLoading ? "Updating…" : "Update password"}
               </Button>
             </form>

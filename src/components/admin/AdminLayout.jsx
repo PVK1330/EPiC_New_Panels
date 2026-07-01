@@ -17,7 +17,7 @@ import {
 
 import NotificationDropdown from "../notifications/NotificationDropdown";
 import MessageDropdown from "../notifications/MessageDropdown";
-import eliteLogo from "../../assets/elitepic_logo.png";
+import eliteLogo from "../../assets/elitepic-logo.png";
 import { getOrganisationBranding } from "../../services/settingsService";
 import { resolveAssetUrl, resolveOrganisationLogoUrl } from "../../utils/assetUrl";
 import { getProfileMenuPaths } from "../../utils/authResponse";

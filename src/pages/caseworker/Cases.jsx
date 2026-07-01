@@ -1,6 +1,5 @@
 ﻿import { useMemo, useState, useCallback, useEffect, Fragment, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import Swal from "sweetalert2";
 import {
   Search,
   Plus,

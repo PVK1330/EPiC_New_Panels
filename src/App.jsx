@@ -1,6 +1,7 @@
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
+import { ConfirmProvider } from "./context/ConfirmContext";
 import AppRouter from "./routes/AppRouter";
 import ScrollToTop from "./components/ScrollToTop";
 import SessionTimeout from "./components/common/SessionTimeout";
@@ -11,18 +12,20 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
-          <ScrollToTop />
-          <SessionTimeout>
-            <AppRouter />
-          </SessionTimeout>
+          <ConfirmProvider>
+            <ScrollToTop />
+            <SessionTimeout>
+              <AppRouter />
+            </SessionTimeout>
 
-          <Toaster
+            <Toaster
             position="top-right"
             toastOptions={{
               duration: 4500,
-              style: { fontWeight: 700, borderRadius: "12px" },
-            }}
-          />
+                style: { fontWeight: 700, borderRadius: "12px" },
+              }}
+            />
+          </ConfirmProvider>
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>

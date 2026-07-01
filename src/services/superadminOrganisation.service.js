@@ -3,6 +3,12 @@ import api from "./api";
 export const fetchOrganisations = (params = {}) =>
   api.get("/api/superadmin/organisations", { params });
 
+export const exportOrganisationsExcel = () =>
+  api.get("/api/superadmin/organisations/export/excel", { responseType: "blob" });
+
+export const exportOrganisationsPdf = () =>
+  api.get("/api/superadmin/organisations/export/pdf", { responseType: "blob" });
+
 export const fetchOrganisationById = (id) => api.get(`/api/superadmin/organisations/${id}`);
 
 export const createOrganisation = (data) => api.post("/api/superadmin/organisations", data);
@@ -20,6 +26,9 @@ export const deleteOrganisation = (id) => api.delete(`/api/superadmin/organisati
 export const suspendOrganisation = (id) => api.post(`/api/superadmin/organisations/${id}/suspend`);
 
 export const activateOrganisation = (id) => api.post(`/api/superadmin/organisations/${id}/activate`);
+
+export const markOrganisationAsPaid = (id, paymentMethod) =>
+  api.post(`/api/superadmin/organisations/${id}/mark-paid`, { payment_method: paymentMethod });
 
 export const createOrganisationAdmin = (orgId, data) => api.post(`/api/superadmin/organisations/${orgId}/admins`, data);
 

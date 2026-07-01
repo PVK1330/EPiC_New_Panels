@@ -8,7 +8,6 @@ const TwoFactorTab = ({ profile, twoFactorLoading, onInitiateSetup, onConfirmSet
 
   const [mode, setMode] = useState(null);
   const [qrCode, setQrCode] = useState(null);
-  const [secret, setSecret] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [disablePassword, setDisablePassword] = useState('');
   const [fieldError, setFieldError] = useState('');
@@ -20,7 +19,6 @@ const TwoFactorTab = ({ profile, twoFactorLoading, onInitiateSetup, onConfirmSet
     const result = await onInitiateSetup();
     if (result?.ok) {
       setQrCode(result.data?.qrCode);
-      setSecret(result.data?.secret || '');
       setMode('setup');
     } else {
       setFieldError(result?.error || '2FA setup failed');
@@ -40,7 +38,6 @@ const TwoFactorTab = ({ profile, twoFactorLoading, onInitiateSetup, onConfirmSet
       setMode(null);
       setOtpCode('');
       setQrCode(null);
-      setSecret('');
     } else {
       setFieldError(result?.error || 'Verification failed');
     }
@@ -69,7 +66,6 @@ const TwoFactorTab = ({ profile, twoFactorLoading, onInitiateSetup, onConfirmSet
     setFieldError('');
     setSuccess('');
     setQrCode(null);
-    setSecret('');
   };
 
   return (
@@ -110,12 +106,6 @@ const TwoFactorTab = ({ profile, twoFactorLoading, onInitiateSetup, onConfirmSet
               <div className="bg-white p-4 rounded-xl inline-block shadow-sm border border-gray-100">
                 <img src={qrCode} alt="2FA QR Code" className="w-48 h-48" />
               </div>
-            </div>
-          )}
-          {secret && (
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-[9px] font-bold text-gray-500 uppercase mb-1">Manual entry code</p>
-              <code className="text-xs font-mono text-secondary bg-white px-3 py-2 rounded border block break-all">{secret}</code>
             </div>
           )}
           <Input

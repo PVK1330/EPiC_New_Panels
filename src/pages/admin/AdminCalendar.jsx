@@ -446,7 +446,7 @@ const Calendar = () => {
               placeholder="Search events..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+              className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
             />
           </div>
 
@@ -658,7 +658,7 @@ const Calendar = () => {
                     onChange={(e) =>
                       setNewEvent({ ...newEvent, title: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                     placeholder="Enter event title"
                   />
                 </div>
@@ -702,7 +702,7 @@ const Calendar = () => {
                       onChange={(e) =>
                         setNewEvent({ ...newEvent, duration: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                     >
                       <option value="15">15 minutes</option>
                       <option value="30">30 minutes</option>
@@ -720,7 +720,7 @@ const Calendar = () => {
                       onChange={(e) =>
                         setNewEvent({ ...newEvent, type: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                     >
                       <option value="meeting">Meeting</option>
                       <option value="call">Phone Call</option>
@@ -739,7 +739,7 @@ const Calendar = () => {
                     onChange={(e) =>
                       setNewEvent({ ...newEvent, meeting_provider: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                   >
                     <option value="none">No online link</option>
                     <option value="google">Google Meet</option>
@@ -760,7 +760,7 @@ const Calendar = () => {
                     onChange={(e) =>
                       setNewEvent({ ...newEvent, location: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                     placeholder="Office, Virtual, Phone, etc."
                   />
                 </div>
@@ -775,7 +775,7 @@ const Calendar = () => {
                     onChange={(e) =>
                       setNewEvent({ ...newEvent, attendees: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                     placeholder="Enter names separated by commas"
                   />
                 </div>
@@ -789,7 +789,7 @@ const Calendar = () => {
                     onChange={(e) =>
                       setNewEvent({ ...newEvent, description: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
                     rows={3}
                     placeholder="Add event description..."
                   />

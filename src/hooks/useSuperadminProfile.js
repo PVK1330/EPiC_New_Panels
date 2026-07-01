@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCredentials } from '../store/slices/authSlice';
 import {
@@ -90,11 +90,11 @@ export default function useSuperadminProfile() {
     }
   }, [authUser, currentAllowedModules, dispatch]);
 
-  const changePassword = useCallback(async ({ currentPassword, newPassword }) => {
+  const changePassword = useCallback(async ({ currentPassword, newPassword, confirmPassword }) => {
     setChangingPassword(true);
     setError(null);
     try {
-      await changeSuperadminPassword({ currentPassword, newPassword });
+      await changeSuperadminPassword({ currentPassword, newPassword, confirmPassword });
       return { ok: true };
     } catch (e) {
       setError(extractError(e));
@@ -104,7 +104,13 @@ export default function useSuperadminProfile() {
     }
   }, []);
 
+  // In-flight guard: prevents a double-click / React StrictMode double-invoke
+  // from issuing two /2fa/setup POSTs, which would mint two secrets and desync
+  // the QR the user scanned from the one stored server-side.
+  const setupInFlight = useRef(false);
   const initiate2FASetup = useCallback(async () => {
+    if (setupInFlight.current) return { ok: false, error: 'Setup already in progress' };
+    setupInFlight.current = true;
     setTwoFactorLoading(true);
     setError(null);
     try {
@@ -115,6 +121,7 @@ export default function useSuperadminProfile() {
       return { ok: false, error: extractError(e) };
     } finally {
       setTwoFactorLoading(false);
+      setupInFlight.current = false;
     }
   }, []);
 

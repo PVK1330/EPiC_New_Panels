@@ -103,6 +103,7 @@ const SponsorWorkerDetails = lazy(() => import('../pages/business/SponsoredWorke
 const CosAllocationpage = lazy(() => import('../pages/business/CosPage'));
 const Compliacedocument = lazy(() => import('../pages/business/Compliacedocument'));
 const ComplianceReviewStatus = lazy(() => import('../pages/business/ComplianceReviewStatus'));
+const ComplianceMonthlyReview = lazy(() => import('../pages/business/ComplianceMonthlyReview'));
 const BusinessMessages = lazy(() => import('../pages/business/BusinessMessages'));
 const BusinessNotifications = lazy(() => import('../pages/business/BusinessNotifications'));
 const BusinessPayment = lazy(() => import('../pages/business/BusinessPayment'));
@@ -117,6 +118,12 @@ const ApplyLicenceV2 = lazy(() => import('../pages/business/ApplyLicenceV2'));
 const LicenceApplicationV2Detail = lazy(() => import('../components/licence/LicenceApplicationV2Detail'));
 const LicenceDocuments = lazy(() => import('../pages/business/LicenceDocuments'));
 const BusinessTasks = lazy(() => import('../pages/business/BusinessTasks'));
+// Section K — Multi-Company Handling
+const LinkedEntities = lazy(() => import('../pages/business/LinkedEntities'));
+// Section H — Right to Work
+const RightToWork = lazy(() => import('../pages/business/RightToWork'));
+// Section O — Sponsor Audit Log
+const BusinessAuditLog = lazy(() => import('../pages/business/BusinessAuditLog'));
 
 // ── Superadmin pages ─────────────────────────────────────────────────────────
 const SuperadminDashboard = lazy(() => import('../pages/superadmin/SuperadminDashboard'));
@@ -131,6 +138,7 @@ const SuperadminFrontend = lazy(() => import('../pages/superadmin/SuperadminFron
 const SuperadminProfile = lazy(() => import('../pages/superadmin/SuperadminProfile'));
 const SuperadminNotifications = lazy(() => import('../pages/superadmin/SuperadminNotifications'));
 const SuperadminAnnouncements = lazy(() => import('../pages/superadmin/SuperadminAnnouncements'));
+const SuperadminGDPR = lazy(() => import('../pages/superadmin/SuperadminGDPR'));
 
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/auth/RegisterPage'));
@@ -361,6 +369,14 @@ const AppRouter = () => {
           <Route path="invoices" element={<Invoices />} />
           <Route path="reports" element={<Reports />} />
           <Route path="tasks" element={<BusinessTasks />} />
+          {/* Section N — Monthly Compliance Review */}
+          <Route path="monthly-compliance-review" element={<ComplianceMonthlyReview />} />
+          {/* Section K — Multi-Company Handling */}
+          <Route path="linked-entities" element={<LinkedEntities />} />
+          {/* Section H — Right to Work */}
+          <Route path="right-to-work" element={<RightToWork />} />
+          {/* Section O — Sponsor Audit Log */}
+          <Route path="audit-log" element={<BusinessAuditLog />} />
         </Route>
 
         <Route
@@ -378,6 +394,7 @@ const AppRouter = () => {
           <Route path="plans" element={<SuperadminPlans />} />
           <Route path="billing" element={<SuperadminBilling />} />
           <Route path="audit-log" element={<SuperadminAuditLog />} />
+          <Route path="gdpr" element={<SuperadminGDPR />} />
           <Route path="settings" element={<SuperadminSettings />} />
           <Route path="notifications" element={<SuperadminNotifications />} />
           <Route path="payments" element={<SuperadminPayments />} />

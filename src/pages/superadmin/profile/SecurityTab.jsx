@@ -28,13 +28,18 @@ const SecurityTab = ({ changingPassword, onChangePassword }) => {
       return;
     }
     if (form.newPassword !== form.confirmPassword) {
-      setFieldError('New passwords do not match');
+      setFieldError('New password and confirm password do not match');
+      return;
+    }
+    if (form.currentPassword === form.newPassword) {
+      setFieldError('New password must be different from your current password');
       return;
     }
 
     const result = await onChangePassword({
       currentPassword: form.currentPassword,
       newPassword: form.newPassword,
+      confirmPassword: form.confirmPassword,
     });
 
     if (result?.ok) {

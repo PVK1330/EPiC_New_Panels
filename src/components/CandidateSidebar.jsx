@@ -2,7 +2,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { performLogout } from "../utils/performLogout";
 import { LogOut, X } from "lucide-react";
-import eliteLogo from "../assets/elitepic_logo.png";
+import eliteLogo from "../assets/elitepic-logo.png";
 import { useMemo } from "react";
 import { candidateNavSections as navSections } from "./candidateNavSections";
 import useModuleAccess from "../hooks/useModuleAccess";

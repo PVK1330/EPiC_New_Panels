@@ -3,7 +3,6 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { updateUser } from "../../store/slices/authSlice";
 import { setOrgSettings } from "../../store/slices/orgSettingsSlice";
-import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiSettings,
@@ -64,6 +63,7 @@ import {
   deleteDepartment,
 } from "../../services/caseWorker";
 import { useToast } from "../../context/ToastContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import {
   getMe,
   updateMe,
@@ -198,6 +198,7 @@ const CONFIG_TABS = [
 export default function AdminSettings() {
   const dispatch = useDispatch();
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "account";
   const [configTab, setConfigTab] = useState(initialTab);
@@ -561,14 +562,14 @@ export default function AdminSettings() {
   };
 
   const handleDeleteCclTemplate = async (visaId) => {
-    const result = await Swal.fire({
+    const confirmed = await confirm({
       title: "Remove CCL template?",
-      text: "Cases for this visa type will use the default template until a new one is uploaded.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Remove",
+      message:
+        "Cases for this visa type will use the default template until a new one is uploaded.",
+      confirmLabel: "Remove",
+      variant: "danger",
     });
-    if (!result.isConfirmed) return;
+    if (!confirmed) return;
     try {
       await deleteCclTemplate(visaId);
       showToast({ message: "CCL template removed." });
@@ -616,13 +617,13 @@ export default function AdminSettings() {
   };
 
   const handleCategoryDelete = async (cat) => {
-    const res = await Swal.fire({
+    const confirmed = await confirm({
       title: "Delete Category?",
-      text: `Are you sure you want to remove "${cat.name}"?`,
-      icon: "warning",
-      showCancelButton: true,
+      message: `Are you sure you want to remove "${cat.name}"?`,
+      confirmLabel: "Delete",
+      variant: "danger",
     });
-    if (res.isConfirmed) {
+    if (confirmed) {
       try {
         await deleteCaseCategory(cat.id);
         loadData();
@@ -960,12 +961,13 @@ export default function AdminSettings() {
                   setVisaModalOpen(true);
                 }}
                 onDeleteVisa={async (id) => {
-                  const r = await Swal.fire({
+                  const confirmed = await confirm({
                     title: "Delete Visa Type?",
-                    icon: "warning",
-                    showCancelButton: true,
+                    message: "This visa type will be permanently removed.",
+                    confirmLabel: "Delete",
+                    variant: "danger",
                   });
-                  if (r.isConfirmed) {
+                  if (confirmed) {
                     await deleteVisaType(id);
                     loadData();
                   }
@@ -985,12 +987,13 @@ export default function AdminSettings() {
                   setPetitionModalOpen(true);
                 }}
                 onDeletePetition={async (id) => {
-                  const r = await Swal.fire({
+                  const confirmed = await confirm({
                     title: "Delete Petition Type?",
-                    icon: "warning",
-                    showCancelButton: true,
+                    message: "This petition type will be permanently removed.",
+                    confirmLabel: "Delete",
+                    variant: "danger",
                   });
-                  if (r.isConfirmed) {
+                  if (confirmed) {
                     await deletePetitionType(id);
                     loadData();
                   }
@@ -1030,12 +1033,13 @@ export default function AdminSettings() {
                   setDepartmentModalOpen(true);
                 }}
                 onDelete={async (name) => {
-                  const r = await Swal.fire({
+                  const confirmed = await confirm({
                     title: "Delete Department?",
-                    icon: "warning",
-                    showCancelButton: true,
+                    message: "This department will be permanently removed.",
+                    confirmLabel: "Delete",
+                    variant: "danger",
                   });
-                  if (r.isConfirmed) {
+                  if (confirmed) {
                     await deleteDepartment({ name });
                     loadData();
                   }
@@ -1117,12 +1121,13 @@ export default function AdminSettings() {
                   setEmailModalOpen(true);
                 }}
                 onDelete={async (key) => {
-                  const r = await Swal.fire({
+                  const confirmed = await confirm({
                     title: "Delete Template?",
-                    icon: "warning",
-                    showCancelButton: true,
+                    message: "This email template will be permanently removed.",
+                    confirmLabel: "Delete",
+                    variant: "danger",
                   });
-                  if (r.isConfirmed) {
+                  if (confirmed) {
                     await deleteEmailTemplate(key);
                     loadData();
                   }
@@ -1211,12 +1216,13 @@ export default function AdminSettings() {
                   setSlaModalOpen(true);
                 }}
                 onDelete={async (id) => {
-                  const r = await Swal.fire({
+                  const confirmed = await confirm({
                     title: "Delete SLA?",
-                    icon: "warning",
-                    showCancelButton: true,
+                    message: "This SLA rule will be permanently removed.",
+                    confirmLabel: "Delete",
+                    variant: "danger",
                   });
-                  if (r.isConfirmed) {
+                  if (confirmed) {
                     await deleteSlaRule(id);
                     loadData();
                   }

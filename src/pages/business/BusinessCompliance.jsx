@@ -11,11 +11,19 @@ import {
   UserRoundCog,
   Calendar,
   AlertCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { getComplianceSummary, getReportingObligations } from "../../services/licenceApi";
 import { formatDate } from "../../utils/datetime";
+import AuditModePanel from "../../components/compliance/AuditModePanel";
+
+const TABS = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "audit",    label: "Audit Mode", icon: ShieldCheck },
+];
 
 const BusinessCompliance = () => {
+  const [activeTab, setActiveTab] = useState("overview");
   const [data, setData] = useState(null);
   const [deadlines, setDeadlines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -198,6 +206,30 @@ const BusinessCompliance = () => {
         </p>
       </motion.div>
 
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-gray-200">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-black border-b-2 transition-colors -mb-px ${
+              activeTab === id
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-500 hover:text-secondary"
+            }`}
+          >
+            <Icon size={14} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "audit" && (
+        <AuditModePanel />
+      )}
+
+      {activeTab === "overview" && (<>
+
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -338,6 +370,7 @@ const BusinessCompliance = () => {
           </div>
         </motion.div>
       </div>
+      </>)}
     </div>
   );
 };
