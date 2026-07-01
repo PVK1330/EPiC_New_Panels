@@ -3,6 +3,9 @@ import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { FileText, Upload, Download, Eye, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import Modal from "../../components/Modal";
+import PageTitle from "../../components/common/PageTitle";
+import EmptyState from "../../components/common/EmptyState";
+import Button from "../../components/Button";
 import { getUserDocuments } from "../../services/documentApi";
 import useDownloads from "../../hooks/useDownloads";
 import { useToast } from "../../context/ToastContext";
@@ -20,26 +23,26 @@ const DocumentItem = ({ doc, onView, onDownload }) => {
       : doc.status?.replace("_", " ") || "Unknown";
 
   return (
-    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:shadow-md mb-4">
+    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-secondary/25 mb-4">
       <div className="flex gap-4 items-start">
         <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
           <FileText className="text-blue-600" size={20} />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-gray-900">{doc.userFileName || doc.documentName}</h3>
-          <p className="text-[11px] font-bold text-gray-400 mt-0.5">
+          <h3 className="text-sm font-black text-gray-900">{doc.userFileName || doc.documentName}</h3>
+          <p className="text-xs font-bold text-gray-500 mt-0.5">
             {doc.documentType} • {dateStr} • {timeStr}
           </p>
-          <p
-            className={`text-[11px] font-black mt-1 uppercase tracking-wider ${
-              doc.status === "approved" ? "text-emerald-500" :
-              doc.status === "rejected" ? "text-red-500" :
-              doc.status === "under_review" || doc.status === "uploaded" ? "text-amber-500" :
-              "text-gray-500"
+          <span
+            className={`inline-flex items-center mt-1.5 text-[9px] font-black uppercase tracking-widest rounded-full border px-2.5 py-0.5 ${
+              doc.status === "approved" ? "bg-green-50 text-green-700 border-green-200" :
+              doc.status === "rejected" ? "bg-red-50 text-red-700 border-red-200" :
+              doc.status === "under_review" || doc.status === "uploaded" ? "bg-amber-50 text-amber-700 border-amber-200" :
+              "bg-gray-50 text-gray-500 border-gray-200"
             }`}
           >
             {statusLabel}
-          </p>
+          </span>
           {doc.status === "rejected" && (doc.rejectionReason || doc.reviewNotes) && (
             <p className="text-xs font-bold text-red-700 mt-2 rounded-lg bg-red-50 border border-red-100 px-3 py-2">
               <span className="font-black">Rejection reason: </span>
@@ -122,33 +125,26 @@ const Documents = () => {
   return (
     <div className="space-y-10 pb-10 animate-in fade-in slide-in-from-top-4 duration-500">
       <section>
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <h1 className="text-4xl font-black text-secondary tracking-tight">
-              My Documents
-            </h1>
-            <p className="text-gray-500 font-bold text-sm mt-1">
-              View and manage all your uploaded documents.
-            </p>
-          </div>
-          <div className="flex gap-2 shrink-0">
-             <button
-              type="button"
-              onClick={loadDocs}
-              className="inline-flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-600 px-4 py-3 rounded-xl text-sm font-black hover:bg-gray-50 transition-all shadow-sm shrink-0"
-            >
-              <RefreshCw size={18} />
-              Refresh
-            </button>
-            <Link
-              to="/candidate/upload-documents"
-              className="inline-flex items-center justify-center gap-2 bg-secondary text-white px-5 py-3 rounded-xl text-sm font-black hover:bg-secondary-dark transition-all shadow-sm shrink-0"
-            >
-              <Upload size={18} />
-              Upload new
-            </Link>
-          </div>
-        </div>
+        <PageTitle
+          className="mb-8"
+          title="My Documents"
+          subtitle="View and manage all your uploaded documents."
+          actions={
+            <>
+              <Button variant="outline" onClick={loadDocs}>
+                <RefreshCw size={18} />
+                Refresh
+              </Button>
+              <Link
+                to="/candidate/upload-documents"
+                className="inline-flex items-center justify-center gap-2 bg-secondary text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-secondary/90 transition-all shadow-sm shrink-0"
+              >
+                <Upload size={18} />
+                Upload new
+              </Link>
+            </>
+          }
+        />
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -164,13 +160,20 @@ const Documents = () => {
             </button>
           </div>
         ) : documents.length === 0 ? (
-          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-12 text-center">
-            <FileText className="mx-auto text-gray-300 mb-4" size={48} />
-            <h3 className="text-lg font-black text-gray-700 mb-1">No documents found</h3>
-            <p className="text-sm font-bold text-gray-400 mb-6">You haven't uploaded any documents yet.</p>
-            <Link to="/candidate/upload-documents" className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl text-sm font-black hover:bg-primary-dark">
-              <Upload size={18} /> Go to Uploads
-            </Link>
+          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
+            <EmptyState
+              icon={FileText}
+              title="No documents found"
+              subtitle="You haven't uploaded any documents yet."
+              action={
+                <Link
+                  to="/candidate/upload-documents"
+                  className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-lg text-sm font-black hover:bg-primary-dark transition-all"
+                >
+                  <Upload size={18} /> Go to Uploads
+                </Link>
+              }
+            />
           </div>
         ) : (
           <div className="space-y-2">
@@ -211,7 +214,7 @@ const Documents = () => {
               </div>
               
               {viewDoc.reviewNotes && (
-                <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 mb-4">
+                <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 mb-4">
                   <p className="text-[10px] font-black uppercase text-amber-600 mb-1">Review notes</p>
                   <p className="text-xs font-bold text-amber-800">{viewDoc.reviewNotes}</p>
                 </div>

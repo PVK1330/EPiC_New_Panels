@@ -1228,11 +1228,11 @@ const CandidateAccount = () => {
 
               <div>
                 <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1.5">
-                  Screenshots (optional, max 5 · JPEG/PNG/GIF/WebP · 5MB each)
+                  Screenshots (optional, max 5 · JPEG/PNG/WebP · 5MB each)
                 </label>
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  accept="image/jpeg,image/png,image/webp"
                   multiple
                   disabled={reportSending || accountLoading}
                   onChange={handleReportFilesChange}

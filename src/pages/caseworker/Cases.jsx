@@ -1,7 +1,6 @@
 ﻿import { useMemo, useState, useCallback, useEffect, Fragment, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Search,
   Plus,
   Download,
   Lock,
@@ -19,6 +18,20 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
+import Button from "../../components/Button";
+import PageTitle from "../../components/common/PageTitle";
+import SearchInput from "../../components/common/SearchInput";
+import EmptyState from "../../components/common/EmptyState";
+import TableSkeleton from "../../components/common/TableSkeleton";
+import {
+  TableShell,
+  Thead,
+  Th,
+  Tbody,
+  Tr,
+  Td,
+} from "../../components/common/Table";
+import Pagination from "../../components/common/Pagination";
 import DatePicker from "../../components/DatePicker";
 import CaseTimeline from "../../components/CaseTimeline";
 import {
@@ -858,42 +871,29 @@ const Cases = () => {
 
   return (
     <div className="space-y-6 pb-10 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-secondary tracking-tight">
-            Case Management
-          </h1>
-          <p className="text-sm font-bold text-gray-600 mt-1">
-            Manage visa cases and applications
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => navigate("/caseworker/pipeline")}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 shadow-sm hover:bg-gray-50"
-          >
-            <LayoutGrid size={18} />
-            Pipeline View
-          </button>
-          <button
-            type="button"
-            onClick={handleExport}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 shadow-sm hover:bg-gray-50"
-          >
-            <Download size={18} />
-            Export
-          </button>
-          <button
-            type="button"
-            onClick={openNewCaseModal}
-            className="inline-flex items-center gap-2 rounded-xl bg-secondary px-4 py-2.5 text-sm font-black text-white shadow-md shadow-secondary/20 hover:bg-secondary/90"
-          >
-            <Plus size={18} strokeWidth={2.5} />
-            Add New Cases
-          </button>
-        </div>
-      </div>
+      <PageTitle
+        title="Case Management"
+        subtitle="Manage visa cases and applications"
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/caseworker/pipeline")}
+            >
+              <LayoutGrid size={18} />
+              Pipeline View
+            </Button>
+            <Button variant="outline" onClick={handleExport}>
+              <Download size={18} />
+              Export
+            </Button>
+            <Button variant="primary" onClick={openNewCaseModal}>
+              <Plus size={18} strokeWidth={2.5} />
+              Add New Cases
+            </Button>
+          </>
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -925,34 +925,22 @@ const Cases = () => {
             </h2>
 
             <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center mb-4">
-              {loading && (
-                <div className="w-full py-8 text-center text-sm font-bold text-gray-500">
-                  Loading cases...
-                </div>
-              )}
               {error && (
                 <div className="w-full py-4 px-4 bg-red-50 border border-red-200 rounded-xl text-sm font-bold text-red-700">
                   {error}
                 </div>
               )}
-              {!loading && !error && (
+              {!error && (
                 <>
-                  <div className="relative flex-1 min-w-[200px] max-w-md">
-                    <Search
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
-                    <input
-                      type="search"
-                      value={search}
-                      onChange={(e) => {
-                        setSearch(e.target.value);
-                        setPage(1);
-                      }}
-                      placeholder="Search cases..."
-                      className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-                    />
-                  </div>
+                  <SearchInput
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="Search cases..."
+                    className="flex-1 min-w-[200px] max-w-md"
+                  />
                   <div className="flex flex-wrap gap-2">
                     <select
                       value={chip === "all" ? "" : chip}
@@ -1007,11 +995,20 @@ const Cases = () => {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-0">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
+          {loading ? (
+            <TableShell>
+              <Tbody>
+                <Tr>
+                  <Td colSpan={10} className="p-0">
+                    <TableSkeleton rows={8} cols={10} />
+                  </Td>
+                </Tr>
+              </Tbody>
+            </TableShell>
+          ) : (
+          <TableShell>
+                <Thead>
+                  <Tr>
                     {[
                       "CASE-ID",
                       "CANDIDATE",
@@ -1022,27 +1019,27 @@ const Cases = () => {
                       "PRIORITY",
                       "STATUS",
                       "SUBMITTED",
-                      "ACTIONS",
                     ].map((h) => (
-                      <th
-                        key={h}
-                        className="py-3 px-4 text-left text-[10px] font-black uppercase tracking-wider text-gray-500 whitespace-nowrap"
-                      >
+                      <Th key={h} className="whitespace-nowrap">
                         {h}
-                      </th>
+                      </Th>
                     ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
+                    <Th align="right" className="whitespace-nowrap">
+                      ACTIONS
+                    </Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
                   {pageSlice.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={10}
-                        className="py-12 text-center text-sm font-bold text-gray-500"
-                      >
-                        No cases match your filters.
-                      </td>
-                    </tr>
+                    <Tr>
+                      <Td colSpan={10} className="p-0">
+                        <EmptyState
+                          icon={FileText}
+                          title="No cases found"
+                          subtitle="No cases match your filters."
+                        />
+                      </Td>
+                    </Tr>
                   ) : (
                     pageSlice.map((c, idx) => {
                       const st = badgeStatus(c.status);
@@ -1050,58 +1047,58 @@ const Cases = () => {
                       return (
                         <Fragment key={c.id || c.caseId || idx}>
                           {/*  Main data row  */}
-                          <tr
-                            className={`hover:bg-gray-50/80 cursor-pointer transition-colors ${reassigned ? "border-b-0" : ""}`}
+                          <Tr
+                            className={reassigned ? "border-b-0" : ""}
                             onClick={() => openDetail(c)}
                           >
-                            <td className="py-3 px-4 text-sm font-bold text-secondary">
+                            <Td className="text-sm font-bold text-secondary">
                               {c.caseId}
-                            </td>
-                            <td className="py-3 px-4 text-sm font-bold text-gray-900">
+                            </Td>
+                            <Td className="text-sm font-bold text-gray-900">
                               {c.candidate?.first_name && c.candidate?.last_name
                                 ? `${c.candidate.first_name} ${c.candidate.last_name}`
                                 : c.candidate || "-"}
-                            </td>
-                            <td className="py-3 px-4 text-sm font-bold text-gray-900">
+                            </Td>
+                            <Td className="text-sm font-bold text-gray-900">
                               {c.sponsor?.first_name && c.sponsor?.last_name
                                 ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
                                 : c.business || "-"}
-                            </td>
-                            <td className="py-3 px-4 text-sm font-bold text-gray-600">
+                            </Td>
+                            <Td className="text-sm font-bold text-gray-600">
                               {c.department?.name || c.department || "-"}
-                            </td>
-                            <td className="py-3 px-4 text-sm font-bold text-gray-600">
+                            </Td>
+                            <Td className="text-sm font-bold text-gray-600">
                               {c.caseworker || "Unassigned"}
-                            </td>
-                            <td className="py-3 px-4">
+                            </Td>
+                            <Td>
                               <span
-                                className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgeVisa(c.visa)}`}
+                                className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${badgeVisa(c.visa)}`}
                               >
                                 {c.visa}
                               </span>
-                            </td>
-                            <td className="py-3 px-4">
+                            </Td>
+                            <Td>
                               <span
-                                className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${badgePriority(c.priority)}`}
+                                className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${badgePriority(c.priority)}`}
                               >
                                 {priorityLabel(c.priority)}
                               </span>
-                            </td>
-                            <td className="py-3 px-4">
+                            </Td>
+                            <Td>
                               <span
-                                className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${st.className}`}
+                                className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${st.className}`}
                               >
                                 {st.label}
                               </span>
-                            </td>
-                            <td className="py-3 px-4 text-sm font-bold text-gray-600 tabular-nums whitespace-nowrap">
+                            </Td>
+                            <Td className="text-sm font-bold text-gray-600 tabular-nums whitespace-nowrap">
                               {formatTarget(c.target)}
-                            </td>
-                            <td
-                              className="py-3 px-4"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <div className="flex gap-1.5">
+                            </Td>
+                            <Td align="right">
+                              <div
+                                className="flex justify-end gap-1.5"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <button
                                   type="button"
                                   onClick={() => openDetail(c)}
@@ -1144,16 +1141,16 @@ const Cases = () => {
                                   <ArrowRightLeft size={14} />
                                 </button>
                               </div>
-                            </td>
-                          </tr>
+                            </Td>
+                          </Tr>
 
                           {/*  Reassignment info banner row  */}
                           {reassigned && (
-                            <tr
+                            <Tr
                               key={`${c.caseId}-reassigned`}
                               className="bg-violet-50/60 border-b border-violet-100"
                             >
-                              <td colSpan={9} className="px-4 py-2">
+                              <td colSpan={10} className="px-4 py-2">
                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                                   <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-violet-700">
                                     <ArrowRightLeft size={12} />
@@ -1177,57 +1174,22 @@ const Cases = () => {
                                   </span>
                                 </div>
                               </td>
-                            </tr>
+                            </Tr>
                           )}
                         </Fragment>
                       );
                     })
                   )}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/80">
-              <p className="text-xs font-bold text-gray-500 tabular-nums">
-                Showing {(pageClamped - 1) * PAGE_SIZE + 1}
-                {Math.min(pageClamped * PAGE_SIZE, pagination.total)} of{" "}
-                {pagination.total} cases
-              </p>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  disabled={pageClamped <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
-                >
-                  †
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (num) => (
-                    <button
-                      key={num}
-                      type="button"
-                      onClick={() => setPage(num)}
-                      className={`min-w-[2rem] rounded-lg border px-2 py-1 text-xs font-black ${
-                        pageClamped === num
-                          ? "border-secondary bg-secondary/10 text-secondary"
-                          : "border-gray-200 text-gray-600 hover:bg-white"
-                      }`}
-                    >
-                      {num}
-                    </button>
-                  ),
-                )}
-                <button
-                  type="button"
-                  disabled={pageClamped >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="rounded-lg border border-gray-200 px-2.5 py-1 text-sm font-bold text-gray-600 disabled:opacity-40 hover:bg-white"
-                >
-                  †’
-                </button>
-              </div>
-            </div>
-          </div>
+                </Tbody>
+          </TableShell>
+          )}
+          <Pagination
+            page={pageClamped}
+            totalPages={totalPages}
+            total={pagination.total}
+            limit={PAGE_SIZE}
+            onPageChange={(next) => setPage(next)}
+          />
         </>
       )}
 
