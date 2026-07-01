@@ -906,9 +906,9 @@ const SuperadminOrganisations = () => {
       {/* Organisations Table */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-auto max-h-[68vh] no-scrollbar">
-          <table className="w-full min-w-0 text-sm">
-            <thead className="sticky top-0 z-10 text-[10px] uppercase text-gray-400 tracking-widest font-bold">
-              <tr className="border-b border-gray-200 bg-gray-50">
+          <table className="w-full min-w-[820px] text-sm">
+            <thead className="sticky top-0 z-10 text-[11px] uppercase text-gray-500 tracking-wider font-black">
+              <tr className="border-b border-gray-100 bg-gray-50">
                 <th scope="col" className="px-4 py-3 text-left">
                   Sr No
                 </th>
@@ -929,7 +929,7 @@ const SuperadminOrganisations = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50/50">
+            <tbody className="divide-y divide-gray-100">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
               ) : filteredOrgs.length === 0 ? (
@@ -950,7 +950,7 @@ const SuperadminOrganisations = () => {
                 filteredOrgs.map((org, index) => (
                   <tr
                     key={org.id}
-                    className="hover:bg-gray-50/50 transition-colors group/row"
+                    className="hover:bg-gray-50 transition-colors group/row"
                   >
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">
@@ -962,7 +962,7 @@ const SuperadminOrganisations = () => {
                         <div className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-gray-400 font-black text-xs group-hover/row:bg-primary group-hover/row:text-white transition-all">
                           {org.name.charAt(0)}
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 max-w-[260px]">
                           <p className="font-bold text-secondary text-sm flex items-center gap-2">
                             <span className="truncate">{org.name}</span>
                             {org.country && org.country !== "—" && (

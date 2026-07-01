@@ -473,7 +473,7 @@ const SuperadminLayout = () => {
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              className="max-w-7xl mx-auto w-full px-2 md:px-4 lg:px-6"
+              className="max-w-7xl mx-auto w-full px-2 md:px-4 lg:px-6 py-6 md:py-6"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}

@@ -4,12 +4,10 @@ import { motion } from "framer-motion";
 import {
   Users,
   Filter,
-  Search,
   Plus,
   Eye,
   AlertCircle,
   CheckCircle2,
-  LayoutDashboard,
   Briefcase,
   ShieldCheck,
   Trash2,
@@ -21,6 +19,13 @@ import { getSponsoredWorkers, deleteSponsoredWorker } from "../../services/spons
 import { toast } from "react-hot-toast";
 import useSponsorLicence from "../../hooks/useSponsorLicence";
 import LicenceGateBanner from "../../components/business/LicenceGateBanner";
+import PageTitle from "../../components/common/PageTitle";
+import SearchInput from "../../components/common/SearchInput";
+import EmptyState from "../../components/common/EmptyState";
+import TableSkeleton from "../../components/common/TableSkeleton";
+import Button from "../../components/Button";
+import { TableShell, Thead, Th, Tbody, Tr, Td } from "../../components/common/Table";
+import TableActionButton from "../../components/common/TableActionButton";
 
 const BusinessWorkers = () => {
   const [workers, setWorkers] = useState([]);
@@ -139,9 +144,14 @@ const BusinessWorkers = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[400px] flex flex-col items-center justify-center gap-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-sm font-black text-secondary animate-pulse">Loading workers...</p>
+      <div className="space-y-5 pb-6">
+        <PageTitle
+          title="Workers"
+          subtitle="Manage sponsored workers and visa sponsorships."
+        />
+        <TableShell>
+          <TableSkeleton rows={6} cols={6} />
+        </TableShell>
       </div>
     );
   }
@@ -154,13 +164,10 @@ const BusinessWorkers = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-secondary tracking-tight flex items-center gap-2.5">
-          <LayoutDashboard className="text-primary" size={26} />
-          Workers
-        </h1>
-        <p className="text-primary font-bold text-sm mt-0.5">
-          Manage sponsored workers and visa sponsorships.
-        </p>
+        <PageTitle
+          title="Workers"
+          subtitle="Manage sponsored workers and visa sponsorships."
+        />
       </motion.div>
 
       {workerBlocked && <LicenceGateBanner status={licenceStatus} />}
@@ -209,17 +216,13 @@ const BusinessWorkers = () => {
         <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
         <div className="p-5">
           <div className="flex flex-col md:flex-row gap-3">
-            <div className="flex-1 relative">
-              <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
-              <input
-                type="text"
-                aria-label="Search workers"
-                placeholder="Search by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 px-3 py-2 text-sm font-bold text-gray-800 placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/15 outline-none"
-              />
-            </div>
+            <SearchInput
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name or email..."
+              aria-label="Search workers"
+              className="flex-1"
+            />
             <div className="flex items-center gap-2">
               <Filter size={18} className="text-gray-400" />
               <select
@@ -238,15 +241,16 @@ const BusinessWorkers = () => {
                 <option value="Visa Rejected">Visa Rejected</option>
               </select>
             </div>
-            <button
+            <Button
+              variant="primary"
               onClick={()=>{ if (!workerBlocked) navigate("/business/sponsored-workers"); }}
               disabled={workerBlocked}
               title={workerBlocked ? "Your Sponsorship Licence is not active." : "Add Worker"}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="whitespace-nowrap"
             >
               <Plus size={16} />
               Add Worker
-            </button>
+            </Button>
           </div>
         </div>
       </motion.div>
@@ -254,105 +258,99 @@ const BusinessWorkers = () => {
       {/* Workers Table / Empty State */}
       {filteredWorkers.length > 0 ? (
         <motion.div
-          className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden relative"
           variants={cardVariants}
           initial="hidden"
           animate="visible"
         >
-          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
-          <div className="p-5">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Worker</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Nationality</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Visa Type</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">CoS Number</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px]">Status</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-500 uppercase tracking-wider text-[10px] text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredWorkers.map((worker) => (
-                    <tr key={worker.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition">
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black text-xs uppercase">
-                            {worker.workerFirstName?.charAt(0)}{worker.workerLastName?.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="text-sm font-black text-secondary">{worker.workerFirstName} {worker.workerLastName}</p>
-                            <p className="text-xs font-bold text-gray-600">{worker.workerEmail}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-sm font-bold text-gray-700">{worker.workerNationality || "—"}</td>
-                      <td className="px-3 py-2 text-sm font-bold text-gray-700">{worker.visaType || "—"}</td>
-                      <td className="px-3 py-2">
-                        {worker.workerCosNumber ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-mono">
-                            {worker.workerCosNumber}
-                          </span>
-                        ) : (
-                          <span className="text-xs font-bold text-gray-400">Not assigned</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(worker.status)}
-                          <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-black rounded-full ${getStatusColor(worker.status)}`}>
-                            {worker.status}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => navigate("/business/worker-details", { state: { workerId: worker.id } })}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark shadow-sm"
-                            title="View details"
-                          >
-                            <Eye size={14} />
-                            View
-                          </button>
-                          <button
-                            onClick={() => openDeleteConfirm(worker.id, worker)}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-black text-red-600 transition hover:bg-red-200"
-                            title="Remove Worker"
-                          >
-                            <Trash2 size={14} />
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <TableShell>
+            <Thead>
+              <Tr>
+                <Th>Worker</Th>
+                <Th>Nationality</Th>
+                <Th>Visa Type</Th>
+                <Th>CoS Number</Th>
+                <Th>Status</Th>
+                <Th align="right">Actions</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {filteredWorkers.map((worker) => (
+                <Tr key={worker.id}>
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black text-xs uppercase">
+                        {worker.workerFirstName?.charAt(0)}{worker.workerLastName?.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">{worker.workerFirstName} {worker.workerLastName}</p>
+                        <p className="text-xs font-bold text-gray-500">{worker.workerEmail}</p>
+                      </div>
+                    </div>
+                  </Td>
+                  <Td>{worker.workerNationality || "—"}</Td>
+                  <Td>{worker.visaType || "—"}</Td>
+                  <Td>
+                    {worker.workerCosNumber ? (
+                      <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-700 font-mono">
+                        {worker.workerCosNumber}
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold text-gray-400">Not assigned</span>
+                    )}
+                  </Td>
+                  <Td>
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(worker.status)}
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${getStatusColor(worker.status)}`}>
+                        {worker.status}
+                      </span>
+                    </div>
+                  </Td>
+                  <Td align="right">
+                    <div className="flex justify-end gap-1">
+                      <TableActionButton
+                        label="View details"
+                        onClick={() => navigate("/business/worker-details", { state: { workerId: worker.id } })}
+                      >
+                        <Eye size={16} />
+                      </TableActionButton>
+                      <TableActionButton
+                        label="Remove Worker"
+                        variant="danger"
+                        onClick={() => openDeleteConfirm(worker.id, worker)}
+                      >
+                        <Trash2 size={16} />
+                      </TableActionButton>
+                    </div>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </TableShell>
         </motion.div>
       ) : (
         !loading && (
           <motion.div
-            className="rounded-2xl border border-gray-200 bg-white p-5 text-center shadow-sm overflow-hidden relative"
+            className="rounded-2xl border border-gray-100 bg-white shadow-sm"
             variants={cardVariants}
             initial="hidden"
             animate="visible"
           >
-            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
-            <Users size={48} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-sm font-bold text-gray-600">No workers found matching your search</p>
-            <button
-              onClick={() => { if (!workerBlocked) navigate("/business/sponsored-workers"); }}
-              disabled={workerBlocked}
-              title={workerBlocked ? "Your Sponsorship Licence is not active." : "Add Your First Worker"}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-primary px-3 py-1.5 text-xs font-black text-primary transition hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Plus size={16} />
-              Add Your First Worker
-            </button>
+            <EmptyState
+              icon={Users}
+              title="No workers found matching your search"
+              action={
+                <Button
+                  variant="outline"
+                  onClick={() => { if (!workerBlocked) navigate("/business/sponsored-workers"); }}
+                  disabled={workerBlocked}
+                  title={workerBlocked ? "Your Sponsorship Licence is not active." : "Add Your First Worker"}
+                >
+                  <Plus size={16} />
+                  Add Your First Worker
+                </Button>
+              }
+            />
           </motion.div>
         )
       )}

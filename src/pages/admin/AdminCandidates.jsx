@@ -2,15 +2,12 @@ import { useState, useEffect, useMemo } from "react";
 import {
   FiEdit2,
   FiTrash2,
-  FiSearch,
   FiPlus,
   FiDownload,
   FiUpload,
   FiCheck,
   FiEye,
-  FiChevronDown,
   FiFolder,
-  FiChevronUp,
   FiPrinter,
   FiBriefcase,
 } from "react-icons/fi";
@@ -50,10 +47,29 @@ import {
 import { getSponsors } from "../../services/sponsorApi";
 import { getApiError } from "../../utils/apiError";
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
+import PageTitle from "../../components/common/PageTitle";
+import SearchInput from "../../components/common/SearchInput";
+import EmptyState from "../../components/common/EmptyState";
+import TableSkeleton from "../../components/common/TableSkeleton";
+import Pagination from "../../components/common/Pagination";
+import {
+  TableShell,
+  Thead,
+  Th,
+  Tbody,
+  Tr,
+  Td,
+  TABLE_CLASS,
+} from "../../components/common/Table";
+import TableActionButton from "../../components/common/TableActionButton";
 import { formatDateLong } from "../../utils/datetime";
 import { AVATAR_COLORS, initialsFrom, fullName } from "./adminHelpers";
 
 const PASSWORD_MIN = 6;
+
+/** Canonical inline chip classes (matches Badge component sizing). */
+const CHIP_BASE =
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest";
 
 /** Session draft for Add client application wizard (partial saves before account creation). */
 const ADMIN_CREATE_APPLICATION_DRAFT_KEY = "elitepic_admin_create_application_draft";
@@ -920,25 +936,16 @@ export default function AdminCandidates() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-black text-[#004ca5] tracking-tight">Clients / Candidates</h1>
-          <p className="text-sm text-gray-500 mt-0.5">All registered clients and their case details</p>
-        </div>
-        <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
-          {/* <button
-            type="button"
-            onClick={() => setFieldPanelOpen((o) => !o)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors"
-          >
-            Application form fields
-            {fieldPanelOpen ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />}
-          </button> */}
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <button
+      <PageTitle
+        title="Clients / Candidates"
+        subtitle="All registered clients and their case details"
+        actions={
+          <>
+            <Button
+              variant="outline"
               onClick={handleExport}
               disabled={exporting}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-xl shadow-sm"
             >
               {exporting ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -946,12 +953,12 @@ export default function AdminCandidates() {
                 <FiDownload size={14} />
               )}
               Export
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setModal({ type: "import" })}
               disabled={importing}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-[#c8102e] rounded-xl transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-xl shadow-sm"
             >
               {importing ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -959,14 +966,14 @@ export default function AdminCandidates() {
                 <FiUpload size={14} />
               )}
               Import Data
-            </button>
-            <Button onClick={openCreate} className="rounded-xl shadow-sm bg-[#c8102e] hover:bg-[#a50d26]">
+            </Button>
+            <Button onClick={openCreate} className="rounded-xl shadow-sm">
               <FiPlus size={14} />
               Add Client
             </Button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {fieldPanelOpen && (
         <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm space-y-4">
@@ -1098,18 +1105,14 @@ export default function AdminCandidates() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 flex flex-col sm:flex-row gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search by name, nationality…"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all"
-            />
-          </div>
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <div className="px-4 py-3 border-b border-gray-100 flex flex-col sm:flex-row gap-3 flex-wrap">
+          <SearchInput
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search by name, nationality…"
+            className="flex-1 min-w-[200px]"
+          />
           <div className="flex items-center gap-2 flex-wrap">
             <select value={visaFilter} onChange={(e) => setVisaFilter(e.target.value)} className="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all">
               <option value="All">All Visa Types</option>
@@ -1126,28 +1129,27 @@ export default function AdminCandidates() {
           </div>
         </div>
 
-        <div className="overflow-x-auto min-h-[200px] relative">
-          {loading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
-              <Loader2 className="w-10 h-10 animate-spin text-secondary" />
-            </div>
-          )}
-          <table className="w-full min-w-[600px]">
-            <thead>
-              <tr className="bg-gray-50 text-left">
-                {["Name","Status","DOB","Nationality","Linked Business","Visa Type","Case Status","Visa Expiry","Payment","Actions"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+        {loading ? (
+          <TableSkeleton rows={8} cols={10} />
+        ) : candidates.length === 0 ? (
+          <EmptyState
+            icon={FiFolder}
+            title="No clients found"
+            subtitle="No clients match your search."
+          />
+        ) : (
+        <div className={TABLE_CLASS.scroll}>
+          <table className="w-full min-w-[600px] border-collapse text-left">
+            <Thead>
+              <tr>
+                {["Name","Status","DOB","Nationality","Linked Business","Visa Type","Case Status","Visa Expiry","Payment"].map((h) => (
+                  <Th key={h}>{h}</Th>
                 ))}
+                <Th align="right">Actions</Th>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {!loading && candidates.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-sm text-gray-400">
-                    No clients match your search.
-                  </td>
-                </tr>
-              ) : (
+            </Thead>
+            <Tbody>
+              {
                 candidates.map((c, idx) => {
                   // Use application data from CandidateApplication table
                   const app = c.application || {};
@@ -1176,61 +1178,77 @@ export default function AdminCandidates() {
                   const nationality = app.nationality || caseRecord.nationality || c.nationality || '—';
 
                   return (
-                    <tr key={`${c.id}-${idx}`} className="hover:bg-gray-50/70 transition-colors">
-                      <td className="px-4 py-3.5">
+                    <Tr key={`${c.id}-${idx}`}>
+                      <Td>
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>
                             {initialsFrom(c)}
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-gray-800 whitespace-nowrap">{fullName(c)}</p>
+                            <p className={`${TABLE_CLASS.cellPrimary} whitespace-nowrap`}>{fullName(c)}</p>
                             <RoleBadge role="Candidate" />
                           </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <StatusBadge status={formatStatusLabel(c.status)} onClick={() => handleToggle(c)} />
-                      </td>
-                      <td className="px-4 py-3.5 text-xs text-gray-500 whitespace-nowrap font-mono">{dob}</td>
-                      <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{nationality}</td>
-                      <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{linkedBusiness}</td>
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${VISA_CHIPS[visaType] ?? "bg-gray-100 text-gray-500"}`}>
+                      </Td>
+                      <Td className="whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleToggle(c)}
+                          className="cursor-pointer"
+                          title="Toggle status"
+                        >
+                          <StatusBadge status={formatStatusLabel(c.status)} />
+                        </button>
+                      </Td>
+                      <Td className="text-xs text-gray-500 whitespace-nowrap font-mono">{dob}</Td>
+                      <Td className="whitespace-nowrap">{nationality}</Td>
+                      <Td className="whitespace-nowrap">{linkedBusiness}</Td>
+                      <Td className="whitespace-nowrap">
+                        <span className={`${CHIP_BASE} ${VISA_CHIPS[visaType] ?? "bg-gray-100 text-gray-500 border-gray-200"}`}>
                           {visaType}
                         </span>
-                      </td>
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${CASE_CHIPS[caseStatus] ?? "bg-gray-100 text-gray-500"}`}>
+                      </Td>
+                      <Td className="whitespace-nowrap">
+                        <span className={`${CHIP_BASE} ${CASE_CHIPS[caseStatus] ?? "bg-gray-100 text-gray-500 border-gray-200"}`}>
                           {caseStatus}
                         </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-xs font-mono whitespace-nowrap text-gray-500">{visaExpiry}</td>
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${PAYMENT_CHIPS[paymentStatus] ?? "bg-gray-100 text-gray-500"}`}>
+                      </Td>
+                      <Td className="text-xs font-mono whitespace-nowrap text-gray-500">{visaExpiry}</Td>
+                      <Td className="whitespace-nowrap">
+                        <span className={`${CHIP_BASE} ${PAYMENT_CHIPS[paymentStatus] ?? "bg-gray-100 text-gray-500 border-gray-200"}`}>
                           {paymentStatus}
                         </span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1 relative z-10">
-                          <button onClick={() => openView(c)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-blue-50 rounded-lg transition-colors" title="View">  <FiEye    size={14} /></button>
-                          <button onClick={() => openEdit(c)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">  <FiEdit2  size={14} /></button>
-                          <button onClick={() => openAssign(c)} className={`p-2 rounded-lg transition-colors ${caseRecord.sponsorId ? "text-indigo-600 hover:bg-blue-50" : "text-gray-400 hover:text-indigo-600 hover:bg-blue-50"}`} title={caseRecord.sponsorId ? "Reassign business" : "Assign to business"}><FiBriefcase size={14} /></button>
-                          <button onClick={() => openDelete(c)} className="p-2 text-gray-400 hover:text-red-500   hover:bg-red-50    rounded-lg transition-colors" title="Delete"><FiTrash2 size={14} /></button>
+                      </Td>
+                      <Td align="right">
+                        <div className="flex items-center justify-end gap-1 relative z-10">
+                          <TableActionButton label="View" onClick={() => openView(c)}><FiEye size={16} /></TableActionButton>
+                          <TableActionButton label="Edit" variant="edit" onClick={() => openEdit(c)}><FiEdit2 size={16} /></TableActionButton>
+                          <TableActionButton label={caseRecord.sponsorId ? "Reassign business" : "Assign to business"} onClick={() => openAssign(c)}><FiBriefcase size={16} /></TableActionButton>
+                          <TableActionButton label="Delete" variant="danger" onClick={() => openDelete(c)}><FiTrash2 size={16} /></TableActionButton>
                         </div>
-                      </td>
-                    </tr>
+                      </Td>
+                    </Tr>
                   );
                 })
-              )}
-            </tbody>
+              }
+            </Tbody>
           </table>
         </div>
+        )}
 
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50">
-          <p className="text-xs text-gray-400">
-            Showing <span className="font-bold text-indigo-600">{candidates.length}</span> of{" "}
-            <span className="font-bold text-indigo-600">{pagination.total}</span> clients
-          </p>
+        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={pagination.total}
+            limit={pagination.limit || limit}
+            onPageChange={setPage}
+          />
+          {totalPages <= 1 && (
+            <p className="text-xs font-bold text-gray-500">
+              Showing {candidates.length} of {pagination.total} clients
+            </p>
+          )}
         </div>
       </div>
 
@@ -1278,8 +1296,8 @@ export default function AdminCandidates() {
                 <div className="min-w-0">
                   <p className="text-lg font-black text-gray-900">{fullName(c)}</p>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
-                    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-black ${CASE_CHIPS[caseStatus] ?? "bg-gray-100 text-gray-500"}`}>{caseStatus}</span>
-                    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-black ${PAYMENT_CHIPS[paymentStatus] ?? "bg-gray-100 text-gray-500"}`}>{paymentStatus}</span>
+                    <span className={`${CHIP_BASE} ${CASE_CHIPS[caseStatus] ?? "bg-gray-100 text-gray-500 border-gray-200"}`}>{caseStatus}</span>
+                    <span className={`${CHIP_BASE} ${PAYMENT_CHIPS[paymentStatus] ?? "bg-gray-100 text-gray-500 border-gray-200"}`}>{paymentStatus}</span>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
