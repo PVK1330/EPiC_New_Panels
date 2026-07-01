@@ -295,6 +295,30 @@ const Payments = () => {
       {/* ── Summary Tab Content ─────────────────────────────────────────────── */}
       {tab === "summary" && (
         <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Explicit payment request from the caseworker/admin */}
+          {schedule?.paymentRequest && balance > 0 && (
+            <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base font-black text-amber-900">
+                  Payment requested
+                </h3>
+                <p className="text-sm font-bold text-amber-800 mt-1">
+                  Your case team has requested a payment of £
+                  {Number(schedule.paymentRequest.requestedAmount).toLocaleString()}
+                  . Please complete it below.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handlePayClick}
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-3 text-sm font-black text-white shadow-md shrink-0 hover:bg-amber-700"
+              >
+                Pay £{balance.toLocaleString()} now
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          )}
+
           {/* Simple 3-column breakdown */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-2xs">

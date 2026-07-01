@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Upload, FileCheck2 } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
 import Button from "../Button";
 import BiometricBookedModal from "../workflow/BiometricBookedModal";
@@ -9,7 +9,18 @@ import {
   recordBiometricDocsUploaded,
   recordVisaPortalReply,
   communicateDecision,
+  uploadDecisionDocument,
+  markCaseCompleted,
+  generateClosureLetter,
+  resendFinalDocuments,
 } from "../../services/workflowApi";
+
+const DECISION_DOC_TYPES = [
+  "Decision Letter",
+  "Approval Notice",
+  "Visa Copy",
+  "BRP Information",
+];
 
 function apiErrorMessage(error) {
   return error?.response?.data?.message || error?.message || "Request failed";
@@ -32,6 +43,8 @@ export default function CaseWorkflowPostCcl({
   );
   const [decisionOutcome, setDecisionOutcome] = useState("approved");
   const [decisionNotes, setDecisionNotes] = useState("");
+  const [decisionDocType, setDecisionDocType] = useState(DECISION_DOC_TYPES[0]);
+  const [decisionFile, setDecisionFile] = useState(null);
 
   const ws = workflowState || {};
   const availability = ws.biometrics?.availability;
@@ -166,6 +179,107 @@ export default function CaseWorkflowPostCcl({
               year: "numeric",
             })}
           </p>
+        </div>
+      )}
+
+      {showDecisionRecorded && decision.outcome === "approved" && (
+        <div className="rounded-lg border border-secondary/20 bg-white p-3 space-y-3">
+          <p className="text-[11px] font-black uppercase tracking-wide text-secondary">
+            Finalise case
+          </p>
+
+          {/* Upload a final/decision document — visible to the candidate in My Account. */}
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-gray-600">
+              Upload a final document for the candidate (appears in their account
+              downloads).
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={decisionDocType}
+                onChange={(e) => setDecisionDocType(e.target.value)}
+                className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-bold"
+              >
+                {DECISION_DOC_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="file"
+                onChange={(e) => setDecisionFile(e.target.files?.[0] || null)}
+                className="text-xs font-bold"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!!busy || !decisionFile}
+                onClick={() =>
+                  run("decision-doc", async () => {
+                    await uploadDecisionDocument(caseId, {
+                      file: decisionFile,
+                      documentType: decisionDocType,
+                    });
+                    setDecisionFile(null);
+                  })
+                }
+              >
+                {busy === "decision-doc" ? (
+                  "Uploading…"
+                ) : (
+                  <span className="inline-flex items-center gap-1">
+                    <Upload size={13} /> Upload
+                  </span>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Mark completed + closure letter — separate actions. */}
+          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-gray-100">
+            {caseStage !== "case_closure" ? (
+              <Button
+                type="button"
+                disabled={!!busy}
+                onClick={() =>
+                  run("mark-completed", () => markCaseCompleted(caseId))
+                }
+              >
+                {busy === "mark-completed" ? "Saving…" : "Mark case as completed"}
+              </Button>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-bold text-emerald-700">
+                <CheckCircle2 size={13} /> Completed
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!!busy}
+              onClick={() =>
+                run("closure-letter", () => generateClosureLetter(caseId))
+              }
+            >
+              {busy === "closure-letter" ? (
+                "Generating…"
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  <FileCheck2 size={13} /> Generate closure letter
+                </span>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!!busy}
+              onClick={() =>
+                run("resend-final-docs", () => resendFinalDocuments(caseId))
+              }
+            >
+              {busy === "resend-final-docs" ? "Sending…" : "Resend final documents"}
+            </Button>
+          </div>
         </div>
       )}
 

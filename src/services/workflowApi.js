@@ -70,6 +70,9 @@ export const proposeCclFees = (caseId, body) =>
 export const reviewCclFees = (caseId, body) =>
   api.patch(`/api/workflow/cases/${caseId}/ccl/fee-review`, body).then(unwrap);
 
+export const sendCclPaymentRequest = (caseId, body) =>
+  api.post(`/api/workflow/cases/${caseId}/ccl/send-payment-request`, body).then(unwrap);
+
 export const getPendingCclFeeApprovals = (params) =>
   api.get("/api/workflow/ccl/pending-approvals", { params }).then(unwrap);
 
@@ -87,3 +90,26 @@ export const recordVisaPortalReply = (caseId, body) =>
 
 export const communicateDecision = (caseId, body) =>
   api.post(`/api/workflow/cases/${caseId}/communicate-decision`, body).then(unwrap);
+
+export const uploadDecisionDocument = (caseId, { file, documentType }) => {
+  const fd = new FormData();
+  fd.append("files", file);
+  fd.append("documentType", documentType);
+  return api
+    .post(`/api/workflow/cases/${caseId}/upload-decision-document`, fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+    .then(unwrap);
+};
+
+export const markCaseCompleted = (caseId) =>
+  api.post(`/api/workflow/cases/${caseId}/mark-completed`).then(unwrap);
+
+export const generateClosureLetter = (caseId) =>
+  api.post(`/api/workflow/cases/${caseId}/closure-letter`).then(unwrap);
+
+export const resendFinalDocuments = (caseId) =>
+  api.post(`/api/workflow/cases/${caseId}/resend-final-documents`).then(unwrap);
+
+export const requestFinalDocuments = () =>
+  api.post("/api/workflow/request-final-documents").then(unwrap);

@@ -114,6 +114,13 @@ const CandidateDashboard = () => {
     caseStage: workflowProcess?.caseStage || caseData.caseStage,
     status: caseStatus,
   });
+  // Once the case has reached closure, always present it as "Completed" (green)
+  // regardless of the raw status value, which can lag (e.g. "Approved"/"Closed").
+  const displayStatus =
+    caseStage === "case_closure" ||
+    ["Completed", "Closed"].includes(caseStatus)
+      ? "Completed"
+      : caseStatus;
   const proposedAmount =
     workflowProcess?.proposedAmount ?? caseData.proposedAmount;
   const biometricLocation =
@@ -228,9 +235,9 @@ const CandidateDashboard = () => {
             </p>
           </div>
           <span
-            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wider ${getStatusColor(caseStatus)}`}
+            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wider ${getStatusColor(displayStatus)}`}
           >
-            {caseStatus}
+            {displayStatus}
           </span>
         </div>
 

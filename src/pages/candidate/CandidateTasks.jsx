@@ -30,6 +30,9 @@ function taskActionPath(task) {
   if (/draft application|review draft/i.test(title)) return "/candidate/application";
   if (/upload|document/i.test(title)) return "/candidate/upload-documents";
   if (/checklist/i.test(title)) return "/candidate/document-checklist";
+  // Direct payment request → Payments page. Keep this BEFORE the CCL rules so a
+  // "Pay case fees" task isn't sent to the CCL acceptance page.
+  if (task.isCasePayment || /pay case fee/i.test(title)) return "/candidate/payments";
   if (task.isCclPayment || /pay ccl fee/i.test(title)) return "/candidate/ccl";
   if (/client care|ccl|fee|payment/i.test(title)) return "/candidate/ccl";
   return "/candidate/application";

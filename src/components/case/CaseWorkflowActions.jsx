@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, CheckCircle2, RefreshCw } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
 import Button from "../Button";
 import CclFeeProposalModal from "./CclFeeProposalModal";
@@ -13,6 +13,7 @@ import {
   reviewDataCapture,
   proposeCclFees,
   reviewCclFees,
+  sendCclPaymentRequest,
 } from "../../services/workflowApi";
 
 function apiErrorMessage(error) {
@@ -80,6 +81,7 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
   const [showFeeModal, setShowFeeModal] = useState(false);
   const [rejectNotes, setRejectNotes] = useState("");
   const [stageError, setStageError] = useState("");
+  const [payReqAmount, setPayReqAmount] = useState("");
 
   const load = useCallback(async () => {
     if (!caseId) return;
@@ -133,9 +135,18 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
   const stage = caseStage || bundle?.caseStage;
   const responses = dcsDetail?.candidateResponse || dcs?.responses;
   const fields = dcsDetail?.fields || bundle?.dataCapture?.template?.fields || [];
-  const paid =
-    amountStatus === "paid" ||
-    (Number(totalAmount) > 0 && Number(bundle?.paidAmount) >= Number(totalAmount));
+  // Payment figures: prefer the live bundle (authoritative), fall back to props.
+  const totalFee = Number(bundle?.totalAmount ?? totalAmount) || 0;
+  const paidAmount = Number(bundle?.paidAmount) || 0;
+  const payStatus = String(bundle?.amountStatus ?? amountStatus ?? "").toLowerCase();
+  const outstanding = Math.max(0, totalFee - paidAmount);
+  const hasPaymentActivity = totalFee > 0 || paidAmount > 0;
+  // Settled when the status is explicitly Paid, or there is no remaining balance
+  // once any fee/payment exists (covers cases where the fee total is 0 but money
+  // has already been received).
+  const paid = payStatus === "paid" || (hasPaymentActivity && outstanding <= 0.02);
+  const partiallyPaid = !paid && paidAmount > 0 && outstanding > 0.02;
+  const noFeeSet = totalFee <= 0 && paidAmount <= 0;
 
   const canProposeFees =
     !isAdmin &&
@@ -151,6 +162,12 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
       ccl?.status === "fee_rejected");
 
   const adminCanReview = isAdmin && ccl?.status === "fee_proposed";
+
+  // CCL is released to the client but the fee is still outstanding — staff can
+  // (re)send the CCL together with a payment request.
+  const cclIssuedUnpaid =
+    (ccl?.status === "issued" || ccl?.status === "signed") && !paid;
+  const paymentReqSent = !!ccl?.paymentRequestSentAt;
 
   const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
 
@@ -168,14 +185,38 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
         )}
 
         <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!!busy}
-            onClick={() => run("dcs-send", () => sendDataCaptureRequest(caseId))}
-          >
-            {busy === "dcs-send" ? "Sending…" : "Send Data Capture Sheet"}
-          </Button>
+          {!dcs ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!!busy}
+              onClick={() => run("dcs-send", () => sendDataCaptureRequest(caseId))}
+            >
+              {busy === "dcs-send" ? "Sending…" : "Send Data Capture Sheet"}
+            </Button>
+          ) : (
+            <div className="inline-flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1.5 text-[11px] font-bold text-green-700">
+                <CheckCircle2 size={13} /> Data Capture Sheet sent
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!!busy}
+                onClick={() =>
+                  run("dcs-send", () => sendDataCaptureRequest(caseId))
+                }
+              >
+                {busy === "dcs-send" ? (
+                  "Resending…"
+                ) : (
+                  <span className="inline-flex items-center gap-1">
+                    <RefreshCw size={13} /> Resend
+                  </span>
+                )}
+              </Button>
+            </div>
+          )}
 
           {dcs?.status === "submitted" && (
             <>
@@ -247,6 +288,54 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
               </Button>
             </>
           )}
+
+          {cclIssuedUnpaid && (
+            <div className="flex flex-wrap items-center gap-2">
+              {paymentReqSent && (
+                <span className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1.5 text-[11px] font-bold text-green-700">
+                  <CheckCircle2 size={13} /> Payment request sent
+                  {ccl?.paymentRequestCount > 1
+                    ? ` (${ccl.paymentRequestCount}×)`
+                    : ""}
+                </span>
+              )}
+              <div className="flex items-center rounded-lg border border-gray-200 bg-white px-2">
+                <span className="text-xs font-bold text-gray-400">£</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={payReqAmount}
+                  onChange={(e) => setPayReqAmount(e.target.value)}
+                  placeholder={outstanding ? outstanding.toFixed(2) : "Amount"}
+                  className="w-24 px-1 py-1.5 text-xs font-bold outline-none"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!!busy}
+                onClick={() =>
+                  run("ccl-payment-request", async () => {
+                    await sendCclPaymentRequest(caseId, {
+                      requestedAmount: payReqAmount || undefined,
+                    });
+                    setPayReqAmount("");
+                  })
+                }
+              >
+                {busy === "ccl-payment-request" ? (
+                  "Sending…"
+                ) : paymentReqSent ? (
+                  <span className="inline-flex items-center gap-1">
+                    <RefreshCw size={13} /> Resend CCL & payment
+                  </span>
+                ) : (
+                  "Send CCL & payment request"
+                )}
+              </Button>
+            </div>
+          )}
         </div>
 
         {adminCanReview && ccl && (
@@ -286,10 +375,23 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
             CCL: <span className="text-secondary">{cclStatusLabel(ccl, stage)}</span>
             <span
               className={`rounded-full px-2 py-0.5 text-[10px] uppercase ${
-                paid ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-800"
+                paid
+                  ? "bg-green-100 text-green-700"
+                  : partiallyPaid
+                    ? "bg-blue-100 text-blue-700"
+                    : noFeeSet
+                      ? "bg-gray-100 text-gray-600"
+                      : "bg-amber-100 text-amber-800"
               }`}
             >
-              Payment: {paid ? "received" : "outstanding"}
+              Payment:{" "}
+              {paid
+                ? "paid"
+                : partiallyPaid
+                  ? `part-paid (£${outstanding.toFixed(2)} left)`
+                  : noFeeSet
+                    ? "no fee set"
+                    : "outstanding"}
             </span>
           </p>
         </div>

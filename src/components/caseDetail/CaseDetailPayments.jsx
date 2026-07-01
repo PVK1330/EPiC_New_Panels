@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, ShieldAlert, ShieldCheck, FileText } from "lucide-react";
+import { CheckCircle2, XCircle, ShieldAlert, ShieldCheck, FileText, Send, RefreshCw } from "lucide-react";
 import Input from "../Input";
 import Button from "../Button";
 import { updateCaseFinance, exportCaseInvoicePDF } from "../../services/caseDetailApi";
-import { reviewCclFees, getCclStatus } from "../../services/workflowApi";
+import { reviewCclFees, getCclStatus, sendCclPaymentRequest } from "../../services/workflowApi";
 import { useToast } from "../../context/ToastContext";
 import { formatDate } from "../../utils/datetime";
 
@@ -22,6 +22,7 @@ const CaseDetailPayments = ({ payments, onReload }) => {
   const [generating, setGenerating] = useState(false);
   const [ccl, setCcl] = useState(null);
   const [reviewNotes, setReviewNotes] = useState("");
+  const [payReqAmount, setPayReqAmount] = useState("");
 
   const caseRef = payments?.caseId;
   const caseStage = payments?.caseStage;
@@ -38,6 +39,43 @@ const CaseDetailPayments = ({ payments, onReload }) => {
     ccl?.status === "fee_proposed" || currentStatus === "Pending Approval";
 
   const instalments = ccl?.installmentPlan || ccl?.installment_plan || [];
+
+  // CCL released to the client but the fee is still outstanding → staff can
+  // (re)send the CCL with a payment request.
+  const _total = Number(payments?.totalAmount) || 0;
+  const _paid = Number(payments?.paidAmount) || 0;
+  const _outstanding = Math.max(0, _total - _paid);
+  const paidInFull =
+    String(currentStatus).toLowerCase() === "paid" ||
+    ((_total > 0 || _paid > 0) && _outstanding <= 0.02);
+  const cclIssuedUnpaid =
+    (ccl?.status === "issued" || ccl?.status === "signed") && !paidInFull;
+  const paymentReqSent = !!ccl?.paymentRequestSentAt;
+  const outstanding = Math.max(
+    0,
+    (Number(payments?.totalAmount) || 0) - (Number(payments?.paidAmount) || 0),
+  );
+
+  const handleSendPaymentRequest = async () => {
+    if (!caseRef) return;
+    setLoading(true);
+    try {
+      await sendCclPaymentRequest(caseRef, {
+        requestedAmount: payReqAmount || undefined,
+      });
+      showToast({ message: "Client Care Letter and payment request sent to client." });
+      setPayReqAmount("");
+      onReload?.();
+    } catch (err) {
+      showToast({
+        variant: "danger",
+        message:
+          err?.response?.data?.message || "Failed to send payment request.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCclReview = async (action) => {
     if (!caseRef) return;
@@ -273,6 +311,61 @@ const CaseDetailPayments = ({ payments, onReload }) => {
               <CheckCircle2 size={15} strokeWidth={2.5} />
               Authorize (legacy)
             </button>
+          </div>
+        )}
+
+        {cclIssuedUnpaid && (
+          <div className="pt-4 mt-4 border-t border-gray-100/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="text-xs font-bold text-gray-500 space-y-1">
+              <p>
+                CCL issued — payment still outstanding
+                {outstanding > 0 ? ` (£${outstanding.toFixed(2)})` : ""}.
+                {paymentReqSent ? " Resend" : " Send"} the Client Care Letter with
+                a payment request to the client.
+              </p>
+              {paymentReqSent && (
+                <span className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2 py-1 text-[11px] font-bold text-green-700">
+                  <CheckCircle2 size={13} strokeWidth={2.5} /> Payment request sent
+                  {ccl?.paymentRequestCount > 1
+                    ? ` (${ccl.paymentRequestCount}×)`
+                    : ""}
+                  {ccl?.paymentRequestSentAt
+                    ? ` — ${formatDate(ccl.paymentRequestSentAt)}`
+                    : ""}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center rounded-xl border border-gray-200 bg-white px-2">
+                <span className="text-xs font-black text-gray-400">£</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={payReqAmount}
+                  onChange={(e) => setPayReqAmount(e.target.value)}
+                  placeholder={outstanding ? outstanding.toFixed(2) : "Amount"}
+                  className="w-24 px-1 py-2 text-xs font-bold outline-none"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleSendPaymentRequest}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-secondary text-white px-5 py-2 text-xs font-black shadow-md shadow-secondary/20 hover:bg-secondary-dark transition-all disabled:opacity-50"
+              >
+                {paymentReqSent ? (
+                  <RefreshCw size={15} strokeWidth={2.5} />
+                ) : (
+                  <Send size={15} strokeWidth={2.5} />
+                )}
+                {loading
+                  ? "Sending…"
+                  : paymentReqSent
+                    ? "Resend CCL & payment"
+                    : "Send CCL & payment request"}
+              </button>
+            </div>
           </div>
         )}
       </div>
