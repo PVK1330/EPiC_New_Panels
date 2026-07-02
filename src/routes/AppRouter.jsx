@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import ProtectedRoute from './ProtectedRoute';
 import RequireAdminModule from './RequireAdminModule';
+import RequireCaseworkerModule from './RequireCaseworkerModule';
+import RequireBusinessModule from './RequireBusinessModule';
 import AdminLayout from '../layouts/AdminLayout';
 import SuperadminLayout from '../layouts/SuperadminLayout';
 import NotFoundPage from '../pages/NotFoundPage';
@@ -302,7 +304,9 @@ const AppRouter = () => {
           path="/caseworker"
           element={
             <ProtectedRoute allowedRoles={['caseworker']}>
-              <AdminLayout />
+              <RequireCaseworkerModule>
+                <AdminLayout />
+              </RequireCaseworkerModule>
             </ProtectedRoute>
           }
         >
@@ -333,7 +337,9 @@ const AppRouter = () => {
           path="/business"
           element={
             <ProtectedRoute allowedRoles={['business']}>
-              <AdminLayout />
+              <RequireBusinessModule>
+                <AdminLayout />
+              </RequireBusinessModule>
             </ProtectedRoute>
           }
         >

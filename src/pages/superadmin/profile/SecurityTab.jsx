@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { RiLockPasswordLine, RiShieldFlashLine } from 'react-icons/ri';
 import Button from '../../../components/Button';
 import Input from '../../../components/Input';
+import { validatePasswordStrength } from '../../../utils/constants';
 
 const SecurityTab = ({ changingPassword, onChangePassword }) => {
   const [form, setForm] = useState({
@@ -23,8 +24,9 @@ const SecurityTab = ({ changingPassword, onChangePassword }) => {
       setFieldError('All fields are required');
       return;
     }
-    if (form.newPassword.length < 8) {
-      setFieldError('New password must be at least 8 characters');
+    const pwErr = validatePasswordStrength(form.newPassword);
+    if (pwErr) {
+      setFieldError(pwErr);
       return;
     }
     if (form.newPassword !== form.confirmPassword) {

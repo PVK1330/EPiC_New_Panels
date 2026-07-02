@@ -185,7 +185,7 @@ const Cases = () => {
         const response = await getCaseworkerCases(params);
 
         // Map API response to component structure
-        const mappedCases = response.data.data.cases.map((c) => ({
+        const mappedCases = (response.data?.data?.cases || []).map((c) => ({
           caseId: c.caseId || `#C-${c.id}`,
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
@@ -519,7 +519,7 @@ const Cases = () => {
       const response = await getCaseworkerCases(params);
 
       if (response?.data?.data?.cases) {
-        const mappedCases = response.data.data.cases.map((c) => ({
+        const mappedCases = (response.data?.data?.cases || []).map((c) => ({
           caseId: c.caseId || `#C-${c.id}`,
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
@@ -693,7 +693,7 @@ const Cases = () => {
       const response = await getCaseworkerCases(params);
 
       if (response?.data?.data?.cases) {
-        const mappedCases = response.data.data.cases.map((c) => ({
+        const mappedCases = (response.data?.data?.cases || []).map((c) => ({
           caseId: c.caseId || `#C-${c.id}`,
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`

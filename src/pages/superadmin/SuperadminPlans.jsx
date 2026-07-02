@@ -77,7 +77,7 @@ const SuperadminPlans = () => {
       setLoading(true);
       const res = await planService.fetchPlans();
       if (res.data.status === 'success') {
-        const mappedPlans = res.data.data.plans.map((p) => ({
+        const mappedPlans = (res.data?.data?.plans || []).map((p) => ({
           ...p,
           interval: p.billing_cycle === 'monthly' ? 'month' : 'year',
           isFeatured: p.is_public,

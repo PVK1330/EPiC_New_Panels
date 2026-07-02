@@ -208,7 +208,7 @@ export default function AdminCases() {
         const response = await getCases(params);
 
         // Map API response to component structure
-        const mappedCases = response.data.data.cases.map((c) => ({
+        const mappedCases = (response.data?.data?.cases || []).map((c) => ({
           caseId: c.caseId || `#C-${c.id}`,
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
@@ -442,7 +442,7 @@ export default function AdminCases() {
       // Refresh cases from API
       const response = await getCases();
       if (response?.data?.data?.cases) {
-        const mappedCases = response.data.data.cases.map((c) => ({
+        const mappedCases = (response.data?.data?.cases || []).map((c) => ({
           caseId: c.caseId || c.id.toString(),
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
@@ -565,7 +565,7 @@ export default function AdminCases() {
       // Refresh cases from API
       const response = await getCases();
       if (response?.data?.data?.cases) {
-        const mappedCases = response.data.data.cases.map((c) => ({
+        const mappedCases = (response.data?.data?.cases || []).map((c) => ({
           caseId: c.caseId || c.id.toString(),
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
@@ -626,7 +626,7 @@ export default function AdminCases() {
       // Refresh cases from API
       const response = await getCases();
       if (response?.data?.data?.cases) {
-        const mappedCases = response.data.data.cases.map((c) => ({
+        const mappedCases = (response.data?.data?.cases || []).map((c) => ({
           caseId: c.caseId || c.id.toString(),
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
@@ -709,7 +709,7 @@ export default function AdminCases() {
       // Refresh cases from API
       const response = await getCases();
       if (response?.data?.data?.cases) {
-        const mappedCases = response.data.data.cases.map((c) => ({
+        const mappedCases = (response.data?.data?.cases || []).map((c) => ({
           caseId: c.caseId || c.id.toString(),
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
@@ -1309,7 +1309,7 @@ export default function AdminCases() {
         onSuccess={async () => {
           const response = await getCases();
           if (response?.data?.data?.cases) {
-            const mappedCases = response.data.data.cases.map((c) => ({
+            const mappedCases = (response.data?.data?.cases || []).map((c) => ({
               caseId: c.caseId || c.id.toString(),
               candidate: c.candidate
                 ? `${c.candidate.first_name} ${c.candidate.last_name}`
