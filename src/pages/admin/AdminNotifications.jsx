@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { io } from "socket.io-client";
+import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";
 import { getMessagingSocketUrl } from "../../utils/socketOrigin";
 import {
@@ -405,6 +406,7 @@ export default function AdminNotifications() {
       fetchStats();
     } catch (error) {
       console.error("Failed to mark all as read:", error);
+      toast.error("Failed to mark all notifications as read");
     }
   }, []);
 

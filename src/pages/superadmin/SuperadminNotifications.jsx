@@ -141,8 +141,12 @@ const SuperadminNotifications = () => {
     try {
       await markAllPlatformNotificationsRead();
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      // Re-sync from the server (authoritative) — keeps the Unread tab and
+      // pagination totals correct after the bulk update.
+      loadNotifications();
     } catch (err) {
       console.error("Failed to mark all notifications read:", err);
+      toast.error("Failed to mark all notifications as read");
     }
   };
 
