@@ -15,3 +15,8 @@ export const updateRtwRecord = (id, formData) =>
   api.put(`/api/business/right-to-work/${id}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+
+// Evidence document is stored privately (not web-served) — fetch it as a blob
+// through the authenticated API so it can be opened/viewed.
+export const fetchRtwDocument = (id) =>
+  api.get(`/api/business/right-to-work/${id}/document`, { responseType: "blob" });

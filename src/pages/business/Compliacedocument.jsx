@@ -399,7 +399,7 @@ const DocumentList = () => {
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Document Name *</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Document Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={uploadName}
@@ -410,7 +410,7 @@ const DocumentList = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Document Type *</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Document Type <span className="text-red-500">*</span></label>
                   <select
                     value={uploadType}
                     onChange={(e) => setUploadType(e.target.value)}
@@ -426,7 +426,7 @@ const DocumentList = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">File *</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">File <span className="text-red-500">*</span></label>
                   <label className="border-2 border-dashed border-gray-200 rounded-xl p-5 text-center hover:border-primary/50 transition cursor-pointer block">
                     <input
                       type="file"

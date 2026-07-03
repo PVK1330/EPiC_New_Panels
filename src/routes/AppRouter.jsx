@@ -121,7 +121,7 @@ const LicenceApplicationV2Detail = lazy(() => import('../components/licence/Lice
 const LicenceDocuments = lazy(() => import('../pages/business/LicenceDocuments'));
 const BusinessTasks = lazy(() => import('../pages/business/BusinessTasks'));
 // Section K — Multi-Company Handling
-const LinkedEntities = lazy(() => import('../pages/business/LinkedEntities'));
+// const LinkedEntities = lazy(() => import('../pages/business/LinkedEntities')); // Linked Entities hidden per request
 // Section H — Right to Work
 const RightToWork = lazy(() => import('../pages/business/RightToWork'));
 // Section O — Sponsor Audit Log
@@ -377,8 +377,8 @@ const AppRouter = () => {
           <Route path="tasks" element={<BusinessTasks />} />
           {/* Section N — Monthly Compliance Review */}
           <Route path="monthly-compliance-review" element={<ComplianceMonthlyReview />} />
-          {/* Section K — Multi-Company Handling */}
-          <Route path="linked-entities" element={<LinkedEntities />} />
+          {/* Section K — Multi-Company Handling (Linked Entities hidden per request) */}
+          {/* <Route path="linked-entities" element={<LinkedEntities />} /> */}
           {/* Section H — Right to Work */}
           <Route path="right-to-work" element={<RightToWork />} />
           {/* Section O — Sponsor Audit Log */}

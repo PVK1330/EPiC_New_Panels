@@ -10,7 +10,11 @@ import {
   FileText,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { getRtwRecords, createRtwRecord } from "../../services/rightToWorkApi";
+import {
+  getRtwRecords,
+  createRtwRecord,
+  fetchRtwDocument,
+} from "../../services/rightToWorkApi";
 import { getSponsoredWorkers } from "../../services/sponsoredWorkerApi";
 
 const STATUS_COLOURS = {
@@ -47,6 +51,30 @@ export default function RightToWork() {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [viewingId, setViewingId] = useState(null);
+
+  // Evidence documents are stored privately (not web-served). Fetch through the
+  // authenticated API and open the returned file in a new tab.
+  const viewDocument = async (record) => {
+    // Open the tab synchronously (inside the click) so it isn't popup-blocked.
+    const tab = window.open("", "_blank", "noopener,noreferrer");
+    setViewingId(record.id);
+    try {
+      const res = await fetchRtwDocument(record.id);
+      const blob = new Blob([res.data], {
+        type: res.headers?.["content-type"] || "application/octet-stream",
+      });
+      const url = URL.createObjectURL(blob);
+      if (tab) tab.location.href = url;
+      else window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      if (tab) tab.close();
+      toast.error(err?.response?.data?.message || "Could not open the document.");
+    } finally {
+      setViewingId(null);
+    }
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -158,14 +186,19 @@ export default function RightToWork() {
                       <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
                       <td className="px-4 py-3">
                         {r.documentPath ? (
-                          <a
-                            href={`/${r.documentPath}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
+                          <button
+                            type="button"
+                            onClick={() => viewDocument(r)}
+                            disabled={viewingId === r.id}
+                            className="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline disabled:opacity-50"
                           >
-                            <FileText size={12} /> View
-                          </a>
+                            {viewingId === r.id ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <FileText size={12} />
+                            )}
+                            View
+                          </button>
                         ) : (
                           <span className="text-xs text-gray-400">None</span>
                         )}

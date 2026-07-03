@@ -444,7 +444,7 @@ const ReportingObligations = () => {
 
             <form onSubmit={handleFormSubmit} className="space-y-3">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Worker *</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Worker <span className="text-red-500">*</span></label>
                 <select
                   required
                   value={formData.workerId}
@@ -461,7 +461,7 @@ const ReportingObligations = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Event Type *</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Event Type <span className="text-red-500">*</span></label>
                 <select
                   required
                   value={formData.eventType}
@@ -483,7 +483,7 @@ const ReportingObligations = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Event Date *</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Event Date <span className="text-red-500">*</span></label>
                 <DatePicker
                   required
                   name="eventDate"
