@@ -7,6 +7,7 @@ import { fetchUnreadCount, addNotification, setUnreadCount } from '../../store/s
 import NotificationList from './NotificationList';
 import { getMessagingSocketUrl } from '../../utils/socketOrigin';
 import { getNotificationRoute } from '../../utils/notificationHelpers';
+import { playNotificationSound } from '../../utils/notificationSound';
 
 const NotificationDropdown = () => {
   const dispatch = useDispatch();
@@ -18,6 +19,19 @@ const NotificationDropdown = () => {
   const dropdownRef = useRef(null);
   // Tracks live socket state so the backstop poll never competes with real-time.
   const socketConnectedRef = useRef(false);
+
+  // Chime whenever the unread badge RISES, whatever delivered the increase —
+  // socket push (instant), tab-refocus refetch, backstop poll, or a manual
+  // refresh. This covers paths with no socket event (e.g. announcements landing
+  // while the socket is down). The first value after mount is a silent
+  // baseline, so login/reload never dings for the existing backlog.
+  const prevUnreadRef = useRef(null);
+  useEffect(() => {
+    if (prevUnreadRef.current !== null && unreadCount > prevUnreadRef.current) {
+      playNotificationSound();
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount]);
 
   // Initial count on mount, and a resync whenever the tab regains focus (covers
   // anything missed while the tab was backgrounded). Real-time updates otherwise
@@ -66,7 +80,9 @@ const NotificationDropdown = () => {
       socketConnectedRef.current = false;
     });
 
-    // New notification → prepend to the list and bump the badge (deduped in the slice).
+    // New notification → prepend to the list and bump the badge (deduped in the
+    // slice). The badge increase itself triggers the chime via the unread-count
+    // watcher above, so duplicates/already-read payloads stay silent.
     socket.on('notification:new', (payload) => {
       if (payload && payload.id != null) dispatch(addNotification(payload));
     });

@@ -1,12 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Bell, CheckSquare, RefreshCw, Loader2, X } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { Bell, CheckSquare, RefreshCw, Loader2, X, Volume2, VolumeOff, MonitorCheck, MonitorOff } from 'lucide-react';
 import {
   fetchNotifications,
   fetchUnreadCount,
   markAllAsRead,
   clearError
 } from '../../store/slices/notificationSlice';
+import {
+  useNotificationSoundEnabled,
+  setNotificationSoundEnabled
+} from '../../utils/notificationSound';
+import { useDesktopPush } from '../../utils/webPush';
 import NotificationItem from './NotificationItem';
 import Pagination from '../common/Pagination';
 
@@ -23,12 +29,35 @@ const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
     pagination,
     loading,
     error,
-    unreadCountLoading
+    unreadCountLoading,
+    markingAllRead
   } = useSelector((state) => state.notifications);
 
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState(showUnreadOnly ? 'unread' : 'all');
+  const soundEnabled = useNotificationSoundEnabled();
+  const desktopPush = useDesktopPush();
   const limit = 20;
+
+  const handleDesktopPushToggle = async () => {
+    const wasEnabled = desktopPush.enabled;
+    const result = await desktopPush.toggle();
+    if (result.ok) {
+      toast.success(
+        wasEnabled
+          ? 'Desktop notifications turned off for this browser'
+          : 'Desktop notifications enabled — you will be notified even when this site is closed',
+      );
+    } else if (result.reason === 'denied') {
+      toast.error(
+        'Notifications are blocked for this site. Allow them in your browser settings (lock icon in the address bar), then try again.',
+      );
+    } else if (result.reason === 'server-disabled') {
+      toast.error('Desktop notifications are not configured on the server.');
+    } else if (result.reason !== 'unsupported') {
+      toast.error('Could not update desktop notifications. Please try again.');
+    }
+  };
 
   // The "unread" tab is filtered server-side so paging + totals are accurate for
   // that view. ("read" has no dedicated server filter, so it stays a client-side
@@ -56,8 +85,17 @@ const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
     dispatch(fetchUnreadCount());
   };
 
-  const handleMarkAllAsRead = () => {
-    dispatch(markAllAsRead());
+  const handleMarkAllAsRead = async () => {
+    try {
+      await dispatch(markAllAsRead()).unwrap();
+    } catch {
+      // Failure is surfaced via state.error (rejected reducer) → error banner.
+    }
+    // Re-sync list + badge from the server either way. On success this makes the
+    // server state authoritative (and supersedes any older in-flight fetch via
+    // the slice's requestId guard); on failure it restores the true state.
+    dispatch(fetchNotifications({ limit, page, unreadOnly: unreadOnly ? 'true' : 'false' }));
+    dispatch(fetchUnreadCount());
   };
 
   const safePagination = pagination || { total: 0, page: 1, limit: 20, pages: 0 };
@@ -105,6 +143,35 @@ const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
           </div>
 
           <div className="flex items-center space-x-1 flex-shrink-0">
+            {desktopPush.supported && (
+              <button
+                onClick={handleDesktopPushToggle}
+                disabled={desktopPush.busy}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200/60 rounded-lg transition-colors disabled:opacity-50"
+                title={desktopPush.enabled
+                  ? 'Desktop notifications on (works even when this site is closed) — click to turn off'
+                  : 'Enable desktop notifications — get notified even when this site is closed'}
+              >
+                {desktopPush.enabled ? (
+                  <MonitorCheck className="w-4 h-4 text-green-600" />
+                ) : (
+                  <MonitorOff className="w-4 h-4 text-gray-400" />
+                )}
+              </button>
+            )}
+
+            <button
+              onClick={() => setNotificationSoundEnabled(!soundEnabled)}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200/60 rounded-lg transition-colors"
+              title={soundEnabled ? 'Notification sound on — click to mute' : 'Notification sound off — click to unmute'}
+            >
+              {soundEnabled ? (
+                <Volume2 className="w-4 h-4" />
+              ) : (
+                <VolumeOff className="w-4 h-4 text-gray-400" />
+              )}
+            </button>
+
             <button
               onClick={handleRefresh}
               disabled={loading}
@@ -117,10 +184,15 @@ const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
-                className="flex items-center space-x-1 px-2.5 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium"
+                disabled={markingAllRead}
+                className="flex items-center space-x-1 px-2.5 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Mark all as read"
               >
-                <CheckSquare className="w-4 h-4" />
+                {markingAllRead ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckSquare className="w-4 h-4" />
+                )}
                 <span className="hidden sm:inline">Mark all read</span>
               </button>
             )}

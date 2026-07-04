@@ -22,6 +22,16 @@ export const markNotificationAsRead = (id) =>
 export const markAllNotificationsAsRead = () =>
   api.patch(`/api/notifications/mark-all-read`);
 
+// Web Push (desktop notifications)
+export const getPushPublicKey = () =>
+  api.get(`/api/notifications/push/public-key`);
+
+export const subscribeToPush = (data) =>
+  api.post(`/api/notifications/push/subscribe`, data);
+
+export const unsubscribeFromPush = (data) =>
+  api.post(`/api/notifications/push/unsubscribe`, data);
+
 export const deleteNotification = (id) =>
   api.delete(`/api/notifications/${id}`);
 
