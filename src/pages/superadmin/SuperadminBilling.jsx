@@ -28,6 +28,7 @@ import toast from 'react-hot-toast';
 import { formatDate } from '../../utils/datetime';
 import { resolveAssetUrl } from '../../utils/assetUrl';
 import { getGatewayStatus } from '../../services/billingApi';
+import { getIdentitySettings } from '../../services/platformSettingsApi';
 import { formatCurrencyExact } from '../../utils/currencyFormatter';
 import usePlatformCurrency from '../../hooks/usePlatformCurrency';
 
@@ -62,16 +63,34 @@ function StatusBadge({ status }) {
 
 /* ── Invoice Preview Modal ───────────────────────────────────────────────── */
 
-function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, taxId = null, currency = 'GBP' }) {
+function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, taxId = null, currency = 'GBP', platform = null }) {
   if (!invoice) return null;
 
-  const amountNet = parseFloat(invoice.amount || 0);
-  const taxEnabled = Number.isFinite(taxRate) && taxRate > 0;
-  const vatAmount = taxEnabled ? parseFloat((amountNet * (taxRate / 100)).toFixed(2)) : 0;
-  const totalGross = parseFloat((amountNet + vatAmount).toFixed(2));
+  // Prefer the invoice's persisted breakdown (invoice.amount = GROSS for
+  // itemised org-subscription invoices); else fall back to the configured
+  // gateway rate for legacy rows where amount is the net subscription price.
+  const hasBreakdown = invoice.total != null && invoice.tax_amount != null;
+  const displayTaxRate = hasBreakdown ? parseFloat(invoice.tax_rate || 0) : taxRate;
+  const taxEnabled = hasBreakdown
+    ? parseFloat(invoice.tax_amount || 0) > 0
+    : Number.isFinite(taxRate) && taxRate > 0;
+  const amountNet = parseFloat((hasBreakdown ? invoice.subtotal : invoice.amount) || 0);
+  const vatAmount = hasBreakdown
+    ? parseFloat(invoice.tax_amount || 0)
+    : (taxEnabled ? parseFloat((amountNet * (taxRate / 100)).toFixed(2)) : 0);
+  const totalGross = hasBreakdown
+    ? parseFloat((invoice.total ?? invoice.amount) || 0)
+    : parseFloat((amountNet + vatAmount).toFixed(2));
   const org = invoice.organisation || {};
   const plan = invoice.subscription?.plan || {};
-  const orgLogoUrl = org.logoUrl ? resolveAssetUrl(org.logoUrl) : null;
+
+  // Supplier branding comes from the platform identity settings
+  // (superadmin/settings) — this invoice is issued BY the platform.
+  const platformName = platform?.platform_name || 'EPiC HRIS Platform';
+  const supportEmail = platform?.support_email || 'support@elitepic.co.uk';
+  const platformLogoUrl = platform?.logo_url ? resolveAssetUrl(platform.logo_url) : null;
+  const addressLines = String(platform?.platform_address || 'United Kingdom')
+    .split(/\r?\n/).map(s => s.trim()).filter(Boolean);
 
   return (
     <AnimatePresence>
@@ -115,20 +134,20 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, 
               <div className="h-1.5 w-full bg-primary" />
 
               <div className="p-6">
-                {/* Header: logo left, INVOICE right */}
+                {/* Header: platform (supplier) logo left, INVOICE right */}
                 <div className="flex items-start justify-between mb-6">
                   <div>
-                    {orgLogoUrl ? (
-                      <img src={orgLogoUrl} alt={org.name} className="h-12 max-w-[140px] object-contain mb-2" onError={e => { e.target.style.display='none'; }} />
+                    {platformLogoUrl ? (
+                      <img src={platformLogoUrl} alt={platformName} className="h-12 max-w-[140px] object-contain mb-2" onError={e => { e.target.style.display='none'; }} />
                     ) : (
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black text-lg">
-                          {(org.name || 'E')[0]}
+                          {(platformName || 'E')[0]}
                         </div>
-                        <span className="font-black text-secondary text-lg">{org.name || 'Organisation'}</span>
+                        <span className="font-black text-secondary text-lg">{platformName}</span>
                       </div>
                     )}
-                    <p className="text-xs text-gray-400">{org.primaryEmail || ''}</p>
+                    <p className="text-xs text-gray-400">{supportEmail}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-3xl font-black text-primary tracking-wider">INVOICE</p>
@@ -144,9 +163,11 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, 
                 <div className="grid grid-cols-3 gap-6 mb-6">
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">From</p>
-                    <p className="text-sm font-bold text-secondary">EPiC HRIS Platform</p>
-                    <p className="text-xs text-gray-500">Elite PiC Ltd</p>
-                    <p className="text-xs text-gray-500">United Kingdom</p>
+                    <p className="text-sm font-bold text-secondary">{platformName}</p>
+                    {addressLines.map(line => (
+                      <p key={line} className="text-xs text-gray-500">{line}</p>
+                    ))}
+                    <p className="text-xs text-gray-500">{supportEmail}</p>
                     {taxEnabled && taxId && <p className="text-xs text-gray-400 mt-1">Tax ID: {taxId}</p>}
                   </div>
                   <div>
@@ -182,7 +203,7 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, 
                         <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Description</th>
                         <th className="text-center px-3 py-3 text-[11px] font-bold uppercase tracking-wider">Period</th>
                         <th className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">{taxEnabled ? "Unit Price" : "Amount"}</th>
-                        {taxEnabled && <th className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">VAT ({taxRate}%)</th>}
+                        {taxEnabled && <th className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">VAT ({displayTaxRate}%)</th>}
                         {taxEnabled && <th className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Total</th>}
                       </tr>
                     </thead>
@@ -192,7 +213,7 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, 
                           <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">1</span>
                         </td>
                         <td className="px-4 py-4">
-                          <p className="font-bold text-secondary text-sm">EPiC HRIS — {plan.name || 'Subscription'} Plan</p>
+                          <p className="font-bold text-secondary text-sm">{platformName} — {plan.name || 'Subscription'} Plan</p>
                           <p className="text-xs text-gray-400 mt-0.5">Payment via {invoice.payment_method || 'N/A'}</p>
                           {invoice.stripe_invoice_id && (
                             <p className="text-xs text-gray-400">Gateway: {invoice.stripe_invoice_id}</p>
@@ -217,7 +238,7 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, 
                           <span className="text-sm font-semibold text-secondary">{fmtCurrency(amountNet, currency)}</span>
                         </div>
                         <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
-                          <span className="text-xs text-gray-500">VAT @ {taxRate}%</span>
+                          <span className="text-xs text-gray-500">VAT @ {displayTaxRate}%</span>
                           <span className="text-sm font-semibold text-secondary">{fmtCurrency(vatAmount, currency)}</span>
                         </div>
                         <div className="flex justify-between items-center px-4 py-3 bg-primary">
@@ -249,7 +270,7 @@ function InvoiceModal({ invoice, onClose, onDownload, downloading, taxRate = 0, 
                 {/* Footer note */}
                 <div className="mt-4 pt-4 border-t border-gray-100 text-center">
                   <p className="text-[10px] text-gray-300">
-                    EPiC HRIS Platform · support@elitepic.co.uk · This is a computer-generated invoice and requires no signature.
+                    {platformName} · {supportEmail} · This is a computer-generated invoice and requires no signature.
                   </p>
                 </div>
               </div>
@@ -300,6 +321,7 @@ const SuperadminBilling = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [taxRate, setTaxRate] = useState(0);
   const [taxId, setTaxId] = useState(null);
+  const [platformInfo, setPlatformInfo] = useState(null);
 
   const {
     invoices,
@@ -319,7 +341,8 @@ const SuperadminBilling = () => {
     fetchInvoices({ page, limit: ITEMS_PER_PAGE });
   }, [fetchInvoices, page]);
 
-  // One-time fetch for the headline stat cards + gateway tax config.
+  // One-time fetch for the headline stat cards + gateway tax config + the
+  // platform identity (name/logo/address) used to brand the invoice preview.
   useEffect(() => {
     fetchDashboardStats();
     getGatewayStatus().then(res => {
@@ -328,6 +351,9 @@ const SuperadminBilling = () => {
       setTaxRate(Number.isFinite(rate) && rate > 0 ? rate : 0);
       setTaxId(gw.tax_id || null);
     }).catch(() => {});
+    getIdentitySettings()
+      .then(res => setPlatformInfo(res.data?.data?.settings || null))
+      .catch(() => {});
   }, [fetchDashboardStats]);
 
   const stats = [
@@ -485,9 +511,15 @@ const SuperadminBilling = () => {
                 </tr>
               ) : (
                 displayedItems.map((item, idx) => {
-                  const net = parseFloat(item.amount || 0);
-                  const vat = taxRate > 0 ? parseFloat((net * (taxRate / 100)).toFixed(2)) : 0;
-                  const total = net + vat;
+                  // Use the invoice's persisted breakdown when present
+                  // (amount = GROSS on itemised rows); recomputing VAT on top
+                  // of a gross amount would double-count the tax.
+                  const rowHasBreakdown = item.total != null && item.tax_amount != null;
+                  const net = parseFloat((rowHasBreakdown ? item.subtotal : item.amount) || 0);
+                  const vat = rowHasBreakdown
+                    ? parseFloat(item.tax_amount || 0)
+                    : (taxRate > 0 ? parseFloat((net * (taxRate / 100)).toFixed(2)) : 0);
+                  const total = rowHasBreakdown ? parseFloat((item.total ?? item.amount) || 0) : net + vat;
                   const orgLogoUrl = item.organisation?.logoUrl ? resolveAssetUrl(item.organisation.logoUrl) : null;
 
                   return (
@@ -531,7 +563,7 @@ const SuperadminBilling = () => {
                       </td>
                       {taxRate > 0 && <td className="px-5 py-3.5 text-right text-xs font-semibold text-secondary">{fmtCurrency(net, currency)}</td>}
                       {taxRate > 0 && <td className="px-5 py-3.5 text-right text-xs font-semibold text-gray-400">{fmtCurrency(vat, currency)}</td>}
-                      <td className="px-5 py-3.5 text-right text-sm font-black text-secondary">{taxRate > 0 ? fmtCurrency(total, currency) : fmtCurrency(net, currency)}</td>
+                      <td className="px-5 py-3.5 text-right text-sm font-black text-secondary">{fmtCurrency(total, currency)}</td>
                       <td className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500">
                         <span className="flex items-center justify-center gap-1">
                           <RiCalendarLine size={11} className="text-gray-400" />
@@ -594,6 +626,7 @@ const SuperadminBilling = () => {
           taxRate={taxRate}
           taxId={taxId}
           currency={currency}
+          platform={platformInfo}
         />
       )}
     </div>

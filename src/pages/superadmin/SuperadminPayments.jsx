@@ -35,6 +35,7 @@ import PageHero, { HeroButton, HeroGhostButton } from '../../components/superadm
 import { formatDate, formatDateTime } from '../../utils/datetime';
 import { formatCurrencyExact } from '../../utils/currencyFormatter';
 import usePlatformCurrency from '../../hooks/usePlatformCurrency';
+import { getIdentitySettings } from '../../services/platformSettingsApi';
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
@@ -73,13 +74,32 @@ function TxnBadge({ status }) {
 
 /* ── Transaction Detail Modal ────────────────────────────────────────────── */
 
-function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRate = 0, taxId = null, currency = 'GBP' }) {
+function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRate = 0, taxId = null, currency = 'GBP', platform = null }) {
   if (!txn) return null;
 
-  const amount = parseFloat(txn.amount || 0);
-  const taxEnabled = Number.isFinite(taxRate) && taxRate > 0;
-  const vatAmount = taxEnabled ? parseFloat((amount * (taxRate / 100)).toFixed(2)) : 0;
-  const total = amount + vatAmount;
+  // Prefer the linked invoice's persisted breakdown (txn.amount = GROSS for
+  // itemised org-subscription charges); else fall back to the configured rate
+  // for legacy rows where amount is the net subscription price.
+  const inv = txn.invoice || {};
+  const hasBreakdown = inv.total != null && inv.tax_amount != null;
+  const displayTaxRate = hasBreakdown ? parseFloat(inv.tax_rate || 0) : taxRate;
+  const taxEnabled = hasBreakdown
+    ? parseFloat(inv.tax_amount || 0) > 0
+    : Number.isFinite(taxRate) && taxRate > 0;
+  const amount = parseFloat((hasBreakdown ? inv.subtotal : txn.amount) || 0);
+  const vatAmount = hasBreakdown
+    ? parseFloat(inv.tax_amount || 0)
+    : (taxEnabled ? parseFloat((amount * (taxRate / 100)).toFixed(2)) : 0);
+  const total = hasBreakdown
+    ? parseFloat((inv.total ?? txn.amount) || 0)
+    : amount + vatAmount;
+
+  // Supplier identity from platform settings (superadmin/settings), with
+  // sensible fallbacks for a fresh install.
+  const platformName = platform?.platform_name || 'EPiC HRIS Platform';
+  const supportEmail = platform?.support_email || 'support@elitepic.co.uk';
+  const addressLines = String(platform?.platform_address || 'United Kingdom')
+    .split(/\r?\n/).map(s => s.trim()).filter(Boolean);
 
   let topBandColor = 'bg-primary';
   if (txn.status === 'completed') topBandColor = 'bg-emerald-600';
@@ -142,9 +162,11 @@ function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRat
                 <div className="grid grid-cols-3 gap-5 mb-6">
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">From (Supplier)</p>
-                    <p className="text-sm font-bold text-secondary">EPiC HRIS Platform</p>
-                    <p className="text-xs text-gray-500">Elite PiC Ltd</p>
-                    <p className="text-xs text-gray-500">United Kingdom</p>
+                    <p className="text-sm font-bold text-secondary">{platformName}</p>
+                    {addressLines.map(line => (
+                      <p key={line} className="text-xs text-gray-500">{line}</p>
+                    ))}
+                    <p className="text-xs text-gray-500">{supportEmail}</p>
                     {taxEnabled && taxId && <p className="text-xs text-gray-400 mt-1">Tax ID: {taxId}</p>}
                   </div>
                   <div>
@@ -180,7 +202,7 @@ function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRat
                         <th scope="col" className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Sr No</th>
                         <th scope="col" className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider">Description</th>
                         <th scope="col" className="text-center px-3 py-3 text-[11px] font-bold uppercase tracking-wider">Gateway Ref</th>
-                        {taxEnabled && <th scope="col" className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">VAT ({taxRate}%)</th>}
+                        {taxEnabled && <th scope="col" className="text-right px-3 py-3 text-[11px] font-bold uppercase tracking-wider">VAT ({displayTaxRate}%)</th>}
                         <th scope="col" className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-wider">{taxEnabled ? "Amount (ex. Tax)" : "Amount"}</th>
                       </tr>
                     </thead>
@@ -190,7 +212,7 @@ function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRat
                           <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-lg bg-gray-50 border border-gray-100 text-xs font-black text-gray-500 tabular-nums">{0 + 1}</span>
                         </td>
                         <td className="px-4 py-4">
-                          <p className="font-bold text-secondary text-sm">EPiC HRIS — Subscription Payment</p>
+                          <p className="font-bold text-secondary text-sm">{platformName} — Subscription Payment</p>
                           {txn.invoice?.invoice_number && (
                             <p className="text-xs text-gray-400 mt-0.5">Invoice: {txn.invoice.invoice_number}</p>
                           )}
@@ -216,7 +238,7 @@ function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRat
                           <span className="text-sm font-semibold text-secondary">{fmtGbp(amount, currency)}</span>
                         </div>
                         <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
-                          <span className="text-xs text-gray-500">VAT @ {taxRate}%</span>
+                          <span className="text-xs text-gray-500">VAT @ {displayTaxRate}%</span>
                           <span className="text-sm font-semibold text-secondary">{fmtGbp(vatAmount, currency)}</span>
                         </div>
                         <div className="flex justify-between items-center px-4 py-3 bg-primary">
@@ -245,7 +267,7 @@ function TransactionModal({ txn, onClose, onDownloadReceipt, downloading, taxRat
                 {/* Footer note */}
                 <div className="mt-4 pt-4 border-t border-gray-100 text-center">
                   <p className="text-[10px] text-gray-300">
-                    EPiC HRIS Platform · support@elitepic.co.uk · This is a computer-generated receipt and requires no signature.
+                    {platformName} · {supportEmail} · This is a computer-generated receipt and requires no signature.
                   </p>
                 </div>
               </div>
@@ -313,10 +335,13 @@ const SuperadminPayments = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [exporting, setExporting] = useState(false);
+  const [platformInfo, setPlatformInfo] = useState(null);
   const [gatewayConfig, setGatewayConfig] = useState({
     publishable_key: '',
     secret_key: '',
     webhook_secret: '',
+    currency: 'GBP',
+    platform_fee: '',
   });
 
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: ITEMS_PER_PAGE, totalPages: 0 });
@@ -371,11 +396,14 @@ const SuperadminPayments = () => {
   useEffect(() => {
     fetchGatewayStatus();
     fetchDashboardStats();
+    getIdentitySettings()
+      .then(res => setPlatformInfo(res.data?.data?.settings || null))
+      .catch(() => {});
   }, [fetchGatewayStatus, fetchDashboardStats]);
 
   const stats = [
-    { title: 'Gross Volume',    value: fmtGbp(dashboardStats?.transactions?.grossVolume  || 0, currency), icon: RiMoneyPoundCircleLine, bgClass: 'bg-blue-600',    delay: 0 },
-    { title: 'Net Revenue',     value: fmtGbp(dashboardStats?.transactions?.netRevenue   || 0, currency), icon: RiPulseLine,           bgClass: 'bg-indigo-600',  delay: 0.05 },
+    { title: 'Gross Volume',    value: fmtGbp(dashboardStats?.revenue?.grossVolume  || 0, currency), icon: RiMoneyPoundCircleLine, bgClass: 'bg-blue-600',    delay: 0 },
+    { title: 'Net Revenue',     value: fmtGbp(dashboardStats?.revenue?.netRevenue   || 0, currency), icon: RiPulseLine,           bgClass: 'bg-indigo-600',  delay: 0.05 },
     { title: 'Success Rate',    value: `${dashboardStats?.transactions?.successRate   || '0'}%`,           icon: RiShieldCheckLine,    bgClass: 'bg-emerald-600', delay: 0.1 },
     { title: 'Refund Rate',     value: `${dashboardStats?.transactions?.refundRate    || '0'}%`,           icon: RiExchangeLine,       bgClass: 'bg-amber-500',   delay: 0.15 },
   ];
@@ -435,9 +463,37 @@ const SuperadminPayments = () => {
     }
   };
 
+  // Prefill the form from the live gateway status so opening the modal and
+  // hitting Save can never blank out existing configuration. Secrets are
+  // write-only (masked server-side) so they always start empty.
+  const openGatewayModal = () => {
+    setGatewayConfig({
+      publishable_key: gatewayStatus?.publishable_key || '',
+      secret_key: '',
+      webhook_secret: '',
+      currency: gatewayStatus?.currency || 'GBP',
+      platform_fee: gatewayStatus?.platform_fee ?? '',
+    });
+    setIsGatewayModalOpen(true);
+  };
+
   const handleSaveGatewayConfig = async () => {
     try {
-      await saveGatewayConfig(gatewayConfig);
+      // Only send fields the operator actually filled in — sending empty
+      // strings would overwrite (wipe) the stored Stripe keys.
+      const payload = {};
+      if (gatewayConfig.publishable_key?.trim()) payload.publishable_key = gatewayConfig.publishable_key.trim();
+      if (gatewayConfig.secret_key?.trim()) payload.secret_key = gatewayConfig.secret_key.trim();
+      if (gatewayConfig.webhook_secret?.trim()) payload.webhook_secret = gatewayConfig.webhook_secret.trim();
+      if (gatewayConfig.currency) payload.currency = gatewayConfig.currency;
+      if (gatewayConfig.platform_fee !== '' && gatewayConfig.platform_fee != null) {
+        payload.platform_fee = Number(gatewayConfig.platform_fee);
+      }
+      if (Object.keys(payload).length === 0) {
+        toast.error('Nothing to save — fill in at least one field');
+        return;
+      }
+      await saveGatewayConfig(payload);
       toast.success('Gateway configuration saved successfully');
       setIsGatewayModalOpen(false);
       fetchGatewayStatus();
@@ -457,7 +513,7 @@ const SuperadminPayments = () => {
         <HeroGhostButton onClick={handleExport} disabled={exporting}>
           <RiFileDownloadLine size={16} /> {exporting ? 'Exporting…' : 'Export'}
         </HeroGhostButton>
-        <HeroButton onClick={() => setIsGatewayModalOpen(true)}>
+        <HeroButton onClick={openGatewayModal}>
           <RiExchangeLine size={16} /> Configure
         </HeroButton>
       </PageHero>
@@ -729,7 +785,7 @@ const SuperadminPayments = () => {
           )}
 
           <button
-            onClick={() => setIsGatewayModalOpen(true)}
+            onClick={openGatewayModal}
             className="w-full py-2.5 bg-secondary text-white rounded-xl text-xs font-bold shadow-sm hover:opacity-90 transition-all"
           >
             Configure Gateway
@@ -747,6 +803,7 @@ const SuperadminPayments = () => {
           taxRate={parseFloat(gatewayStatus?.tax_rate || '0')}
           taxId={gatewayStatus?.tax_id || null}
           currency={currency}
+          platform={platformInfo}
         />
       )}
 
@@ -816,12 +873,23 @@ const SuperadminPayments = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-400 ml-1">Currency</label>
-                    <select className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-secondary outline-none">
-                      <option>GBP (£)</option>
-                      <option>USD ($)</option>
+                    <select
+                      value={gatewayConfig.currency}
+                      onChange={e => setGatewayConfig({ ...gatewayConfig, currency: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold text-secondary outline-none"
+                    >
+                      <option value="GBP">GBP (£)</option>
+                      <option value="USD">USD ($)</option>
                     </select>
                   </div>
-                  <Input label="Platform Fee (%)" type="number" defaultValue="2.5" />
+                  <Input
+                    label="Platform Fee (%)"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={gatewayConfig.platform_fee}
+                    onChange={e => setGatewayConfig({ ...gatewayConfig, platform_fee: e.target.value })}
+                  />
                 </div>
 
                 <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">

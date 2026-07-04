@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { FileText, Upload, X, CheckCircle, AlertCircle } from "lucide-react";
 import api from "../../services/api";
+import { downloadDocument as fetchDocumentBlob } from "../../services/caseApi";
 import { getCaseChecklist } from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
@@ -399,13 +400,27 @@ export default function CaseworkerDocuments() {
     }
   };
 
-  const openViewDocument = (url) => {
-    setViewDocumentUrl(url);
+  const openViewDocument = async (doc) => {
     setViewDocumentOpen(true);
+    setViewDocumentUrl('');
+    try {
+      // Fetch through the authenticated API and preview via an object URL —
+      // pointing the iframe straight at the download endpoint made the
+      // browser save the file (attachment disposition) instead of previewing.
+      const res = await fetchDocumentBlob(doc.id);
+      const mimeType = res.headers?.["content-type"] || "application/octet-stream";
+      const blob = new Blob([res.data], { type: mimeType });
+      setViewDocumentUrl(URL.createObjectURL(blob));
+    } catch (error) {
+      console.error("Error loading document preview:", error);
+      setViewDocumentOpen(false);
+      showToast({ message: "Failed to load document preview.", variant: "danger" });
+    }
   };
 
   const closeViewDocument = () => {
     setViewDocumentOpen(false);
+    if (viewDocumentUrl) URL.revokeObjectURL(viewDocumentUrl);
     setViewDocumentUrl('');
   };
 
@@ -628,7 +643,7 @@ export default function CaseworkerDocuments() {
                       <div className="flex gap-2">
                         <button
                           type="button"
-                          onClick={() => openViewDocument(r.documentUrl)}
+                          onClick={() => openViewDocument(r)}
                           className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-black text-gray-600 hover:border-secondary/40"
                         >
                           View
@@ -746,7 +761,7 @@ export default function CaseworkerDocuments() {
                       <td className="py-3 px-4">
                         <button
                           type="button"
-                          onClick={() => openViewDocument(d.documentUrl)}
+                          onClick={() => openViewDocument(d)}
                           className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-black text-gray-600 hover:border-secondary/40"
                         >
                           View
@@ -996,8 +1011,8 @@ export default function CaseworkerDocuments() {
                   title="Document Viewer"
                 />
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-500">
-                  No document to display
+                <div className="flex items-center justify-center h-[600px] text-sm font-bold text-gray-500">
+                  Loading document…
                 </div>
               )}
             </div>

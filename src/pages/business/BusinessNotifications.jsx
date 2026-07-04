@@ -20,6 +20,9 @@ import {
 } from "../../services/notificationApi";
 import { formatDateLong } from "../../utils/datetime";
 import { resolveNotificationTarget } from "../../utils/notificationHelpers";
+import Pagination from "../../components/common/Pagination";
+
+const PAGE_SIZE = 10;
 
 const BusinessNotifications = () => {
   const navigate = useNavigate();
@@ -28,18 +31,22 @@ const BusinessNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [stats, setStats] = useState({ total: 0, unread: 0, read: 0 });
   const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: PAGE_SIZE, pages: 0 });
 
   useEffect(() => {
     fetchNotifications();
     fetchStats();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const fetchNotifications = async () => {
     setIsLoading(true);
     try {
-      const res = await getNotifications();
+      const res = await getNotifications({ page, limit: PAGE_SIZE });
       if (res.data?.status === "success") {
-        const mappedNotifications = (res.data.data.notifications || []).map(n => ({
+        const data = res.data.data || {};
+        const mappedNotifications = (data.notifications || []).map(n => ({
           id: n.id,
           type: n.type === 'error' ? 'alert' : n.type === 'warning' ? 'info' : n.type,
           title: n.title,
@@ -55,6 +62,14 @@ const BusinessNotifications = () => {
           actionUrl: n.actionUrl,
         }));
         setNotifications(mappedNotifications);
+
+        // Normalize the two response shapes: flat { total, page, totalPages }
+        // or nested { pagination } — same handling as AdminNotifications.
+        const p = data.pagination || {};
+        const total = p.total ?? data.total ?? 0;
+        const limit = p.limit ?? PAGE_SIZE;
+        const pages = p.pages ?? data.totalPages ?? (limit ? Math.ceil(total / limit) : 0);
+        setPagination({ total, page: p.page ?? data.page ?? page, limit, pages });
       }
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -287,6 +302,18 @@ const BusinessNotifications = () => {
           </motion.div>
         )}
       </motion.div>
+
+      {pagination.pages > 1 && (
+        <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+          <Pagination
+            page={pagination.page}
+            totalPages={pagination.pages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={setPage}
+          />
+        </div>
+      )}
     </div>
   );
 };

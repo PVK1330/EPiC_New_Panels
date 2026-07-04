@@ -150,6 +150,7 @@ const Payments = () => {
   const paid = paidFromApi;
   const balance = balanceFromApi;
   const balanceSettled = paymentsVisible && balance <= 0.02;
+  const invoices = Array.isArray(schedule?.invoices) ? schedule.invoices : [];
 
   const tab = useMemo(() => {
     return searchParams.get("tab") === "history" ? "history" : "summary";
@@ -221,6 +222,106 @@ const Payments = () => {
     }
   };
 
+  const INVOICE_STATUS_BADGE = {
+    completed: { label: "Paid", className: "bg-emerald-50 text-emerald-700" },
+    pending: { label: "Awaiting payment", className: "bg-amber-50 text-amber-700" },
+    failed: { label: "Failed", className: "bg-red-50 text-red-700" },
+    refunded: { label: "Refunded", className: "bg-gray-100 text-gray-600" },
+  };
+
+  const invoicesCard = invoices.length > 0 && (
+    <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-2xs">
+      <h2 className="text-base font-black text-secondary mb-4">Invoices</h2>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-0 text-left border-collapse">
+          <thead>
+            <tr className="border-b border-gray-100 text-xs font-bold text-gray-400">
+              <th className="pb-3 pr-4">Date</th>
+              <th className="pb-3 px-4">Invoice #</th>
+              <th className="pb-3 px-4">Description</th>
+              <th className="pb-3 px-4">Amount</th>
+              <th className="pb-3 px-4">Status</th>
+              <th className="pb-3 pl-4 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50 text-sm">
+            {invoices.map((inv) => {
+              const badge = INVOICE_STATUS_BADGE[inv.status] || {
+                label: inv.status || "—",
+                className: "bg-gray-100 text-gray-600",
+              };
+              return (
+                <tr key={inv.id} className="hover:bg-gray-50/50">
+                  <td className="py-3.5 pr-4 font-bold text-gray-900 whitespace-nowrap">
+                    {inv.date ? formatDateLong(inv.date, { month: "short" }) : "—"}
+                  </td>
+                  <td className="py-3.5 px-4 text-gray-700 whitespace-nowrap">{inv.invoiceNumber}</td>
+                  <td className="py-3.5 px-4 text-gray-700">
+                    {inv.description || "Case fees"}
+                    {inv.dueDate && (
+                      <span className="block text-xs text-gray-400 mt-0.5">
+                        Due {formatDateLong(inv.dueDate, { month: "short" })}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3.5 px-4 font-black text-secondary whitespace-nowrap">
+                    £{Number(inv.amount || 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="py-3.5 px-4">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                  </td>
+                  <td className="py-3.5 pl-4 text-right">
+                    {inv.status === "pending" && paymentsVisible && balance > 0.02 ? (
+                      <button
+                        type="button"
+                        onClick={handlePayClick}
+                        className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white shadow-xs"
+                      >
+                        Pay now
+                        <ArrowRight size={12} />
+                      </button>
+                    ) : inv.status === "completed" ? (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setPayError("");
+                          const result = await downloadInvoiceReceiptPdf({
+                            caseId,
+                            amount: Number(inv.amount || 0).toFixed(2),
+                            date: inv.date
+                              ? formatDateLong(inv.date, { month: "short" })
+                              : formatDateLong(new Date(), { month: "short" }),
+                            description: inv.description || `Invoice ${inv.invoiceNumber}`,
+                            isReceipt: true,
+                            candidateName: user
+                              ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+                              : "Client",
+                            platformName: platformName,
+                          });
+                          if (!result?.ok) {
+                            setPayError(result?.message || "Failed to download receipt");
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-secondary hover:underline"
+                      >
+                        <Download size={14} />
+                        <span>Receipt</span>
+                      </button>
+                    ) : (
+                      <span className="text-gray-300 text-xs">—</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-500 max-w-5xl mx-auto">
       {/* ── Friendly Page Header ────────────────────────────────────────────── */}
@@ -249,16 +350,21 @@ const Payments = () => {
         <p className="text-sm text-red-600 font-bold">{payError}</p>
       )}
       {!scheduleLoading && !paymentsVisible && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex gap-4">
-          <Lock className="text-amber-700 shrink-0" size={28} />
-          <div>
-            <h3 className="text-base font-black text-amber-950">Payments not available yet</h3>
-            <p className="text-sm text-amber-800 mt-1 leading-relaxed">
-              {schedule?.message ||
-                "Your payment schedule will appear here after your caseworker proposes fees and an administrator approves your Client Care Letter."}
-            </p>
+        <>
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex gap-4">
+            <Lock className="text-amber-700 shrink-0" size={28} />
+            <div>
+              <h3 className="text-base font-black text-amber-950">Payments not available yet</h3>
+              <p className="text-sm text-amber-800 mt-1 leading-relaxed">
+                {schedule?.message ||
+                  "Your payment schedule will appear here after your caseworker proposes fees and an administrator approves your Client Care Letter."}
+              </p>
+            </div>
           </div>
-        </div>
+          {/* Invoices already issued for this case are still shown even before
+              the payment schedule itself is released. */}
+          {invoicesCard}
+        </>
       )}
 
       {!scheduleLoading && paymentsVisible && (
@@ -447,7 +553,9 @@ const Payments = () => {
 
       {/* ── History Tab Content ─────────────────────────────────────────────── */}
       {tab === "history" && (
-        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-2xs animate-in fade-in duration-300">
+        <div className="space-y-6 animate-in fade-in duration-300">
+        {invoicesCard}
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-2xs">
           <h2 className="text-base font-black text-secondary mb-4">Payment Receipts</h2>
           <div className="overflow-x-auto">
             <table className="w-full min-w-0 text-left border-collapse">
@@ -512,6 +620,7 @@ const Payments = () => {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
 

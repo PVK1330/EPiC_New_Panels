@@ -38,7 +38,10 @@ import { formatDateLong } from "../../utils/datetime";
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
 import { AVATAR_COLORS, initialsFrom, fullName } from "./adminHelpers";
 
-const ROLE_OPTIONS = [{ value: "2", label: "Caseworker" }];
+const ROLE_OPTIONS = [
+  { value: "", label: "Select role", disabled: true },
+  { value: "2", label: "Caseworker" },
+];
 
 const STATUS_FILTER_OPTIONS = [
   { value: "All", label: "All" },
@@ -49,6 +52,7 @@ const STATUS_FILTER_OPTIONS = [
 ];
 
 const EDIT_STATUS_OPTIONS = [
+  { value: "", label: "Select status", disabled: true },
   { value: "active", label: "Active" },
   { value: "high load", label: "High Load" },
   { value: "on leave", label: "On Leave" },
@@ -141,7 +145,7 @@ export default function AdminCaseworkers() {
   // (the raw `departments` list is still used by the table filter, which has
   // its own "All Departments" option).
   const departmentOptions = [
-    { value: "", label: "Select department" },
+    { value: "", label: "Select department", disabled: true },
     ...departments,
   ];
 
@@ -858,6 +862,7 @@ export default function AdminCaseworkers() {
               name="first_name"
               value={createForm.first_name}
               onChange={handleCreateChange}
+              placeholder="Enter first name"
               required
               error={errors.first_name}
             />
@@ -866,6 +871,7 @@ export default function AdminCaseworkers() {
               name="last_name"
               value={createForm.last_name}
               onChange={handleCreateChange}
+              placeholder="Enter last name"
               required
               error={errors.last_name}
             />
@@ -875,6 +881,7 @@ export default function AdminCaseworkers() {
               type="email"
               value={createForm.email}
               onChange={handleCreateChange}
+              placeholder="e.g. name@company.com"
               required
               error={errors.email}
             />
@@ -886,6 +893,7 @@ export default function AdminCaseworkers() {
               dialName="country_code"
               nationalName="mobile"
               onChange={handleCreateChange}
+              placeholder="e.g. 7911 123456"
               required
               error={errors.mobile}
               className="sm:col-span-2"
@@ -916,6 +924,7 @@ export default function AdminCaseworkers() {
               name="first_name"
               value={editForm.first_name}
               onChange={handleEditChange}
+              placeholder="Enter first name"
               required
               error={errors.first_name}
             />
@@ -924,6 +933,7 @@ export default function AdminCaseworkers() {
               name="last_name"
               value={editForm.last_name}
               onChange={handleEditChange}
+              placeholder="Enter last name"
               required
               error={errors.last_name}
             />
@@ -933,6 +943,7 @@ export default function AdminCaseworkers() {
               type="email"
               value={editForm.email}
               onChange={handleEditChange}
+              placeholder="e.g. name@company.com"
               required
               error={errors.email}
             />
@@ -944,6 +955,7 @@ export default function AdminCaseworkers() {
               dialName="country_code"
               nationalName="mobile"
               onChange={handleEditChange}
+              placeholder="e.g. 7911 123456"
               required
               error={errors.mobile}
               className="sm:col-span-2"

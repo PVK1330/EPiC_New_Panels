@@ -228,4 +228,18 @@ button{
     max-height: none !important;
     overflow: visible !important;
   }
+  /* `position: fixed` ancestors pin printed output to the first page's
+     viewport box in Chrome, so anything longer than one page was cut off
+     (seen on caseworker → cases → "Print / PDF application", where the print
+     modal is nested inside the case-detail modal — two fixed overlays deep).
+     Demote the overlay chain to absolute while printing so the application
+     flows across pages from the top of the sheet. */
+  .app-modal-root {
+    position: absolute !important;
+    height: auto !important;
+  }
+  .app-modal-root > .relative {
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
 }

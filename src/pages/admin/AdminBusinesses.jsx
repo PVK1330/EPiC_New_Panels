@@ -70,6 +70,7 @@ const STATUS_FILTER_OPTIONS = [
 ];
 
 const EDIT_STATUS_OPTIONS = [
+  { value: "", label: "Select status", disabled: true },
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
 ];
@@ -647,7 +648,7 @@ export default function AdminBusinesses() {
           <table className="w-full min-w-[600px]">
             <thead>
               <tr className="bg-gray-50 text-left">
-                {["Company", "User Name", "Status", "Licence Status", "Licence Expiry", "Active Cases", "Sponsored Workers", "Risk Score", "Outstanding", "Actions"].map(
+                {["Company", "User Name", "Licence Status", "Licence Expiry", "Active Cases", "Sponsored Workers", "Risk Score", "Outstanding", "Status", "Actions"].map(
                   (h) => (
                     <th
                       key={h}
@@ -710,9 +711,6 @@ export default function AdminBusinesses() {
                         </div>
                       </td>
                       <td className="px-4 py-3.5 whitespace-nowrap">
-                        <StatusBadge status={formatStatusLabel(user.status)} onClick={() => handleToggle(user)} />
-                      </td>
-                      <td className="px-4 py-3.5 whitespace-nowrap">
                         <span
                           className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
                             licenceStatus === 'Active' ? 'bg-green-100 text-green-700' :
@@ -744,6 +742,9 @@ export default function AdminBusinesses() {
                       </td>
                       <td className="px-4 py-3.5 text-sm font-mono font-bold text-red-500 whitespace-nowrap">
                         {outstanding}
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <StatusBadge status={formatStatusLabel(user.status)} onClick={() => handleToggle(user)} />
                       </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1">
@@ -861,7 +862,7 @@ export default function AdminBusinesses() {
               name="first_name"
               value={createForm.first_name}
               onChange={handleCreateChange}
-              placeholder="John"
+              placeholder="Enter first name"
               required
               error={errors.first_name}
             />
@@ -870,7 +871,7 @@ export default function AdminBusinesses() {
               name="last_name"
               value={createForm.last_name}
               onChange={handleCreateChange}
-              placeholder="Smith"
+              placeholder="Enter last name"
               required
               error={errors.last_name}
             />
@@ -880,7 +881,7 @@ export default function AdminBusinesses() {
               type="email"
               value={createForm.email}
               onChange={handleCreateChange}
-              placeholder="name@company.com"
+              placeholder="e.g. name@company.com"
               required
               error={errors.email}
               className="sm:col-span-2"
@@ -893,6 +894,7 @@ export default function AdminBusinesses() {
               dialName="country_code"
               nationalName="mobile"
               onChange={handleCreateChange}
+              placeholder="e.g. 7911 123456"
               required
               error={errors.mobile}
               className="sm:col-span-2"
@@ -902,7 +904,7 @@ export default function AdminBusinesses() {
               name="companyName"
               value={createForm.companyName}
               onChange={handleCreateChange}
-              placeholder="TechNova Ltd"
+              placeholder="e.g. TechNova Ltd"
               required
               error={errors.companyName}
               className="sm:col-span-2"
@@ -921,7 +923,7 @@ export default function AdminBusinesses() {
               name="first_name"
               value={editForm.first_name}
               onChange={handleEditChange}
-              placeholder="John"
+              placeholder="Enter first name"
               required
               error={errors.first_name}
             />
@@ -930,7 +932,7 @@ export default function AdminBusinesses() {
               name="last_name"
               value={editForm.last_name}
               onChange={handleEditChange}
-              placeholder="Smith"
+              placeholder="Enter last name"
               required
               error={errors.last_name}
             />
@@ -940,7 +942,7 @@ export default function AdminBusinesses() {
               type="email"
               value={editForm.email}
               onChange={handleEditChange}
-              placeholder="name@company.com"
+              placeholder="e.g. name@company.com"
               required
               error={errors.email}
               className="sm:col-span-2"
@@ -953,6 +955,7 @@ export default function AdminBusinesses() {
               dialName="country_code"
               nationalName="mobile"
               onChange={handleEditChange}
+              placeholder="e.g. 7911 123456"
               required
               error={errors.mobile}
               className="sm:col-span-2"
@@ -962,6 +965,7 @@ export default function AdminBusinesses() {
               name="companyName"
               value={editForm.companyName || ""}
               onChange={handleEditChange}
+              placeholder="e.g. TechNova Ltd"
               required
               error={errors.companyName}
               className="sm:col-span-2"
@@ -1268,6 +1272,7 @@ export default function AdminBusinesses() {
             type="password"
             value={resetForm.new_password}
             onChange={handleResetChange}
+            placeholder="Enter new password"
             required
             error={resetErrors.new_password}
           />
@@ -1277,6 +1282,7 @@ export default function AdminBusinesses() {
             type="password"
             value={resetForm.confirm_password}
             onChange={handleResetChange}
+            placeholder="Re-enter new password"
             required
             error={resetErrors.confirm_password}
           />

@@ -29,6 +29,7 @@ import {
 import { triggerDownload } from "../../services/documentApi";
 import LicenceStages from "../../components/licence/LicenceStages";
 import IntakeDocumentChecklist from "../../components/licence/IntakeDocumentChecklist";
+import DatePicker from "../../components/DatePicker";
 import { useToast } from "../../context/ToastContext";
 import { formatDate } from "../../utils/datetime";
 
@@ -1547,11 +1548,12 @@ const CaseworkerLicenceApplications = () => {
                             <Calendar size={11} /> Submission Date <span className="text-red-400">*</span>
                           </span>
                         </label>
-                        <input
-                          type="date"
+                        {/* Shared DatePicker (same as other forms) — value stays "YYYY-MM-DD". */}
+                        <DatePicker
+                          name="submissionDate"
                           value={subForm.submissionDate}
                           onChange={(e) => setSubForm((f) => ({ ...f, submissionDate: e.target.value }))}
-                          className={inp}
+                          placeholder="Select submission date"
                         />
                       </div>
                       <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
@@ -1635,11 +1637,12 @@ const CaseworkerLicenceApplications = () => {
                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">
                           Expiry Date <span className="text-gray-300 normal-case font-bold">(optional)</span>
                         </label>
-                        <input
-                          type="date"
+                        {/* Shared DatePicker (same as other forms) — value stays "YYYY-MM-DD". */}
+                        <DatePicker
+                          name="expiryDate"
                           value={grantForm.expiryDate}
                           onChange={(e) => setGrantForm((f) => ({ ...f, expiryDate: e.target.value }))}
-                          className={inp}
+                          placeholder="Select expiry date"
                         />
                       </div>
                       <div>

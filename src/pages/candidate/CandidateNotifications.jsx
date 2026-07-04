@@ -6,21 +6,27 @@ import {
 } from "../../services/notificationApi";
 import { formatDateLong } from "../../utils/datetime";
 
+const PAGE_SIZE = 10;
+
 export default function CandidateNotifications() {
   const [filter, setFilter] = useState("all");
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: PAGE_SIZE, pages: 0 });
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const fetchNotifications = async () => {
     setIsLoading(true);
     try {
-      const res = await getNotifications();
+      const res = await getNotifications({ page, limit: PAGE_SIZE });
       if (res.data?.status === "success") {
-        const mappedNotifications = (res.data.data.notifications || []).map(n => ({
+        const data = res.data.data || {};
+        const mappedNotifications = (data.notifications || []).map(n => ({
           id: n.id,
           icon: getIconForType(n.type),
           type: n.type === 'error' ? 'alert' : n.type === 'warning' ? 'warning' : n.type,
@@ -32,6 +38,14 @@ export default function CandidateNotifications() {
           metadata: n.metadata,
         }));
         setNotifications(mappedNotifications);
+
+        // Normalize the two response shapes: flat { total, page, totalPages }
+        // or nested { pagination } — same handling as AdminNotifications.
+        const p = data.pagination || {};
+        const total = p.total ?? data.total ?? 0;
+        const limit = p.limit ?? PAGE_SIZE;
+        const pages = p.pages ?? data.totalPages ?? (limit ? Math.ceil(total / limit) : 0);
+        setPagination({ total, page: p.page ?? data.page ?? page, limit, pages });
       }
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -94,6 +108,8 @@ export default function CandidateNotifications() {
       filter={filter}
       onFilterChange={setFilter}
       onMarkRead={markRead}
+      pagination={pagination}
+      onPageChange={setPage}
     />
   );
 }

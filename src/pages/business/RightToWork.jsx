@@ -16,6 +16,7 @@ import {
   fetchRtwDocument,
 } from "../../services/rightToWorkApi";
 import { getSponsoredWorkers } from "../../services/sponsoredWorkerApi";
+import DatePicker from "../../components/DatePicker";
 
 const STATUS_COLOURS = {
   valid: "bg-emerald-50 text-emerald-700",
@@ -246,13 +247,12 @@ export default function RightToWork() {
               {/* Initial check date */}
               <div>
                 <label className="block text-xs font-black text-secondary mb-1">Initial Check Date <span className="text-red-500">*</span></label>
-                <input
-                  type="date"
+                <DatePicker
                   name="initialCheckDate"
                   value={form.initialCheckDate}
                   onChange={handleField}
+                  placeholder="Select initial check date"
                   required
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
@@ -272,12 +272,11 @@ export default function RightToWork() {
               {/* Follow-up date */}
               <div>
                 <label className="block text-xs font-black text-secondary mb-1">Follow-up Check Date</label>
-                <input
-                  type="date"
+                <DatePicker
                   name="followUpCheckDate"
                   value={form.followUpCheckDate}
                   onChange={handleField}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  placeholder="Select follow-up check date"
                 />
               </div>
 

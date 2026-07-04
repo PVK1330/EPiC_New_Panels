@@ -1,6 +1,7 @@
 import { Bell, Check, Filter, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import Pagination from "../common/Pagination";
 
 /**
  * Reusable notifications list UI for all portals.
@@ -18,6 +19,10 @@ const NotificationsPanel = ({
   onDelete,
   showDelete = false,
   emptyText = "No notifications at the moment",
+  // Optional server-side paging: { page, pages, total, limit } + onPageChange.
+  // When omitted the panel behaves exactly as before (no pager rendered).
+  pagination = null,
+  onPageChange,
 }) => {
   const normalized = useMemo(
     () =>
@@ -175,6 +180,18 @@ const NotificationsPanel = ({
             </div>
           )}
         </div>
+
+        {pagination && onPageChange && pagination.pages > 1 && (
+          <div className="mt-4">
+            <Pagination
+              page={pagination.page}
+              totalPages={pagination.pages}
+              total={pagination.total}
+              limit={pagination.limit}
+              onPageChange={onPageChange}
+            />
+          </div>
+        )}
       </div>
 
       {/* Notification Details Modal */}

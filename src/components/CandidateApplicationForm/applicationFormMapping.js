@@ -65,6 +65,21 @@ export function pruneCustomResponsesToDefinitions(application, definitions) {
 }
 
 /**
+ * Alternate contact number is persisted as ONE string. When the form still
+ * holds the split fields (ISO code + national digits), prefix the dial code
+ * (e.g. "+44 7911123456"); already-combined or legacy values pass through.
+ */
+function combineAltContactNumber(application) {
+  const num = String(application.contactNumber2 || "").trim();
+  if (!num || num.startsWith("+") || !application.contactCountryCode2) return num;
+  try {
+    return `+${getCountryCallingCode(application.contactCountryCode2)} ${num}`;
+  } catch {
+    return num;
+  }
+}
+
+/**
  * Build CRM candidate row + full application snapshot from application form payload.
  * Returns separate objects for user data and application data for child table structure.
  */
@@ -144,7 +159,7 @@ export function mapApplicationToCandidateRow(application, overrides = {}) {
     gender: application.gender || null,
     relationshipStatus: application.relationshipStatus || null,
     address: application.address || null,
-    contactNumber2: application.contactNumber2 || null,
+    contactNumber2: combineAltContactNumber(application) || null,
     previousFullAddress: application.previousFullAddress || null,
     previousAddress: application.previousAddress || null,
     startDate: application.startDate || null,
@@ -255,6 +270,22 @@ export function candidateRowToApplicationForm(c) {
     }
     const contactNumber = c.mobile || c.phone || "";
 
+    // Alternate contact number is stored as one string, optionally prefixed
+    // with its dial code (e.g. "+44 7911123456") — split it back into the ISO
+    // country + national digits used by the phone input.
+    let contactCountryCode2 = "GB";
+    let contactNumber2 = String(app.contactNumber2 || "");
+    const altMatch = contactNumber2.match(/^(\+\d{1,4})\s*(.*)$/);
+    if (altMatch) {
+      try {
+        const matches = getCountriesForCallingCode(altMatch[1].replace(/^\+/, ""));
+        if (matches && matches.length > 0) contactCountryCode2 = matches[0];
+      } catch {
+        // unknown dial code — keep default
+      }
+      contactNumber2 = altMatch[2].trim();
+    }
+
     return {
       ...base,
       // Core fields from user table
@@ -269,7 +300,8 @@ export function candidateRowToApplicationForm(c) {
       gender: app.gender || "",
       relationshipStatus: app.relationshipStatus || "",
       address: app.address || "",
-      contactNumber2: app.contactNumber2 || "",
+      contactCountryCode2,
+      contactNumber2,
       previousFullAddress: app.previousFullAddress || "",
       previousAddress: app.previousAddress || "",
       startDate: formatDateForInput(app.startDate),

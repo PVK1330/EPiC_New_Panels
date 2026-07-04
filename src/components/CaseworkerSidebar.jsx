@@ -164,7 +164,7 @@ const CaseworkerSidebar = ({ isOpen, onClose }) => {
                   {fullName}
                 </p>
                 <p className="text-[9px] font-black text-primary tracking-wider">
-                  Case Officer
+                  Caseworker
                 </p>
               </div>
             </div>

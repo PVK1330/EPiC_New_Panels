@@ -99,7 +99,7 @@ const DroppableColumn = ({ stage, children }) => {
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 p-2.5 space-y-2.5 h-[600px] overflow-y-auto rounded-b-2xl transition-colors duration-150 ${isOver ? "bg-blue-50/60" : ""}`}
+      className={`flex-1 min-h-0 overflow-y-auto overscroll-contain p-2.5 space-y-2.5 rounded-b-2xl transition-colors duration-150 ${isOver ? "bg-blue-50/60" : ""}`}
     >
       {children}
     </div>
@@ -307,7 +307,7 @@ export default function Pipeline() {
       onDragEnd={handleDragEnd}
     >
       <motion.div
-        className="pb-10 min-h-[calc(100vh-8rem)]"
+        className="flex flex-col h-[calc(100vh-8rem)] max-h-[calc(100vh-8rem)] min-h-0 pb-6"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
@@ -325,7 +325,7 @@ export default function Pipeline() {
           </div>
         ) : (
           <>
-            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-4 shrink-0">
               <div className="flex items-start gap-3">
                 <div className="mt-1 p-2.5 rounded-2xl bg-white border border-gray-100 shadow-sm">
                   <Briefcase className="text-primary" size={22} />
@@ -358,7 +358,7 @@ export default function Pipeline() {
             </div>
 
             <motion.div
-              className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1 [scrollbar-width:thin]"
+              className="flex flex-1 min-h-0 gap-4 overflow-x-auto overflow-y-hidden pb-2 -mx-1 px-1 [scrollbar-width:thin]"
               variants={container}
               initial="hidden"
               animate="visible"
@@ -367,7 +367,7 @@ export default function Pipeline() {
                 <motion.section
                   key={stage.id}
                   variants={colVariant}
-                  className={`shrink-0 w-[min(100%,240px)] sm:w-56 flex flex-col rounded-2xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/90 shadow-sm overflow-hidden border-t-4 ${stage.accent} ${stage.header}`}
+                  className={`shrink-0 w-[min(100%,240px)] sm:w-56 h-full max-h-full min-h-0 flex flex-col rounded-2xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/90 shadow-sm overflow-hidden border-t-4 ${stage.accent} ${stage.header}`}
                 >
                   <header className="px-3.5 pt-3.5 pb-2 flex items-center justify-between gap-2 border-b border-gray-100/80 bg-white/60 backdrop-blur-sm">
                     <div className="flex items-center gap-2 min-w-0">

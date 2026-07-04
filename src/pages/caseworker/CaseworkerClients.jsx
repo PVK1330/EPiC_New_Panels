@@ -150,6 +150,9 @@ const CaseworkerClients = () => {
   const [selectedSponsor, setSelectedSponsor] = useState(null);
   // Full case detail (documents / timeline / communications) for the open candidate.
   const [candidateDetails, setCandidateDetails] = useState(null);
+  // Direct message thread (Messages module) with the open candidate, merged into
+  // the Communications tab alongside logged case communications and notes.
+  const [candidateMessages, setCandidateMessages] = useState([]);
   const [loadingCandidateDetails, setLoadingCandidateDetails] = useState(false);
   const [downloadingDocId, setDownloadingDocId] = useState(null);
 
@@ -172,24 +175,33 @@ const CaseworkerClients = () => {
     setViewModal({ type: null, data: null });
     setSelectedSponsor(null);
     setCandidateDetails(null);
+    setCandidateMessages([]);
   };
 
   // Pull the full case record (documents, timeline, communications, notes) for
-  // the selected candidate's primary case so the modal tabs show real data.
+  // the selected candidate's primary case, plus the direct message thread with
+  // the candidate, so the modal tabs show real data. Each source is best-effort:
+  // a failure in one must not blank the other.
   const fetchCandidateDetails = async (candidate) => {
     const caseRef = candidate?.primaryCase?.caseId || candidate?.primaryCase?.id;
-    if (!caseRef) {
-      setCandidateDetails(null);
-      return;
-    }
     try {
       setLoadingCandidateDetails(true);
       setCandidateDetails(null);
-      const response = await getCaseworkerCaseDetails(caseRef);
-      setCandidateDetails(response?.data?.data || null);
-    } catch (error) {
-      console.error("Error fetching candidate case details:", error);
-      setCandidateDetails(null);
+      setCandidateMessages([]);
+      const [detailsRes, messagesRes] = await Promise.allSettled([
+        caseRef ? getCaseworkerCaseDetails(caseRef) : Promise.resolve(null),
+        candidate?.id ? api.get(`/api/messages/${candidate.id}`) : Promise.resolve(null),
+      ]);
+      if (detailsRes.status === "fulfilled") {
+        setCandidateDetails(detailsRes.value?.data?.data || null);
+      } else {
+        console.error("Error fetching candidate case details:", detailsRes.reason);
+      }
+      if (messagesRes.status === "fulfilled") {
+        setCandidateMessages(messagesRes.value?.data?.data?.messages || []);
+      } else {
+        console.error("Error fetching candidate messages:", messagesRes.reason);
+      }
     } finally {
       setLoadingCandidateDetails(false);
     }
@@ -665,8 +677,9 @@ const CaseworkerClients = () => {
                       <Loader2 size={20} className="animate-spin" />
                     </div>
                   ) : (() => {
-                    // Merge logged communications and case notes into one date-sorted
-                    // history so the tab is useful even when only one source exists.
+                    // Merge logged communications, case notes and the direct message
+                    // thread into one date-sorted history so the tab is useful even
+                    // when only one source exists.
                     const comms = (candidateDetails?.communications || []).map((c) => ({
                       id: `comm-${c.id}`,
                       date: c.sentDate || c.created_at,
@@ -681,12 +694,37 @@ const CaseworkerClients = () => {
                       title: n.title || (n.author ? `Note by ${n.author.first_name || ""} ${n.author.last_name || ""}`.trim() : "Case note"),
                       body: n.content,
                     }));
-                    const history = [...comms, ...notes].sort(
+                    const messages = (candidateMessages || []).map((m) => {
+                      const inbound = m.senderId === viewModal.data.id;
+                      const senderName = `${m.sender?.first_name || ""} ${m.sender?.last_name || ""}`.trim();
+                      let body = m.content;
+                      if (m.messageType === "file") {
+                        // File messages store JSON metadata in content.
+                        try {
+                          const meta = JSON.parse(m.content);
+                          body = [meta?.content, meta?.originalName ? `Attachment: ${meta.originalName}` : "Attachment"]
+                            .filter(Boolean)
+                            .join(" · ");
+                        } catch {
+                          body = "Attachment";
+                        }
+                      }
+                      return {
+                        id: `msg-${m.id}`,
+                        date: m.createdAt || m.created_at,
+                        channel: "message",
+                        title: inbound
+                          ? `Message from ${senderName || viewModal.data.name}`
+                          : `Message to ${viewModal.data.name}${senderName ? ` from ${senderName}` : ""}`,
+                        body,
+                      };
+                    });
+                    const history = [...comms, ...notes, ...messages].sort(
                       (a, b) => new Date(b.date || 0) - new Date(a.date || 0),
                     );
 
                     if (history.length === 0) {
-                      return <div className="text-sm text-gray-500 py-8 text-center">No communications or notes recorded yet.</div>;
+                      return <div className="text-sm text-gray-500 py-8 text-center">No communications, messages or notes recorded yet.</div>;
                     }
 
                     const channelClass = (channel) => {
@@ -694,6 +732,7 @@ const CaseworkerClients = () => {
                       if (c.includes("email")) return "bg-blue-100 text-blue-700";
                       if (c.includes("phone")) return "bg-green-100 text-green-700";
                       if (c.includes("sms")) return "bg-purple-100 text-purple-700";
+                      if (c === "message") return "bg-teal-50 text-teal-700";
                       return "bg-gray-100 text-gray-700";
                     };
 
