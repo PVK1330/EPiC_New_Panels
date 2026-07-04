@@ -23,12 +23,18 @@ const NotificationsPanel = ({
   // When omitted the panel behaves exactly as before (no pager rendered).
   pagination = null,
   onPageChange,
+  // Optional click interceptor: return true when the click was handled (e.g.
+  // navigated to the related page) to skip opening the details modal.
+  onItemClick,
 }) => {
   const normalized = useMemo(
     () =>
       notifications.map((n) => {
         const unread = typeof n.unread === "boolean" ? n.unread : !n.read;
         return {
+          // Keep routing fields (entityType/entityId/actionType/category/
+          // actionUrl…) so onItemClick can resolve a navigation target.
+          ...n,
           id: n.id,
           type: n.type ?? "info",
           icon: n.icon,
@@ -125,6 +131,7 @@ const NotificationsPanel = ({
                 className={`border rounded-xl p-4 flex items-start gap-4 transition-colors cursor-pointer ${typeStyles(n.type)} ${n.unread ? "border-l-[3px] border-l-secondary" : ""}`}
                 onClick={() => {
                   onMarkRead?.(n.id);
+                  if (onItemClick?.(n)) return;
                   setSelectedNotification(n);
                 }}
                 role="button"
@@ -133,6 +140,7 @@ const NotificationsPanel = ({
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     onMarkRead?.(n.id);
+                    if (onItemClick?.(n)) return;
                     setSelectedNotification(n);
                   }
                 }}

@@ -1,14 +1,19 @@
 import { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import NotificationsPanel from "../../components/notifications/NotificationsPanel";
 import {
   getNotifications,
   markNotificationAsRead,
 } from "../../services/notificationApi";
 import { formatDateLong } from "../../utils/datetime";
+import { resolveNotificationTarget } from "../../utils/notificationHelpers";
 
 const PAGE_SIZE = 10;
 
 export default function CandidateNotifications() {
+  const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
   const [filter, setFilter] = useState("all");
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,6 +41,12 @@ export default function CandidateNotifications() {
           unread: !n.isRead,
           priority: n.priority,
           metadata: n.metadata,
+          // Routing fields — required by resolveNotificationTarget
+          entityType: n.entityType,
+          entityId: n.entityId,
+          actionType: n.actionType,
+          category: n.category,
+          actionUrl: n.actionUrl,
         }));
         setNotifications(mappedNotifications);
 
@@ -100,6 +111,17 @@ export default function CandidateNotifications() {
     }
   };
 
+  // Navigate to the related page when the notification resolves to one;
+  // returning false falls back to the panel's details modal.
+  const handleItemClick = (n) => {
+    const target = resolveNotificationTarget(n, user);
+    if (target?.path) {
+      navigate(target.path, target.state ? { state: target.state } : undefined);
+      return true;
+    }
+    return false;
+  };
+
   return (
     <NotificationsPanel
       title="Notifications"
@@ -108,6 +130,7 @@ export default function CandidateNotifications() {
       filter={filter}
       onFilterChange={setFilter}
       onMarkRead={markRead}
+      onItemClick={handleItemClick}
       pagination={pagination}
       onPageChange={setPage}
     />
