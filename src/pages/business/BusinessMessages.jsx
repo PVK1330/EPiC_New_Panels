@@ -168,7 +168,7 @@ const BusinessMessages = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-0 h-[calc(100dvh-96px)] md:h-[calc(100vh-128px)] gap-3 sm:gap-4 w-full">
+    <div className="flex flex-col min-h-0 h-full gap-3 sm:gap-4 w-full">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-2 shrink-0 min-w-0">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-black text-secondary tracking-tight">

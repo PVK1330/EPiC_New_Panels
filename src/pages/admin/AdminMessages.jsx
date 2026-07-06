@@ -168,7 +168,7 @@ export default function AdminMessages() {
 
   return (
     <motion.div
-      className="flex flex-col min-h-0 h-[calc(100dvh-96px)] md:h-[calc(100vh-128px)] gap-3 sm:gap-4 w-full"
+      className="flex flex-col min-h-0 h-full gap-3 sm:gap-4 w-full"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}

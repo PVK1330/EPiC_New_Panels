@@ -540,7 +540,7 @@ export default function AdminNotifications() {
       </motion.div>
 
       <motion.div
-        className="grid grid-cols-2 md:grid-cols-4 gap-3"
+        className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-4 gap-3"
         variants={containerVariants}
         initial="hidden"
         animate="visible"

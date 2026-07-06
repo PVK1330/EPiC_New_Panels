@@ -248,7 +248,7 @@ const NotificationList = ({ showUnreadOnly = false, onClose = null }) => {
       )}
 
       {/* Notifications */}
-      <div className={isDropdown ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-96 overflow-y-auto'}>
+      <div className={isDropdown ? 'flex-1 min-h-0 overflow-y-auto' : ''}>
         {filteredNotifications.length === 0 ? (
           <div className="p-8 text-center">
             <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
