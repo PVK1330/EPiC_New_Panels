@@ -152,7 +152,7 @@ export default function Tasks() {
       try {
         const response = await api.get("/api/cases/dropdown");
         if (response.data.status === "success") {
-          const options = response.data.data.map(c => ({
+          const options = (response.data?.data || []).map(c => ({
             id: c.id,
             caseId: c.caseId || `#C-${c.id}`,
             candidate: c.candidateName || "Unknown"

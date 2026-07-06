@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   RiNotification3Line,
@@ -7,6 +8,8 @@ import {
   RiCloseLine,
   RiCheckDoubleLine,
   RiArrowRightSLine,
+  RiVolumeUpLine,
+  RiVolumeMuteLine,
 } from "react-icons/ri";
 import {
   fetchPlatformNotifications,
@@ -15,6 +18,11 @@ import {
   markAllPlatformNotificationsRead,
 } from "../../services/superadminNotification.service";
 import { formatDateLong } from "../../utils/datetime";
+import {
+  playNotificationSound,
+  useNotificationSoundEnabled,
+  setNotificationSoundEnabled,
+} from "../../utils/notificationSound";
 
 const TYPE_DOT = {
   success: "bg-green-500",
@@ -43,11 +51,27 @@ const PlatformNotificationDropdown = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
+  const soundEnabled = useNotificationSoundEnabled();
+
+  // This panel has no socket — new notifications are detected by the 30s count
+  // poll. Mirror the displayed count in a ref (so local mark-read decrements are
+  // accounted for) and chime only when a poll comes back HIGHER than it.
+  const unreadCountRef = useRef(0);
+  const countLoadedOnceRef = useRef(false);
+  useEffect(() => {
+    unreadCountRef.current = unreadCount;
+  }, [unreadCount]);
 
   const loadUnreadCount = useCallback(async () => {
     try {
       const res = await fetchPlatformUnreadCount();
-      setUnreadCount(res.data?.data?.unreadCount ?? res.data?.unreadCount ?? 0);
+      const count = res.data?.data?.unreadCount ?? res.data?.unreadCount ?? 0;
+      // No sound for the backlog shown on first load — only for new arrivals.
+      if (countLoadedOnceRef.current && count > unreadCountRef.current) {
+        playNotificationSound();
+      }
+      countLoadedOnceRef.current = true;
+      setUnreadCount(count);
     } catch {
       /* silent */
     }
@@ -94,7 +118,7 @@ const PlatformNotificationDropdown = () => {
       );
       setUnreadCount((c) => Math.max(0, c - 1));
     } catch {
-      /* silent */
+      toast.error("Failed to mark notification as read");
     }
   };
 
@@ -103,8 +127,13 @@ const PlatformNotificationDropdown = () => {
       await markAllPlatformNotificationsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
+      // Re-sync from the server so the badge reflects the true DB state rather
+      // than only the optimistic update.
+      loadUnreadCount();
+      loadNotifications();
     } catch {
-      /* silent */
+      // A silent catch here made a failed request look like a dead button.
+      toast.error("Failed to mark all notifications as read");
     }
   };
 
@@ -148,6 +177,13 @@ const PlatformNotificationDropdown = () => {
                 )}
               </div>
               <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setNotificationSoundEnabled(!soundEnabled)}
+                  className="p-1.5 text-gray-400 hover:text-primary rounded transition-colors"
+                  title={soundEnabled ? "Notification sound on — click to mute" : "Notification sound off — click to unmute"}
+                >
+                  {soundEnabled ? <RiVolumeUpLine size={16} /> : <RiVolumeMuteLine size={16} />}
+                </button>
                 {unreadCount > 0 && (
                   <button
                     onClick={handleMarkAllRead}

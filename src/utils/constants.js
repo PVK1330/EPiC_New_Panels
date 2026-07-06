@@ -90,11 +90,33 @@ export function isValidEmail(value) {
   return isEmail(String(value || "").trim());
 }
 
-/** Password: minimum 8 characters */
+/**
+ * Password policy — mirrors the backend strongPasswordSchema
+ * (common.validation.js): 12+ chars with upper, lower, digit and special.
+ */
 export const PASSWORD_VALIDATION = {
-  minLength: 8,
-  message: "Password must be at least 8 characters",
+  minLength: 12,
+  message:
+    "Password must be at least 12 characters and include uppercase, lowercase, a number and a special character",
 };
+
+/**
+ * Validate a password against the app's strong policy (kept in lock-step with
+ * the backend strongPasswordSchema). Returns null when valid, else the first
+ * user-facing message — so a weak password is caught client-side with the same
+ * wording the server would return.
+ * @param {string} password
+ * @returns {string|null}
+ */
+export function validatePasswordStrength(password) {
+  const value = String(password || "");
+  if (value.length < 12) return "Password must be at least 12 characters";
+  if (!/[a-z]/.test(value)) return "Password must contain a lowercase letter";
+  if (!/[A-Z]/.test(value)) return "Password must contain an uppercase letter";
+  if (!/[0-9]/.test(value)) return "Password must contain a number";
+  if (!/[^A-Za-z0-9]/.test(value)) return "Password must contain a special character";
+  return null;
+}
 
 export const DOB_VALIDATION = {
   minAgeYears: 16,

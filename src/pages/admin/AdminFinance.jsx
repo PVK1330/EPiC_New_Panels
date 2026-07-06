@@ -85,6 +85,7 @@ export default function AdminFinance() {
   const [transactions, setTransactions] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [usingMockData, setUsingMockData] = useState(false);
+  const [selectedTxn, setSelectedTxn] = useState(null);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -354,7 +355,9 @@ export default function AdminFinance() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {transactions.map(({ id, client, caseId, amount, type, status, date }, index) => (
+              {transactions.map((txn, index) => {
+                const { id, client, caseId, amount, type, status, date } = txn;
+                return (
                 <motion.tr
                   key={id}
                   className="hover:bg-gray-50 transition-colors"
@@ -378,13 +381,15 @@ export default function AdminFinance() {
                       type="button"
                       title="View"
                       aria-label="View"
+                      onClick={() => setSelectedTxn(txn)}
                       className="text-primary hover:text-primary/80 transition-colors"
                     >
                       <Eye size={18} />
                     </button>
                   </td>
                 </motion.tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -715,6 +720,83 @@ export default function AdminFinance() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Transaction / Invoice Details Modal */}
+      {selectedTxn && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm"
+          onClick={() => setSelectedTxn(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-lg w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+              <h3 className="text-sm font-black text-secondary">
+                Transaction {selectedTxn.id}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSelectedTxn(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-5">
+                <p className="text-2xl font-black text-secondary">{selectedTxn.amount}</p>
+                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${statusBadge[selectedTxn.status] || "bg-gray-100 text-gray-600"}`}>
+                  {selectedTxn.status}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
+                {[
+                  ["Client", selectedTxn.client],
+                  ["Case ID", selectedTxn.caseId],
+                  ["Invoice number", selectedTxn.invoiceNumber],
+                  ["Transaction ref", selectedTxn.transactionRef],
+                  ["Payment type", selectedTxn.paymentType],
+                  ["Method", selectedTxn.type],
+                  ["Created", selectedTxn.date],
+                  ["Payment date", selectedTxn.paymentDate],
+                  ["Due date", selectedTxn.dueDate],
+                  ["Case status", selectedTxn.caseStatus],
+                ]
+                  .filter(([, value]) => value)
+                  .map(([label, value]) => (
+                    <div key={label}>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+                      <p className="text-sm font-semibold text-secondary mt-0.5 break-words">{value}</p>
+                    </div>
+                  ))}
+              </div>
+              {(selectedTxn.description || selectedTxn.notes) && (
+                <div className="mt-5 p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
+                  {selectedTxn.description && (
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Description</p>
+                      <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap">{selectedTxn.description}</p>
+                    </div>
+                  )}
+                  {selectedTxn.notes && (
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Notes</p>
+                      <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap">{selectedTxn.notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <Button type="button" variant="ghost" onClick={() => setSelectedTxn(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -41,7 +41,9 @@ export const markAsRead = createAsyncThunk(
       await markNotificationAsRead(id);
       return id;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to mark notification as read');
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to mark notification as read'
+      );
     }
   }
 );
@@ -53,7 +55,12 @@ export const markAllAsRead = createAsyncThunk(
       await markAllNotificationsAsRead();
       return true;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to mark all notifications as read');
+      // error.response is absent when the request never reached the server
+      // (axios cancel from the CSRF guard, timeout, network down) — fall back to
+      // error.message so those failures are still surfaced, not silent.
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to mark all notifications as read'
+      );
     }
   }
 );
@@ -82,7 +89,14 @@ const initialState = {
   loading: false,
   error: null,
   unreadCountLoading: false,
-  unreadCountError: null
+  unreadCountError: null,
+  markingAllRead: false,
+  // requestIds of the LATEST fetch dispatched for each resource. Responses from
+  // older, still-in-flight fetches are ignored so they can never overwrite newer
+  // state (e.g. a list fetched just before "mark all read" landing just after it
+  // and reverting everything to unread).
+  latestListRequestId: null,
+  latestCountRequestId: null
 };
 
 const notificationSlice = createSlice({
@@ -130,11 +144,14 @@ const notificationSlice = createSlice({
   extraReducers: (builder) => {
     // Fetch notifications
     builder
-      .addCase(fetchNotifications.pending, (state) => {
+      .addCase(fetchNotifications.pending, (state, action) => {
         state.loading = true;
         state.error = null;
+        state.latestListRequestId = action.meta.requestId;
       })
       .addCase(fetchNotifications.fulfilled, (state, action) => {
+        // Stale response — a newer fetch has been dispatched since; drop it.
+        if (action.meta.requestId !== state.latestListRequestId) return;
         state.loading = false;
         const payload = action.payload || {};
         state.notifications = payload.notifications || [];
@@ -152,21 +169,26 @@ const notificationSlice = createSlice({
         };
       })
       .addCase(fetchNotifications.rejected, (state, action) => {
+        if (action.meta.requestId !== state.latestListRequestId) return;
         state.loading = false;
         state.error = action.payload;
       });
 
     // Fetch unread count
     builder
-      .addCase(fetchUnreadCount.pending, (state) => {
+      .addCase(fetchUnreadCount.pending, (state, action) => {
         state.unreadCountLoading = true;
         state.unreadCountError = null;
+        state.latestCountRequestId = action.meta.requestId;
       })
       .addCase(fetchUnreadCount.fulfilled, (state, action) => {
+        // Stale response — a newer count fetch has been dispatched since; drop it.
+        if (action.meta.requestId !== state.latestCountRequestId) return;
         state.unreadCountLoading = false;
         state.unreadCount = action.payload.count;
       })
       .addCase(fetchUnreadCount.rejected, (state, action) => {
+        if (action.meta.requestId !== state.latestCountRequestId) return;
         state.unreadCountLoading = false;
         state.unreadCountError = action.payload;
       });
@@ -180,11 +202,19 @@ const notificationSlice = createSlice({
           notification.readAt = new Date().toISOString();
           state.unreadCount = Math.max(0, state.unreadCount - 1);
         }
+      })
+      .addCase(markAsRead.rejected, (state, action) => {
+        state.error = action.payload || 'Failed to mark notification as read';
       });
 
     // Mark all as read
     builder
+      .addCase(markAllAsRead.pending, (state) => {
+        state.markingAllRead = true;
+        state.error = null;
+      })
       .addCase(markAllAsRead.fulfilled, (state) => {
+        state.markingAllRead = false;
         state.notifications.forEach(notification => {
           if (!notification.isRead) {
             notification.isRead = true;
@@ -192,6 +222,12 @@ const notificationSlice = createSlice({
           }
         });
         state.unreadCount = 0;
+      })
+      .addCase(markAllAsRead.rejected, (state, action) => {
+        // Without this case a failed request left the UI completely unchanged —
+        // the button looked dead. Surface the failure in the list's error banner.
+        state.markingAllRead = false;
+        state.error = action.payload || 'Failed to mark all notifications as read';
       });
 
     // Delete notification

@@ -5,8 +5,10 @@ import DatePicker from "../../../components/DatePicker";
 import useCaseDetail from "../../../hooks/useCaseDetail";
 import { updateTask } from "../../../services/caseApi";
 import { formatDate } from "../../../utils/datetime";
+import { useToast } from "../../../context/ToastContext";
 
 function CasesTasksTab({ caseId }) {
+  const { showToast } = useToast();
   const { tasks, tasksLoading: loading, fetchTasks, addTask } = useCaseDetail();
   const [togglingId, setTogglingId] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -38,11 +40,17 @@ function CasesTasksTab({ caseId }) {
       await updateTask(task.id, { status: next });
     } catch (e) {
       console.error("Failed to update task status:", e);
+      // Surface the backend's reason (e.g. "Only the assignee or an admin can
+      // update this task") instead of silently leaving the checkbox unchanged.
+      showToast({
+        message: e?.response?.data?.message || "Couldn't update this task.",
+        variant: "danger",
+      });
     } finally {
       await fetchTasks(caseId);
       setTogglingId(null);
     }
-  }, [caseId, fetchTasks]);
+  }, [caseId, fetchTasks, showToast]);
 
   const openCreateModal = useCallback(() => {
     setCreateErrors({});

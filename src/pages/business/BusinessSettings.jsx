@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSelector } from "react-redux";
+import { validatePasswordStrength } from "../../utils/constants";
 import {
   Settings,
   User,
@@ -151,8 +152,9 @@ const BusinessSettings = () => {
     if (passwordForm.new_password !== passwordForm.confirm_password) {
       return showToast({ message: "Passwords do not match", variant: "warning" });
     }
-    if (passwordForm.new_password.length < 8) {
-      return showToast({ message: "New password must be at least 8 characters", variant: "warning" });
+    const pwErr = validatePasswordStrength(passwordForm.new_password);
+    if (pwErr) {
+      return showToast({ message: pwErr, variant: "warning" });
     }
     try {
       setSaving(true);

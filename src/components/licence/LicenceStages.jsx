@@ -200,7 +200,9 @@ export default function LicenceStages({ applicationId, app, data, viewerRole, on
       }
       showToast({ message: "Task marked complete. The team has been notified.", variant: "success" });
     } catch (err) {
-      showToast({ message: err?.response?.data?.message || "Couldn't complete this task.", variant: "danger" });
+      // Surface the backend's actual message; fall back to the axios error text
+      // (e.g. CSRF-bootstrap or network failures) before the generic string.
+      showToast({ message: err?.response?.data?.message || err?.message || "Couldn't complete this task.", variant: "danger" });
     } finally {
       setBusyKey(null);
     }

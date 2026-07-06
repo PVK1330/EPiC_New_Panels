@@ -19,8 +19,11 @@ const stagesBase = (role, id) => {
 
 export const getLicenceStages = (role, id) => api.get(`${stagesBase(role, id)}/stages`);
 
+// Completion triggers server-side chain advancement + audit before responding,
+// so give it more headroom than the global 10s axios timeout — a slow round-trip
+// must not surface as a spurious "couldn't complete" while the task actually saved.
 export const completeLicenceStageTask = (role, id, stageKey, taskRole) =>
-  api.post(`${stagesBase(role, id)}/stages/${stageKey}/complete`, { role: taskRole });
+  api.post(`${stagesBase(role, id)}/stages/${stageKey}/complete`, { role: taskRole }, { timeout: 30000 });
 
 /**
  * Full cross-entity workflow timeline (licence + CoS + sponsored workers) for an

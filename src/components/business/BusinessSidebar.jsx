@@ -76,7 +76,8 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
         { to: "/business/reporting-obligations",        label: "Reporting Obligations", icon: FileWarning,    moduleKey: "business.reporting-obligations" },
         { to: "/business/compliance-review",            label: "Review Status",         icon: ClipboardCheck, moduleKey: "business.compliance" },
         { to: "/business/monthly-compliance-review",    label: "Monthly Review",        icon: CalendarCheck,  moduleKey: "business.compliance" },
-        { to: "/business/linked-entities",              label: "Linked Entities",       icon: Link2,          moduleKey: "business.compliance" },
+        // Linked Entities hidden per request.
+        // { to: "/business/linked-entities",              label: "Linked Entities",       icon: Link2,          moduleKey: "business.compliance" },
         { to: "/business/right-to-work",                label: "Right to Work",         icon: BadgeCheck,     moduleKey: "business.compliance" },
         { to: "/business/audit-log",                    label: "Audit Log",             icon: ClipboardCheck, moduleKey: "business.compliance" },
       ],

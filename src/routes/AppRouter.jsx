@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import ProtectedRoute from './ProtectedRoute';
 import RequireAdminModule from './RequireAdminModule';
+import RequireCaseworkerModule from './RequireCaseworkerModule';
+import RequireBusinessModule from './RequireBusinessModule';
 import AdminLayout from '../layouts/AdminLayout';
 import SuperadminLayout from '../layouts/SuperadminLayout';
 import NotFoundPage from '../pages/NotFoundPage';
@@ -119,7 +121,7 @@ const LicenceApplicationV2Detail = lazy(() => import('../components/licence/Lice
 const LicenceDocuments = lazy(() => import('../pages/business/LicenceDocuments'));
 const BusinessTasks = lazy(() => import('../pages/business/BusinessTasks'));
 // Section K — Multi-Company Handling
-const LinkedEntities = lazy(() => import('../pages/business/LinkedEntities'));
+// const LinkedEntities = lazy(() => import('../pages/business/LinkedEntities')); // Linked Entities hidden per request
 // Section H — Right to Work
 const RightToWork = lazy(() => import('../pages/business/RightToWork'));
 // Section O — Sponsor Audit Log
@@ -302,7 +304,9 @@ const AppRouter = () => {
           path="/caseworker"
           element={
             <ProtectedRoute allowedRoles={['caseworker']}>
-              <AdminLayout />
+              <RequireCaseworkerModule>
+                <AdminLayout />
+              </RequireCaseworkerModule>
             </ProtectedRoute>
           }
         >
@@ -333,7 +337,9 @@ const AppRouter = () => {
           path="/business"
           element={
             <ProtectedRoute allowedRoles={['business']}>
-              <AdminLayout />
+              <RequireBusinessModule>
+                <AdminLayout />
+              </RequireBusinessModule>
             </ProtectedRoute>
           }
         >
@@ -371,8 +377,8 @@ const AppRouter = () => {
           <Route path="tasks" element={<BusinessTasks />} />
           {/* Section N — Monthly Compliance Review */}
           <Route path="monthly-compliance-review" element={<ComplianceMonthlyReview />} />
-          {/* Section K — Multi-Company Handling */}
-          <Route path="linked-entities" element={<LinkedEntities />} />
+          {/* Section K — Multi-Company Handling (Linked Entities hidden per request) */}
+          {/* <Route path="linked-entities" element={<LinkedEntities />} /> */}
           {/* Section H — Right to Work */}
           <Route path="right-to-work" element={<RightToWork />} />
           {/* Section O — Sponsor Audit Log */}
@@ -394,7 +400,14 @@ const AppRouter = () => {
           <Route path="plans" element={<SuperadminPlans />} />
           <Route path="billing" element={<SuperadminBilling />} />
           <Route path="audit-log" element={<SuperadminAuditLog />} />
-          <Route path="gdpr" element={<SuperadminGDPR />} />
+          <Route
+            path="gdpr"
+            element={
+              <ProtectedRoute allowedRoleIds={[5]}>
+                <SuperadminGDPR />
+              </ProtectedRoute>
+            }
+          />
           <Route path="settings" element={<SuperadminSettings />} />
           <Route path="notifications" element={<SuperadminNotifications />} />
           <Route path="payments" element={<SuperadminPayments />} />

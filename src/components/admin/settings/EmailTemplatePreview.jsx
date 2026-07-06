@@ -17,6 +17,43 @@ const C = {
   muted: "#6B7785",
 };
 
+// Sample data substituted into {{placeholders}} so admins preview a realistic
+// email instead of raw template variables (mirrors the keys offered in
+// EmailTemplateEditor and the workflow email seeder).
+const SAMPLE_PLACEHOLDER_VALUES = {
+  client_name: "John Smith",
+  candidate_name: "John Smith",
+  recipient_name: "John Smith",
+  caseworker_name: "Alex Morgan",
+  employer_name: "Acme Recruitment Ltd",
+  sponsor_name: "Acme Recruitment Ltd",
+  case_ref: "CS-2045",
+  visa_type: "Skilled Worker",
+  biometrics_date: "15 August 2026",
+  amount: "£1,250.00",
+  email: "john.smith@example.com",
+  password: "Temp#Pass123",
+  login_url: "https://portal.example.com/login",
+  data_capture_link: "https://portal.example.com/forms/data-capture",
+  required_documents: "Passport, TB Certificate, Bank Statements",
+};
+
+function fillPlaceholders(text, orgName) {
+  return String(text ?? "").replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key) => {
+    const k = key.toLowerCase();
+    if (k === "org_name" || k === "firm_name" || k === "company_name") {
+      return orgName;
+    }
+    if (SAMPLE_PLACEHOLDER_VALUES[k] !== undefined) {
+      return SAMPLE_PLACEHOLDER_VALUES[k];
+    }
+    // Unknown variable — show a readable sample label instead of raw braces.
+    return `[${key
+      .replace(/[_.]+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())}]`;
+  });
+}
+
 export default function EmailTemplatePreview({ template, onClose }) {
   const [device, setDevice] = useState("desktop");
   const [org, setOrg] = useState(null);
@@ -35,15 +72,22 @@ export default function EmailTemplatePreview({ template, onClose }) {
     };
   }, []);
 
+  const orgName = org?.name || "Your Organisation";
+
   // BUG-004: sanitise the template HTML before rendering to prevent stored XSS.
+  // Placeholders ({{client_name}}, {{case_ref}}, …) are replaced with sample
+  // values first so the preview reads like a real delivered email.
   const sanitizedBody = useMemo(
-    () => DOMPurify.sanitize(template?.body ?? ""),
-    [template?.body],
+    () => DOMPurify.sanitize(fillPlaceholders(template?.body, orgName)),
+    [template?.body, orgName],
+  );
+  const previewSubject = useMemo(
+    () => fillPlaceholders(template?.subject, orgName),
+    [template?.subject, orgName],
   );
 
   if (!template) return null;
 
-  const orgName = org?.name || "Your Organisation";
   const logoSrc = resolveOrganisationLogoUrl(org);
   const isMobile = device === "mobile";
 
@@ -63,7 +107,7 @@ export default function EmailTemplatePreview({ template, onClose }) {
               Preview: {template.template_key}
             </h3>
             <p className="text-xs text-gray-400 font-medium italic">
-              Subject: {template.subject}
+              Subject: {previewSubject}
             </p>
           </div>
         </div>
@@ -189,8 +233,10 @@ export default function EmailTemplatePreview({ template, onClose }) {
           </div>
 
           <p className="text-[10px] text-gray-400 text-center mt-3 px-2">
-            Live preview of the shared branded template. The logo, organisation name and
-            sender are applied automatically when the email is sent.
+            Live preview with sample data — placeholders such as{" "}
+            {"{{client_name}}"} are filled with example values here and replaced
+            with real case data when the email is sent. The logo, organisation
+            name and sender are applied automatically.
           </p>
         </div>
       </div>

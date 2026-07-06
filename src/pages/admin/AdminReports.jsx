@@ -954,14 +954,14 @@ function PerformanceTab({
         )
       : null;
 
-  // Handle download report triggers general export workbook
+  // Download the performance report for a single caseworker only
   const handleDownloadReport = async (caseworkerId) => {
     showToast?.({
-      message: "Generating combined performance workbook export...",
+      message: "Generating performance report export...",
       variant: "info",
     });
     try {
-      const params = {};
+      const params = { sheet: "performance", caseworkerId };
       if (dateRange?.start)
         params.startDate = dateRange.start.toISOString().split("T")[0];
       if (dateRange?.end)

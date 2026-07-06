@@ -141,8 +141,12 @@ const SuperadminNotifications = () => {
     try {
       await markAllPlatformNotificationsRead();
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      // Re-sync from the server (authoritative) — keeps the Unread tab and
+      // pagination totals correct after the bulk update.
+      loadNotifications();
     } catch (err) {
       console.error("Failed to mark all notifications read:", err);
+      toast.error("Failed to mark all notifications as read");
     }
   };
 
@@ -271,7 +275,7 @@ const SuperadminNotifications = () => {
                       </span>
                     </div>
                     <p className={`text-xs ${!notif.isRead ? 'text-gray-600 font-semibold' : 'text-gray-400 font-medium'} leading-relaxed max-w-4xl truncate`}>
-                      {notif.desc}
+                      {notif.message ?? notif.desc}
                     </p>
                   </div>
                 </div>
@@ -356,7 +360,7 @@ const SuperadminNotifications = () => {
 
             <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
               <p className="text-sm text-gray-600 font-semibold leading-relaxed">
-                {selectedNotification.desc}
+                {selectedNotification.message ?? selectedNotification.desc}
               </p>
             </div>
 

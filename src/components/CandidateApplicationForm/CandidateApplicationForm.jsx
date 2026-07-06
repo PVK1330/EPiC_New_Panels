@@ -172,7 +172,7 @@ function AppSelect({
   );
 }
 
-function AppTextarea({ label, id, value, onChange, className = "" }) {
+function AppTextarea({ label, id, value, onChange, className = "", placeholder = "" }) {
   return (
     <div className={className}>
       <label htmlFor={id} className={fieldLabelClass}>
@@ -183,6 +183,7 @@ function AppTextarea({ label, id, value, onChange, className = "" }) {
         value={value}
         onChange={onChange}
         rows={4}
+        placeholder={placeholder}
         className={`${inputClass} min-h-[6rem] resize-y`}
       />
     </div>
@@ -336,6 +337,17 @@ function sanitizeForApi(payload) {
       out[key] = null;
     }
   }
+  // Alternate contact number: persist the selected dial code with the number in
+  // the single contactNumber2 column (e.g. "+44 7911123456"). The ISO helper
+  // field is client-side only and must not reach the API.
+  if (out.contactNumber2 && String(out.contactNumber2).trim()) {
+    const dial = getCountryByCode(out.contactCountryCode2)?.dialCode;
+    const num = String(out.contactNumber2).trim();
+    if (dial && !num.startsWith("+")) {
+      out.contactNumber2 = `${dial} ${num}`;
+    }
+  }
+  delete out.contactCountryCode2;
   return out;
 }
 
@@ -426,6 +438,21 @@ function validateStep(stepIndex, data) {
   if (stepIndex === 2) {
     if (data.ukLicense === "Yes" && !data.ukStayDuration?.toString().trim()) {
       errs.ukStayDuration = "Please specify duration of stay";
+    }
+    // Alternate contact number is optional, but must be a valid number for the
+    // selected country when provided (same treatment as the main contact number).
+    if (data.contactNumber2?.toString().trim()) {
+      try {
+        const country = data.contactCountryCode2 || "GB";
+        if (!isValidPhoneNumber(data.contactNumber2.toString().trim(), country)) {
+          errs.contactNumber2 = "Enter a valid phone number for the selected country";
+        }
+      } catch {
+        // Fall back to digit-length check if libphonenumber throws
+        const digits = data.contactNumber2.toString().replace(/[^\d]/g, "");
+        if (digits.length < 7 || digits.length > 15)
+          errs.contactNumber2 = "Enter a valid contact number (7–15 digits)";
+      }
     }
     // Validation for dates if both provided
     if (data.startDate && data.endDate) {
@@ -1187,6 +1214,7 @@ export default function CandidateApplicationForm({
                   <AppInput
                     label="First name *"
                     name="firstName"
+                    placeholder="Enter first name"
                     formData={formData}
                     onChange={handleChange}
                     error={formErrors.firstName}
@@ -1196,6 +1224,7 @@ export default function CandidateApplicationForm({
                   <AppInput
                     label="Last name *"
                     name="lastName"
+                    placeholder="Enter last name"
                     formData={formData}
                     onChange={handleChange}
                     error={formErrors.lastName}
@@ -1206,6 +1235,7 @@ export default function CandidateApplicationForm({
                     label="Email *"
                     name="email"
                     type="email"
+                    placeholder="e.g. name@company.com"
                     formData={formData}
                     onChange={handleChange}
                     error={formErrors.email}
@@ -1218,6 +1248,7 @@ export default function CandidateApplicationForm({
                     formData={formData}
                     onChange={handleChange}
                     options={genderOptions}
+                    placeholder="Select gender"
                     error={formErrors.gender}
                   />
                 )}
@@ -1233,6 +1264,7 @@ export default function CandidateApplicationForm({
                       national={formData.contactNumber ?? ""}
                       dialName="_contactDialCode"
                       nationalName="contactNumber"
+                      placeholder="e.g. 7911 123456"
                       onChange={(e) => {
                         if (e.target.name === "_contactDialCode") {
                           const c = getCountryByDialCode(e.target.value);
@@ -1252,12 +1284,14 @@ export default function CandidateApplicationForm({
                     formData={formData}
                     onChange={handleChange}
                     options={relationshipOptions}
+                    placeholder="Select relationship status"
                   />
                 )}
                 {show("address") && (
                   <AppInput
                     label="Current address"
                     name="address"
+                    placeholder="Enter current address"
                     formData={formData}
                     onChange={handleChange}
                     className="md:col-span-2"
@@ -1293,6 +1327,7 @@ export default function CandidateApplicationForm({
                   <AppInput
                     label="Place of birth"
                     name="placeOfBirth"
+                    placeholder="Enter place of birth"
                     formData={formData}
                     onChange={handleChange}
                   />
@@ -1312,6 +1347,7 @@ export default function CandidateApplicationForm({
                   <AppInput
                     label="Passport number"
                     name="passportNumber"
+                    placeholder="Enter passport number"
                     formData={formData}
                     onChange={handleChange}
                   />
@@ -1320,6 +1356,7 @@ export default function CandidateApplicationForm({
                   <AppInput
                     label="Issuing authority"
                     name="issuingAuthority"
+                    placeholder="Enter issuing authority"
                     formData={formData}
                     onChange={handleChange}
                     error={formErrors.issuingAuthority}
@@ -1422,14 +1459,29 @@ export default function CandidateApplicationForm({
                   />
                 )}
                 {show("contactNumber2") && (
-                  <AppInput
-                    label="Alternate contact number"
-                    name="contactNumber2"
-                    type="tel"
-                    formData={formData}
-                    onChange={handleChange}
-                    className="md:col-span-2"
-                  />
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>
+                      {renderLabel("Alternate contact number")}
+                    </label>
+                    <GlobalPhoneInput
+                      split
+                      className="mt-1"
+                      dialCode={getCountryByCode(formData.contactCountryCode2)?.dialCode || "+44"}
+                      national={formData.contactNumber2 ?? ""}
+                      dialName="_contact2DialCode"
+                      nationalName="contactNumber2"
+                      placeholder="e.g. 7911 123456"
+                      onChange={(e) => {
+                        if (e.target.name === "_contact2DialCode") {
+                          const c = getCountryByDialCode(e.target.value);
+                          handleChange({ target: { name: "contactCountryCode2", value: c?.code || "GB" } });
+                        } else {
+                          handleChange(e);
+                        }
+                      }}
+                      error={formErrors.contactNumber2 || formErrors.contactCountryCode2}
+                    />
+                  </div>
                 )}
 
                 <SectionTitle>Address Details</SectionTitle>
@@ -1807,7 +1859,7 @@ export default function CandidateApplicationForm({
                       formData={formData}
                       onChange={handleChange}
                       options={visaTypeOptions}
-                      placeholder="Select type"
+                      placeholder="Select visa type"
                     />
                   </div>
                 )}
@@ -1887,6 +1939,7 @@ export default function CandidateApplicationForm({
                               label={label}
                               id={id}
                               value={val}
+                              placeholder="Enter your answer"
                               onChange={(e) =>
                                 handleCustomResponseChange(
                                   def.id,
@@ -1915,6 +1968,7 @@ export default function CandidateApplicationForm({
                             onChange={(e) =>
                               handleCustomResponseChange(def.id, e.target.value)
                             }
+                            placeholder={inputType === "date" ? undefined : "Enter your answer"}
                             className={inputClass}
                           />
                         </div>

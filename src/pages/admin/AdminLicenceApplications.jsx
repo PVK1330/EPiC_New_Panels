@@ -983,6 +983,12 @@ const AdminLicenceApplications = () => {
                       {selectedApp.documents.map((doc, i) => {
                         const previewing = docBusy === `${i}:preview`;
                         const downloading = docBusy === `${i}:download`;
+                        // Real name: the API's per-index label (V2 checklist name or
+                        // stored filename), else the path basename, else a generic label.
+                        const docLabel =
+                          selectedApp.documentNames?.[i] ||
+                          (typeof doc === "string" && doc.split(/[\\/]/).pop()) ||
+                          `Document ${i + 1}`;
                         return (
                           <div
                             key={doc}
@@ -998,7 +1004,7 @@ const AdminLicenceApplications = () => {
                               {previewing
                                 ? <Loader2 size={18} className="text-primary animate-spin shrink-0" />
                                 : <FileText size={18} className="text-primary shrink-0" />}
-                              <span className="text-xs font-black text-secondary truncate">Document {i + 1}</span>
+                              <span className="text-xs font-black text-secondary truncate" title={docLabel}>{docLabel}</span>
                             </button>
                             <button
                               type="button"

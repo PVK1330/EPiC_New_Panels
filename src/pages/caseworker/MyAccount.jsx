@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { validatePasswordStrength } from "../../utils/constants";
 import {
   UserCircle,
   User,
@@ -203,7 +204,8 @@ const MyAccount = () => {
     if (!otpVerified) return setPasswordError("Please verify your email first");
     if (!passwordForm.new_password) return setPasswordError("New password is required");
     if (passwordForm.new_password !== passwordForm.confirm_password) return setPasswordError("Passwords do not match");
-    if (passwordForm.new_password.length < 8) return setPasswordError("Password must be at least 8 characters");
+    const pwErr = validatePasswordStrength(passwordForm.new_password);
+    if (pwErr) return setPasswordError(pwErr);
 
     try {
       setLoading(true);
@@ -577,7 +579,7 @@ const MyAccount = () => {
 
                       <div className="px-3 py-2 bg-amber-50 rounded-xl border border-amber-200">
                         <p className="text-[11px] font-bold text-amber-700">
-                          Password must be at least 8 characters.
+                          Password must be at least 12 characters and include uppercase, lowercase, a number and a special character.
                         </p>
                       </div>
 

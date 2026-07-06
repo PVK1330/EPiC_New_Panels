@@ -1142,7 +1142,7 @@ export default function AdminCandidates() {
           <table className="w-full min-w-[600px] border-collapse text-left">
             <Thead>
               <tr>
-                {["Name","Status","DOB","Nationality","Linked Business","Visa Type","Case Status","Visa Expiry","Payment"].map((h) => (
+                {["Name","DOB","Nationality","Linked Business","Visa Type","Case Status","Visa Expiry","Payment","Status"].map((h) => (
                   <Th key={h}>{h}</Th>
                 ))}
                 <Th align="right">Actions</Th>
@@ -1190,16 +1190,6 @@ export default function AdminCandidates() {
                           </div>
                         </div>
                       </Td>
-                      <Td className="whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => handleToggle(c)}
-                          className="cursor-pointer"
-                          title="Toggle status"
-                        >
-                          <StatusBadge status={formatStatusLabel(c.status)} />
-                        </button>
-                      </Td>
                       <Td className="text-xs text-gray-500 whitespace-nowrap font-mono">{dob}</Td>
                       <Td className="whitespace-nowrap">{nationality}</Td>
                       <Td className="whitespace-nowrap">{linkedBusiness}</Td>
@@ -1218,6 +1208,16 @@ export default function AdminCandidates() {
                         <span className={`${CHIP_BASE} ${PAYMENT_CHIPS[paymentStatus] ?? "bg-gray-100 text-gray-500 border-gray-200"}`}>
                           {paymentStatus}
                         </span>
+                      </Td>
+                      <Td className="whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleToggle(c)}
+                          className="cursor-pointer"
+                          title="Toggle status"
+                        >
+                          <StatusBadge status={formatStatusLabel(c.status)} />
+                        </button>
                       </Td>
                       <Td align="right">
                         <div className="flex items-center justify-end gap-1 relative z-10">

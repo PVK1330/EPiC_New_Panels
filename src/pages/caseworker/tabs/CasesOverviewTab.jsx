@@ -113,12 +113,15 @@ function CasesOverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }
         <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">
           Case progress
         </p>
-        <div className="flex justify-between text-center gap-1">
+        {/* 16 steps don't fit the modal width — scroll the strip inside the
+            card instead of letting the columns punch through its border. */}
+        <div className="overflow-x-auto pb-1 [scrollbar-width:thin]">
+          <div className="flex justify-between text-center gap-1">
           {IMMIGRATION_CASE_STEPS.map((step, i) => {
             const done = step.order < currentOrder;
             const current = step.order === currentOrder;
             return (
-              <div key={step.id} className="flex-1 relative">
+              <div key={step.id} className="flex-1 min-w-[64px] relative">
                 {i > 0 && (
                   <div
                     className={`absolute left-0 right-1/2 top-[14px] h-0.5 -translate-x-1/2 ${
@@ -148,6 +151,7 @@ function CasesOverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }
               </div>
             );
           })}
+          </div>
         </div>
       </div>
     </div>

@@ -163,6 +163,7 @@ export function getInitialApplicationFormData() {
     ukLicense: "",
     medicalTreatment: "",
     ukStayDuration: "",
+    contactCountryCode2: "GB",
     contactNumber2: "",
     previousAddress: "",
     startDate: "",
