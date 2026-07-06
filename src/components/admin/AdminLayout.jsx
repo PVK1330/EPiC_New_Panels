@@ -286,16 +286,22 @@ const AdminLayout = () => {
         </header>
 
         {/* ── Main Content ── */}
-        <main
-          id="main-content"
-          className={`flex-1 overflow-y-auto ${user?.role === 'caseworker' ? 'p-3 md:p-4' : 'p-4 md:p-5'} bg-surface`}
-        >
-          <div className="w-full">
-            <div className="max-w-7xl mx-auto w-full px-2 md:px-4 lg:px-6">
-              <Outlet />
-            </div>
-          </div>
-        </main>
+        {(() => {
+          const isMessagesPage = location.pathname.endsWith("/messages") ||
+            (location.pathname.endsWith("/communication") && !location.search.includes("tab=notifications"));
+          return (
+            <main
+              id="main-content"
+              className={`flex-1 ${isMessagesPage ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'} ${user?.role === 'caseworker' ? 'p-3 md:p-4' : 'p-4 md:p-5'} bg-surface`}
+            >
+              <div className={`w-full ${isMessagesPage ? 'flex-1 flex flex-col min-h-0' : ''}`}>
+                <div className={`max-w-7xl mx-auto w-full px-2 md:px-4 lg:px-6 ${isMessagesPage ? 'flex-1 flex flex-col min-h-0' : ''}`}>
+                  <Outlet />
+                </div>
+              </div>
+            </main>
+          );
+        })()}
       </div>
     </div>
   );

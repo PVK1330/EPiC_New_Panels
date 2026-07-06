@@ -186,7 +186,7 @@ const Communication = () => {
   };
 
   return (
-    <div className="flex flex-col gap-0 pb-4 -mx-4 md:-mx-8 px-4 md:px-8 min-h-0 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-0 pb-4 -mx-4 md:-mx-8 px-4 md:px-8 min-h-0 h-full animate-in fade-in duration-500">
       <header className="pt-2 pb-4">
         <h1 className="text-2xl md:text-3xl font-black text-secondary tracking-tight">
           Communication

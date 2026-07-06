@@ -155,7 +155,7 @@ const NotificationDropdown = () => {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[22rem] sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-xl border border-gray-200 z-50 flex flex-col overflow-hidden">
+        <div className="fixed top-16 left-4 right-4 sm:absolute sm:top-auto sm:left-auto sm:right-0 mt-2 sm:w-96 max-w-[calc(100vw-2rem)] sm:max-w-none bg-white rounded-xl shadow-xl border border-gray-200 z-50 flex flex-col overflow-hidden">
           {/* The list owns its own header (title, tabs, refresh, mark-all-read);
               the dropdown only provides the panel chrome, a close button, and
               the footer link so we don't render two stacked "Notifications"
