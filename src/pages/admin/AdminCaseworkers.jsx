@@ -367,12 +367,29 @@ export default function AdminCaseworkers() {
     }
     setSaving(true);
     try {
-      // Generate a secure random password
-      const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^*";
-      let generatedPassword = "";
-      for (let i = 0; i < 12; i++) {
-        generatedPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+      // Generate a secure random password that matches the backend's policy
+      const lower = "abcdefghijklmnopqrstuvwxyz";
+      const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const digits = "0123456789";
+      const specials = "!@#$%^&*";
+      const all = lower + upper + digits + specials;
+
+      const pick = (chars) => chars.charAt(Math.floor(Math.random() * chars.length));
+      let generatedPassword = [
+        pick(upper),
+        pick(lower),
+        pick(digits),
+        pick(specials),
+      ].join("");
+
+      for (let i = generatedPassword.length; i < 12; i++) {
+        generatedPassword += pick(all);
       }
+
+      generatedPassword = generatedPassword
+        .split("")
+        .sort(() => Math.random() - 0.5)
+        .join("");
 
       const res = await createCaseworker({
         first_name: createForm.first_name.trim(),
