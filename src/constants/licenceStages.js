@@ -269,7 +269,7 @@ export function deriveStageStatuses(app) {
 
   const complete = {
     // Pre-submission wizard (1-8)
-    enquiry_onboarding:        true,
+    enquiry_onboarding:        false,
     licence_routes:            (app.routes || []).length > 0,
     organisation_details:      !!(app.organisationInfo && (app.organisationInfo.companiesHouseNumber || app.organisationInfo.organisationType)),
     cos_requirements:          (app.cosRequirements || []).length > 0,
