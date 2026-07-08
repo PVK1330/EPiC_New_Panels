@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import {
   LayoutDashboard,
   Hash,
@@ -21,7 +21,9 @@ import {
   Plus,
   Trash2,
   Eye,
-  Download
+  Download,
+  Ban,
+  Timer
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -48,6 +50,41 @@ const LicenceStatus = () => {
   const [applications, setApplications] = useState([]);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
+
+  // ── Rejection Cooldown ──────────────────────────────────────────────────────
+  // Computed from the most recent rejected application that still has an active
+  // rejectionCooldownUntil date (set to rejectedAt + 6 months by the server).
+  const rejectionCooldown = useMemo(() => {
+    const rejected = applications
+      .filter((a) => {
+        const status = (a.status || "").toLowerCase();
+        const isRejected = status === "rejected" || status === "licence rejected";
+        return isRejected && a.rejectionCooldownUntil;
+      })
+      .map((a) => ({
+        ...a,
+        cooldownDate: new Date(a.rejectionCooldownUntil),
+      }))
+      .sort((a, b) => b.cooldownDate - a.cooldownDate);
+
+    if (!rejected.length) return null;
+
+    const latest = rejected[0];
+    const now = new Date();
+    const cooldownDate = latest.cooldownDate;
+
+    if (cooldownDate <= now) return null; // cooldown has passed — button re-enabled
+
+    const msRemaining = cooldownDate - now;
+    const daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+    const cooldownFormatted = cooldownDate.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    return { app: latest, daysRemaining, cooldownDate: cooldownFormatted };
+  }, [applications]);
 
   const [summaryStats, setSummaryStats] = useState({
     licenceId: "Pending",
@@ -302,14 +339,94 @@ const LicenceStatus = () => {
             Manage your sponsor licence applications, track their status, and upload evidence.
           </p>
         </div>
-        <button
-          onClick={() => navigate("/business/apply-licence-v2")}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white hover:bg-primary-dark transition shadow-sm w-fit"
-        >
-          <Plus size={14} />
-          New Licence Application
-        </button>
+        <div className="relative group">
+          <button
+            id="new-licence-btn"
+            onClick={() => {
+              if (rejectionCooldown) return;
+              navigate("/business/apply-licence-v2");
+            }}
+            disabled={!!rejectionCooldown}
+            aria-disabled={!!rejectionCooldown}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-black transition shadow-sm w-fit ${
+              rejectionCooldown
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-70"
+                : "bg-primary text-white hover:bg-primary-dark cursor-pointer"
+            }`}
+          >
+            {rejectionCooldown ? <Ban size={14} /> : <Plus size={14} />}
+            New Licence Application
+          </button>
+          {/* Tooltip shown on hover when in cooldown */}
+          {rejectionCooldown && (
+            <div className="absolute top-full left-0 mt-2 z-20 w-64 pointer-events-none">
+              <div className="bg-gray-900 text-white text-[11px] font-bold rounded-xl px-3 py-2 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <div className="flex items-center gap-1.5 mb-1 text-red-300">
+                  <Timer size={11} />
+                  Reapplication locked for {rejectionCooldown.daysRemaining} more day{rejectionCooldown.daysRemaining !== 1 ? "s" : ""}
+                </div>
+                Available from {rejectionCooldown.cooldownDate}
+              </div>
+            </div>
+          )}
+        </div>
       </motion.div>
+
+      {/* ── Rejection Cooldown Banner ─────────────────────────────────────────── */}
+      {rejectionCooldown && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-rose-50 shadow-sm overflow-hidden relative"
+        >
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-rose-600" />
+          <div className="p-5">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+              <div className="flex items-start gap-3 flex-1">
+                <div className="p-2.5 bg-red-100 rounded-xl text-red-600 shrink-0 mt-0.5">
+                  <Ban size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-red-700 flex items-center gap-2">
+                    Application Locked — 6-Month Reapplication Restriction
+                  </h3>
+                  <p className="text-xs font-bold text-red-600/80 mt-1">
+                    Your previous licence application was rejected. Under Home Office guidelines, you must wait <span className="font-black text-red-700">6 months</span> before reapplying.
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <div className="inline-flex items-center gap-1.5 bg-red-100 border border-red-200 rounded-xl px-3 py-2">
+                      <Timer size={14} className="text-red-600" />
+                      <div>
+                        <p className="text-[10px] font-black text-red-500 uppercase tracking-wider">Days Remaining</p>
+                        <p className="text-xl font-black text-red-700 leading-none mt-0.5">
+                          {rejectionCooldown.daysRemaining}
+                          <span className="text-xs font-bold ml-1">day{rejectionCooldown.daysRemaining !== 1 ? "s" : ""}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="inline-flex items-center gap-1.5 bg-white border border-red-100 rounded-xl px-3 py-2">
+                      <Calendar size={14} className="text-red-500" />
+                      <div>
+                        <p className="text-[10px] font-black text-red-500 uppercase tracking-wider">Reapplication Available From</p>
+                        <p className="text-xs font-black text-red-700 mt-0.5">{rejectionCooldown.cooldownDate}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="shrink-0">
+                <button
+                  disabled
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gray-200 text-gray-400 px-4 py-2 text-xs font-black cursor-not-allowed shadow-sm"
+                >
+                  <Ban size={13} />
+                  Locked Until {rejectionCooldown.cooldownDate}
+                </button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Information Request Alert */}
       {applications.find(app => app.status.toLowerCase() === 'information requested') && (
