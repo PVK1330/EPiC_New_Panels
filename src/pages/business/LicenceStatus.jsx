@@ -52,25 +52,34 @@ const LicenceStatus = () => {
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
 
   // ── Rejection Cooldown ──────────────────────────────────────────────────────
-  // Computed from the most recent rejected application that still has an active
-  // rejectionCooldownUntil date (set to rejectedAt + 6 months by the server).
+  // Block reapplication for 6 months after ANY rejection (Rejected or Licence
+  // Rejected). Uses the server-set rejectionCooldownUntil when available;
+  // falls back to updatedAt + 6 months so the button is always locked even if
+  // the rejection path didn't write the cooldown column.
   const rejectionCooldown = useMemo(() => {
+    const now = new Date();
+
     const rejected = applications
       .filter((a) => {
         const status = (a.status || "").toLowerCase();
-        const isRejected = status === "rejected" || status === "licence rejected";
-        return isRejected && a.rejectionCooldownUntil;
+        return status === "rejected" || status === "licence rejected";
       })
-      .map((a) => ({
-        ...a,
-        cooldownDate: new Date(a.rejectionCooldownUntil),
-      }))
+      .map((a) => {
+        const rawCooldown = a.rejectionCooldownUntil || a.rejection_cooldown_until;
+        const cooldownDate = rawCooldown
+          ? new Date(rawCooldown)
+          : (() => {
+              const d = new Date(a.updatedAt || a.updated_at || a.createdAt || a.created_at || now);
+              d.setMonth(d.getMonth() + 6);
+              return d;
+            })();
+        return { ...a, cooldownDate };
+      })
       .sort((a, b) => b.cooldownDate - a.cooldownDate);
 
     if (!rejected.length) return null;
 
     const latest = rejected[0];
-    const now = new Date();
     const cooldownDate = latest.cooldownDate;
 
     if (cooldownDate <= now) return null; // cooldown has passed — button re-enabled

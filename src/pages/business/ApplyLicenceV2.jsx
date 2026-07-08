@@ -11,6 +11,7 @@ import {
   submitLicenceV2Application,
   deleteLicenceV2Draft,
   syncPersonnelFromProfile,
+  getMyLicenceApplications,
 } from "../../services/licenceApi";
 import WizardStepBar from "../../components/licenceV2/WizardStepBar";
 import Step1Routes from "../../components/licenceV2/Step1Routes";
@@ -223,20 +224,32 @@ export default function ApplyLicenceV2() {
     let cancelled = false;
     const draftParam = searchParams.get("draft");
     if (draftParam) { loadDraft(draftParam); return; }
-    listLicenceV2Applications()
+    getMyLicenceApplications()
       .then((r) => {
         if (cancelled) return;
         const all = r.data.data || [];
         const blocking = all.find((a) => BLOCKING_STATUSES.includes(a.status));
         if (blocking) { setBlockedStatus(blocking.status); setPhase("blocked"); return; }
-        // Check for active rejection cooldown before allowing new draft creation
+        // Check for active rejection cooldown before allowing new draft creation.
+        // Catches ALL rejected apps — falls back to updatedAt + 6 months when
+        // rejectionCooldownUntil is not set (e.g. V1 rejections).
         const now = new Date();
         const rejectedWithCooldown = all
           .filter((a) => {
             const s = (a.status || "").toLowerCase();
-            return (s === "rejected" || s === "licence rejected") && a.rejectionCooldownUntil;
+            return s === "rejected" || s === "licence rejected";
           })
-          .map((a) => ({ ...a, cooldownDate: new Date(a.rejectionCooldownUntil) }))
+          .map((a) => {
+            const rawCooldown = a.rejectionCooldownUntil || a.rejection_cooldown_until;
+            const cooldownDate = rawCooldown
+              ? new Date(rawCooldown)
+              : (() => {
+                  const d = new Date(a.updatedAt || a.updated_at || a.createdAt || a.created_at || now);
+                  d.setMonth(d.getMonth() + 6);
+                  return d;
+                })();
+            return { ...a, cooldownDate };
+          })
           .filter((a) => a.cooldownDate > now)
           .sort((a, b) => b.cooldownDate - a.cooldownDate);
         if (rejectedWithCooldown.length > 0) {
@@ -248,7 +261,8 @@ export default function ApplyLicenceV2() {
           setPhase("cooldown");
           return;
         }
-        const draftsOnly = all.filter((a) => a.status === "Draft");
+        // Only allow V2 drafts in the picker (V1 drafts cannot be resumed in the V2 wizard)
+        const draftsOnly = all.filter((a) => a.status === "Draft" && Number(a.applicationVersion || a.application_version || 1) === 2);
         if (draftsOnly.length > 0) { setDrafts(draftsOnly); setPhase("pick"); }
         else startNew();
       })
@@ -260,68 +274,21 @@ export default function ApplyLicenceV2() {
   useEffect(() => { appIdRef.current = appId; }, [appId]);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
 
-  // Discard-on-exit: a brand-new draft is the wizard's working area, but it must not
-  // linger in the sponsor's history unless they explicitly kept it. If the user leaves
-  // without clicking Save Draft / Submit, delete the draft (and any Step 4 uploads or
-  // profile-sync writes it accumulated). Resumed drafts (draftIsNew = false) are never
-  // auto-deleted; a submitted application (phase "submitted") is always kept.
-  useEffect(() => {
-    return () => {
-      if (
-        draftIsNew.current &&
-        !explicitlySaved.current &&
-        phaseRef.current !== "submitted" &&
-        appIdRef.current
-      ) {
-        deleteLicenceV2Draft(appIdRef.current).catch(() => {});
-      }
-    };
-  }, []);
+  // No discard-on-exit cleanup needed: the DB row is only created on the
+  // first explicit save (Save & Continue / Save Draft), so there is nothing
+  // to delete if the user leaves without saving.
 
-  const startNew = async () => {
-    setPhase("loading");
-    try {
-      const r = await createLicenceV2Draft();
-      const app = r.data.data;
-      draftIsNew.current = true;
-      explicitlySaved.current = false;
-      setAppId(app.id);
-      setFormData(appToFormData(app));
-      setCurrentStep(app.currentStep || 1);
-      setPersonnelSyncedAt(deriveSyncedAt(app));
-      setPhase("wizard");
-    } catch (err) {
-      if (err?.response?.status === 409) {
-        const data = err?.response?.data || {};
-        // Rejection cooldown block — show dedicated cooldown UI
-        if (data.code === "REAPPLICATION_COOLDOWN_ACTIVE") {
-          const msg = data.message || "";
-          // Try to extract the date from the message ("after DD Month YYYY")
-          const dateMatch = msg.match(/after\s+(.+?)\s+\(/);
-          const cooldownDate = dateMatch ? dateMatch[1] : "6 months after rejection";
-          // Estimate remaining days (rough: 180 days from now as fallback)
-          const now = new Date();
-          let daysRemaining = 180;
-          try {
-            const parsed = new Date(cooldownDate);
-            if (!isNaN(parsed)) {
-              daysRemaining = Math.max(1, Math.ceil((parsed - now) / (1000 * 60 * 60 * 24)));
-            }
-          } catch { /* use default */ }
-          setCooldownInfo({ daysRemaining, cooldownDate });
-          setPhase("cooldown");
-        } else {
-          // Active application already exists
-          const msg = data.message || "";
-          const match = msg.match(/\(([^)]+)\)/);
-          setBlockedStatus(match ? match[1] : "Under Review");
-          setPhase("blocked");
-        }
-      } else {
-        showToast({ message: "Failed to create draft application", variant: "danger" });
-        navigate("/business/licence");
-      }
-    }
+
+  // Open the wizard with empty local state only — no DB row is created here.
+  // Insertion happens lazily via ensureDraftCreated() on the first save.
+  const startNew = () => {
+    draftIsNew.current = true;
+    explicitlySaved.current = false;
+    setAppId(null);
+    setFormData({ ...EMPTY });
+    setCurrentStep(1);
+    setPersonnelSyncedAt(null);
+    setPhase("wizard");
   };
 
   const loadDraft = async (id) => {
@@ -384,11 +351,24 @@ export default function ApplyLicenceV2() {
     } catch { /* silent */ }
   };
 
+  // Lazily create the DB draft row on the first save action.
+  // Subsequent calls return the existing appId immediately.
+  const ensureDraftCreated = async () => {
+    if (appId) return appId;
+    const r = await createLicenceV2Draft();
+    const app = r.data.data;
+    setAppId(app.id);
+    appIdRef.current = app.id;
+    setPersonnelSyncedAt(deriveSyncedAt(app));
+    return app.id;
+  };
+
   const saveStep = async (patch, nextStep) => {
     setSaving(true);
     try {
+      const id = await ensureDraftCreated();
       const body = { currentStep: nextStep, ...patch };
-      const r = await saveLicenceV2Draft(appId, body);
+      const r = await saveLicenceV2Draft(id, body);
       const app = r.data.data;
       setFormData(appToFormData(app));
       setCurrentStep(nextStep);
@@ -408,6 +388,8 @@ export default function ApplyLicenceV2() {
   // the draft-schema slice of the live formData before moving to the previous step.
   const handleBack = () => {
     if (currentStep <= 1) return;
+    // If no draft exists yet, just step back in local state — nothing to save.
+    if (!appId) { setCurrentStep(currentStep - 1); return; }
     const patch = {
       routes: formData.routes,
       sponsorSize: formData.sponsorSize || undefined,
@@ -421,10 +403,10 @@ export default function ApplyLicenceV2() {
     saveStep(patch, currentStep - 1);
   };
 
-  // Explicit, sponsor-initiated save. Together with Submit this is the only action
-  // that "keeps" a brand-new draft — without it the draft is discarded on exit.
+  // Explicit, sponsor-initiated save. Lazily creates the DB row if it doesn't
+  // exist yet (e.g. sponsor clicks Save Draft before Save & Continue on Step 1).
   const handleSaveDraft = async () => {
-    if (!appId || savingDraft) return;
+    if (savingDraft) return;
     const patch = {
       routes: formData.routes,
       sponsorSize: formData.sponsorSize || undefined,
@@ -437,7 +419,8 @@ export default function ApplyLicenceV2() {
     };
     setSavingDraft(true);
     try {
-      const r = await saveLicenceV2Draft(appId, { currentStep, ...patch });
+      const id = await ensureDraftCreated();
+      const r = await saveLicenceV2Draft(id, { currentStep, ...patch });
       setFormData(appToFormData(r.data.data));
       explicitlySaved.current = true;
       showToast({ message: "Draft saved — you can safely leave and resume later.", variant: "success" });
@@ -454,8 +437,9 @@ export default function ApplyLicenceV2() {
     submitInFlight.current = true;
     setSubmitting(true); setSubmitErrors([]);
     try {
-      await saveLicenceV2Draft(appId, { currentStep: 8, ...patch });
-      await submitLicenceV2Application(appId);
+      const id = await ensureDraftCreated();
+      await saveLicenceV2Draft(id, { currentStep: 8, ...patch });
+      await submitLicenceV2Application(id);
       setPhase("submitted");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
@@ -526,21 +510,22 @@ export default function ApplyLicenceV2() {
                   <Step8Declarations data={formData} onChange={merge} onBack={handleBack} onSubmit={handleSubmit} submitting={submitting} submitErrors={submitErrors} />
                 )}
               </div>
-              {appId && (
-                <div className="flex flex-col items-center gap-2 pt-1 border-t border-gray-100">
-                  <button
-                    onClick={handleSaveDraft}
-                    disabled={savingDraft || saving}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-secondary/5 text-secondary font-black text-xs px-4 py-2 hover:bg-secondary/10 active:scale-95 transition-all disabled:opacity-40"
-                  >
-                    {savingDraft ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                    Save Draft
-                  </button>
-                  <p className="text-center text-[10px] font-bold text-gray-400 flex items-center justify-center gap-1.5">
-                    <FileText size={11} /> Draft #{appId} — your progress is only kept if you Save Draft or Submit
-                  </p>
-                </div>
-              )}
+              <div className="flex flex-col items-center gap-2 pt-1 border-t border-gray-100">
+                <button
+                  onClick={handleSaveDraft}
+                  disabled={savingDraft || saving}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-secondary/5 text-secondary font-black text-xs px-4 py-2 hover:bg-secondary/10 active:scale-95 transition-all disabled:opacity-40"
+                >
+                  {savingDraft ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                  Save Draft
+                </button>
+                <p className="text-center text-[10px] font-bold text-gray-400 flex items-center justify-center gap-1.5">
+                  <FileText size={11} />
+                  {appId
+                    ? `Draft #${appId} — your progress is only kept if you Save Draft or Submit`
+                    : "Your progress is only saved when you click Save & Continue or Save Draft"}
+                </p>
+              </div>
             </>
           )}
         </div>
