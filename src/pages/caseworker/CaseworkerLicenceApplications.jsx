@@ -806,6 +806,11 @@ const CaseworkerLicenceApplications = () => {
                       {selectedApp.documents.map((doc, i) => {
                         const previewing  = docBusy === `${i}:preview`;
                         const downloading = docBusy === `${i}:download`;
+                        const docLabel =
+                          selectedApp.documentNames?.[i] ||
+                          (typeof doc === "string" && doc.split(/[\\/]/).pop()) ||
+                          `Document ${i + 1}`;
+
                         return (
                           <div key={doc} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-white hover:border-primary/20 transition-all">
                             <button
@@ -817,7 +822,7 @@ const CaseworkerLicenceApplications = () => {
                               {previewing
                                 ? <Loader2 size={15} className="text-primary animate-spin shrink-0" />
                                 : <FileText size={15} className="text-gray-400 shrink-0" />}
-                              <span className="text-xs font-bold text-secondary truncate">Document {i + 1}</span>
+                              <span className="text-xs font-bold text-secondary truncate" title={docLabel}>{docLabel}</span>
                             </button>
                             <button
                               type="button"
