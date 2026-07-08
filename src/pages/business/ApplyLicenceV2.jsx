@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShieldCheck, FileText, Loader2, Trash2, Clock, Save } from "lucide-react";
+import { ShieldCheck, FileText, Loader2, Trash2, Clock, Save, Ban, Timer, Calendar } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
 import {
   createLicenceV2Draft,
@@ -117,6 +117,57 @@ function ApplicationBlocked({ status, navigate }) {
   );
 }
 
+function CooldownBlocked({ cooldown, navigate }) {
+  return (
+    <div className="py-8 space-y-6">
+      <div className="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-rose-50 overflow-hidden relative">
+        <div className="h-1 w-full bg-gradient-to-r from-red-500 to-rose-600" />
+        <div className="p-6 text-center space-y-4">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+            <Ban size={28} className="text-red-600" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-red-700 mb-1">Reapplication Locked</h2>
+            <p className="text-sm font-bold text-gray-500 max-w-sm mx-auto">
+              Your previous licence application was rejected. Under Home Office guidelines, you must wait <span className="font-black text-red-700">6 months</span> before reapplying.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            <div className="inline-flex items-center gap-2 bg-red-100 border border-red-200 rounded-xl px-4 py-3">
+              <Timer size={16} className="text-red-600" />
+              <div className="text-left">
+                <p className="text-[10px] font-black text-red-500 uppercase tracking-wider">Days Remaining</p>
+                <p className="text-2xl font-black text-red-700 leading-none mt-0.5">
+                  {cooldown.daysRemaining}
+                  <span className="text-xs font-bold ml-1">day{cooldown.daysRemaining !== 1 ? "s" : ""}</span>
+                </p>
+              </div>
+            </div>
+            <div className="inline-flex items-center gap-2 bg-white border border-red-100 rounded-xl px-4 py-3">
+              <Calendar size={16} className="text-red-500" />
+              <div className="text-left">
+                <p className="text-[10px] font-black text-red-500 uppercase tracking-wider">Available From</p>
+                <p className="text-sm font-black text-red-700 mt-0.5">{cooldown.cooldownDate}</p>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs font-bold text-gray-400 max-w-xs mx-auto">
+            The "New Licence Application" button will automatically unlock once the 6-month restriction period has passed.
+          </p>
+        </div>
+      </div>
+      <div className="text-center">
+        <button
+          onClick={() => navigate("/business/licence")}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-4 py-2 text-sm font-black text-white hover:bg-secondary-dark transition shadow-sm"
+        >
+          Back to Licence Status
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SubmitSuccess({ navigate }) {
   return (
     <div className="text-center py-10 space-y-4">
@@ -141,8 +192,9 @@ export default function ApplyLicenceV2() {
   const [searchParams] = useSearchParams();
   const { showToast } = useToast();
 
-  const [phase, setPhase] = useState("loading"); // loading | pick | wizard | submitted | blocked
+  const [phase, setPhase] = useState("loading"); // loading | pick | wizard | submitted | blocked | cooldown
   const [blockedStatus, setBlockedStatus] = useState(null);
+  const [cooldownInfo, setCooldownInfo] = useState(null); // { daysRemaining, cooldownDate }
   const [drafts, setDrafts] = useState([]);
   const [appId, setAppId] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
@@ -177,6 +229,25 @@ export default function ApplyLicenceV2() {
         const all = r.data.data || [];
         const blocking = all.find((a) => BLOCKING_STATUSES.includes(a.status));
         if (blocking) { setBlockedStatus(blocking.status); setPhase("blocked"); return; }
+        // Check for active rejection cooldown before allowing new draft creation
+        const now = new Date();
+        const rejectedWithCooldown = all
+          .filter((a) => {
+            const s = (a.status || "").toLowerCase();
+            return (s === "rejected" || s === "licence rejected") && a.rejectionCooldownUntil;
+          })
+          .map((a) => ({ ...a, cooldownDate: new Date(a.rejectionCooldownUntil) }))
+          .filter((a) => a.cooldownDate > now)
+          .sort((a, b) => b.cooldownDate - a.cooldownDate);
+        if (rejectedWithCooldown.length > 0) {
+          const top = rejectedWithCooldown[0];
+          const msRemaining = top.cooldownDate - now;
+          const daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+          const cooldownDate = top.cooldownDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+          setCooldownInfo({ daysRemaining, cooldownDate });
+          setPhase("cooldown");
+          return;
+        }
         const draftsOnly = all.filter((a) => a.status === "Draft");
         if (draftsOnly.length > 0) { setDrafts(draftsOnly); setPhase("pick"); }
         else startNew();
@@ -221,11 +292,31 @@ export default function ApplyLicenceV2() {
       setPhase("wizard");
     } catch (err) {
       if (err?.response?.status === 409) {
-        // Server blocked the new application (pending one already exists)
-        const msg = err?.response?.data?.message || "";
-        const match = msg.match(/\(([^)]+)\)/);
-        setBlockedStatus(match ? match[1] : "Under Review");
-        setPhase("blocked");
+        const data = err?.response?.data || {};
+        // Rejection cooldown block — show dedicated cooldown UI
+        if (data.code === "REAPPLICATION_COOLDOWN_ACTIVE") {
+          const msg = data.message || "";
+          // Try to extract the date from the message ("after DD Month YYYY")
+          const dateMatch = msg.match(/after\s+(.+?)\s+\(/);
+          const cooldownDate = dateMatch ? dateMatch[1] : "6 months after rejection";
+          // Estimate remaining days (rough: 180 days from now as fallback)
+          const now = new Date();
+          let daysRemaining = 180;
+          try {
+            const parsed = new Date(cooldownDate);
+            if (!isNaN(parsed)) {
+              daysRemaining = Math.max(1, Math.ceil((parsed - now) / (1000 * 60 * 60 * 24)));
+            }
+          } catch { /* use default */ }
+          setCooldownInfo({ daysRemaining, cooldownDate });
+          setPhase("cooldown");
+        } else {
+          // Active application already exists
+          const msg = data.message || "";
+          const match = msg.match(/\(([^)]+)\)/);
+          setBlockedStatus(match ? match[1] : "Under Review");
+          setPhase("blocked");
+        }
       } else {
         showToast({ message: "Failed to create draft application", variant: "danger" });
         navigate("/business/licence");
@@ -394,6 +485,7 @@ export default function ApplyLicenceV2() {
 
   if (phase === "submitted") return <SubmitSuccess navigate={navigate} />;
   if (phase === "blocked") return <ApplicationBlocked status={blockedStatus} navigate={navigate} />;
+  if (phase === "cooldown") return <CooldownBlocked cooldown={cooldownInfo} navigate={navigate} />;
 
   const stepProps = { data: formData, onChange: merge, onNext: handleNext, onBack: handleBack, saving };
   const personnelProps = { onSyncFromProfile: handleSyncFromProfile, syncing, personnelSyncedAt };
