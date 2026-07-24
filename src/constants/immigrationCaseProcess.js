@@ -51,7 +51,7 @@ export const IMMIGRATION_CASE_STEPS = [
   { id: "client_enquiry", order: 1, title: "Client Enquiry", shortTitle: "Enquiry", description: "Client contacts the firm with an immigration query." },
   { id: "admin_assignment", order: 2, title: "Admin Assignment", shortTitle: "Assignment", description: "Admin assigns caseworker and sets priority." },
   { id: "initial_consultation", order: 3, title: "Initial Consultation", shortTitle: "Consultation", description: "Initial consultation to assess eligibility and visa options." },
-  { id: "data_capture_initial_docs", order: 4, title: "Data Capture & Documents", shortTitle: "Data & Docs", description: "Data Capture Sheet sent; passport, BRP/eVisa, driving licence requested." },
+  { id: "data_capture_initial_docs", order: 4, title: "Data Capture & Documents", shortTitle: "Data & Docs", description: "Upload Documents sent; passport, BRP/eVisa, and driving licence (if applicable) requested." },
   { id: "application_preparation", order: 5, title: "Application Preparation", shortTitle: "Preparation", description: "Application form preparation begins once documents received." },
   { id: "document_review", order: 6, title: "Document Review", shortTitle: "Doc Review", description: "Caseworker reviews documents and identifies gaps." },
   { id: "further_information_request", order: 7, title: "Further Information", shortTitle: "Further Info", description: "Further information or documents requested from client." },
@@ -152,12 +152,12 @@ export const STAGE_GUIDANCE = {
   admin_assignment: { actions: ["Confirm caseworker", "Set priority", "Start consultation"], docs: [] },
   initial_consultation: { actions: ["Assess eligibility", "Confirm visa route"], docs: [] },
   data_capture_initial_docs: {
-    actions: ["Send Data Capture Sheet", "Request mandatory documents"],
+    actions: ["Send Upload Documents", "Request mandatory documents"],
     docs: ["Passport", "BRP / eVisa", "Driving licence (if applicable)"],
   },
   application_preparation: {
-    actions: ["Begin application form", "Verify Data Capture Sheet received"],
-    docs: ["Completed Data Capture Sheet"],
+    actions: ["Begin application form", "Verify Upload Documents received"],
+    docs: ["Completed Upload Documents"],
   },
   document_review: {
     actions: ["Review uploads", "Flag gaps", "Internal QC"],
@@ -220,7 +220,7 @@ export function buildStepStates(caseRecord) {
 
 export const CANDIDATE_STAGE_ACTIONS = {
   data_capture_initial_docs: [
-    { text: "Complete your Data Capture Sheet", to: "/candidate/document-checklist" },
+    { text: "Complete your Upload Documents", to: "/candidate/upload-documents-form" },
     { text: "Upload: Passport, BRP/eVisa", to: "/candidate/document-checklist" },
   ],
   draft_application_review: [

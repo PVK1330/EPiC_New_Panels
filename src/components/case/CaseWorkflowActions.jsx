@@ -192,12 +192,12 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
               disabled={!!busy}
               onClick={() => run("dcs-send", () => sendDataCaptureRequest(caseId))}
             >
-              {busy === "dcs-send" ? "Sending…" : "Send Data Capture Sheet"}
+              {busy === "dcs-send" ? "Sending…" : "Send Upload Documents"}
             </Button>
           ) : (
             <div className="inline-flex items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1.5 text-[11px] font-bold text-green-700">
-                <CheckCircle2 size={13} /> Data Capture Sheet sent
+                <CheckCircle2 size={13} /> Upload Documents sent
               </span>
               <Button
                 type="button"

@@ -14,7 +14,7 @@ function apiErrorMessage(error) {
   return error?.response?.data?.message || error?.message || "Something went wrong";
 }
 
-const DataCaptureSheet = () => {
+const UploadDocumentsForm = () => {
   const { showToast } = useToast();
   const { myApplication, getMyApplication } = useCandidate();
   const cclStatus = myApplication?._relatedData?.cclRecord?.status;
@@ -75,7 +75,7 @@ const DataCaptureSheet = () => {
     try {
       await submitDataCapture(responses);
       setStatus("submitted");
-      showToast({ message: "Data Capture Sheet submitted to your caseworker." });
+      showToast({ message: "Upload Documents submitted to your caseworker." });
     } catch (e) {
       showToast({ variant: "danger", message: apiErrorMessage(e) });
     } finally {
@@ -99,7 +99,7 @@ const DataCaptureSheet = () => {
       <header>
         <h1 className="text-3xl font-black text-secondary tracking-tight flex items-center gap-2">
           <ClipboardList className="text-primary" />
-          Data Capture Sheet
+          Upload Documents
         </h1>
         <p className="text-sm font-bold text-gray-500 mt-1">
           Case {caseRef || "—"} · Complete your details for your visa application.
@@ -138,7 +138,7 @@ const DataCaptureSheet = () => {
       {!fields.length ? (
         <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center">
           <p className="text-sm font-bold text-gray-500">
-            Your caseworker has not sent a Data Capture Sheet yet.
+            Your caseworker has not sent a Upload Documents yet.
           </p>
           <Link to="/candidate/dashboard" className="text-sm font-black text-secondary mt-4 inline-block">
             Back to dashboard
@@ -196,4 +196,4 @@ const DataCaptureSheet = () => {
   );
 };
 
-export default DataCaptureSheet;
+export default UploadDocumentsForm;
