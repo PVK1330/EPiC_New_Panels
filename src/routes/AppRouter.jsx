@@ -27,7 +27,7 @@ const CandidateNotifications = lazy(() => import('../pages/candidate/CandidateNo
 const CandidateTasks = lazy(() => import('../pages/candidate/CandidateTasks'));
 const ActivityLog = lazy(() => import('../pages/candidate/ActivityLog'));
 const ApplicationStatus = lazy(() => import('../pages/candidate/ApplicationStatus'));
-const DataCaptureSheet = lazy(() => import('../pages/candidate/DataCaptureSheet'));
+const UploadDocumentsForm = lazy(() => import('../pages/candidate/UploadDocumentsForm'));
 const CandidateCCL = lazy(() => import('../pages/candidate/CandidateCCL'));
 const BiometricAvailability = lazy(() => import('../pages/candidate/BiometricAvailability'));
 const CandidateAccount = lazy(() => import('../pages/candidate/CandidateAccount'));
@@ -287,8 +287,8 @@ const AppRouter = () => {
           <Route path="activity-log" element={<ActivityLog />} />
           <Route path="application-status" element={<ApplicationStatus />} />
           <Route path="track-progress" element={<Navigate to="/candidate/application-status" replace />} />
-          <Route path="data-capture-sheet" element={<DataCaptureSheet />} />
-          <Route path="data-capture" element={<Navigate to="/candidate/data-capture-sheet" replace />} />
+          <Route path="upload-documents-form" element={<UploadDocumentsForm />} />
+          <Route path="data-capture" element={<Navigate to="/candidate/upload-documents-form" replace />} />
           <Route path="ccl" element={<CandidateCCL />} />
           <Route path="biometric-availability" element={<BiometricAvailability />} />
           <Route path="timeline" element={<Navigate to="/candidate/application-status?tab=timeline" replace />} />

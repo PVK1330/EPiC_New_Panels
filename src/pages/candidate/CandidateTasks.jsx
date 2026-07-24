@@ -96,7 +96,7 @@ export default function CandidateTasks() {
       <header>
         <h1 className="text-2xl md:text-3xl font-black text-secondary tracking-tight">My Tasks</h1>
         <p className="text-sm font-bold text-gray-500 mt-1">
-          Actions from your caseworker  including Data Capture Sheet requests sent to you.
+          Actions from your caseworker including Upload Documents requests sent to you.
         </p>
       </header>
 

@@ -107,7 +107,7 @@ const ApplicationStatus = () => {
       ? [
           {
             prio: "high",
-            title: "Complete Data Capture Sheet",
+            title: "Complete Upload Documents",
             tag: "Required",
             due: "Action Required",
             cta: { label: "Open checklist", to: "/candidate/document-checklist" },

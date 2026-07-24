@@ -36,7 +36,7 @@ export const ROLE_ROUTES = {
 
 export const DOCUMENT_TYPE_OPTIONS = [
   "General",
-  "Data Capture Sheet",
+  "Upload Documents",
   "Client Care Letter",
   "Decision Letter",
   "Approval Notice",
