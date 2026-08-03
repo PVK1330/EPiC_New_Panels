@@ -30,7 +30,7 @@ const AUDIENCE_OPTIONS = [
 const ROLE_LABEL = {
   caseworker: "Caseworkers",
   sponsor: "Sponsors",
-  candidate: "Candidates",
+  candidate: "Clients",
   business: "Sponsors",
 };
 

@@ -64,7 +64,7 @@ const priorityBadge = {
 
 const TABLE_COLS = [
   "Case ID",
-  "Candidate",
+  "Client",
   "Business",
   "CaseWorker (s)",
   "Visa Type",

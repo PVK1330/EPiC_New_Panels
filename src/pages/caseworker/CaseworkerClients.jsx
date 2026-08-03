@@ -117,7 +117,7 @@ const buildAssignedCandidates = (cases = []) => {
     )[0];
     const track = latestCase?.visaType?.name || "Visa Case";
     const code = latestCase?.caseId ? `#${latestCase.caseId}` : `#C-${candidate.id}`;
-    const sub = `${latestCase?.nationality || "Candidate"}${latestCase?.jobTitle ? ` · ${latestCase.jobTitle}` : ""}`;
+    const sub = `${latestCase?.nationality || "Client"}${latestCase?.jobTitle ? ` · ${latestCase.jobTitle}` : ""}`;
 
     return {
       id: candidate.id,

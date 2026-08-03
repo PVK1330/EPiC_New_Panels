@@ -327,7 +327,7 @@ const CaseworkerDashboard = () => {
               <tr className="border-b border-gray-100 bg-gray-50/80">
                 {[
                   "Case ID",
-                  "Candidate",
+                  "Client",
                   "Business",
                   "Visa type",
                   "Status",

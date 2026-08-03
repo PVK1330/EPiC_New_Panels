@@ -65,7 +65,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
         { to: "/business/licence-documents", label: "Licence Documents",   icon: Files,       moduleKey: "business.licence" },
         { to: "/business/cosallocation",     label: "CoS Allocation",      icon: Package,     moduleKey: "business.licence" },
         { to: "/business/workers",           label: "Sponsored Workers",   icon: UserCog,     moduleKey: "business.workers" },
-        { to: "/business/employee-records",  label: "Employee Records",    icon: UserCheck,   moduleKey: "business.workers" },
+        // { to: "/business/employee-records",  label: "Employee Records",    icon: UserCheck,   moduleKey: "business.workers" },
       ],
     },
     {

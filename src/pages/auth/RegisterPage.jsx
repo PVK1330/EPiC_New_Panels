@@ -11,7 +11,7 @@ import useAuth from "../../hooks/useAuth";
 // (Previously "Candidate" was mis-mapped to value 3, which is the ADMIN role —
 // silently granting admin to every self-registered candidate.)
 const ROLE_OPTIONS = [
-  { value: 1, label: "Candidate" },
+  { value: 1, label: "Client" },
   { value: 4, label: "Business" },
 ];
 

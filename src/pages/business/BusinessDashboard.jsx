@@ -319,7 +319,7 @@ export default function BusinessDashboard() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="text-sm font-black text-secondary">
-                        {`${item.candidate?.first_name || ""} ${item.candidate?.last_name || ""}`.trim() || "Candidate"}
+                        {`${item.candidate?.first_name || ""} ${item.candidate?.last_name || ""}`.trim() || "Client"}
                       </h4>
                       <p className="text-xs font-bold text-gray-500">{item.jobTitle || "Case in progress"}</p>
                       <p className="text-[10px] font-bold text-gray-400 mt-1">Case ID: {item.caseId || "N/A"}</p>

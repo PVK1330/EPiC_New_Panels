@@ -5,7 +5,7 @@ import { formatTime } from "../../../utils/datetime";
 
 function CasesCommsTab({ candidate, caseId }) {
   const navigate = useNavigate();
-  const candidateName = typeof candidate === "string" && candidate.trim() ? candidate : "Candidate";
+  const candidateName = typeof candidate === "string" && candidate.trim() ? candidate : "Client";
   const initial = candidateName.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState([

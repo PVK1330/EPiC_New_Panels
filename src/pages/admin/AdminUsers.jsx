@@ -682,14 +682,14 @@ export default function AdminUsers() {
               required
               error={errors.email}
             />
-             <Input
+            {/* <Input
               label="Role"
               name="role_id"
               value={createForm.role_id}
               onChange={handleCreateChange}
               options={ROLE_OPTIONS}
               required
-            />
+            /> */}
             <PhoneInput
               split
               label="Mobile"
@@ -701,7 +701,6 @@ export default function AdminUsers() {
               placeholder="7700 900000"
               required
               error={errors.mobile}
-              className="sm:col-span-2"
             />
 
 
@@ -774,24 +773,15 @@ export default function AdminUsers() {
               placeholder="7700 900000"
               required
               error={errors.mobile}
-              className="sm:col-span-2"
             />
-            <Input
+            {/* <Input
               label="Role"
               name="role_id"
               value={editForm.role_id}
               onChange={handleEditChange}
               options={ROLE_OPTIONS}
               required
-            />
-            <Input
-              label="Status"
-              name="status"
-              value={editForm.status}
-              onChange={handleEditChange}
-              options={EDIT_STATUS_OPTIONS}
-              required
-            />
+            /> */}
             <Input
               label="New Password (optional)"
               name="password"
@@ -809,6 +799,14 @@ export default function AdminUsers() {
               onChange={handleEditChange}
               placeholder="••••••••"
               error={errors.confirm_password}
+            />
+            <Input
+              label="Status"
+              name="status"
+              value={editForm.status}
+              onChange={handleEditChange}
+              options={EDIT_STATUS_OPTIONS}
+              required
             />
           </div>
         )}
