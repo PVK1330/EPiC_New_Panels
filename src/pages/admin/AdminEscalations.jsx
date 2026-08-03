@@ -438,7 +438,7 @@ const AdminEscalations = () => {
           <table className="w-full min-w-[600px]">
             <thead>
               <tr className="bg-gray-50 text-left">
-                {["Case ID", "Candidate", "Severity", "Trigger Reason", "Assigned Admin", "Days Open", "Status", "Actions"].map((h, i) => (
+                {["Case ID", "Client", "Severity", "Trigger Reason", "Assigned Admin", "Days Open", "Status", "Actions"].map((h, i) => (
                   <th key={i} className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">
                     {h || " "}
                   </th>

@@ -1325,7 +1325,7 @@ const CandidateAccount = () => {
                           reduxUser?.first_name,
                           reduxUser?.last_name,
                         ) ||
-                        "Candidate"}
+                        "Client"}
                     </p>
                     <p className="text-xs font-bold text-gray-500 mt-0.5">
                       Case:{" "}

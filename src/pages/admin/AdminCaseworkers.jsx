@@ -735,7 +735,7 @@ export default function AdminCaseworkers() {
                   "Name",
                   "Email",
                   "Department",
-                  "Candidates",
+                  "Clients",
                   "Active Cases",
                   "Overdue",
                   "Completed",
@@ -913,16 +913,15 @@ export default function AdminCaseworkers() {
               placeholder="e.g. 7911 123456"
               required
               error={errors.mobile}
-              className="sm:col-span-2"
             />
-            <Input
+            {/* <Input
               label="Role"
               name="role_id"
               value={createForm.role_id}
               onChange={handleCreateChange}
               options={ROLE_OPTIONS}
               required
-            />
+            /> */}
             <Input
               label="Department"
               name="department"
@@ -975,16 +974,15 @@ export default function AdminCaseworkers() {
               placeholder="e.g. 7911 123456"
               required
               error={errors.mobile}
-              className="sm:col-span-2"
             />
-            <Input
+            {/* <Input
               label="Role"
               name="role_id"
               value={editForm.role_id}
               onChange={handleEditChange}
               options={ROLE_OPTIONS}
               required
-            />
+            /> */}
             <Input
               label="Department"
               name="department"
@@ -1001,7 +999,6 @@ export default function AdminCaseworkers() {
               onChange={handleEditChange}
               options={EDIT_STATUS_OPTIONS}
               required
-              className="sm:col-span-2"
             />
           </div>
         )}

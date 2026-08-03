@@ -43,7 +43,7 @@ const BusinessPayment = () => {
         invoiceNo: p.invoiceNumber || `INV-${p.id}`,
         dueDate: p.dueDate || null,
         caseRef: p.Case?.caseId || "N/A",
-        candidateName: `${p.Case?.candidate?.first_name || ""} ${p.Case?.candidate?.last_name || ""}`.trim() || "Candidate",
+        candidateName: `${p.Case?.candidate?.first_name || ""} ${p.Case?.candidate?.last_name || ""}`.trim() || "Client",
       }));
       // Licence-fee / ISC payments live in the sponsor ledger, not case_payments.
       const ledgerRows = (data.sponsorPayments || []).map((p) => ({
@@ -350,7 +350,7 @@ const BusinessPayment = () => {
 
             <div className="space-y-3">
               {[
-                ["Candidate",    selectedPayment.candidateName],
+                ["Client",    selectedPayment.candidateName],
                 ["Case Ref",     selectedPayment.caseRef],
                 ["Amount",       money(selectedPayment.amount)],
                 ["Date",         selectedPayment.date ? formatDate(selectedPayment.date) : "N/A"],

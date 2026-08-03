@@ -10,7 +10,7 @@ export const AVATAR_COLORS = [
 
 export function displayRoleName(row) {
   const n = row?.Role?.name;
-  if (!n) return "Candidate";
+  if (!n) return "Client";
   return n.charAt(0).toUpperCase() + n.slice(1);
 }
 

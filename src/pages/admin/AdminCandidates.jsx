@@ -176,7 +176,7 @@ function canonicalVisaLabel(value) {
   return value; // unknown — show the raw stored value
 }
 
-const ROLE_OPTIONS = [{ value: "1", label: "Candidate" }];
+const ROLE_OPTIONS = [{ value: "1", label: "Client" }];
 
 const VISA_TYPE_OPTIONS = [
   { value: "Skilled Worker", label: "Skilled Worker" },
@@ -232,7 +232,7 @@ const EMPTY_CREATE = {
 
 function displayRoleName(row) {
   const n = row?.Role?.name;
-  if (!n) return "Candidate";
+  if (!n) return "Client";
   return n.charAt(0).toUpperCase() + n.slice(1);
 }
 
@@ -508,7 +508,7 @@ export default function AdminCandidates() {
       showToast({
         message:
           res.data?.message ||
-          (businessId ? "Candidate assigned to business" : "Candidate unassigned"),
+          (businessId ? "Client assigned to business" : "Client unassigned"),
         variant: "success",
       });
       closeModal();
@@ -746,7 +746,7 @@ export default function AdminCandidates() {
     try {
       const res = await createCandidate(data);
       showToast({
-        message: res.data?.message || "Candidate created successfully",
+        message: res.data?.message || "Client created successfully",
         variant: "success",
       });
       closeModal();
@@ -817,7 +817,7 @@ export default function AdminCandidates() {
     try {
       const res = await toggleCandidateStatus(row.id);
       showToast({
-        message: res.data?.message || "Candidate deactivated",
+        message: res.data?.message || "Client deactivated",
         variant: "success",
       });
       closeModal();
@@ -937,7 +937,7 @@ export default function AdminCandidates() {
       transition={{ duration: 0.3 }}
     >
       <PageTitle
-        title="Clients / Candidates"
+        title="Clients"
         subtitle="All registered clients and their case details"
         actions={
           <>
@@ -985,10 +985,10 @@ export default function AdminCandidates() {
           )}
           <div>
             <p className="text-sm font-bold text-gray-700 mb-1">
-              Built-in fields — toggle visibility for candidates.
+              Built-in fields — toggle visibility for clients.
             </p>
             <p className="text-xs text-gray-400 mb-3">
-              Hidden fields are removed from the candidate application form. Each badge shows which form step the field belongs to.
+              Hidden fields are removed from the client application form. Each badge shows which form step the field belongs to.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[min(50vh,28rem)] overflow-y-auto pr-1">
               {[...applicationFieldSettings]
@@ -1186,7 +1186,7 @@ export default function AdminCandidates() {
                           </div>
                           <div>
                             <p className={`${TABLE_CLASS.cellPrimary} whitespace-nowrap`}>{fullName(c)}</p>
-                            <RoleBadge role="Candidate" />
+                            <RoleBadge role="Client" />
                           </div>
                         </div>
                       </Td>
@@ -1381,7 +1381,7 @@ export default function AdminCandidates() {
       <Modal
         open={modal.type === "delete"}
         onClose={closeModal}
-        title="Deactivate Candidate"
+        title="Deactivate Client"
         maxWidthClass="max-w-sm"
         bodyClassName="px-4 py-4 sm:px-6"
         footer={
@@ -1450,8 +1450,8 @@ export default function AdminCandidates() {
               <span className="font-black text-secondary">
                 {modal.data ? fullName(modal.data) : ""}
               </span>{" "}
-              to a business. The candidate will appear in that business's
-              portal (My Candidates / Workers).
+              to a business. The client will appear in that business's
+              portal (My Clients / Workers).
             </p>
           </div>
 
@@ -1583,7 +1583,7 @@ export default function AdminCandidates() {
               <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
                 <li>Download the sample template below for the correct column headers</li>
                 <li>Each row is matched by <span className="font-bold">Email</span> (required) or User ID</li>
-                <li>Existing candidates are updated; new emails create accounts with a temporary password</li>
+                <li>Existing clients are updated; new emails create accounts with a temporary password</li>
                 <li>Dates must be in <span className="font-bold">YYYY-MM-DD</span> format (e.g. 1990-05-15)</li>
                 <li>Yes/No fields accept <span className="font-bold">Yes</span> or <span className="font-bold">No</span></li>
               </ul>

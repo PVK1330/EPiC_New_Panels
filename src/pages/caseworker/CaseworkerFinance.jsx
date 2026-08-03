@@ -13,7 +13,7 @@ const Stat = ({ label, value, colorClass }) => (
   </div>
 );
 
-const INVOICE_COLUMNS = ["Invoice", "Candidate", "Amount", "Status", "Due"];
+const INVOICE_COLUMNS = ["Invoice", "Client", "Amount", "Status", "Due"];
 
 // Quote a CSV cell: wrap in quotes and escape embedded quotes so values
 // containing commas, quotes, or newlines survive a round-trip into Excel/Sheets.

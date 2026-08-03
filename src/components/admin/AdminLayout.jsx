@@ -226,7 +226,7 @@ const AdminLayout = () => {
                     {fullName}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">
-                    {user?.role || "Admin"}
+                    {user?.role === "candidate" ? "Client" : user?.role || "Admin"}
                   </p>
                 </div>
               </button>
