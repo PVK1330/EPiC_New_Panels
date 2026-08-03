@@ -88,7 +88,7 @@ export default function CandidateMessages() {
   }, [availableUsers, threads, user?.id]);
 
   const roleTabs = useMemo(() => {
-    const roles = new Set(["admin", "business", "caseworker"]);
+    const roles = new Set(["admin", "caseworker"]);
     mergedThreads.forEach((t) => {
       if (t.role) {
         const r = t.role.toLowerCase();

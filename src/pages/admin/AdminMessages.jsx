@@ -39,8 +39,8 @@ export default function AdminMessages() {
         name: u.name,
         email: u.email || "",
         initials: u.initials,
-        role: u.role || "User",
-          profile_pic: u.profile_pic || u.avatar_url,
+        role: (u.role?.toLowerCase() === 'candidate' ? 'Client' : u.role) || "User",
+        profile_pic: u.profile_pic || u.avatar_url,
       });
     });
 
@@ -52,8 +52,8 @@ export default function AdminMessages() {
           name: t.name,
           email: "",
           initials: t.initials,
-          role: t.role || "User",
-            profile_pic: t.profile_pic || t.avatar_url,
+          role: (t.role?.toLowerCase() === 'candidate' ? 'Client' : t.role) || "User",
+          profile_pic: t.profile_pic || t.avatar_url,
         });
       }
     });
@@ -72,7 +72,7 @@ export default function AdminMessages() {
         name: u.name,
         initials: u.initials,
         role: u.role || "User",
-          profile_pic: u.profile_pic || u.avatar_url,
+        profile_pic: u.profile_pic || u.avatar_url,
         preview:
           primary?.preview ||
           (convs.length ? "Open thread" : "No messages yet — click to start"),
@@ -98,10 +98,11 @@ export default function AdminMessages() {
   }, [availableUsers, threads, user?.id]);
 
   const roleTabs = useMemo(() => {
-    const roles = new Set(["admin", "business", "candidate", "caseworker"]);
+    const roles = new Set(["caseworker", "business", "client"]);
     mergedThreads.forEach((t) => {
       if (t.role) {
-        const r = t.role.toLowerCase();
+        let r = t.role.toLowerCase();
+        if (r === "candidate") r = "client";
         if (r === "sponsor") roles.add("business");
         else roles.add(r);
       }
@@ -113,9 +114,12 @@ export default function AdminMessages() {
     let list = mergedThreads;
     if (roleFilter !== "All") {
       list = list.filter((t) => {
-        const r = (t.role || "").toLowerCase();
-        if (roleFilter === "business") return r === "business" || r === "sponsor";
-        return r === roleFilter.toLowerCase();
+        let tRole = (t.role || "").toLowerCase();
+        if (tRole === "candidate") tRole = "client";
+        
+        const fRole = roleFilter.toLowerCase();
+        if (fRole === "business") return tRole === "business" || tRole === "sponsor";
+        return tRole === fRole;
       });
     }
     const q = query.trim().toLowerCase();
