@@ -39,8 +39,8 @@ const BusinessMessages = () => {
         name: u.name,
         email: u.email || "",
         initials: u.initials,
-        role: u.role || "User",
-          profile_pic: u.profile_pic || u.avatar_url,
+        role: (u.role?.toLowerCase() === 'candidate' ? 'Client' : u.role) || "User",
+        profile_pic: u.profile_pic || u.avatar_url,
       });
     });
 
@@ -52,8 +52,8 @@ const BusinessMessages = () => {
           name: t.name,
           email: "",
           initials: t.initials,
-          role: t.role || "User",
-            profile_pic: t.profile_pic || t.avatar_url,
+          role: (t.role?.toLowerCase() === 'candidate' ? 'Client' : t.role) || "User",
+          profile_pic: t.profile_pic || t.avatar_url,
         });
       }
     });
@@ -72,7 +72,7 @@ const BusinessMessages = () => {
         name: u.name,
         initials: u.initials,
         role: u.role || "User",
-          profile_pic: u.profile_pic || u.avatar_url,
+        profile_pic: u.profile_pic || u.avatar_url,
         preview:
           primary?.preview ||
           (convs.length ? "Open thread" : "No messages yet — click to start"),
@@ -98,22 +98,25 @@ const BusinessMessages = () => {
   }, [availableUsers, threads, user?.id]);
 
   const roleTabs = useMemo(() => {
-    const roles = new Set(["admin", "candidate", "caseworker"]);
+    const roles = new Set(["admin", "caseworker"]);
     mergedThreads.forEach((t) => {
       if (t.role) {
-        const r = t.role.toLowerCase();
+        let r = t.role.toLowerCase();
+        if (r === "candidate") r = "client";
         if (r === "sponsor") roles.add("business");
         else roles.add(r);
       }
     });
-    return ["All", ...Array.from(roles).filter(r => r !== "business" && r !== "sponsor").sort()];
+    return ["All", ...Array.from(roles).filter(r => r !== "business" && r !== "sponsor" && r !== "client").sort()];
   }, [mergedThreads]);
 
   const filteredThreads = useMemo(() => {
     let list = mergedThreads;
     if (roleFilter !== "All") {
       list = list.filter((t) => {
-        const tRole = (t.role || "").toLowerCase();
+        let tRole = (t.role || "").toLowerCase();
+        if (tRole === "candidate") tRole = "client";
+        
         const fRole = roleFilter.toLowerCase();
         if (fRole === "business") return tRole === "business" || tRole === "sponsor";
         return tRole === fRole;
@@ -201,11 +204,10 @@ const BusinessMessages = () => {
                     key={tab}
                     type="button"
                     onClick={() => setRoleFilter(tab)}
-                    className={`flex-1 text-[11px] font-semibold py-1.5 px-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
-                      roleFilter === tab
+                    className={`flex-1 text-[11px] font-semibold py-1.5 px-2 rounded-lg transition-all duration-150 whitespace-nowrap ${roleFilter === tab
                         ? "bg-white text-indigo-700 shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
-                    }`}
+                      }`}
                   >
                     {formatRoleTab(tab)}
                   </button>

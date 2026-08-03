@@ -38,8 +38,8 @@ const CaseworkerMessages = () => {
         name: u.name,
         email: u.email || "",
         initials: u.initials,
-        role: u.role || "User",
-          profile_pic: u.profile_pic || u.avatar_url,
+        role: (u.role?.toLowerCase() === 'candidate' ? 'Client' : u.role) || "User",
+        profile_pic: u.profile_pic || u.avatar_url,
       });
     });
 
@@ -51,8 +51,8 @@ const CaseworkerMessages = () => {
           name: t.name,
           email: "",
           initials: t.initials,
-          role: t.role || "User",
-            profile_pic: t.profile_pic || t.avatar_url,
+          role: (t.role?.toLowerCase() === 'candidate' ? 'Client' : t.role) || "User",
+          profile_pic: t.profile_pic || t.avatar_url,
         });
       }
     });
@@ -71,7 +71,7 @@ const CaseworkerMessages = () => {
         name: u.name,
         initials: u.initials,
         role: u.role || "User",
-          profile_pic: u.profile_pic || u.avatar_url,
+        profile_pic: u.profile_pic || u.avatar_url,
         preview:
           primary?.preview ||
           (convs.length ? "Open thread" : "No messages yet — click to start"),
@@ -97,10 +97,11 @@ const CaseworkerMessages = () => {
   }, [availableUsers, threads, user?.id]);
 
   const roleTabs = useMemo(() => {
-    const roles = new Set(["admin", "business", "candidate"]);
+    const roles = new Set(["admin", "business", "client"]);
     mergedThreads.forEach((t) => {
       if (t.role) {
-        const r = t.role.toLowerCase();
+        let r = t.role.toLowerCase();
+        if (r === "candidate") r = "client";
         if (r === "sponsor") roles.add("business");
         else roles.add(r);
       }
@@ -112,7 +113,9 @@ const CaseworkerMessages = () => {
     let list = mergedThreads;
     if (roleFilter !== "All") {
       list = list.filter((t) => {
-        const tRole = (t.role || "").toLowerCase();
+        let tRole = (t.role || "").toLowerCase();
+        if (tRole === "candidate") tRole = "client";
+        
         const fRole = roleFilter.toLowerCase();
         if (fRole === "business") return tRole === "business" || tRole === "sponsor";
         return tRole === fRole;
