@@ -8,7 +8,7 @@ import {
   MessageSquare,
   BellRing,
   Calendar,
-  DollarSign,
+  Wallet,
   Package,
   ListChecks,
 } from "lucide-react";
@@ -47,7 +47,7 @@ export const candidateNavSections = [
   {
     title: "Account",
     items: [
-      { to: "/candidate/payments", label: "Payments",   icon: DollarSign, moduleKey: "candidate.payments" },
+      { to: "/candidate/payments", label: "Payments",   icon: Wallet, moduleKey: "candidate.payments" },
       { to: "/candidate/account",  label: "My Account", icon: Package,    moduleKey: "candidate.account" },
     ],
   },

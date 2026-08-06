@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { DollarSign, Clock, CheckCircle, TrendingUp, CreditCard, Landmark, Globe, X, RefreshCw, Eye } from "lucide-react";
+import { Wallet, Banknote, Clock, CheckCircle, TrendingUp, CreditCard, Landmark, Globe, X, RefreshCw, Eye } from "lucide-react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import DatePicker from "../../components/DatePicker";
@@ -126,7 +126,7 @@ export default function AdminFinance() {
       bg: "bg-green-100",
       color: "text-green-600",
       subColor: "text-green-600",
-      icon: DollarSign
+      icon: Banknote
     },
     {
       label: "Outstanding",
@@ -263,7 +263,7 @@ export default function AdminFinance() {
       >
         <div>
           <h1 className="text-2xl font-black text-secondary tracking-tight flex items-center gap-3">
-            <DollarSign className="text-primary" size={24} />
+            <Wallet className="text-primary" size={24} />
             Finance
           </h1>
           <p className="text-primary font-bold text-sm mt-1">

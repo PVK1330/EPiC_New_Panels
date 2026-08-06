@@ -17,7 +17,7 @@ import {
   RiFileExcel2Line,
   RiFilePdf2Line,
   RiLoader4Line,
-  RiMoneyDollarCircleLine,
+  RiWallet3Line,
 } from "react-icons/ri";
 import CreateOrganizationModal from "../../components/superadmin/CreateOrganizationModal";
 import Button from "../../components/Button";
@@ -1030,7 +1030,7 @@ const SuperadminOrganisations = () => {
                             }}
                             disabled={actionLoading}
                           >
-                            <RiMoneyDollarCircleLine size={17} className="text-blue-600" />
+                            <RiWallet3Line size={17} className="text-blue-600" />
                           </TableActionButton>
                         )}
                         <TableActionButton

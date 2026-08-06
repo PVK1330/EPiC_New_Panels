@@ -17,7 +17,7 @@ import {
   RiGitBranchLine,
   RiAlarmWarningLine,
   RiBarChartLine,
-  RiMoneyDollarCircleLine,
+  RiWallet3Line,
   RiLineChartLine,
   RiStackLine,
   RiNotification2Line,
@@ -73,7 +73,7 @@ const navSections = [
     label: "Analytics & Finance",
     items: [
       { to: "/admin/workload",  label: "Workload",   icon: RiBarChartLine,          moduleKey: "admin.workload" },
-      { to: "/admin/finance",   label: "Finance",    icon: RiMoneyDollarCircleLine, moduleKey: "admin.finance" },
+      { to: "/admin/finance",   label: "Finance",    icon: RiWallet3Line, moduleKey: "admin.finance" },
       { to: "/admin/reports",   label: "Reports",    icon: RiLineChartLine,         moduleKey: "admin.reports" },
     ],
   },

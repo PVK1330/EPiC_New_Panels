@@ -8,7 +8,7 @@ import {
   User,
   Users,
   MessageSquare,
-  DollarSign,
+  Wallet,
   Activity,
   UserCircle,
   CalendarClock,
@@ -53,7 +53,7 @@ export const caseworkerNavSections = (taskCount = 0) => [
     title: "Analytics",
     items: [
       { to: "/caseworker/pipeline",    label: "Pipeline",    icon: BarChart3,  moduleKey: "caseworker.pipeline" },
-      { to: "/caseworker/finance",     label: "Finance",     icon: DollarSign, moduleKey: "caseworker.finance" },
+      { to: "/caseworker/finance",     label: "Finance",     icon: Wallet, moduleKey: "caseworker.finance" },
       { to: "/caseworker/performance", label: "Performance", icon: Activity,   moduleKey: "caseworker.performance" },
     ],
   },

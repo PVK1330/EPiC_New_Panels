@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiPlus, FiTable, FiBriefcase, FiX, FiCalendar, FiUser, FiBriefcase as FiWork, FiDollarSign, FiFileText } from "react-icons/fi";
+import { FiPlus, FiTable, FiBriefcase, FiX, FiCalendar, FiUser, FiBriefcase as FiWork, FiFileText } from "react-icons/fi";
+import { Banknote } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -482,21 +483,21 @@ const AdminPipeline = () => {
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Salary Offered</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
-                        <FiDollarSign size={14} className="text-gray-400" />
+                        <Banknote size={14} className="text-gray-400" />
                         {selectedCase.salaryOffered || 0}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Total Amount</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
-                        <FiDollarSign size={14} className="text-gray-400" />
+                        <Banknote size={14} className="text-gray-400" />
                         {selectedCase.totalAmount || 0}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Paid Amount</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
-                        <FiDollarSign size={14} className="text-gray-400" />
+                        <Banknote size={14} className="text-gray-400" />
                         {selectedCase.paidAmount || 0}
                       </p>
                     </div>

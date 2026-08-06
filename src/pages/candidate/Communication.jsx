@@ -94,7 +94,7 @@ const NOTIFICATIONS = [
   },
   {
     id: "n3",
-    icon: "💰",
+    icon: "💳",
     title: "Payment reminder — £800 balance due",
     body: "Your remaining balance of £800 is due by 30 Apr 2026.",
     time: "10 Apr, 9:00am",

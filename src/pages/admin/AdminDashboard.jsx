@@ -8,7 +8,7 @@ import {
   RiAlarmWarningLine,
   RiCheckLine,
   RiUserLine,
-  RiMoneyDollarCircleLine,
+  RiWallet3Line,
   RiErrorWarningLine,
   RiBuildingLine,
   RiCalendarLine,
@@ -238,7 +238,7 @@ export default function AdminDashboard() {
         {
           label: "Revenue",
           value: `£${(dashboardStats.financeStats?.totalRevenue || 0).toLocaleString()}`,
-          icon: RiMoneyDollarCircleLine,
+          icon: RiWallet3Line,
           iconColor: "text-yellow-600",
           iconBg: "bg-yellow-50",
           to: "/admin/finance",

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CreditCard, Download, Filter, Search, CheckCircle2, AlertCircle, Eye, LayoutDashboard, DollarSign, Clock, Loader2, X, ArrowRight } from "lucide-react";
+import { CreditCard, Download, Filter, Search, CheckCircle2, AlertCircle, Eye, LayoutDashboard, Banknote, Clock, Loader2, X, ArrowRight } from "lucide-react";
 import { getBusinessPayments, createSponsorPaymentCheckout, verifySponsorPayment } from "../../services/businessProfileApi";
 import { formatDate } from "../../utils/datetime";
 import { useToast } from "../../context/ToastContext";
@@ -197,7 +197,7 @@ const BusinessPayment = () => {
 
       <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-3" variants={cardVariants} initial="hidden" animate="visible">
         <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-          <div className="flex items-center gap-2 mb-2 text-gray-900"><DollarSign size={20} className="text-emerald-600" /><span className="font-black text-sm">Total Paid</span></div>
+          <div className="flex items-center gap-2 mb-2 text-gray-900"><Banknote size={20} className="text-emerald-600" /><span className="font-black text-sm">Total Paid</span></div>
           <p className="text-2xl font-black text-secondary">{money(totalPaid)}</p>
         </motion.div>
         <motion.div variants={cardVariants} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
