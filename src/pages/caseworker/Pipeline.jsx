@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Filter, Briefcase, Table, Plus } from "lucide-react";
+import { Filter, Briefcase, Table, Plus, Banknote } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiX, FiCalendar, FiUser, FiBriefcase as FiWork, FiDollarSign } from "react-icons/fi";
+import { FiX, FiCalendar, FiUser, FiBriefcase as FiWork } from "react-icons/fi";
 import {
   DndContext,
   closestCenter,
@@ -500,21 +500,21 @@ export default function Pipeline() {
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Salary Offered</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
-                        <FiDollarSign size={14} className="text-gray-400" />
+                        <Banknote size={14} className="text-gray-400" />
                         {selectedCase.salaryOffered || 0}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Total Amount</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
-                        <FiDollarSign size={14} className="text-gray-400" />
+                        <Banknote size={14} className="text-gray-400" />
                         {selectedCase.totalAmount || 0}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Paid Amount</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
-                        <FiDollarSign size={14} className="text-gray-400" />
+                        <Banknote size={14} className="text-gray-400" />
                         {selectedCase.paidAmount || 0}
                       </p>
                     </div>

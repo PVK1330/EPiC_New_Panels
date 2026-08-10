@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { FiCreditCard, FiDollarSign, FiShield, FiSave, FiRefreshCw, FiCheckCircle } from "react-icons/fi";
+import { FiCreditCard, FiShield, FiSave, FiRefreshCw, FiCheckCircle } from "react-icons/fi";
+import { RiWallet3Line } from "react-icons/ri";
 import Button from "../../Button";
 import Input from "../../Input";
 
@@ -63,7 +64,7 @@ export default function PaymentSettings({
             <section className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden h-full">
               <div className="p-4 border-b border-gray-50 flex items-center gap-3 bg-gray-50/50">
                 <div className="p-2 bg-primary/10 rounded-xl text-primary">
-                  <FiDollarSign size={20} />
+                  <RiWallet3Line size={20} />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-secondary">Currency & Invoicing</h3>

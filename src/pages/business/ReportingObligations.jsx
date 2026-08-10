@@ -18,7 +18,7 @@ import {
   User,
   Briefcase,
   Calendar,
-  DollarSign,
+  Banknote,
   LogOut,
   X,
   Paperclip,
@@ -359,7 +359,7 @@ const ReportingObligations = () => {
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
                         {event.eventType === "Role Change" && <Briefcase size={14} className="text-gray-500" />}
-                        {event.eventType === "Salary Change" && <DollarSign size={14} className="text-gray-500" />}
+                        {event.eventType === "Salary Change" && <Banknote size={14} className="text-gray-500" />}
                         {event.eventType === "Absence &gt;10 days" && <Calendar size={14} className="text-gray-500" />}
                         {event.eventType === "Termination" && <LogOut size={14} className="text-gray-500" />}
                         <span className="text-xs font-bold text-gray-700">{event.eventType}</span>

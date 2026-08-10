@@ -8,7 +8,7 @@ import {
   Building2,
   User,
   ShieldCheck,
-  DollarSign,
+  Wallet,
   Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -274,7 +274,7 @@ const ApplyLicence = () => {
       </Section>
 
       {/* Financial (optional) */}
-      <Section icon={DollarSign} title="Financial information" subtitle="Optional — helps us understand your sponsorship capacity." tone="emerald">
+      <Section icon={Wallet} title="Financial information" subtitle="Optional — helps us understand your sponsorship capacity." tone="emerald">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label className={label}>Primary funding source</label>

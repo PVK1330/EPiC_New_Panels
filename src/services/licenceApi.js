@@ -200,12 +200,14 @@ export const requestMoreCos = (data) =>
   api.patch("/api/business/licence/request-more-cos", data);
 
 // Business: Upload document to a licence application
-export const uploadLicenceDocument = ({ files, applicationId, documentType = "" }) => {
-  const fd = new FormData();
-  files.forEach((f) => fd.append("documents", f));
-  fd.append("applicationId", String(applicationId));
-  fd.append("documentType", documentType);
-  return api.post("/api/business/licence/documents/upload", fd, {
+export const uploadLicenceDocument = ({ files, applicationId, documentType = "", documentKey = "" }) => {
+  const formData = new FormData();
+  files.forEach((f) => formData.append("documents", f));
+  formData.append("applicationId", applicationId);
+  if (documentType) formData.append("documentType", documentType);
+  if (documentKey) formData.append("documentKey", documentKey);
+
+  return api.post("/api/business/licence/documents/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
 };

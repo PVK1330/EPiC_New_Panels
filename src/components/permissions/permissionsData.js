@@ -27,7 +27,7 @@ export const DEFAULT_MODULES = [
   { name: "Dashboard", icon: "RiDashboardLine" },
   { name: "Cases", icon: "RiFolderLine" },
   { name: "Contacts", icon: "RiUserLine" },
-  { name: "Finance", icon: "RiMoneyDollarCircleLine" },
+  { name: "Finance", icon: "RiWallet3Line" },
   { name: "Reports", icon: "RiLineChartLine" },
   { name: "Infrastructure", icon: "RiShieldLine" },
   { name: "Security", icon: "RiLockLine" },

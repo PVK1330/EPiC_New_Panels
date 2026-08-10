@@ -10,7 +10,7 @@ import {
   Settings,
   X,
   UserCheck,
-  DollarSign,
+  Wallet,
   TrendingUp,
   Calendar,
   ShieldCheck,
@@ -18,7 +18,7 @@ import {
   Activity,
   ClipboardCheck,
   FileWarning,
-  Receipt,
+  ReceiptText,
   UserCog,
   Link2,
   CalendarCheck,
@@ -85,8 +85,8 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
     {
       label: "Finance",
       items: [
-        { to: "/business/invoices", label: "Invoices", icon: Receipt,    moduleKey: "business.payment" },
-        { to: "/business/payment",  label: "Payments", icon: DollarSign, moduleKey: "business.payment" },
+        { to: "/business/invoices", label: "Invoices", icon: ReceiptText, moduleKey: "business.payment" },
+        { to: "/business/payment",  label: "Payments", icon: Wallet,      moduleKey: "business.payment" },
       ],
     },
     {

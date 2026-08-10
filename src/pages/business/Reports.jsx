@@ -5,7 +5,7 @@ import {
   PieChart,
   Users,
   FileText,
-  DollarSign,
+  Wallet,
   Calendar,
   Download,
   Loader2,
@@ -162,7 +162,7 @@ const Reports = () => {
     { id: "cos-utilization", label: "CoS Utilisation", icon: PieChart },
     { id: "worker",          label: "Workers",          icon: Users },
     { id: "compliance",      label: "Compliance",       icon: FileText },
-    { id: "financial",       label: "Financial",        icon: DollarSign },
+    { id: "financial",       label: "Financial",        icon: Wallet },
   ];
 
   const activeTab = tabs.find((t) => t.id === selectedReport);

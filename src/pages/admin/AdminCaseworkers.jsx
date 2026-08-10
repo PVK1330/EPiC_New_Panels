@@ -31,6 +31,7 @@ import {
   bulkImportCaseworkers,
   getDepartments,
   getCaseworkerById,
+  getPerformanceReport,
 } from "../../services/caseWorker";
 import { getOrganisationSlugFromHost } from "../../utils/organisationHost";
 import { formatDateLong } from "../../utils/datetime";
@@ -180,6 +181,11 @@ export default function AdminCaseworkers() {
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importFile, setImportFile] = useState(null);
+
+  // Performance Report state
+  const [perfReportOpen, setPerfReportOpen] = useState(false);
+  const [perfReportData, setPerfReportData] = useState([]);
+  const [perfReportLoading, setPerfReportLoading] = useState(false);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(searchInput), 400);
@@ -564,6 +570,10 @@ export default function AdminCaseworkers() {
   };
 
   const handleExport = async () => {
+    if (!caseworkers || caseworkers.length === 0) {
+      showToast({ message: "No data to export. Adjust your filters and try again.", variant: "danger" });
+      return;
+    }
     setExporting(true);
     try {
       const res = await exportCaseworkers({
@@ -588,9 +598,56 @@ export default function AdminCaseworkers() {
         variant: "success",
       });
     } catch (e) {
-      showToast({ message: getApiError(e), variant: "danger" });
+      // The backend returns 404 JSON when there are no matching caseworkers
+      const msg = e?.response?.data?.message || getApiError(e);
+      showToast({ message: msg, variant: "danger" });
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handlePerfReport = async () => {
+    if (!caseworkers || caseworkers.length === 0) {
+      showToast({ message: "No caseworkers to generate a report for.", variant: "danger" });
+      return;
+    }
+    setPerfReportOpen(true);
+    setPerfReportLoading(true);
+    setPerfReportData([]);
+    try {
+      const results = await Promise.allSettled(
+        caseworkers.map((cw) => getPerformanceReport(cw.id))
+      );
+      const reports = results
+        .map((r, i) => {
+          if (r.status === "fulfilled") {
+            return {
+              ...r.value.data?.data,
+              _cw: caseworkers[i],
+            };
+          }
+          // Fallback: build from already-fetched perf metrics
+          const cw = caseworkers[i];
+          const perf = cw.performance || {};
+          return {
+            caseworker: { id: cw.id, name: fullName(cw), email: cw.email },
+            metrics: {
+              totalCases: perf.totalCases || 0,
+              completedCases: perf.completedCases || 0,
+              inProgressCases: perf.inProgressCases || 0,
+              pendingCases: perf.pendingCases || 0,
+              completionRate: perf.completionRate || 0,
+              avgCompletionTime: null,
+            },
+            _cw: cw,
+          };
+        })
+        .filter(Boolean);
+      setPerfReportData(reports);
+    } catch (e) {
+      showToast({ message: getApiError(e), variant: "danger" });
+    } finally {
+      setPerfReportLoading(false);
     }
   };
 
@@ -630,8 +687,16 @@ export default function AdminCaseworkers() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
-            <FiBarChart2 size={14} />
+          <button
+            onClick={handlePerfReport}
+            disabled={perfReportLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {perfReportLoading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <FiBarChart2 size={14} />
+            )}
             Performance Report
           </button>
           <Button
@@ -1370,6 +1435,95 @@ export default function AdminCaseworkers() {
               >
                 Remove
               </button>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* ── Performance Report Modal ─────────────────────────────────────── */}
+      <Modal
+        open={perfReportOpen}
+        onClose={() => setPerfReportOpen(false)}
+        title="Performance Report"
+        maxWidthClass="max-w-4xl"
+        bodyClassName="px-5 py-5 sm:px-6"
+        footer={
+          <Button variant="ghost" onClick={() => setPerfReportOpen(false)} className="rounded-xl">
+            Close
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">
+            Showing performance metrics for <span className="font-bold text-secondary">{caseworkers.length}</span> caseworker{caseworkers.length !== 1 ? "s" : ""} currently visible in the table.
+          </p>
+
+          {perfReportLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-pulse">
+              {(caseworkers.length > 0 ? caseworkers : [1, 2]).map((_, i) => (
+                <div key={i} className="h-36 rounded-xl bg-gray-100 border border-gray-100" />
+              ))}
+            </div>
+          ) : perfReportData.length === 0 ? (
+            <div className="py-12 text-center rounded-xl border border-dashed border-gray-200 bg-gray-50/50">
+              <FiBarChart2 size={32} className="mx-auto text-gray-300 mb-3" />
+              <p className="text-sm font-bold text-gray-500">No performance data available.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-1">
+              {perfReportData.map((report, idx) => {
+                const cw = report._cw || report.caseworker;
+                const m = report.metrics || {};
+                const rate = parseFloat(m.completionRate || 0);
+                const barColor = rate >= 85 ? "bg-green-500" : rate >= 60 ? "bg-yellow-500" : "bg-red-500";
+                const textColor = rate >= 85 ? "text-green-600" : rate >= 60 ? "text-yellow-600" : "text-red-500";
+                const name = cw?.name || fullName(cw) || "—";
+                return (
+                  <div
+                    key={cw?.id || idx}
+                    className="p-4 rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>
+                        {initialsFrom(report._cw || {})}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-secondary truncate">{name}</p>
+                        <p className="text-xs text-gray-400 truncate">{cw?.email || "—"}</p>
+                      </div>
+                    </div>
+
+                    {/* Metrics grid */}
+                    <div className="grid grid-cols-4 gap-2 mb-3">
+                      {[
+                        { label: "Total", value: m.totalCases ?? 0, cls: "bg-blue-50 text-blue-700" },
+                        { label: "Done", value: m.completedCases ?? 0, cls: "bg-green-50 text-green-700" },
+                        { label: "Active", value: m.inProgressCases ?? 0, cls: "bg-indigo-50 text-indigo-700" },
+                        { label: "Pending", value: m.pendingCases ?? 0, cls: "bg-orange-50 text-orange-700" },
+                      ].map((s) => (
+                        <div key={s.label} className={`text-center p-2 rounded-lg ${s.cls}`}>
+                          <p className="text-lg font-black">{s.value}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-wide opacity-75">{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Completion rate bar */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${barColor}`} style={{ width: `${rate}%` }} />
+                      </div>
+                      <span className={`text-xs font-black ${textColor} w-10 text-right`}>{rate}%</span>
+                    </div>
+                    {m.avgCompletionTime != null && (
+                      <p className="text-[11px] text-gray-400 mt-1.5">
+                        Avg completion: <span className="font-bold text-gray-600">{m.avgCompletionTime} day{m.avgCompletionTime !== 1 ? "s" : ""}</span>
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

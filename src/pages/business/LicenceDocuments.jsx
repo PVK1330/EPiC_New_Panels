@@ -16,7 +16,14 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react";
-import { uploadLicenceDocument, getLicenceDocuments, getMyLicenceApplications, downloadSponsorLicenceDocument } from "../../services/licenceApi";
+import Swal from "sweetalert2";
+import {
+  uploadLicenceDocument,
+  getLicenceDocuments,
+  getMyLicenceApplications,
+  downloadSponsorLicenceDocument,
+  deleteLicenceDocument,
+} from "../../services/licenceApi";
 import { useToast } from "../../context/ToastContext";
 import { formatDateLong } from "../../utils/datetime";
 
@@ -170,8 +177,29 @@ const LicenceDocuments = () => {
     }
   };
 
-  const handleDelete = (docId) => {
-    showToast({ message: "Manual deletion of licence evidence is restricted. Please update the application.", variant: "info" });
+  const handleDelete = async (doc) => {
+    const result = await Swal.fire({
+      title: "Delete Document?",
+      text: `Are you sure you want to delete ${doc.name}? This action cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, delete it!"
+    });
+
+    if (result.isConfirmed) {
+      setDocBusy((s) => ({ ...s, [doc.id]: "delete" }));
+      try {
+        await deleteLicenceDocument(doc.applicationId, doc.documentKey ?? doc.docIndex);
+        showToast({ message: "Document deleted successfully", variant: "success" });
+        fetchDocuments();
+      } catch (err) {
+        showToast({ message: err.response?.data?.message || "Failed to delete document", variant: "danger" });
+      } finally {
+        setDocBusy((s) => ({ ...s, [doc.id]: null }));
+      }
+    }
   };
 
   const handleReuploadClick = (doc) => {
@@ -194,6 +222,7 @@ const LicenceDocuments = () => {
         files: [reuploadFile],
         applicationId: reuploadDoc.applicationId,
         documentType: reuploadDoc.name,
+        documentKey: reuploadDoc.documentKey,
       });
       showToast({ message: "Document re-uploaded successfully. Status reset to Pending.", variant: "success" });
       setReuploadDoc(null);
@@ -386,19 +415,19 @@ const LicenceDocuments = () => {
                       </td>
                       <td className="px-3 py-2 text-right">
                         <div className="flex justify-end gap-1.5 flex-wrap">
-                          {(doc.status === "Rejected" || doc.status === "rejected") && (
+                          {doc.canReplace !== false && (
                             <button
                               onClick={() => handleReuploadClick(doc)}
                               disabled={reuploading && reuploadDoc?.id === doc.id}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all shadow-sm text-xs font-black disabled:opacity-50"
-                              title="Re-upload rejected document"
+                              title="Replace document"
                             >
                               {reuploading && reuploadDoc?.id === doc.id ? (
                                 <Loader2 size={13} className="animate-spin" />
                               ) : (
                                 <RefreshCw size={13} />
                               )}
-                              Re-upload
+                              Replace
                             </button>
                           )}
                           <button
@@ -417,13 +446,16 @@ const LicenceDocuments = () => {
                           >
                             {docBusy[doc.id] === "download" ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
                           </button>
-                          <button
-                            onClick={() => handleDelete(doc.id)}
-                            className="p-1.5 bg-red-50 text-red-300 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                            title="Delete"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          {doc.canDelete !== false && (
+                            <button
+                              onClick={() => handleDelete(doc)}
+                              disabled={!!docBusy[doc.id]}
+                              className="p-1.5 bg-red-50 text-red-300 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Delete"
+                            >
+                              {docBusy[doc.id] === "delete" ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -473,7 +505,7 @@ const LicenceDocuments = () => {
               <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
                 <RefreshCw size={17} className="text-amber-600" />
               </div>
-              <h3 className="text-sm font-black text-secondary">Re-upload Document</h3>
+              <h3 className="text-sm font-black text-secondary">Replace Document</h3>
             </div>
             <p className="text-sm font-bold text-gray-600 mb-2">
               Replacing: <span className="text-secondary">{reuploadDoc.name}</span>
@@ -499,7 +531,7 @@ const LicenceDocuments = () => {
                 className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg px-3 py-1.5 text-xs transition disabled:opacity-60 flex items-center justify-center gap-1.5"
               >
                 {reuploading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                {reuploading ? "Uploading..." : "Confirm Re-upload"}
+                {reuploading ? "Uploading..." : "Confirm Replace"}
               </button>
             </div>
           </motion.div>

@@ -90,7 +90,7 @@ export default function CandidateNotifications() {
       success: "✅",
       case_assigned: "🚀",
       case_status: "📅",
-      payment: "💰",
+      payment: "💳",
       system: "ℹ️",
     };
     return map[type] || "📢";

@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, FileText, DollarSign, Search, Filter, Download, Eye, CheckCircle2, Clock, AlertCircle, X } from "lucide-react";
+import { LayoutDashboard, FileText, Banknote, Search, Filter, Download, Eye, CheckCircle2, Clock, AlertCircle, X } from "lucide-react";
 import { getBusinessPayments } from "../../services/businessProfileApi";
 import { formatDate } from "../../utils/datetime";
 import { useToast } from "../../context/ToastContext";
@@ -118,7 +118,7 @@ const Invoices = () => {
         </motion.div>
         <motion.div variants={cardVariants} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark" />
-          <div className="flex items-center gap-2 mb-3 text-gray-900"><DollarSign size={18} className="text-primary" /><span className="text-sm font-black">Total Amount</span></div>
+          <div className="flex items-center gap-2 mb-3 text-gray-900"><Banknote size={18} className="text-primary" /><span className="text-sm font-black">Total Amount</span></div>
           <p className="text-2xl font-black text-secondary">{money(totalAmount)}</p>
         </motion.div>
         <motion.div variants={cardVariants} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm relative overflow-hidden">
