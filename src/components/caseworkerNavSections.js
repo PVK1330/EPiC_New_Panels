@@ -68,7 +68,7 @@ export const caseworkerNavSections = (taskCount = 0) => [
     title: "Account",
     items: [
       { to: "/caseworker/my-account",      label: "My Account",      icon: UserCircle,    moduleKey: "caseworker.dashboard" },
-      { to: "/caseworker/reschedule-form", label: "Reschedule Form", icon: CalendarClock, moduleKey: "caseworker.calendar" },
+      // { to: "/caseworker/reschedule-form", label: "Reschedule Form", icon: CalendarClock, moduleKey: "caseworker.calendar" },
     ],
   },
 ];

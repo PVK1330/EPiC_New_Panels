@@ -195,7 +195,12 @@ function SponsorUploadPanel({ doc, applicationId, onRefresh }) {
   async function handleRemove() {
     setLoading(true); setError("");
     try {
-      await deleteIntakeDocument(applicationId, doc.documentKey);
+      if (doc.isAdditional) {
+        const { deleteLicenceDocument } = await import("../../services/licenceApi");
+        await deleteLicenceDocument(applicationId, doc.documentKey);
+      } else {
+        await deleteIntakeDocument(applicationId, doc.documentKey);
+      }
       onRefresh();
     } catch (err) {
       setError(err?.response?.data?.message || "Remove failed");
@@ -366,11 +371,12 @@ function ConditionToggles({ conditions, onChange }) {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export default function IntakeDocumentChecklist({ applicationId, viewerRole = "sponsor", data, onRefresh }) {
-  const { mandatory = [], conditionalByType = {}, stats = {}, form } = data || {};
+  const { form, mandatory, conditionalByType, stats, additionalDocuments } = data || {};
   const [conditionsOpen, setConditionsOpen] = useState(false);
 
-  const conditionalEntries = Object.entries(conditionalByType);
+  const conditionalEntries = Object.entries(conditionalByType || {});
   const hasConditional = conditionalEntries.length > 0;
+  const hasAdditional = Array.isArray(additionalDocuments) && additionalDocuments.length > 0;
 
   return (
     <div className="space-y-4">
@@ -421,9 +427,9 @@ export default function IntakeDocumentChecklist({ applicationId, viewerRole = "s
 
       {/* Mandatory documents */}
       <div>
-        <h4 className="text-sm font-semibold text-gray-700 mb-2">Mandatory Documents ({mandatory.length})</h4>
+        <h4 className="text-sm font-semibold text-gray-700 mb-2">Mandatory Documents ({mandatory?.length || 0})</h4>
         <div className="space-y-2">
-          {mandatory.map((doc) => (
+          {mandatory?.map((doc) => (
             <DocumentRow key={doc.documentKey} doc={doc} applicationId={applicationId} viewerRole={viewerRole} onRefresh={onRefresh} />
           ))}
         </div>
@@ -450,8 +456,23 @@ export default function IntakeDocumentChecklist({ applicationId, viewerRole = "s
         </div>
       )}
 
+      {/* Additional ad-hoc documents */}
+      {hasAdditional && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-700 mb-2 mt-4">Additional Documents</h4>
+          <p className="text-xs text-gray-500 mb-3">
+            Documents you have uploaded directly that do not map to standard checklist requirements.
+          </p>
+          <div className="space-y-2">
+            {additionalDocuments.map((doc) => (
+              <DocumentRow key={doc.documentKey} doc={doc} applicationId={applicationId} viewerRole={viewerRole} onRefresh={onRefresh} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Empty state */}
-      {mandatory.length === 0 && !hasConditional && (
+      {mandatory?.length === 0 && !hasConditional && !hasAdditional && (
         <div className="text-center py-8 text-gray-400">
           <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
           <p className="text-sm">Document checklist is being prepared…</p>

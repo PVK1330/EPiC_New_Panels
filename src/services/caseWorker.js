@@ -13,6 +13,9 @@ export const deleteDepartment = (data) => api.post(`/api/caseworker/departments/
 
 export const getCaseworkerById = (id) => api.get(`/api/caseworker/${id}`);
 
+export const getPerformanceReport = (id, params = {}) =>
+  api.get(`/api/caseworker/${id}/performance-report`, { params });
+
 export const createCaseworker = (data) => api.post(`/api/caseworker`, data);
 
 export const updateCaseworker = (id, data) => api.put(`/api/caseworker/${id}`, data);
