@@ -405,17 +405,23 @@ export default function AdminSettings() {
       setConfigTab(tab);
     }
     const sync = searchParams.get("sync");
-    if (sync?.startsWith("google_")) {
+    if (sync?.startsWith("google_") || sync?.startsWith("microsoft_")) {
       const messages = {
         google_success: "Google Calendar connected successfully.",
         google_access_denied:
           "Google access was denied. Add your Gmail as a test user in Google Cloud Console.",
         google_error: "Google connection failed. Please try again.",
+        microsoft_success: "Microsoft Teams connected successfully.",
+        microsoft_error: "Microsoft connection failed. Please try again.",
+        microsoft_invalid_state:
+          "Microsoft sign-in expired before it finished. Please connect again.",
+        microsoft_unauthorized:
+          "Your session expired during Microsoft sign-in. Please log in and try again.",
       };
       if (messages[sync]) {
         showToast({
           message: messages[sync],
-          variant: sync === "google_success" ? "success" : "danger",
+          variant: sync.endsWith("_success") ? "success" : "danger",
         });
       }
       const next = new URLSearchParams(searchParams);
