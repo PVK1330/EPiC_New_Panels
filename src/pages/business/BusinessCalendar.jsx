@@ -10,6 +10,7 @@ import { getMyAppointments } from "../../services/appointmentApi";
 import { getWorkflowCalendarEvents } from "../../services/calendarApi";
 import { mapWorkflowEventsToCalendar } from "../../utils/calendarWorkflowEvents";
 import { formatDate, formatTime, formatWithOptions } from "../../utils/datetime";
+import SyncCalendarButton from "../../components/SyncCalendarButton";
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -315,6 +316,7 @@ const Calendar = () => {
             <Plus size={16} />
             New Event
           </button>
+          <SyncCalendarButton onSynced={fetchTeamsMeetings} />
         </div>
       </div>
 

@@ -37,6 +37,7 @@ import {
 } from "../../services/appointmentApi";
 import { getWorkflowCalendarEvents } from "../../services/calendarApi";
 import { mapWorkflowEventsToCalendar } from "../../utils/calendarWorkflowEvents";
+import SyncCalendarButton from "../../components/SyncCalendarButton";
 import {
   formatDate,
   formatTime,
@@ -421,6 +422,7 @@ export default function CandidateCalendar() {
             <Plus size={16} />
             New Event
           </button>
+          <SyncCalendarButton onSynced={fetchTeamsMeetings} />
           {/* <button
             type="button"
             onClick={() => setShowTeamsModal(true)}
