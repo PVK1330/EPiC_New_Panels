@@ -15,6 +15,10 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess }) => {
     end_time: '',
     attendees: '',
     meeting_type: 'online',
+    // The modal is titled "Create Teams Meeting" but never sent a provider, so
+    // the backend saved a plain diary entry: no Teams link, no Outlook event,
+    // and nothing to email attendees. Default to Teams, and let it be changed.
+    meeting_provider: 'microsoft',
     reminder_minutes: 15,
     related_case_id: ''
   });
@@ -45,6 +49,7 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess }) => {
         end_time: form.end_time,
         attendees: attendees.length > 0 ? attendees : undefined,
         meeting_type: form.meeting_type,
+        meeting_provider: form.meeting_provider,
         reminder_minutes: parseInt(form.reminder_minutes),
         related_case_id: form.related_case_id || undefined
       };
@@ -65,13 +70,19 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess }) => {
         end_time: '',
         attendees: '',
         meeting_type: 'online',
+        meeting_provider: 'microsoft',
         reminder_minutes: 15,
         related_case_id: ''
       });
       
     } catch (error) {
       console.error('Failed to create meeting:', error);
-      alert('Failed to create meeting. Please make sure you are connected to Microsoft Teams.');
+      // The API explains exactly what went wrong (not connected, link creation
+      // failed, validation) — showing that beats a fixed guess.
+      alert(
+        error?.response?.data?.message ||
+          'Failed to create meeting. Please make sure your calendar account is connected.'
+      );
     } finally {
       setLoading(false);
     }
@@ -168,6 +179,23 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess }) => {
                 <option value="online">Online</option>
                 <option value="in-person">In-Person</option>
                 <option value="hybrid">Hybrid</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="meeting_provider" className="text-sm font-semibold text-gray-700 mb-2 block">
+                Platform
+              </label>
+              <select
+                id="meeting_provider"
+                name="meeting_provider"
+                value={form.meeting_provider}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              >
+                <option value="microsoft">Microsoft Teams</option>
+                <option value="google">Google Meet</option>
+                <option value="none">No online link</option>
               </select>
             </div>
 
