@@ -15,6 +15,8 @@ import PhoneInput from "../../components/PhoneInput";
 import Button from "../../components/Button";
 import { isValidPhone } from "../../utils/countries";
 import { getApiError } from "../../utils/apiError";
+import { userRowClass } from "../../utils/userIdentity";
+import UserEmail from "../../components/common/UserEmail";
 import useAdmin from "../../hooks/useAdmin";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -527,7 +529,7 @@ export default function AdminUsers() {
                 admins.map((user, idx) => (
                   <tr
                     key={user.id}
-                    className="hover:bg-gray-50/70 transition-colors"
+                    className={userRowClass(user)}
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
@@ -542,7 +544,7 @@ export default function AdminUsers() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">
-                      {user.email}
+                      <UserEmail email={user.email} />
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
                       <RoleBadge role={displayRoleName(user)} />

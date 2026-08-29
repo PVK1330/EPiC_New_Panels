@@ -21,6 +21,8 @@ import PhoneInput from "../../components/PhoneInput";
 import Button from "../../components/Button";
 import { isValidPhone } from "../../utils/countries";
 import { getApiError } from "../../utils/apiError";
+import { userRowClass } from "../../utils/userIdentity";
+import UserEmail from "../../components/common/UserEmail";
 import useCaseworker from "../../hooks/useCaseworker";
 import useDownloads from "../../hooks/useDownloads";
 import { useToast } from "../../context/ToastContext";
@@ -841,7 +843,7 @@ export default function AdminCaseworkers() {
                   return (
                     <tr
                       key={user.id}
-                      className="hover:bg-gray-50/70 transition-colors"
+                      className={userRowClass(user)}
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -856,7 +858,7 @@ export default function AdminCaseworkers() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{user.email}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap"><UserEmail email={user.email} /></td>
                       <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{departmentLabel(user)}</td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-violet-100 text-violet-700">
@@ -1091,7 +1093,7 @@ export default function AdminCaseworkers() {
                   {displayRoleName(viewingDetails)} · {departmentLabel(viewingDetails)}
                 </p>
                 <p className="text-xs text-gray-500 mt-1 truncate">
-                  {viewingDetails.email} · {viewingDetails.country_code} {viewingDetails.mobile}
+                  <UserEmail email={viewingDetails.email} /> · {viewingDetails.country_code} {viewingDetails.mobile}
                 </p>
               </div>
               <div className="text-right shrink-0">

@@ -1,6 +1,6 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { FiImage, FiSave, FiRefreshCw } from "react-icons/fi";
+import { FiImage, FiSave, FiRefreshCw, FiCopy, FiCheck, FiUserPlus } from "react-icons/fi";
 import Button from "../../Button";
 import { resolveOrganisationLogoUrl, resolveAssetUrl } from "../../../utils/assetUrl";
 
@@ -25,6 +25,17 @@ export default function OrganisationSettings({
 }) {
   const fileRef = useRef(null);
   const faviconRef = useRef(null);
+  const [copiedField, setCopiedField] = useState("");
+
+  const copyValue = async (field, value) => {
+    try {
+      await navigator.clipboard.writeText(String(value));
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(""), 2000);
+    } catch {
+      /* clipboard unavailable (http/permissions) — value stays selectable */
+    }
+  };
   const previewUrl = logoFile
     ? URL.createObjectURL(logoFile)
     : resolveOrganisationLogoUrl(organisation);
@@ -38,6 +49,59 @@ export default function OrganisationSettings({
         <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-700 text-sm font-semibold">
           {error}
         </div>
+      )}
+
+      {/* BUG-001: candidates must enter this ID/code to self-register, but it
+          was not visible anywhere in the app for admins to share. */}
+      {!loading && organisation && (
+        <section className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-50 flex items-center gap-3 bg-gray-50/50">
+            <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-600">
+              <FiUserPlus size={20} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-secondary">Candidate self-registration</h3>
+              <p className="text-xs text-gray-500">
+                Share either value below with candidates — they enter it in the
+                "Organisation ID or code" field when creating their portal account
+              </p>
+            </div>
+          </div>
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[
+              { field: "id", label: "Organisation ID", value: organisation?.id },
+              { field: "slug", label: "Organisation code", value: organisation?.slug },
+            ]
+              .filter((item) => item.value !== null && item.value !== undefined && item.value !== "")
+              .map((item) => (
+                <div
+                  key={item.field}
+                  className="flex items-center justify-between gap-3 p-4 rounded-2xl border border-gray-100 bg-gray-50"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                      {item.label}
+                    </p>
+                    <p className="text-sm font-bold text-secondary truncate select-all">
+                      {item.value}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copyValue(item.field, item.value)}
+                    className="shrink-0 p-2 rounded-xl border border-gray-200 bg-white text-gray-500 hover:text-primary hover:border-primary/50 transition-colors"
+                    title={`Copy ${item.label.toLowerCase()}`}
+                  >
+                    {copiedField === item.field ? (
+                      <FiCheck size={16} className="text-emerald-600" />
+                    ) : (
+                      <FiCopy size={16} />
+                    )}
+                  </button>
+                </div>
+              ))}
+          </div>
+        </section>
       )}
 
       <section className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
