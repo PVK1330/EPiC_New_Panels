@@ -327,10 +327,6 @@ function CasesDocumentsTab({ caseId, candidateId }) {
                     + Add Required Document
                   </button>
                 )}
-                <button type="button" onClick={() => openUploadModal()}
-                  className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
-                  + Upload Document
-                </button>
               </div>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
@@ -441,9 +437,21 @@ function CasesDocumentsTab({ caseId, candidateId }) {
       )}
 
       <div>
+        {/* BUG-030: the Upload button used to live inside the checklist block above, so a
+            case with no visa type / checklist had no way to upload at all. */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">All uploaded documents</p>
+          <button type="button" onClick={() => openUploadModal()}
+            className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
+            + Upload Document
+          </button>
         </div>
+        {!checklistLoading && Object.keys(checklist?.checklist || {}).length === 0 && (
+          <p className="text-xs text-gray-500 mb-3">
+            No required-documents checklist applies to this case yet
+            {checklist?.visaTypeMissing ? " (no visa type set on the case)" : ""}. You can still upload documents.
+          </p>
+        )}
         {loading ? (
           <p className="text-sm text-gray-500">Loading documents...</p>
         ) : documents.length === 0 ? (
