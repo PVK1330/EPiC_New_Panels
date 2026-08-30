@@ -18,6 +18,7 @@ import {
 } from "../../../services/documentChecklistApi";
 import { DOCUMENT_TYPE_OPTIONS } from "../../../utils/constants";
 import { formatDate } from "../../../utils/datetime";
+import { getUploadErrorMessage, validateUploadFile } from "../../../utils/uploadError";
 
 const categoryLabels = {
   identity: "Identity Documents",
@@ -240,7 +241,8 @@ function CasesDocumentsTab({ caseId, candidateId }) {
 
   const submitUploadDocument = useCallback(async () => {
     const err = {};
-    if (!selectedFile) err.file = "Required";
+    const fileError = validateUploadFile(selectedFile);
+    if (fileError) err.file = fileError;
     if (!uploadForm.documentType) err.documentType = "Required";
     setUploadErrors(err);
     if (Object.keys(err).length) return;
@@ -249,7 +251,9 @@ function CasesDocumentsTab({ caseId, candidateId }) {
       const formData = new FormData();
       formData.append("files", selectedFile);
       formData.append("caseId", caseId);
-      formData.append("userId", candidateId);
+      // Server derives the client from caseId; only send userId when it is known
+      // (appending undefined would post the literal string "undefined").
+      if (candidateId) formData.append("userId", String(candidateId));
       formData.append("documentType", uploadForm.documentType);
       formData.append("documentCategory", uploadForm.documentCategory);
       formData.append("userFileName", uploadForm.userFileName || selectedFile.name);
@@ -263,7 +267,7 @@ function CasesDocumentsTab({ caseId, candidateId }) {
       }
     } catch (error) {
       console.error("Error uploading document:", error);
-      setUploadErrors({ api: error.response?.data?.message || "Failed to upload document" });
+      setUploadErrors({ api: getUploadErrorMessage(error) });
     } finally {
       setUploading(false);
     }

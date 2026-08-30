@@ -5,6 +5,7 @@ import Button from "../Button";
 import { getCaseChecklist } from "../../services/documentChecklistApi";
 import { useToast } from "../../context/ToastContext";
 import { formatDate } from "../../utils/datetime";
+import { getUploadErrorMessage, validateUploadFile } from "../../utils/uploadError";
 import DatePicker from "../DatePicker";
 
 const REVIEWABLE_STATUSES = new Set(["uploaded", "under_review"]);
@@ -13,7 +14,7 @@ function canReviewDocument(status) {
   return REVIEWABLE_STATUSES.has(String(status || "").toLowerCase());
 }
 
-const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocumentStatus }) => {
+const CaseDetailDocuments = ({ documents, caseId, candidateId, uploadDocument, changeDocumentStatus }) => {
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
@@ -244,7 +245,8 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
 
   const submitUpload = useCallback(async () => {
     const err = {};
-    if (!selectedFile) err.file = "Required";
+    const fileError = validateUploadFile(selectedFile);
+    if (fileError) err.file = fileError;
     if (!uploadForm.documentType) err.documentType = "Required";
     setUploadErrors(err);
     if (Object.keys(err).length) return;
@@ -254,6 +256,9 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
       const formData = new FormData();
       formData.append("files", selectedFile);
       formData.append("caseId", caseId);
+      // The document belongs to the case's client. The server also derives this
+      // from caseId, but send it explicitly whenever the page knows it (BUG-019).
+      if (candidateId) formData.append("userId", String(candidateId));
       formData.append("documentType", uploadForm.documentType);
       formData.append("documentCategory", uploadForm.documentCategory);
       formData.append("userFileName", uploadForm.userFileName || selectedFile.name);
@@ -269,15 +274,11 @@ const CaseDetailDocuments = ({ documents, caseId, uploadDocument, changeDocument
       closeUploadModal();
     } catch (error) {
       console.error("Error uploading document:", error);
-      if (error.response?.data?.message) {
-        setUploadErrors({ api: error.response.data.message });
-      } else {
-        setUploadErrors({ api: "Failed to upload document" });
-      }
+      setUploadErrors({ api: getUploadErrorMessage(error) });
     } finally {
       setUploading(false);
     }
-  }, [uploadForm, selectedFile, caseId, uploadDocument, fetchChecklist, closeUploadModal]);
+  }, [uploadForm, selectedFile, caseId, candidateId, uploadDocument, fetchChecklist, closeUploadModal]);
 
   // Group checklist by category - handle both array and object formats
   const groupedChecklist = checklist?.checklist ? checklist.checklist : 
