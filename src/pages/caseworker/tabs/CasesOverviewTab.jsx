@@ -50,6 +50,7 @@ function CasesOverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }
       <CaseWorkflowGuidance caseRecord={caseRecord} />
       <CaseWorkflowActions
         caseId={c.caseId}
+        candidateName={c.candidate}
         totalAmount={c.totalAmount}
         amountStatus={c.amountStatus}
         caseStage={c.caseStage}

@@ -141,7 +141,7 @@ function AdminCaseFormModal({
               <h4 className="text-sm font-black text-secondary mb-4">Business Information</h4>
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700">Sponsor <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-medium text-gray-700">Sponsor <span className="text-gray-400 font-normal">(optional)</span></label>
                   <select name="businessId" value={formData.businessId}
                     onChange={(e) => {
                       const selectedSponsor = sponsors.find((s) => s.id === parseInt(e.target.value));
@@ -149,8 +149,12 @@ function AdminCaseFormModal({
                       if (errors.businessId) setErrors((prev) => ({ ...prev, businessId: "" }));
                     }}
                     className={`w-full border rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all ${errors.businessId ? "border-red-500" : "border-slate-200"}`}>
-                    <option value="">Select sponsor</option>
-                    {sponsors.map((s) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}
+                    <option value="">No sponsor (private client)</option>
+                    {sponsors.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.sponsorProfile?.companyName || s.sponsorProfile?.tradingName || `${s.first_name} ${s.last_name}`}
+                      </option>
+                    ))}
                   </select>
                   {errors.businessId && <span className="text-xs text-red-500">{errors.businessId}</span>}
                 </div>
