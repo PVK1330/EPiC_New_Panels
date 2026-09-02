@@ -48,22 +48,33 @@ const CaseDetailOverview = ({ data }) => {
         <h3 className="text-xs font-black uppercase tracking-widest text-primary mb-4 pb-2 border-b border-gray-100">
           Sponsor Information
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Company Name">{s.company}</Field>
-          <Field label="Licence No.">
-            <span className="font-mono text-xs">{s.licenceNo}</span>
-          </Field>
-          <Field label="Licence Status">
-            <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-black bg-green-100 text-green-800">
-              {s.licenceStatus}
-            </span>
-          </Field>
-          <Field label="Licence Expiry">
-            <span className="text-green-600 font-bold">{s.licenceExpiry}</span>
-          </Field>
-          <Field label="Contact">{s.contact}</Field>
-          <Field label="Assigned Caseworker">{s.caseworker}</Field>
-        </div>
+        {/* BUG-031: a private client has no sponsor — show that plainly instead of
+            a grid of "N/A" fields that reads like missing data. */}
+        {s.hasSponsor === false ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Company Name">
+              <span className="text-gray-500 font-semibold">No sponsor (private client)</span>
+            </Field>
+            <Field label="Assigned Caseworker">{s.caseworker}</Field>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Company Name">{s.company}</Field>
+            <Field label="Licence No.">
+              <span className="font-mono text-xs">{s.licenceNo}</span>
+            </Field>
+            <Field label="Licence Status">
+              <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-black bg-green-100 text-green-800">
+                {s.licenceStatus}
+              </span>
+            </Field>
+            <Field label="Licence Expiry">
+              <span className="text-green-600 font-bold">{s.licenceExpiry}</span>
+            </Field>
+            <Field label="Contact">{s.contact}</Field>
+            <Field label="Assigned Caseworker">{s.caseworker}</Field>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">

@@ -406,7 +406,13 @@ const AdminCaseDetail = () => {
         phone: candidate?.mobile || candidate?.phone || "N/A",
       },
       sponsor: {
-        company: business?.sponsor?.sponsorProfile?.companyName || business?.businessId || "N/A",
+        // BUG-031: a case may legitimately have no sponsor (private client).
+        hasSponsor: Boolean(business?.sponsor),
+        company:
+          business?.sponsor?.sponsorProfile?.companyName ||
+          (business?.sponsor
+            ? `${business.sponsor.first_name} ${business.sponsor.last_name}`.trim()
+            : "No sponsor (private client)"),
         licenceNo: business?.sponsor?.sponsorProfile?.sponsorLicenceNumber || "N/A",
         licenceStatus: business?.sponsor?.sponsorProfile?.licenceStatus || "N/A",
         licenceExpiry: business?.sponsor?.sponsorProfile?.licenceExpiryDate
@@ -865,6 +871,7 @@ const AdminCaseDetail = () => {
 
           <CaseWorkflowActions
             caseId={cleanId}
+            candidateName={data.candidateName}
             totalAmount={caseData?.financial?.totalFee}
             amountStatus={data.payments?.amountStatus}
             caseStage={data.case?.caseStage}

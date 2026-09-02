@@ -68,7 +68,7 @@ function cclStatusLabel(ccl, caseStage) {
   return ccl.status;
 }
 
-export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus, caseStage, onRefresh }) {
+export default function CaseWorkflowActions({ caseId, candidateName, totalAmount, amountStatus, caseStage, onRefresh }) {
   const { showToast } = useToast();
   const user = useSelector((state) => state.auth.user);
   const isAdmin = user?.role === "admin" || Number(user?.role_id) === 3;
@@ -195,26 +195,34 @@ export default function CaseWorkflowActions({ caseId, totalAmount, amountStatus,
               {busy === "dcs-send" ? "Sending…" : "Send Upload Documents"}
             </Button>
           ) : (
-            <div className="inline-flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1.5 text-[11px] font-bold text-green-700">
-                <CheckCircle2 size={13} /> Upload Documents sent
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!!busy}
-                onClick={() =>
-                  run("dcs-send", () => sendDataCaptureRequest(caseId))
-                }
-              >
-                {busy === "dcs-send" ? (
-                  "Resending…"
-                ) : (
-                  <span className="inline-flex items-center gap-1">
-                    <RefreshCw size={13} /> Resend
-                  </span>
-                )}
-              </Button>
+            <div className="flex flex-col gap-1.5">
+              <div className="inline-flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1.5 text-[11px] font-bold text-green-700">
+                  <CheckCircle2 size={13} /> Upload Documents request sent to {candidateName || "the client"}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!!busy}
+                  onClick={() =>
+                    run("dcs-send", () => sendDataCaptureRequest(caseId))
+                  }
+                >
+                  {busy === "dcs-send" ? (
+                    "Resending…"
+                  ) : (
+                    <span className="inline-flex items-center gap-1">
+                      <RefreshCw size={13} /> Resend
+                    </span>
+                  )}
+                </Button>
+              </div>
+              {/* BUG-031: say when it was sent and whether the client has responded */}
+              <p className="text-[11px] font-bold text-gray-500">
+                {dcs.status === "submitted" || dcs.status === "approved"
+                  ? `The client responded${dcs.submittedAt ? ` on ${formatDate(dcs.submittedAt)}` : ""}.`
+                  : `Sent${dcs.created_at || dcs.createdAt ? ` on ${formatDate(dcs.created_at || dcs.createdAt)}` : ""} — the client was emailed the required-documents request and has not uploaded anything yet.`}
+              </p>
             </div>
           )}
 
