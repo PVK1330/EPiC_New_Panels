@@ -60,7 +60,11 @@ function CasesPaymentsTab({ caseDetail, onUpdate }) {
       const cclRes = await getCclStatus(caseRef).catch(() => null);
       if (cclRes?.ccl) setCclMeta(cclRes.ccl);
       onUpdate?.({ totalAmount: payload.feeAmount, amountNotes: payload.notes, amountStatus: "Pending Approval", caseStage: "client_care_letter" });
-      showToast({ message: "Fee proposal submitted. Admins have been notified and a review task was created." });
+      // BUG-033: confirm what payment plan was actually submitted.
+      const planLabel = payload.installments?.length > 1
+        ? `${payload.installments.length} instalments`
+        : "single payment";
+      showToast({ message: `Fee proposal submitted (${planLabel}). Admins have been notified and a review task was created.` });
     } catch (err) {
       console.error("CCL propose error:", err);
       const apiMsg = err?.response?.data?.message;
@@ -128,6 +132,28 @@ function CasesPaymentsTab({ caseDetail, onUpdate }) {
             placeholder="Itemize application fees, legal assistance, or IHS surcharge coverage..."
             className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm font-bold text-gray-800 outline-none focus:border-secondary focus:bg-white transition-all resize-none disabled:opacity-60" />
         </div>
+        {/* BUG-033: show the submitted payment plan and how many instalments it has */}
+        {(cclMeta?.installmentPlan || cclMeta?.installment_plan || []).length > 0 && (
+          <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5">
+              {(() => {
+                const plan = cclMeta?.installmentPlan || cclMeta?.installment_plan || [];
+                return plan.length === 1 ? "Payment plan — single payment" : `Payment plan — ${plan.length} instalments`;
+              })()}
+            </p>
+            <div className="space-y-1">
+              {(cclMeta?.installmentPlan || cclMeta?.installment_plan || []).map((row, i) => (
+                <div key={i} className="flex items-center justify-between text-xs font-bold text-gray-700">
+                  <span>{i + 1}. {row.label || `Instalment ${i + 1}`}</span>
+                  <span className="tabular-nums">
+                    £{(Number.parseFloat(row.amount) || 0).toLocaleString()}
+                    {row.dueDate ? <span className="text-gray-400 font-normal"> · due {String(row.dueDate).slice(0, 10)}</span> : null}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {awaitingAdmin && (
           <p className="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
             Awaiting admin approval. Admins have been notified and a review task was created.
