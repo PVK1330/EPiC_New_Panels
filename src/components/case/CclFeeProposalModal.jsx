@@ -17,6 +17,8 @@ export default function CclFeeProposalModal({
   const [feeAmount, setFeeAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [rows, setRows] = useState([emptyRow()]);
+  // BUG-032: instalments are optional — the default is one single full payment.
+  const [useInstalments, setUseInstalments] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -31,11 +33,22 @@ export default function CclFeeProposalModal({
           }))
         : [emptyRow()],
     );
+    // A saved plan that is just one "Full fee" row equals a single payment.
+    const fee = Number.parseFloat(initialFee) || 0;
+    const isSinglePayment =
+      !initialPlan?.length ||
+      (initialPlan.length === 1 &&
+        Math.abs((Number.parseFloat(initialPlan[0].amount) || 0) - fee) <= 0.02);
+    setUseInstalments(!isSinglePayment);
   }, [open, initialFee, initialPlan, initialNotes]);
 
   const total = Number.parseFloat(feeAmount) || 0;
   const instalmentSum = useMemo(
     () => rows.reduce((s, r) => s + (Number.parseFloat(r.amount) || 0), 0),
+    [rows],
+  );
+  const instalmentCount = useMemo(
+    () => rows.filter((r) => r.label || r.amount).length,
     [rows],
   );
   const sumMismatch = total > 0 && Math.abs(instalmentSum - total) > 0.02;
@@ -46,13 +59,16 @@ export default function CclFeeProposalModal({
     e.preventDefault();
     onSubmit({
       feeAmount: total,
-      installments: rows
-        .filter((r) => r.label || r.amount)
-        .map((r) => ({
-          label: r.label,
-          amount: Number.parseFloat(r.amount) || 0,
-          dueDate: r.dueDate || null,
-        })),
+      // No schedule = a single full payment (the server records it as "Full fee").
+      installments: useInstalments
+        ? rows
+            .filter((r) => r.label || r.amount)
+            .map((r) => ({
+              label: r.label,
+              amount: Number.parseFloat(r.amount) || 0,
+              dueDate: r.dueDate || null,
+            }))
+        : [],
       notes,
     });
   };
@@ -91,6 +107,24 @@ export default function CclFeeProposalModal({
             />
           </div>
 
+          <div>
+            <label className="flex items-center gap-2 text-xs font-black text-gray-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={useInstalments}
+                onChange={(e) => setUseInstalments(e.target.checked)}
+                className="accent-secondary"
+              />
+              Offer payment in instalments (optional)
+            </label>
+            {!useInstalments && (
+              <p className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mt-2">
+                Single payment{total > 0 ? ` of £${total.toFixed(2)}` : ""} — no instalment schedule needed.
+              </p>
+            )}
+          </div>
+
+          {useInstalments && (
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-black uppercase tracking-wider text-gray-500">
@@ -153,12 +187,23 @@ export default function CclFeeProposalModal({
                 </div>
               ))}
             </div>
+            {/* BUG-033: always confirm how many instalments are set up */}
+            <p
+              className={`text-xs font-bold mt-2 ${
+                sumMismatch || instalmentCount === 0 ? "text-amber-700" : "text-emerald-700"
+              }`}
+            >
+              {instalmentCount} instalment{instalmentCount === 1 ? "" : "s"} set up · £
+              {instalmentSum.toFixed(2)} of £{total.toFixed(2)}
+              {!sumMismatch && instalmentCount > 0 ? " ✓" : ""}
+            </p>
             {sumMismatch && (
-              <p className="text-xs font-bold text-amber-700 mt-2">
+              <p className="text-xs font-bold text-amber-700 mt-1">
                 Instalments (£{instalmentSum.toFixed(2)}) must equal total (£{total.toFixed(2)})
               </p>
             )}
           </div>
+          )}
 
           <div>
             <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
@@ -177,7 +222,10 @@ export default function CclFeeProposalModal({
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={busy || sumMismatch || total <= 0}>
+          <Button
+            type="submit"
+            disabled={busy || total <= 0 || (useInstalments && (sumMismatch || instalmentCount === 0))}
+          >
             {busy ? "Submitting…" : "Submit for admin approval"}
           </Button>
         </div>

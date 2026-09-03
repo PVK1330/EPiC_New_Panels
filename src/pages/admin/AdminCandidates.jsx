@@ -46,6 +46,7 @@ import {
 } from "../../services/candidateApi";
 import { getSponsors } from "../../services/sponsorApi";
 import { getApiError } from "../../utils/apiError";
+import { isInactiveUser } from "../../utils/userIdentity";
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
 import PageTitle from "../../components/common/PageTitle";
 import SearchInput from "../../components/common/SearchInput";
@@ -1178,7 +1179,7 @@ export default function AdminCandidates() {
                   const nationality = app.nationality || caseRecord.nationality || c.nationality || '—';
 
                   return (
-                    <Tr key={`${c.id}-${idx}`}>
+                    <Tr key={`${c.id}-${idx}`} className={isInactiveUser(c) ? "bg-gray-50/60 opacity-60 hover:opacity-100" : ""}>
                       <Td>
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>

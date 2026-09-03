@@ -190,11 +190,11 @@ const Cases = () => {
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
             : "Unknown",
-          business:
-            c.sponsor?.sponsorProfile?.companyName ||
-            c.sponsor?.sponsorProfile?.tradingName ||
-            c.sponsor?.first_name ||
-            "Unknown",
+          business: c.sponsor
+            ? c.sponsor.sponsorProfile?.companyName ||
+              c.sponsor.sponsorProfile?.tradingName ||
+              `${c.sponsor.first_name} ${c.sponsor.last_name || ""}`.trim()
+            : "No sponsor (private client)",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           legacyStatus: c.status,
@@ -524,11 +524,11 @@ const Cases = () => {
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
             : "Unknown",
-          business:
-            c.sponsor?.sponsorProfile?.companyName ||
-            c.sponsor?.sponsorProfile?.tradingName ||
-            c.sponsor?.first_name ||
-            "Unknown",
+          business: c.sponsor
+            ? c.sponsor.sponsorProfile?.companyName ||
+              c.sponsor.sponsorProfile?.tradingName ||
+              `${c.sponsor.first_name} ${c.sponsor.last_name || ""}`.trim()
+            : "No sponsor (private client)",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           legacyStatus: c.status,
@@ -604,7 +604,7 @@ const Cases = () => {
 
     //  Required selections 
     if (!newCaseForm.candidateId) e.candidateId = "Please select a candidate";
-    if (!newCaseForm.businessId) e.businessId = "Please select a sponsor";
+    // Sponsor is optional (BUG-031) — private clients have no sponsor.
     if (!newCaseForm.visaTypeId) e.visaTypeId = "Please select a visa type";
 
     //  Caseworkers: 1 or 2 required 
@@ -698,11 +698,11 @@ const Cases = () => {
           candidate: c.candidate
             ? `${c.candidate.first_name} ${c.candidate.last_name}`
             : "Unknown",
-          business:
-            c.sponsor?.sponsorProfile?.companyName ||
-            c.sponsor?.sponsorProfile?.tradingName ||
-            c.sponsor?.first_name ||
-            "Unknown",
+          business: c.sponsor
+            ? c.sponsor.sponsorProfile?.companyName ||
+              c.sponsor.sponsorProfile?.tradingName ||
+              `${c.sponsor.first_name} ${c.sponsor.last_name || ""}`.trim()
+            : "No sponsor (private client)",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           legacyStatus: c.status,
@@ -1400,7 +1400,7 @@ const Cases = () => {
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">
-                    Sponsor <span className="text-red-500">*</span>
+                    Sponsor <span className="text-gray-400 font-normal">(optional)</span>
                   </label>
                   <div className="relative">
                     <select
@@ -1419,7 +1419,9 @@ const Cases = () => {
                           businessName:
                             selectedSponsor?.sponsorProfile?.companyName ||
                             selectedSponsor?.sponsorProfile?.tradingName ||
-                            `${selectedSponsor.first_name} ${selectedSponsor.last_name}`,
+                            (selectedSponsor
+                              ? `${selectedSponsor.first_name} ${selectedSponsor.last_name}`
+                              : ""),
                         }));
                         if (newCaseErrors.businessId)
                           setNewCaseErrors((prev) => ({
@@ -1429,10 +1431,12 @@ const Cases = () => {
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.businessId ? "border-red-400" : "border-gray-300"}`}
                     >
-                      <option value="">Select sponsor</option>
+                      <option value="">No sponsor (private client)</option>
                       {sponsors.map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.first_name} {s.last_name}
+                          {s.sponsorProfile?.companyName ||
+                            s.sponsorProfile?.tradingName ||
+                            `${s.first_name} ${s.last_name}`}
                         </option>
                       ))}
                     </select>
@@ -2100,7 +2104,7 @@ const Cases = () => {
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">
-                    Sponsor <span className="text-red-500">*</span>
+                    Sponsor <span className="text-gray-400 font-normal">(optional)</span>
                   </label>
                   <div className="relative">
                     <select
@@ -2119,7 +2123,9 @@ const Cases = () => {
                           businessName:
                             selectedSponsor?.sponsorProfile?.companyName ||
                             selectedSponsor?.sponsorProfile?.tradingName ||
-                            `${selectedSponsor.first_name} ${selectedSponsor.last_name}`,
+                            (selectedSponsor
+                              ? `${selectedSponsor.first_name} ${selectedSponsor.last_name}`
+                              : ""),
                         }));
                         if (newCaseErrors.businessId)
                           setNewCaseErrors((prev) => ({
@@ -2129,10 +2135,12 @@ const Cases = () => {
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.businessId ? "border-red-400" : "border-gray-300"}`}
                     >
-                      <option value="">Select sponsor</option>
+                      <option value="">No sponsor (private client)</option>
                       {sponsors.map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.first_name} {s.last_name}
+                          {s.sponsorProfile?.companyName ||
+                            s.sponsorProfile?.tradingName ||
+                            `${s.first_name} ${s.last_name}`}
                         </option>
                       ))}
                     </select>

@@ -19,6 +19,7 @@ import PhoneInput from "../../components/PhoneInput";
 import Button from "../../components/Button";
 import { isValidPhone } from "../../utils/countries";
 import { getApiError } from "../../utils/apiError";
+import { userRowClass } from "../../utils/userIdentity";
 import useSponsor from "../../hooks/useSponsor";
 import useDownloads from "../../hooks/useDownloads";
 import { useToast } from "../../context/ToastContext";
@@ -690,7 +691,7 @@ export default function AdminBusinesses() {
                   return (
                     <tr
                       key={user.id}
-                      className="hover:bg-gray-50/70 transition-colors"
+                      className={userRowClass(user)}
                     >
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">

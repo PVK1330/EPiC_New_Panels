@@ -17,7 +17,7 @@ import AdminPaymentStatusControl from "../../components/caseDetail/AdminPaymentS
 import CaseDetailTimeline from "../../components/caseDetail/CaseDetailTimeline";
 import CaseDetailCommunication from "../../components/caseDetail/CaseDetailCommunication";
 import CaseDetailNotes from "../../components/caseDetail/CaseDetailNotes";
-import { CASE_DETAIL_TABS, TAB_IDS, DEFAULT_CASE_DETAIL } from "../../components/caseDetail/caseDetailData";
+import { CASE_DETAIL_TABS, TAB_IDS, EMPTY_CASE_DETAIL } from "../../components/caseDetail/caseDetailData";
 import CaseWorkflowActions from "../../components/case/CaseWorkflowActions";
 import CaseWorkflowPanel from "../../components/case/CaseWorkflowPanel";
 import BiometricBookedModal from "../../components/workflow/BiometricBookedModal";
@@ -86,6 +86,7 @@ const AdminCaseDetail = () => {
   // State for data
   const [caseData, setCaseData] = useState(null);
   const [caseLoading, setCaseLoading] = useState(false);
+  const [caseError, setCaseError] = useState("");
   const [documents, setDocuments] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [notes, setNotes] = useState([]);
@@ -99,13 +100,17 @@ const AdminCaseDetail = () => {
   // Fetch case detail
   const fetchCaseDetail = useCallback(async (id) => {
     setCaseLoading(true);
+    setCaseError("");
     try {
       const res = await getCaseDetails(id);
       if (res.data?.status === "success") {
         setCaseData(res.data.data);
+      } else {
+        setCaseError(res.data?.message || "Could not load this case.");
       }
     } catch (error) {
       console.error("Error fetching case detail:", error);
+      setCaseError(error.response?.data?.message || "Could not load this case.");
     } finally {
       setCaseLoading(false);
     }
@@ -319,8 +324,8 @@ const AdminCaseDetail = () => {
   const data = useMemo(() => {
     if (!caseData) {
       return {
-        ...DEFAULT_CASE_DETAIL,
-        caseId: caseId || DEFAULT_CASE_DETAIL.caseId,
+        ...EMPTY_CASE_DETAIL,
+        caseId: caseId || "",
         tasks: mappedTasks,
         internalNotes: mappedNotes,
         documents: mappedDocuments,
@@ -375,7 +380,7 @@ const AdminCaseDetail = () => {
     const outstanding = parseFloat(financial?.outstandingBalance || 0);
 
     return {
-      ...DEFAULT_CASE_DETAIL,
+      ...EMPTY_CASE_DETAIL,
       internalCaseId: internalId,
       caseId: overview?.caseId,
       candidateName: candidate
@@ -401,7 +406,13 @@ const AdminCaseDetail = () => {
         phone: candidate?.mobile || candidate?.phone || "N/A",
       },
       sponsor: {
-        company: business?.sponsor?.sponsorProfile?.companyName || business?.businessId || "N/A",
+        // BUG-031: a case may legitimately have no sponsor (private client).
+        hasSponsor: Boolean(business?.sponsor),
+        company:
+          business?.sponsor?.sponsorProfile?.companyName ||
+          (business?.sponsor
+            ? `${business.sponsor.first_name} ${business.sponsor.last_name}`.trim()
+            : "No sponsor (private client)"),
         licenceNo: business?.sponsor?.sponsorProfile?.sponsorLicenceNumber || "N/A",
         licenceStatus: business?.sponsor?.sponsorProfile?.licenceStatus || "N/A",
         licenceExpiry: business?.sponsor?.sponsorProfile?.licenceExpiryDate
@@ -446,8 +457,9 @@ const AdminCaseDetail = () => {
         payment: `$${totalPaid.toLocaleString()} paid`,
         daysLeft: "N/A",
       },
-      // Use real-time docs from hook when available; fall back to case-detail aggregate
-      documents: mappedDocuments.length > 0 ? mappedDocuments : DEFAULT_CASE_DETAIL.documents,
+      // Real documents only (hook list, else case-detail aggregate). An empty case
+      // must show the empty state — it used to show sample rows (Alice Patel …).
+      documents: mappedDocuments,
       // Real tasks from separate /api/tasks/case/:id endpoint
       tasks: mappedTasks,
       payments: {
@@ -468,7 +480,7 @@ const AdminCaseDetail = () => {
       messages: [],
       // Real notes from /api/case-notes endpoint
       internalNotes: mappedNotes,
-      audit: DEFAULT_CASE_DETAIL.audit,
+      audit: [],
     };
   }, [caseData, caseId, mappedTasks, mappedNotes, mappedDocuments]);
 
@@ -695,6 +707,7 @@ const AdminCaseDetail = () => {
       <CaseDetailDocuments
         documents={data.documents}
         caseId={cleanId}
+        candidateId={caseData?.candidate?.id ?? caseData?.candidateId}
         uploadDocument={handleUploadDocument}
         changeDocumentStatus={handleChangeDocumentStatus}
       />
@@ -748,6 +761,13 @@ const AdminCaseDetail = () => {
       {caseLoading ? (
         <div className="flex items-center justify-center py-20">
           <div className="text-gray-500">Loading case details...</div>
+        </div>
+      ) : caseError ? (
+        <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+          <div className="font-semibold text-gray-700">{caseError}</div>
+          <Link to="/admin/cases" className="text-sm font-bold text-primary hover:underline">
+            Back to cases
+          </Link>
         </div>
       ) : (
         <>
@@ -851,6 +871,7 @@ const AdminCaseDetail = () => {
 
           <CaseWorkflowActions
             caseId={cleanId}
+            candidateName={data.candidateName}
             totalAmount={caseData?.financial?.totalFee}
             amountStatus={data.payments?.amountStatus}
             caseStage={data.case?.caseStage}

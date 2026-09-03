@@ -18,6 +18,7 @@ import {
 } from "../../../services/documentChecklistApi";
 import { DOCUMENT_TYPE_OPTIONS } from "../../../utils/constants";
 import { formatDate } from "../../../utils/datetime";
+import { getUploadErrorMessage, validateUploadFile } from "../../../utils/uploadError";
 
 const categoryLabels = {
   identity: "Identity Documents",
@@ -240,7 +241,8 @@ function CasesDocumentsTab({ caseId, candidateId }) {
 
   const submitUploadDocument = useCallback(async () => {
     const err = {};
-    if (!selectedFile) err.file = "Required";
+    const fileError = validateUploadFile(selectedFile);
+    if (fileError) err.file = fileError;
     if (!uploadForm.documentType) err.documentType = "Required";
     setUploadErrors(err);
     if (Object.keys(err).length) return;
@@ -249,7 +251,9 @@ function CasesDocumentsTab({ caseId, candidateId }) {
       const formData = new FormData();
       formData.append("files", selectedFile);
       formData.append("caseId", caseId);
-      formData.append("userId", candidateId);
+      // Server derives the client from caseId; only send userId when it is known
+      // (appending undefined would post the literal string "undefined").
+      if (candidateId) formData.append("userId", String(candidateId));
       formData.append("documentType", uploadForm.documentType);
       formData.append("documentCategory", uploadForm.documentCategory);
       formData.append("userFileName", uploadForm.userFileName || selectedFile.name);
@@ -263,7 +267,7 @@ function CasesDocumentsTab({ caseId, candidateId }) {
       }
     } catch (error) {
       console.error("Error uploading document:", error);
-      setUploadErrors({ api: error.response?.data?.message || "Failed to upload document" });
+      setUploadErrors({ api: getUploadErrorMessage(error) });
     } finally {
       setUploading(false);
     }
@@ -323,10 +327,6 @@ function CasesDocumentsTab({ caseId, candidateId }) {
                     + Add Required Document
                   </button>
                 )}
-                <button type="button" onClick={() => openUploadModal()}
-                  className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
-                  + Upload Document
-                </button>
               </div>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
@@ -437,9 +437,21 @@ function CasesDocumentsTab({ caseId, candidateId }) {
       )}
 
       <div>
+        {/* BUG-030: the Upload button used to live inside the checklist block above, so a
+            case with no visa type / checklist had no way to upload at all. */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">All uploaded documents</p>
+          <button type="button" onClick={() => openUploadModal()}
+            className="rounded-xl bg-secondary px-3 py-2 text-xs font-black text-white">
+            + Upload Document
+          </button>
         </div>
+        {!checklistLoading && Object.keys(checklist?.checklist || {}).length === 0 && (
+          <p className="text-xs text-gray-500 mb-3">
+            No required-documents checklist applies to this case yet
+            {checklist?.visaTypeMissing ? " (no visa type set on the case)" : ""}. You can still upload documents.
+          </p>
+        )}
         {loading ? (
           <p className="text-sm text-gray-500">Loading documents...</p>
         ) : documents.length === 0 ? (

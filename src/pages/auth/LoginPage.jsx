@@ -137,7 +137,7 @@ export default function LoginPage() {
 
   const handleRegisterChange = (e) => {
     setRegisterForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    setRegisterErrors((prev) => ({ ...prev, [e.target.name]: "" }));
+    setRegisterErrors((prev) => ({ ...prev, [e.target.name]: "", general: "" }));
   };
 
   const handleCountryCodeChange = (country) => {
@@ -153,10 +153,13 @@ export default function LoginPage() {
 
   const validateRegister = () => {
     const errs = {};
+    // BUG-001: advisers hand out codes like "EPIC2026 - 111", not the numeric
+    // database id — accept a number OR an organisation code/name (the backend
+    // resolves either) instead of rejecting everything non-numeric.
     if (!registerForm.organisationId.trim())
       errs.organisationId = "Organisation ID is required";
-    else if (!/^\d+$/.test(registerForm.organisationId.trim()))
-      errs.organisationId = "Organisation ID must be a number";
+    else if (!/^[A-Za-z0-9][A-Za-z0-9 ._-]{0,63}$/.test(registerForm.organisationId.trim()))
+      errs.organisationId = "Enter the Organisation ID or code given by your adviser";
     if (!registerForm.firstName.trim())
       errs.firstName = "First name is required";
     if (!registerForm.lastName.trim()) errs.lastName = "Last name is required";
@@ -164,8 +167,17 @@ export default function LoginPage() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email))
       errs.email = "Enter a valid email";
     if (!registerForm.password) errs.password = "Password is required";
-    else if (registerForm.password.length < 8)
-      errs.password = "At least 8 characters";
+    // BUG-001: mirror the backend strong-password policy (12+ chars with upper,
+    // lower, digit and special). The form previously allowed 8+ chars, so valid
+    // input here was still rejected server-side with a confusing error.
+    else if (
+      registerForm.password.length < 12 ||
+      !/[a-z]/.test(registerForm.password) ||
+      !/[A-Z]/.test(registerForm.password) ||
+      !/[0-9]/.test(registerForm.password) ||
+      !/[^A-Za-z0-9]/.test(registerForm.password)
+    )
+      errs.password = "Min 12 characters with upper, lower, number & symbol";
     if (registerForm.password !== registerForm.confirmPassword)
       errs.confirmPassword = "Passwords do not match";
     if (!registerForm.dob) {
@@ -286,9 +298,16 @@ export default function LoginPage() {
         role_id: 1,
       });
       sessionStorage.setItem("pending_otp_email", registerForm.email.trim());
+      // BUG-001: the OTP verify/resend calls must target the same organisation
+      // as registration — without this the backend fell back to the default
+      // organisation and answered "User not found or already verified".
+      sessionStorage.setItem(
+        "pending_otp_org_id",
+        registerForm.organisationId.trim(),
+      );
       navigate("/verify-otp");
     } catch (err) {
-      setRegisterErrors({ email: err.message || "Registration failed" });
+      setRegisterErrors({ general: err.message || "Registration failed" });
     } finally {
       setRegisterLoading(false);
     }
@@ -486,13 +505,12 @@ export default function LoginPage() {
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
               <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
                 <Input
-                  label="Organisation ID"
+                  label="Organisation ID or code"
                   name="organisationId"
                   type="text"
-                  inputMode="numeric"
                   value={registerForm.organisationId}
                   onChange={handleRegisterChange}
-                  placeholder="e.g. 3"
+                  placeholder="e.g. 3 or your organisation code"
                   error={registerErrors.organisationId}
                   required
                 />
@@ -682,7 +700,7 @@ export default function LoginPage() {
                     type="password"
                     value={registerForm.password}
                     onChange={handleRegisterChange}
-                    placeholder="At least 8 characters"
+                    placeholder="Min 12 chars incl. number & symbol"
                     error={registerErrors.password}
                     required
                   />
@@ -699,9 +717,10 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {registerErrors.email && !registerErrors.firstName && (
+              {(registerErrors.general ||
+                (registerErrors.email && !registerErrors.firstName)) && (
                 <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm text-center font-medium">
-                  {registerErrors.email}
+                  {registerErrors.general || registerErrors.email}
                 </div>
               )}
 

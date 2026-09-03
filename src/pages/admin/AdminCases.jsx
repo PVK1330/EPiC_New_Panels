@@ -354,7 +354,7 @@ export default function AdminCases() {
 
     // ── Required selections ──────────────────────────────────────────────
     if (!formData.candidateId) e.candidateId = "Please select a candidate";
-    if (!formData.businessId) e.businessId = "Please select a sponsor";
+    // Sponsor is optional (BUG-031) — private clients have no sponsor.
     if (!formData.visaTypeId) e.visaTypeId = "Please select a visa type";
 
     // ── Caseworkers (optional on create, but never more than 2) ──────────
@@ -449,8 +449,10 @@ export default function AdminCases() {
             : "—",
           candidateId: c.candidateId,
           business: c.sponsor
-            ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
-            : "—",
+            ? c.sponsor.sponsorProfile?.companyName ||
+              c.sponsor.sponsorProfile?.tradingName ||
+              `${c.sponsor.first_name} ${c.sponsor.last_name}`
+            : "No sponsor (private client)",
           businessId: c.sponsorId,
           visaType: c.visaType?.name || "—",
           petitionType: c.petitionType?.name || "—",
@@ -572,8 +574,10 @@ export default function AdminCases() {
             : "—",
           candidateId: c.candidateId,
           business: c.sponsor
-            ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
-            : "—",
+            ? c.sponsor.sponsorProfile?.companyName ||
+              c.sponsor.sponsorProfile?.tradingName ||
+              `${c.sponsor.first_name} ${c.sponsor.last_name}`
+            : "No sponsor (private client)",
           businessId: c.sponsorId,
           visaType: c.visaType?.name || "—",
           petitionType: c.petitionType?.name || "—",
@@ -633,8 +637,10 @@ export default function AdminCases() {
             : "—",
           candidateId: c.candidateId,
           business: c.sponsor
-            ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
-            : "—",
+            ? c.sponsor.sponsorProfile?.companyName ||
+              c.sponsor.sponsorProfile?.tradingName ||
+              `${c.sponsor.first_name} ${c.sponsor.last_name}`
+            : "No sponsor (private client)",
           businessId: c.sponsorId,
           visaType: c.visaType?.name || "—",
           petitionType: c.petitionType?.name || "—",
@@ -716,8 +722,10 @@ export default function AdminCases() {
             : "—",
           candidateId: c.candidateId,
           business: c.sponsor
-            ? `${c.sponsor.first_name} ${c.sponsor.last_name}`
-            : "—",
+            ? c.sponsor.sponsorProfile?.companyName ||
+              c.sponsor.sponsorProfile?.tradingName ||
+              `${c.sponsor.first_name} ${c.sponsor.last_name}`
+            : "No sponsor (private client)",
           businessId: c.sponsorId,
           visaType: c.visaType?.name || "—",
           petitionType: c.petitionType?.name || "—",

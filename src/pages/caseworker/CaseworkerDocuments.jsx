@@ -8,6 +8,7 @@ import { useToast } from "../../context/ToastContext";
 import { DOCUMENT_TYPE_OPTIONS } from "../../utils/constants";
 import useDownloads from "../../hooks/useDownloads";
 import { formatDateLong } from "../../utils/datetime";
+import { getUploadErrorMessage, validateUploadFile } from "../../utils/uploadError";
 import DatePicker from "../../components/DatePicker";
 import Pagination from "../../components/common/Pagination";
 
@@ -244,8 +245,10 @@ export default function CaseworkerDocuments() {
 
   const submitUploadDocument = useCallback(async () => {
     const err = {};
-    if (!selectedFile) err.file = "Required";
+    const fileError = validateUploadFile(selectedFile);
+    if (fileError) err.file = fileError;
     if (!uploadForm.documentType) err.documentType = "Required";
+    if (!caseId) err.api = "Please select a case first.";
     setUploadErrors(err);
     if (Object.keys(err).length) return;
 
@@ -254,22 +257,20 @@ export default function CaseworkerDocuments() {
       const selectedCase = cases.find(c => c.id.toString() === caseId.toString());
       const userId = selectedCase?.candidateId;
 
-      if (!userId) {
-        setUploadErrors({ api: "Unable to determine user ID from selected case" });
-        return;
-      }
-
       const formData = new FormData();
-      formData.append("documents", selectedFile);
+      // Server multer accepts the file under "files" (see upload.middleware.js);
+      // sending it as "documents" was rejected with "Unexpected field" (BUG-030).
+      formData.append("files", selectedFile);
       formData.append("caseId", caseId);
       formData.append("documentType", uploadForm.documentType);
       formData.append("documentCategory", uploadForm.documentCategory);
-      formData.append("userId", userId);
-      formData.append("userFileName", uploadForm.userFileName);
+      // The server derives the client from the case; pass it when we know it.
+      if (userId) formData.append("userId", String(userId));
+      formData.append("userFileName", uploadForm.userFileName || selectedFile.name);
       if (uploadForm.expiryDate) formData.append("expiryDate", uploadForm.expiryDate);
       if (uploadForm.notes) formData.append("notes", uploadForm.notes);
 
-      const response = await api.post("/api/caseworker/documents/upload", formData);
+      const response = await api.post("/api/caseworker/documents/upload", formData, { timeout: 120000 });
 
       if (response.data.status === "success") {
         await fetchAllDocuments();
@@ -279,11 +280,7 @@ export default function CaseworkerDocuments() {
       }
     } catch (error) {
       console.error("Error uploading document:", error);
-      if (error.response?.data?.message) {
-        setUploadErrors({ api: error.response.data.message });
-      } else {
-        setUploadErrors({ api: "Failed to upload document" });
-      }
+      setUploadErrors({ api: getUploadErrorMessage(error) });
     } finally {
       setUploading(false);
     }
@@ -302,22 +299,24 @@ export default function CaseworkerDocuments() {
       return;
     }
 
+    const fileError = validateUploadFile(selectedFile);
+    if (fileError) {
+      showToast({ message: fileError, variant: "warning" });
+      return;
+    }
+
     try {
       setUploading(true);
       const selectedCase = cases.find(c => c.id.toString() === caseId.toString());
       const userId = selectedCase?.candidateId;
 
-      if (!userId) {
-        showToast({ message: "Unable to determine user ID from selected case.", variant: "danger" });
-        return;
-      }
-
       const formData = new FormData();
-      formData.append("documents", selectedFile);
+      // Field name must be "files" (see upload.middleware.js) — BUG-030.
+      formData.append("files", selectedFile);
       formData.append("caseId", caseId);
       formData.append("documentType", docType);
       formData.append("documentCategory", "candidate");
-      formData.append("userId", userId);
+      if (userId) formData.append("userId", String(userId));
       formData.append("userFileName", selectedFile.name);
       if (expiryDate) {
         formData.append("expiryDate", expiryDate);
@@ -326,10 +325,11 @@ export default function CaseworkerDocuments() {
         formData.append("notes", notes);
       }
 
-      const response = await api.post("/api/caseworker/documents/upload", formData, {
+      await api.post("/api/caseworker/documents/upload", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        timeout: 120000,
       });
 
       showToast({ message: "Document uploaded successfully.", variant: "success" });
@@ -345,7 +345,7 @@ export default function CaseworkerDocuments() {
     } catch (error) {
       console.error("Error uploading document:", error);
       showToast({
-        message: error.response?.data?.message || "Failed to upload document.",
+        message: getUploadErrorMessage(error, "Failed to upload document."),
         variant: "danger",
       });
     } finally {

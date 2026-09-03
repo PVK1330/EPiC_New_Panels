@@ -64,10 +64,12 @@ export const updateCaseStage = (id, caseStage) =>
 export const getCaseWorkflow = () => api.get(`/api/cases/workflow`);
 
 // ── Documents ────────────────────────────────────────────────────────────────
-// POST /api/documents/upload  (multipart/form-data: caseId, documentCategory, documents, expiryDate, userFileName, userId)
+// POST /api/documents/upload  (multipart/form-data: files, caseId, userId?, documentType, documentCategory, userFileName, expiryDate?, notes?)
+// Uploads are scanned server-side, so allow well beyond the 10 s default timeout.
 export const uploadCaseDocument = (formData) =>
   api.post(`/api/documents/upload`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: 120000,
   });
 
 // GET /api/documents/:id

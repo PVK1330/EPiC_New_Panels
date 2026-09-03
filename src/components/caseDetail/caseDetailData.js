@@ -20,6 +20,9 @@ export const CASE_DETAIL_TABS = [
   { id: TAB_IDS.notes, label: "Notes (Internal)" },
 ];
 
+// Design-time SAMPLE record (fictional people/dates). Never render it to users —
+// the case page used to fall back to these rows for cases with no documents,
+// which looked like real uploads. Use EMPTY_CASE_DETAIL below instead.
 export const DEFAULT_CASE_DETAIL = {
   caseId: "VF-2841",
   candidateName: "Priya Sharma",
@@ -109,4 +112,27 @@ export const DEFAULT_CASE_DETAIL = {
     { ts: "2026-01-11 14:22", user: "TechNova HR", action: "UPLOAD", actionClass: "bg-blue-100 text-blue-800", module: "Documents", oldVal: "—", newVal: "CoS Uploaded", newClass: "text-green-600" },
     { ts: "2026-01-10 09:14", user: "Sarah Anand", action: "CREATE", actionClass: "bg-purple-100 text-purple-800", module: "Case", oldVal: "—", newVal: "#VF-2841 Created", newClass: "text-secondary" },
   ],
+};
+
+// Blank record with the same shape as DEFAULT_CASE_DETAIL. Used by the real case
+// page while loading and as the base for mapped API data, so sections with no
+// data show empty states rather than sample content.
+export const EMPTY_CASE_DETAIL = {
+  caseId: "",
+  candidateName: "",
+  statusChip: "",
+  visaChip: "",
+  subtitle: "",
+  candidate: { fullName: "", dob: "N/A", nationality: "N/A", passport: "N/A", email: "N/A", phone: "N/A" },
+  sponsor: { company: "N/A", licenceNo: "N/A", licenceStatus: "N/A", licenceExpiry: "N/A", contact: "N/A", caseworker: "Unassigned" },
+  case: { visaType: "", caseStatus: "", dateOpened: "N/A", targetDate: "N/A", visaExpiry: "N/A", paymentStatus: "" },
+  progress: { pct: 0, documents: "0/0 approved", tasks: "N/A", payment: "£0 paid", daysLeft: "N/A" },
+  documents: [],
+  tasks: [],
+  payments: { total: "£0", paid: "£0", balance: "£0", history: [], invoiceId: "N/A" },
+  timeline: [],
+  threads: [],
+  messages: [],
+  internalNotes: [],
+  audit: [],
 };
