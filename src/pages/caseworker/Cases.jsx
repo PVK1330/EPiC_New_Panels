@@ -594,7 +594,9 @@ const Cases = () => {
   };
 
   const handleCaseworkerIdsChange = (ids) => {
-    setNewCaseForm((prev) => ({ ...prev, assignedCaseworkerIds: ids }));
+    // BUG-017: one caseworker per case — keep only the most recent selection.
+    const single = Array.isArray(ids) ? ids.slice(-1) : ids;
+    setNewCaseForm((prev) => ({ ...prev, assignedCaseworkerIds: single }));
     if (newCaseErrors.assignedCaseworkers)
       setNewCaseErrors((prev) => ({ ...prev, assignedCaseworkers: "" }));
   };
@@ -609,7 +611,7 @@ const Cases = () => {
 
     //  Caseworkers: 1 or 2 required 
     const n = newCaseForm.assignedCaseworkerIds?.length || 0;
-    if (n < 1 || n > 2) e.assignedCaseworkers = "Select 1 or 2 caseworkers";
+    if (n !== 1) e.assignedCaseworkers = "Select one caseworker";
 
     //  Target submission date: required, valid, not in the past 
     if (!newCaseForm.targetSubmissionDate) {

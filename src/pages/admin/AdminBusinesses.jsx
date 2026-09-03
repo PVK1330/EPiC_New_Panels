@@ -245,8 +245,8 @@ export default function AdminBusinesses() {
       errs.email = "Enter a valid email";
     if (!createForm.country_code.trim())
       errs.country_code = "Country code is required";
-    if (!createForm.mobile.trim()) errs.mobile = "Mobile is required";
-    else if (!isValidPhone(createForm.country_code, createForm.mobile))
+    // BUG-015: sponsor mobile is optional — only validate the format when given.
+    if (createForm.mobile.trim() && !isValidPhone(createForm.country_code, createForm.mobile))
       errs.mobile = "Enter a valid phone number for the selected country";
     if (!createForm.companyName.trim()) errs.companyName = "Company name is required";
     // Password is generated server-side and emailed to the sponsor — not collected here.
@@ -262,8 +262,8 @@ export default function AdminBusinesses() {
       errs.email = "Enter a valid email";
     if (!editForm.country_code.trim())
       errs.country_code = "Country code is required";
-    if (!editForm.mobile.trim()) errs.mobile = "Mobile is required";
-    else if (!isValidPhone(editForm.country_code, editForm.mobile))
+    // BUG-015: sponsor mobile is optional — only validate the format when given.
+    if (editForm.mobile.trim() && !isValidPhone(editForm.country_code, editForm.mobile))
       errs.mobile = "Enter a valid phone number for the selected country";
     if (!editForm.companyName.trim()) errs.companyName = "Company name is required";
     return errs;
@@ -889,14 +889,13 @@ export default function AdminBusinesses() {
             />
             <PhoneInput
               split
-              label="Mobile"
+              label="Mobile (optional)"
               dialCode={createForm.country_code}
               national={createForm.mobile}
               dialName="country_code"
               nationalName="mobile"
               onChange={handleCreateChange}
               placeholder="e.g. 7911 123456"
-              required
               error={errors.mobile}
               className="sm:col-span-2"
             />
@@ -950,14 +949,13 @@ export default function AdminBusinesses() {
             />
             <PhoneInput
               split
-              label="Mobile"
+              label="Mobile (optional)"
               dialCode={editForm.country_code}
               national={editForm.mobile}
               dialName="country_code"
               nationalName="mobile"
               onChange={handleEditChange}
               placeholder="e.g. 7911 123456"
-              required
               error={errors.mobile}
               className="sm:col-span-2"
             />

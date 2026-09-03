@@ -17,11 +17,8 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
   const [open, setOpen] = useState(false);
 
   const toggleId = (id) => {
-    if (value.includes(id)) {
-      onChange(value.filter((x) => x !== id));
-    } else if (value.length < 2) {
-      onChange([...value, id]);
-    }
+    // BUG-017: one caseworker per case — selecting one replaces the previous.
+    onChange(value.includes(id) ? [] : [id]);
   };
 
   const summaryText = value.length
@@ -31,15 +28,15 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
   return (
     <div className="relative md:col-span-2 space-y-2">
       <label className="text-sm font-medium text-gray-700">
-        Caseworker Assignment <span className="text-red-500">*</span>
-        <span className="text-gray-400 font-normal ml-1">(1–2 workers)</span>
+        Caseworker Assignment
+        <span className="text-gray-400 font-normal ml-1">(one caseworker, optional on create)</span>
       </label>
       <button type="button" onClick={() => setOpen((o) => !o)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-left text-sm bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all ${error ? "border-red-500" : "border-slate-200"}`}>
         <span className={value.length ? "text-gray-900 font-semibold" : "text-gray-400"}>
-          {value.length ? summaryText : "Choose caseworkers…"}
+          {value.length ? summaryText : "Choose a caseworker…"}
         </span>
-        <span className="text-xs font-bold text-gray-400 tabular-nums shrink-0">{value.length}/2</span>
+        <span className="text-xs font-bold text-gray-400 tabular-nums shrink-0">{value.length}/1</span>
       </button>
       {open && (
         <>
@@ -47,7 +44,7 @@ function CaseworkerMultiSelect({ options, value, onChange, error }) {
           <div className="absolute z-[70] left-0 right-0 mt-1 border border-gray-200 rounded-xl bg-white shadow-xl py-1 max-h-60 overflow-y-auto">
             {options.map((o) => {
               const checked = value.includes(o.id);
-              const disabled = !checked && value.length >= 2;
+              const disabled = false; // single-select: picking another replaces it
               return (
                 <label key={o.id} className={`flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-secondary/5"}`}>
                   <input type="checkbox" className="accent-secondary rounded border-gray-300" checked={checked} disabled={disabled} onChange={() => toggleId(o.id)} />
