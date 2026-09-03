@@ -45,6 +45,11 @@ const FIELD_SECTIONS = [
       "ukLicense",
       "ukLicenseNumber",
       "medicalTreatment",
+      "medicalTreatmentHospitalClinicName",
+      "medicalTreatmentHospitalClinicAddress",
+      "medicalTreatmentStartDate",
+      "medicalTreatmentEndDate",
+      "medicalTreatmentDetails",
       "ukStayDuration",
     ],
   },
@@ -52,18 +57,31 @@ const FIELD_SECTIONS = [
     title: APPLICATION_STEP_LABELS[2],
     keys: [
       "illegalEntry",
+      "illegalEntryDetails",
       "overstayed",
+      "overstayedDetails",
       "breach",
+      "breachDetails",
       "falseInfo",
+      "falseInfoDetails",
       "otherBreach",
+      "otherBreachDetails",
       "refusedVisa",
+      "refusedVisaDetails",
       "refusedEntry",
+      "refusedEntryDetails",
       "refusedPermission",
+      "refusedPermissionDetails",
       "refusedAsylum",
+      "refusedAsylumDetails",
       "deported",
+      "deportedDetails",
       "removed",
+      "removedDetails",
       "requiredToLeave",
+      "requiredToLeaveDetails",
       "banned",
+      "bannedDetails",
     ],
   },
   {
@@ -96,7 +114,7 @@ const FIELD_SECTIONS = [
   },
   {
     title: APPLICATION_STEP_LABELS[5],
-    keys: ["niNumber", "sponsored", "englishProof"],
+    keys: ["niNumber", "sponsored", "sponsoredDetails", "englishProof"],
   },
 ];
 
@@ -125,6 +143,31 @@ function buildSections(form, customFieldDefinitions = []) {
           return false;
         }
         if (key === "ukLicenseNumber" && form.ukLicense !== "Yes") {
+          return false;
+        }
+        // Hide detail fields if parent question is not Yes
+        const PARENT_MAP = {
+          medicalTreatmentHospitalClinicName: "medicalTreatment",
+          medicalTreatmentHospitalClinicAddress: "medicalTreatment",
+          medicalTreatmentStartDate: "medicalTreatment",
+          medicalTreatmentEndDate: "medicalTreatment",
+          medicalTreatmentDetails: "medicalTreatment",
+          illegalEntryDetails: "illegalEntry",
+          overstayedDetails: "overstayed",
+          breachDetails: "breach",
+          falseInfoDetails: "falseInfo",
+          otherBreachDetails: "otherBreach",
+          refusedVisaDetails: "refusedVisa",
+          refusedEntryDetails: "refusedEntry",
+          refusedPermissionDetails: "refusedPermission",
+          refusedAsylumDetails: "refusedAsylum",
+          deportedDetails: "deported",
+          removedDetails: "removed",
+          requiredToLeaveDetails: "requiredToLeave",
+          bannedDetails: "banned",
+          sponsoredDetails: "sponsored",
+        };
+        if (PARENT_MAP[key] && form[PARENT_MAP[key]] !== "Yes") {
           return false;
         }
         return true;

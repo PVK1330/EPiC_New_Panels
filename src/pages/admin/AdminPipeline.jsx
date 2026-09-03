@@ -199,13 +199,13 @@ const AdminPipeline = () => {
           instructions: payload.biometricInstructions,
         });
         showToast({
-          message: "Confirmation sent — candidate notified by email & in-app",
+          message: "Confirmation sent — client notified by email & in-app",
           variant: "success",
         });
       } else {
         await updatePipelineStage(caseId, "biometrics_booked", payload);
         showToast({
-          message: "Biometrics booked — candidate notified",
+          message: "Biometrics booked — client notified",
           variant: "success",
         });
       }

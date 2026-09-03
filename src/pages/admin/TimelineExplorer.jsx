@@ -51,7 +51,7 @@ const TimelineExplorer = () => {
         <select className="border p-2 rounded dark:bg-gray-700 dark:border-gray-600">
           <option value="">All Entities</option>
           <option value="case">Cases</option>
-          <option value="candidate">Candidates</option>
+          <option value="candidate">Clients</option>
         </select>
       </div>
 

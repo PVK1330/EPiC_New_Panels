@@ -108,10 +108,10 @@ function AdminCaseFormModal({
         <form onSubmit={onSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h4 className="text-sm font-black text-secondary mb-4">Candidate Information</h4>
+              <h4 className="text-sm font-black text-secondary mb-4">Client Information</h4>
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700">Candidate <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-medium text-gray-700">Client <span className="text-red-500">*</span></label>
                   <select name="candidateId" value={formData.candidateId}
                     onChange={(e) => {
                       const selectedCandidate = candidates.find((c) => c.id === parseInt(e.target.value));
@@ -119,12 +119,12 @@ function AdminCaseFormModal({
                       if (errors.candidateId) setErrors((prev) => ({ ...prev, candidateId: "" }));
                     }}
                     className={`w-full border rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all ${errors.candidateId ? "border-red-500" : "border-slate-200"}`}>
-                    <option value="">Select candidate</option>
+                    <option value="">Select client</option>
                     {candidates.map((c, idx) => <option key={`${c.id}-${idx}`} value={c.id}>{c.first_name} {c.last_name}</option>)}
                   </select>
                   {errors.candidateId && <span className="text-xs text-red-500">{errors.candidateId}</span>}
                 </div>
-                <Input label="Candidate Name" name="candidateName" value={formData.candidateName} onChange={onChange} placeholder="Auto-filled from selection" disabled />
+                <Input label="Client Name" name="candidateName" value={formData.candidateName} onChange={onChange} placeholder="Auto-filled from selection" disabled />
                 <NationalitySelect label="Nationality" name="nationality" value={formData.nationality} onChange={onChange} placeholder="Select nationality" />
                 <Input label="Job Title" name="jobTitle" value={formData.jobTitle} onChange={onChange} placeholder="e.g. Software Engineer" />
                 <div className="flex flex-col gap-1">

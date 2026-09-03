@@ -353,7 +353,7 @@ export default function AdminCases() {
     const e = {};
 
     // ── Required selections ──────────────────────────────────────────────
-    if (!formData.candidateId) e.candidateId = "Please select a candidate";
+    if (!formData.candidateId) e.candidateId = "Please select a client";
     // Sponsor is optional (BUG-031) — private clients have no sponsor.
     if (!formData.visaTypeId) e.visaTypeId = "Please select a visa type";
 
@@ -1222,8 +1222,8 @@ export default function AdminCases() {
               </h3>
               <p className="text-sm text-gray-600 mb-4">
                 {approveRejectAction === "approve"
-                  ? "Approving this case will send a notification to the candidate and assigned caseworkers."
-                  : "Rejecting this case will send a notification to the candidate and assigned caseworkers."}
+                  ? "Approving this case will send a notification to the client and assigned caseworkers."
+                  : "Rejecting this case will send a notification to the client and assigned caseworkers."}
               </p>
               <div className="mb-4">
                 <label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -1232,7 +1232,7 @@ export default function AdminCases() {
                 <textarea
                   value={approveRejectNote}
                   onChange={(e) => setApproveRejectNote(e.target.value)}
-                  placeholder="Add a note for the candidate and caseworkers..."
+                  placeholder="Add a note for the client and caseworkers..."
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
                   rows={3}
                 />

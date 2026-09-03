@@ -119,8 +119,8 @@ export default function AdminCclFeeApprovals() {
             <PoundSterling className="text-primary" size={28} />
             CCL Fee Approvals
           </h1>
-          <p className="text-gray-500 font-bold text-sm mt-1">
-            Review caseworker fee proposals before the Client Care Letter is released to candidates.
+          <p className="text-xs font-bold text-gray-400 mt-1">
+            Review caseworker fee proposals before the Client Care Letter is released to clients.
           </p>
         </div>
       </div>
@@ -161,7 +161,7 @@ export default function AdminCclFeeApprovals() {
               <Search className="absolute left-4 top-3 text-gray-300" size={16} />
               <input
                 type="text"
-                placeholder="Search candidates / refs..."
+                placeholder="Search clients / refs..."
                 className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-primary/20 transition-all text-xs font-bold"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}

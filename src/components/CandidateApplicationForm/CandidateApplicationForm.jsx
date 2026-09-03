@@ -507,6 +507,25 @@ function validateStep(stepIndex, data) {
           errs.contactNumber2 = "Enter a valid contact number (7–15 digits)";
       }
     }
+    if (data.medicalTreatment === "Yes") {
+      if (!data.medicalTreatmentHospitalClinicName?.toString().trim()) {
+        errs.medicalTreatmentHospitalClinicName = "Hospital or clinic name is required";
+      }
+      if (!data.medicalTreatmentHospitalClinicAddress?.toString().trim()) {
+        errs.medicalTreatmentHospitalClinicAddress = "Hospital or clinic address is required";
+      }
+      if (!data.medicalTreatmentStartDate) {
+        errs.medicalTreatmentStartDate = "Treatment start date is required";
+      }
+      if (!data.medicalTreatmentEndDate) {
+        errs.medicalTreatmentEndDate = "Treatment end date is required";
+      }
+      if (data.medicalTreatmentStartDate && data.medicalTreatmentEndDate) {
+        if (new Date(data.medicalTreatmentStartDate) > new Date(data.medicalTreatmentEndDate)) {
+          errs.medicalTreatmentEndDate = "End date cannot be before start date";
+        }
+      }
+    }
     // Validation for dates if both provided across all previous addresses
     const prevAddrs = Array.isArray(data.previousAddresses) ? data.previousAddresses : [];
     for (let i = 0; i < prevAddrs.length; i++) {
@@ -533,7 +552,52 @@ function validateStep(stepIndex, data) {
     }
   }
 
+  if (stepIndex === 4) {
+    if (data.illegalEntry === "Yes" && !data.illegalEntryDetails?.toString().trim()) {
+      errs.illegalEntryDetails = "Please provide details of illegal entry";
+    }
+    if (data.overstayed === "Yes" && !data.overstayedDetails?.toString().trim()) {
+      errs.overstayedDetails = "Please provide details of overstaying";
+    }
+    if (data.breach === "Yes" && !data.breachDetails?.toString().trim()) {
+      errs.breachDetails = "Please provide details of leave condition breach";
+    }
+    if (data.falseInfo === "Yes" && !data.falseInfoDetails?.toString().trim()) {
+      errs.falseInfoDetails = "Please provide details";
+    }
+    if (data.otherBreach === "Yes" && !data.otherBreachDetails?.toString().trim()) {
+      errs.otherBreachDetails = "Please provide details of immigration breach";
+    }
+    if (data.refusedVisa === "Yes" && !data.refusedVisaDetails?.toString().trim()) {
+      errs.refusedVisaDetails = "Please provide details of visa refusal";
+    }
+    if (data.refusedEntry === "Yes" && !data.refusedEntryDetails?.toString().trim()) {
+      errs.refusedEntryDetails = "Please provide details of entry refusal";
+    }
+    if (data.refusedPermission === "Yes" && !data.refusedPermissionDetails?.toString().trim()) {
+      errs.refusedPermissionDetails = "Please provide details of permission refusal";
+    }
+    if (data.refusedAsylum === "Yes" && !data.refusedAsylumDetails?.toString().trim()) {
+      errs.refusedAsylumDetails = "Please provide details of asylum refusal";
+    }
+    if (data.deported === "Yes" && !data.deportedDetails?.toString().trim()) {
+      errs.deportedDetails = "Please provide details of deportation";
+    }
+    if (data.removed === "Yes" && !data.removedDetails?.toString().trim()) {
+      errs.removedDetails = "Please provide details of removal";
+    }
+    if (data.requiredToLeave === "Yes" && !data.requiredToLeaveDetails?.toString().trim()) {
+      errs.requiredToLeaveDetails = "Please provide details";
+    }
+    if (data.banned === "Yes" && !data.bannedDetails?.toString().trim()) {
+      errs.bannedDetails = "Please provide details of exclusion/ban";
+    }
+  }
+
   if (stepIndex === 5) {
+    if (data.sponsored === "Yes" && !data.sponsoredDetails?.toString().trim()) {
+      errs.sponsoredDetails = "Please provide sponsorship details";
+    }
     if (
       data.visaType &&
       data.visaType !== "Other" &&
@@ -1617,6 +1681,73 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.medicalTreatment === "Yes" && (
+                  <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50/40 p-4 space-y-4">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-secondary">
+                      Medical Treatment Details
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <AppInput
+                          label="Hospital / Clinic Name *"
+                          name="medicalTreatmentHospitalClinicName"
+                          placeholder="e.g. St Thomas' Hospital / Central Clinic"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.medicalTreatmentHospitalClinicName}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={fieldLabelClass}>Hospital / Clinic Address *</label>
+                        <textarea
+                          name="medicalTreatmentHospitalClinicAddress"
+                          value={formData.medicalTreatmentHospitalClinicAddress || ""}
+                          onChange={handleChange}
+                          placeholder="Full address of hospital or clinic"
+                          rows={2}
+                          className={`${inputClass} resize-none`}
+                        />
+                        {formErrors.medicalTreatmentHospitalClinicAddress && (
+                          <p className="mt-1 text-xs font-bold text-red-500">{formErrors.medicalTreatmentHospitalClinicAddress}</p>
+                        )}
+                      </div>
+                      <div>
+                        <AppInput
+                          label="Treatment Start Date *"
+                          name="medicalTreatmentStartDate"
+                          type="date"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.medicalTreatmentStartDate}
+                        />
+                      </div>
+                      <div>
+                        <AppInput
+                          label="Treatment End Date *"
+                          name="medicalTreatmentEndDate"
+                          type="date"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.medicalTreatmentEndDate}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={fieldLabelClass}>Other Treatment Details</label>
+                        <textarea
+                          name="medicalTreatmentDetails"
+                          value={formData.medicalTreatmentDetails || ""}
+                          onChange={handleChange}
+                          placeholder="Please provide any additional relevant details of medical treatment received"
+                          rows={3}
+                          className={`${inputClass} resize-none`}
+                        />
+                        {formErrors.medicalTreatmentDetails && (
+                          <p className="mt-1 text-xs font-bold text-red-500">{formErrors.medicalTreatmentDetails}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {show("ukStayDuration") && (
                   <AppInput
                     label="How long have you lived in the UK?"
@@ -1920,6 +2051,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.illegalEntry === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Illegal entry details *</label>
+                    <textarea
+                      name="illegalEntryDetails"
+                      value={formData.illegalEntryDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of illegal entry"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.illegalEntryDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.illegalEntryDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("overstayed") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1930,6 +2078,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.overstayed === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Overstaying details *</label>
+                    <textarea
+                      name="overstayedDetails"
+                      value={formData.overstayedDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of overstaying"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.overstayedDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.overstayedDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("breach") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1940,6 +2105,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.breach === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Condition breach details *</label>
+                    <textarea
+                      name="breachDetails"
+                      value={formData.breachDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of leave condition breach"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.breachDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.breachDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("falseInfo") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1950,6 +2132,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.falseInfo === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Details of false information *</label>
+                    <textarea
+                      name="falseInfoDetails"
+                      value={formData.falseInfoDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.falseInfoDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.falseInfoDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("otherBreach") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1958,6 +2157,22 @@ export default function CandidateApplicationForm({
                       formData={formData}
                       onChange={handleChange}
                     />
+                  </div>
+                )}
+                {formData.otherBreach === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Other immigration breach details *</label>
+                    <textarea
+                      name="otherBreachDetails"
+                      value={formData.otherBreachDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of other immigration breach"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.otherBreachDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.otherBreachDetails}</p>
+                    )}
                   </div>
                 )}
 
@@ -1972,6 +2187,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.refusedVisa === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Visa refusal details *</label>
+                    <textarea
+                      name="refusedVisaDetails"
+                      value={formData.refusedVisaDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of visa refusal (date, country, visa type, reason)"
+                      rows={3}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.refusedVisaDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedVisaDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("refusedEntry") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1982,6 +2214,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.refusedEntry === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Refused entry details *</label>
+                    <textarea
+                      name="refusedEntryDetails"
+                      value={formData.refusedEntryDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of entry refusal"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.refusedEntryDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedEntryDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("refusedPermission") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1992,6 +2241,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.refusedPermission === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Refused permission details *</label>
+                    <textarea
+                      name="refusedPermissionDetails"
+                      value={formData.refusedPermissionDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of permission refusal"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.refusedPermissionDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedPermissionDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("refusedAsylum") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -2002,6 +2268,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.refusedAsylum === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Refused asylum details *</label>
+                    <textarea
+                      name="refusedAsylumDetails"
+                      value={formData.refusedAsylumDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of asylum refusal"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.refusedAsylumDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedAsylumDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("deported") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -2012,6 +2295,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.deported === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Deportation details *</label>
+                    <textarea
+                      name="deportedDetails"
+                      value={formData.deportedDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of deportation"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.deportedDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.deportedDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("removed") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -2022,6 +2322,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.removed === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Removal details *</label>
+                    <textarea
+                      name="removedDetails"
+                      value={formData.removedDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of removal"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.removedDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.removedDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("requiredToLeave") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -2032,6 +2349,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.requiredToLeave === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Required to leave details *</label>
+                    <textarea
+                      name="requiredToLeaveDetails"
+                      value={formData.requiredToLeaveDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.requiredToLeaveDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.requiredToLeaveDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("banned") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -2040,6 +2374,22 @@ export default function CandidateApplicationForm({
                       formData={formData}
                       onChange={handleChange}
                     />
+                  </div>
+                )}
+                {formData.banned === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Exclusion / ban details *</label>
+                    <textarea
+                      name="bannedDetails"
+                      value={formData.bannedDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of ban or exclusion"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.bannedDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.bannedDetails}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -2147,6 +2497,22 @@ export default function CandidateApplicationForm({
                       formData={formData}
                       onChange={handleChange}
                     />
+                  </div>
+                )}
+                {formData.sponsored === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Sponsorship details *</label>
+                    <textarea
+                      name="sponsoredDetails"
+                      value={formData.sponsoredDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of your government or scholarship sponsorship"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.sponsoredDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.sponsoredDetails}</p>
+                    )}
                   </div>
                 )}
 

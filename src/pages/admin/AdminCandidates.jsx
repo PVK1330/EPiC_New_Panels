@@ -112,23 +112,24 @@ const FIELD_STEP_MAP = {
   dob: "Nationality",            passportNumber: "Nationality", issuingAuthority: "Nationality",
   issueDate: "Nationality",      expiryDate: "Nationality", passportAvailable: "Nationality",
   nationalIdNumber: "Identity",  idIssuingAuthorityNational: "Identity",
-  otherNationality: "Identity",  ukLicense: "Identity",     ukLicenseNumber: "Identity", medicalTreatment: "Identity",
+  otherNationality: "Identity",  ukLicense: "Identity",     ukLicenseNumber: "Identity",
+  medicalTreatment: "Identity",  medicalTreatmentHospitalClinicName: "Identity", medicalTreatmentHospitalClinicAddress: "Identity", medicalTreatmentStartDate: "Identity", medicalTreatmentEndDate: "Identity", medicalTreatmentDetails: "Identity",
   ukStayDuration: "Identity",    contactNumber2: "Identity",
   previousAddress: "Identity",   previousAddresses: "Identity", startDate: "Identity",     endDate: "Identity",
   parentName: "Parent",          parentRelation: "Parent",  parentDob: "Parent",
   parentNationality: "Parent",   sameNationality: "Parent",
   parent2Name: "Parent",         parent2Relation: "Parent", parent2Dob: "Parent",
   parent2Nationality: "Parent",  parent2SameNationality: "Parent",
-  illegalEntry: "Travel & visa", overstayed: "Travel & visa", breach: "Travel & visa",
-  falseInfo: "Travel & visa",    otherBreach: "Travel & visa",
-  refusedVisa: "Travel & visa",  refusedEntry: "Travel & visa",
-  refusedPermission: "Travel & visa", refusedAsylum: "Travel & visa",
-  deported: "Travel & visa",     removed: "Travel & visa",
-  requiredToLeave: "Travel & visa", banned: "Travel & visa",
+  illegalEntry: "Travel & visa", illegalEntryDetails: "Travel & visa", overstayed: "Travel & visa", overstayedDetails: "Travel & visa", breach: "Travel & visa", breachDetails: "Travel & visa",
+  falseInfo: "Travel & visa",    falseInfoDetails: "Travel & visa",    otherBreach: "Travel & visa", otherBreachDetails: "Travel & visa",
+  refusedVisa: "Travel & visa",  refusedVisaDetails: "Travel & visa",  refusedEntry: "Travel & visa", refusedEntryDetails: "Travel & visa",
+  refusedPermission: "Travel & visa", refusedPermissionDetails: "Travel & visa", refusedAsylum: "Travel & visa", refusedAsylumDetails: "Travel & visa",
+  deported: "Travel & visa",     deportedDetails: "Travel & visa",     removed: "Travel & visa", removedDetails: "Travel & visa",
+  requiredToLeave: "Travel & visa", requiredToLeaveDetails: "Travel & visa", banned: "Travel & visa", bannedDetails: "Travel & visa",
   visitedOther: "Status",        countryVisited: "Status",  visitReason: "Status",
   entryDate: "Status",           leaveDate: "Status",       visaType: "Status",
   brpNumber: "Status",           visaEndDate: "Status",     niNumber: "Status",
-  sponsored: "Status",           englishProof: "Status",
+  sponsored: "Status",           sponsoredDetails: "Status", englishProof: "Status",
 };
 
 const STEP_BADGE = {
@@ -444,7 +445,7 @@ export default function AdminCandidates() {
         setErrors({});
         setModal({ type: "edit", data: candidateData });
       } else {
-        showToast({ message: "Failed to load candidate data", variant: "danger" });
+        showToast({ message: "Failed to load client data", variant: "danger" });
       }
     } catch (error) {
       console.error("Error fetching candidate data:", error);
@@ -467,7 +468,7 @@ export default function AdminCandidates() {
         setErrors({});
         setModal({ type: "view", data: candidateData });
       } else {
-        showToast({ message: "Failed to load candidate data", variant: "danger" });
+        showToast({ message: "Failed to load client data", variant: "danger" });
       }
     } catch (error) {
       console.error("Error fetching candidate data for view:", error);
@@ -877,7 +878,7 @@ export default function AdminCandidates() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "candidate-import-sample.xlsx";
+      a.download = "client-import-sample.xlsx";
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -907,7 +908,7 @@ export default function AdminCandidates() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `candidate-applications_${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.download = `client-applications_${new Date().toISOString().split("T")[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -1323,7 +1324,7 @@ export default function AdminCandidates() {
                     onClick={async () => {
                       try {
                         const candidateId = c?.id ?? c?.userId;
-                        if (!candidateId) throw new Error("Candidate id not found");
+                        if (!candidateId) throw new Error("Client id not found");
                         await downloadAdminCandidateApplicationPdf(candidateId);
                         showToast({ message: "PDF downloaded." });
                       } catch (e) {
