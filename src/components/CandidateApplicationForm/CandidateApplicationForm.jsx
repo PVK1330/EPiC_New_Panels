@@ -2408,42 +2408,84 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
-                {show("countryVisited") && (
-                  <AppInput
-                    label="Which country did you visit?"
-                    name="countryVisited"
-                    placeholder="Country name"
-                    formData={formData}
-                    onChange={handleChange}
-                  />
-                )}
-                {show("visitReason") && (
-                  <AppInput
-                    label="What was the reason for your visit?"
-                    name="visitReason"
-                    placeholder="Reason"
-                    formData={formData}
-                    onChange={handleChange}
-                  />
-                )}
-                {show("entryDate") && (
-                  <AppInput
-                    label="When did you enter this country?"
-                    name="entryDate"
-                    type="date"
-                    formData={formData}
-                    onChange={handleChange}
-                  />
-                )}
-                {show("leaveDate") && (
-                  <AppInput
-                    label="When did you leave this country?"
-                    name="leaveDate"
-                    type="date"
-                    formData={formData}
-                    onChange={handleChange}
-                  />
-                )}
+                {/* BUG-014: multiple trips — each with country, purpose, dates,
+                    duration and other details. Shown once "Yes" is selected. */}
+                {show("countryVisited") && formData.visitedOther === "Yes" && (() => {
+                  const travelList = Array.isArray(formData.travelHistory) && formData.travelHistory.length > 0
+                    ? formData.travelHistory
+                    : (formData.countryVisited || formData.visitReason || formData.entryDate || formData.leaveDate
+                      ? [{ countryVisited: formData.countryVisited || "", visitReason: formData.visitReason || "", entryDate: formData.entryDate || "", leaveDate: formData.leaveDate || "", duration: "", details: "" }]
+                      : [{ countryVisited: "", visitReason: "", entryDate: "", leaveDate: "", duration: "", details: "" }]);
+
+                  const blank = { countryVisited: "", visitReason: "", entryDate: "", leaveDate: "", duration: "", details: "" };
+                  const syncFirst = (list) => {
+                    handleChange({ target: { name: "countryVisited", value: list[0]?.countryVisited || "" } });
+                    handleChange({ target: { name: "visitReason", value: list[0]?.visitReason || "" } });
+                    handleChange({ target: { name: "entryDate", value: list[0]?.entryDate || "" } });
+                    handleChange({ target: { name: "leaveDate", value: list[0]?.leaveDate || "" } });
+                  };
+                  const updateTravelItem = (idx, field, val) => {
+                    const nextList = [...travelList];
+                    nextList[idx] = { ...nextList[idx], [field]: val };
+                    handleChange({ target: { name: "travelHistory", value: nextList } });
+                    if (idx === 0 && ["countryVisited", "visitReason", "entryDate", "leaveDate"].includes(field)) {
+                      handleChange({ target: { name: field, value: val } });
+                    }
+                  };
+                  const addTravelItem = () => handleChange({ target: { name: "travelHistory", value: [...travelList, { ...blank }] } });
+                  const removeTravelItem = (idx) => {
+                    const nextList = travelList.filter((_, i) => i !== idx);
+                    const final = nextList.length > 0 ? nextList : [{ ...blank }];
+                    handleChange({ target: { name: "travelHistory", value: final } });
+                    syncFirst(final);
+                  };
+
+                  return (
+                    <div className="md:col-span-2 space-y-4">
+                      {travelList.map((item, idx) => (
+                        <div key={idx} className="relative rounded-2xl border border-slate-200 bg-slate-50/50 p-4 shadow-sm">
+                          <div className="flex items-center justify-between border-b border-slate-200/80 pb-2 mb-3">
+                            <span className="text-xs font-bold uppercase tracking-wider text-secondary">Trip {idx + 1}</span>
+                            {travelList.length > 1 && (
+                              <button type="button" onClick={() => removeTravelItem(idx)} className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg transition-colors">
+                                <Trash2 className="h-3.5 w-3.5" /> Remove
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                              <label className={fieldLabelClass}>Which country did you visit?</label>
+                              <input name={`trvCountry_${idx}`} value={item.countryVisited || ""} onChange={(e) => updateTravelItem(idx, "countryVisited", e.target.value)} placeholder="Country name" className={inputClass} />
+                            </div>
+                            <div>
+                              <label className={fieldLabelClass}>Purpose of travel</label>
+                              <input name={`trvReason_${idx}`} value={item.visitReason || ""} onChange={(e) => updateTravelItem(idx, "visitReason", e.target.value)} placeholder="e.g. tourism, work, study" className={inputClass} />
+                            </div>
+                            <div>
+                              <label className={fieldLabelClass}>Date of entry</label>
+                              <DatePicker name={`trvEntry_${idx}`} value={item.entryDate || ""} onChange={(e) => updateTravelItem(idx, "entryDate", e.target.value)} placeholder="Select entry date" />
+                            </div>
+                            <div>
+                              <label className={fieldLabelClass}>Date of leaving</label>
+                              <DatePicker name={`trvLeave_${idx}`} value={item.leaveDate || ""} onChange={(e) => updateTravelItem(idx, "leaveDate", e.target.value)} placeholder="Select leave date" />
+                            </div>
+                            <div>
+                              <label className={fieldLabelClass}>Duration of stay</label>
+                              <input name={`trvDuration_${idx}`} value={item.duration || ""} onChange={(e) => updateTravelItem(idx, "duration", e.target.value)} placeholder="e.g. 2 weeks" className={inputClass} />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className={fieldLabelClass}>Other relevant details (optional)</label>
+                              <textarea name={`trvDetails_${idx}`} value={item.details || ""} onChange={(e) => updateTravelItem(idx, "details", e.target.value)} rows={2} placeholder="Anything else about this trip" className={`${inputClass} resize-none`} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <button type="button" onClick={addTravelItem} className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary bg-secondary/10 hover:bg-secondary/20 px-3 py-2 rounded-lg transition-colors">
+                        + Add another country
+                      </button>
+                    </div>
+                  );
+                })()}
 
                 <SectionTitle>Current Status</SectionTitle>
                 {show("visaType") && (

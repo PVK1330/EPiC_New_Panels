@@ -164,10 +164,7 @@ const AdminAssign = () => {
       setReasonErr("Please select a caseworker");
       return;
     }
-    if (!reason.trim()) {
-      setReasonErr("Reason is required");
-      return;
-    }
+    // BUG-016: the assignment reason is optional.
     setReasonErr("");
     setLoading(true);
     try {

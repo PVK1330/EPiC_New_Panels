@@ -103,10 +103,7 @@ const FIELD_SECTIONS = [
     title: APPLICATION_STEP_LABELS[4],
     keys: [
       "visitedOther",
-      "countryVisited",
-      "visitReason",
-      "entryDate",
-      "leaveDate",
+      "travelHistory",
       "visaType",
       "brpNumber",
       "visaEndDate",
@@ -188,6 +185,26 @@ function buildSections(form, customFieldDefinitions = []) {
               const addr = item.previousAddress || item.address || "";
               const dates = [item.startDate, item.endDate].filter(Boolean).join(" to ");
               return `${idx + 1}. ${addr}${dates ? ` (${dates})` : ""}`;
+            }).join("\n");
+          }
+        }
+        if (key === "travelHistory") {
+          const list = Array.isArray(form.travelHistory) && form.travelHistory.length > 0
+            ? form.travelHistory
+            : (form.countryVisited ? [{ countryVisited: form.countryVisited, visitReason: form.visitReason, entryDate: form.entryDate, leaveDate: form.leaveDate }] : []);
+          if (list.length === 0) {
+            val = "—";
+          } else {
+            val = list.map((item, idx) => {
+              const dates = [item.entryDate, item.leaveDate].filter(Boolean).join(" to ");
+              const parts = [
+                item.countryVisited,
+                item.visitReason ? `purpose: ${item.visitReason}` : "",
+                dates,
+                item.duration ? `duration: ${item.duration}` : "",
+                item.details,
+              ].filter(Boolean).join(" · ");
+              return `${idx + 1}. ${parts}`;
             }).join("\n");
           }
         }
