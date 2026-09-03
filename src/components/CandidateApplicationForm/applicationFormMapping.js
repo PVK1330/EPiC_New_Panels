@@ -165,14 +165,35 @@ export function mapApplicationToCandidateRow(application, overrides = {}) {
     landlordContactNumber: application.landlordContactNumber || null,
     landlordEmail: application.landlordEmail || null,
     landlordAddress: application.landlordAddress || null,
-    contactNumber2: combineAltContactNumber(application) || null,
     previousFullAddress: application.previousFullAddress || null,
-    previousAddress: application.previousAddress || null,
-    startDate: application.startDate || null,
-    endDate: application.endDate || null,
+    previousAddress: (Array.isArray(application.previousAddresses) && application.previousAddresses.length > 0)
+      ? (application.previousAddresses[0]?.previousAddress || application.previousAddresses[0]?.address || application.previousAddress || null)
+      : (application.previousAddress || null),
+    previousAddresses: Array.isArray(application.previousAddresses)
+      ? application.previousAddresses.map((item) => ({
+          previousAddress: item.previousAddress || item.address || "",
+          startDate: item.startDate || null,
+          endDate: item.endDate || null,
+        })).filter((item) => item.previousAddress || item.startDate || item.endDate)
+      : (application.previousAddress ? [{
+          previousAddress: application.previousAddress,
+          startDate: application.startDate || null,
+          endDate: application.endDate || null,
+        }] : []),
+    startDate: (Array.isArray(application.previousAddresses) && application.previousAddresses.length > 0)
+      ? (application.previousAddresses[0]?.startDate || application.startDate || null)
+      : (application.startDate || null),
+    endDate: (Array.isArray(application.previousAddresses) && application.previousAddresses.length > 0)
+      ? (application.previousAddresses[0]?.endDate || application.endDate || null)
+      : (application.endDate || null),
     
     // Nationality & Identity
-    nationality: application.nationality || null,
+    nationality: (Array.isArray(application.nationalities) && application.nationalities.length > 0)
+      ? application.nationalities[0]
+      : (application.nationality || null),
+    nationalities: Array.isArray(application.nationalities)
+      ? application.nationalities.filter(Boolean)
+      : (application.nationality ? [application.nationality] : []),
     birthCountry: application.birthCountry || null,
     placeOfBirth: application.placeOfBirth || null,
     dob: application.dob || null,
@@ -187,6 +208,7 @@ export function mapApplicationToCandidateRow(application, overrides = {}) {
     idIssuingAuthorityNational: application.idIssuingAuthorityNational || null,
     otherNationality: application.otherNationality || null,
     ukLicense: application.ukLicense || null,
+    ukLicenseNumber: application.ukLicenseNumber || null,
     medicalTreatment: application.medicalTreatment || null,
     ukStayDuration: application.ukStayDuration || null,
     
@@ -315,12 +337,36 @@ export function candidateRowToApplicationForm(c) {
       contactCountryCode2,
       contactNumber2,
       previousFullAddress: app.previousFullAddress || "",
-      previousAddress: app.previousAddress || "",
-      startDate: formatDateForInput(app.startDate),
-      endDate: formatDateForInput(app.endDate),
+      previousAddress: (Array.isArray(app.previousAddresses) && app.previousAddresses.length > 0)
+        ? (app.previousAddresses[0]?.previousAddress || app.previousAddresses[0]?.address || app.previousAddress || "")
+        : (app.previousAddress || ""),
+      previousAddresses: (Array.isArray(app.previousAddresses) && app.previousAddresses.length > 0)
+        ? app.previousAddresses.map((item) => ({
+            previousAddress: item.previousAddress || item.address || "",
+            startDate: formatDateForInput(item.startDate),
+            endDate: formatDateForInput(item.endDate),
+          }))
+        : (app.previousAddress || app.startDate || app.endDate
+          ? [{
+              previousAddress: app.previousAddress || "",
+              startDate: formatDateForInput(app.startDate),
+              endDate: formatDateForInput(app.endDate),
+            }]
+          : []),
+      startDate: (Array.isArray(app.previousAddresses) && app.previousAddresses.length > 0)
+        ? (formatDateForInput(app.previousAddresses[0]?.startDate) || formatDateForInput(app.startDate))
+        : formatDateForInput(app.startDate),
+      endDate: (Array.isArray(app.previousAddresses) && app.previousAddresses.length > 0)
+        ? (formatDateForInput(app.previousAddresses[0]?.endDate) || formatDateForInput(app.endDate))
+        : formatDateForInput(app.endDate),
       
       // Nationality & Identity
-      nationality: app.nationality || "",
+      nationality: (Array.isArray(app.nationalities) && app.nationalities.length > 0)
+        ? app.nationalities[0]
+        : (app.nationality || c.nationality || ""),
+      nationalities: Array.isArray(app.nationalities) && app.nationalities.length > 0
+        ? app.nationalities.filter(Boolean)
+        : (app.nationality || c.nationality ? [app.nationality || c.nationality] : []),
       birthCountry: app.birthCountry || "",
       placeOfBirth: app.placeOfBirth || "",
       dob: formatDateForInput(app.dob || c.dob),
@@ -335,6 +381,7 @@ export function candidateRowToApplicationForm(c) {
       idIssuingAuthorityNational: app.idIssuingAuthorityNational || "",
       otherNationality: app.otherNationality || "",
       ukLicense: app.ukLicense || "",
+      ukLicenseNumber: app.ukLicenseNumber || "",
       medicalTreatment: app.medicalTreatment || "",
       ukStayDuration: app.ukStayDuration || "",
       
@@ -415,6 +462,9 @@ export function candidateRowToApplicationForm(c) {
     landlordEmail: c.landlordEmail || c.landlord_email || "",
     landlordAddress: c.landlordAddress || c.landlord_address || "",
     nationality: c.nationality ?? "",
+    nationalities: Array.isArray(c.nationalities) && c.nationalities.length > 0
+      ? c.nationalities.filter(Boolean)
+      : (c.nationality ? [c.nationality] : []),
     birthCountry: c.countryOfBirth ?? "",
     placeOfBirth: "",
     dob: formatDateForInput(c.dob),
@@ -429,11 +479,13 @@ export function candidateRowToApplicationForm(c) {
     idIssuingAuthorityNational: c.idIssuingAuthorityNational ?? "",
     otherNationality: c.otherNationality ?? "",
     ukLicense: c.ukLicense ?? "",
+    ukLicenseNumber: c.ukLicenseNumber ?? "",
     medicalTreatment: c.medicalTreatment ?? "",
     ukStayDuration: c.ukStayDuration ?? "",
     contactNumber2: "",
     previousFullAddress: "",
     previousAddress: "",
+    previousAddresses: [],
     startDate: "",
     endDate: "",
     parentName: "",

@@ -24,9 +24,7 @@ const FIELD_SECTIONS = [
       "landlordEmail",
       "landlordAddress",
       "contactNumber2",
-      "previousAddress",
-      "startDate",
-      "endDate",
+      "previousAddresses",
     ],
   },
   {
@@ -45,6 +43,7 @@ const FIELD_SECTIONS = [
       "idIssuingAuthorityNational",
       "otherNationality",
       "ukLicense",
+      "ukLicenseNumber",
       "medicalTreatment",
       "ukStayDuration",
     ],
@@ -103,6 +102,9 @@ const FIELD_SECTIONS = [
 
 function formatDisplayValue(value) {
   if (value === null || value === undefined || value === "") return "—";
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).join(", ") || "—";
+  }
   if (typeof value === "boolean") return value ? "Yes" : "No";
   const s = String(value).trim();
   if (s === "yes") return "Yes";
@@ -122,13 +124,36 @@ function buildSections(form, customFieldDefinitions = []) {
         ) {
           return false;
         }
+        if (key === "ukLicenseNumber" && form.ukLicense !== "Yes") {
+          return false;
+        }
         return true;
       })
-      .map((key) => ({
-        key,
-        label: APPLICATION_FIELD_LABELS[key],
-        value: formatDisplayValue(form[key]),
-      })),
+      .map((key) => {
+        let val = form[key];
+        if (key === "nationality" && Array.isArray(form.nationalities) && form.nationalities.length > 0) {
+          val = form.nationalities;
+        }
+        if (key === "previousAddresses") {
+          const list = Array.isArray(form.previousAddresses) && form.previousAddresses.length > 0
+            ? form.previousAddresses
+            : (form.previousAddress ? [{ previousAddress: form.previousAddress, startDate: form.startDate, endDate: form.endDate }] : []);
+          if (list.length === 0) {
+            val = "—";
+          } else {
+            val = list.map((item, idx) => {
+              const addr = item.previousAddress || item.address || "";
+              const dates = [item.startDate, item.endDate].filter(Boolean).join(" to ");
+              return `${idx + 1}. ${addr}${dates ? ` (${dates})` : ""}`;
+            }).join("\n");
+          }
+        }
+        return {
+          key,
+          label: APPLICATION_FIELD_LABELS[key],
+          value: formatDisplayValue(val),
+        };
+      }),
   }));
 
   const custom = (customFieldDefinitions || []).filter((d) => d?.label && d?.id);

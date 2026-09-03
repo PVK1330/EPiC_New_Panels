@@ -24,8 +24,10 @@ import {
 import { formatDateLong } from "../../utils/datetime";
 import DatePicker from "../DatePicker";
 import NationalitySelect from "../NationalitySelect";
+import NationalityMultiSelect from "../NationalityMultiSelect";
 import CountrySelect from "../CountrySelect";
 import GlobalPhoneInput from "../PhoneInput";
+import { Plus, Trash2 } from "lucide-react";
 import { getCountryByCode, getCountryByDialCode } from "../../utils/countries";
 
 const inputClass =
@@ -84,6 +86,16 @@ function AppInput({
           error={error}
           max={max}
           placeholder={placeholder || "Select date"}
+        />
+      </div>
+    ) : as === "nationalities" || as === "nationality-multi" ? (
+      <div className="mt-1">
+        <NationalityMultiSelect
+          name={name}
+          value={formData[name] ?? []}
+          onChange={onChange}
+          error={error}
+          placeholder={placeholder || "Select or search nationalities…"}
         />
       </div>
     ) : as === "nationality" ? (
@@ -426,8 +438,13 @@ function validateStep(stepIndex, data) {
   }
 
   if (stepIndex === 1) {
-    if (!data.nationality?.toString().trim())
+    const selectedNats = Array.isArray(data.nationalities)
+      ? data.nationalities.filter(Boolean)
+      : (data.nationality?.toString().trim() ? [data.nationality.trim()] : []);
+    if (selectedNats.length === 0) {
+      errs.nationalities = "At least one nationality is required";
       errs.nationality = "Nationality is required";
+    }
     if (!data.dob) {
       errs.dob = "Date of birth is required";
     } else {
@@ -467,8 +484,13 @@ function validateStep(stepIndex, data) {
   }
 
   if (stepIndex === 2) {
-    if (data.ukLicense === "Yes" && !data.ukStayDuration?.toString().trim()) {
-      errs.ukStayDuration = "Please specify duration of stay";
+    if (data.ukLicense === "Yes") {
+      if (!data.ukLicenseNumber?.toString().trim()) {
+        errs.ukLicenseNumber = "UK driving licence number is required";
+      }
+      if (!data.ukStayDuration?.toString().trim()) {
+        errs.ukStayDuration = "Please specify duration of stay";
+      }
     }
     // Alternate contact number is optional, but must be a valid number for the
     // selected country when provided (same treatment as the main contact number).
@@ -485,7 +507,16 @@ function validateStep(stepIndex, data) {
           errs.contactNumber2 = "Enter a valid contact number (7–15 digits)";
       }
     }
-    // Validation for dates if both provided
+    // Validation for dates if both provided across all previous addresses
+    const prevAddrs = Array.isArray(data.previousAddresses) ? data.previousAddresses : [];
+    for (let i = 0; i < prevAddrs.length; i++) {
+      const item = prevAddrs[i];
+      if (item.startDate && item.endDate) {
+        if (new Date(item.startDate) > new Date(item.endDate)) {
+          errs[`prevAddress_endDate_${i}`] = "End date cannot be before start date";
+        }
+      }
+    }
     if (data.startDate && data.endDate) {
       if (new Date(data.startDate) > new Date(data.endDate)) {
         errs.endDate = "End date cannot be before start date";
@@ -1420,14 +1451,26 @@ export default function CandidateApplicationForm({
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
                 <SectionTitle>Nationality details</SectionTitle>
                 {show("nationality") && (
-                  <AppInput
-                    label="Country of nationality *"
-                    name="nationality"
-                    as="country"
-                    formData={formData}
-                    onChange={handleChange}
-                    error={formErrors.nationality}
-                  />
+                  <div className="md:col-span-2">
+                    <label htmlFor="nationalities" className={fieldLabelClass}>
+                      {renderLabel("Country of nationality *")}
+                    </label>
+                    <NationalityMultiSelect
+                      name="nationalities"
+                      value={
+                        Array.isArray(formData.nationalities) && formData.nationalities.length > 0
+                          ? formData.nationalities
+                          : (formData.nationality ? [formData.nationality] : [])
+                      }
+                      onChange={(e) => {
+                        handleChange(e);
+                        const arr = Array.isArray(e.target.value) ? e.target.value : [];
+                        handleChange({ target: { name: "nationality", value: arr[0] || "" } });
+                      }}
+                      error={formErrors.nationalities || formErrors.nationality}
+                      placeholder="Select one or more nationalities…"
+                    />
+                  </div>
                 )}
                 {show("birthCountry") && (
                   <AppInput
@@ -1552,6 +1595,18 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.ukLicense === "Yes" && (
+                  <div className="md:col-span-2">
+                    <AppInput
+                      label="UK driving licence number *"
+                      name="ukLicenseNumber"
+                      placeholder="Enter UK driving licence number (e.g. SMITH957125AB9DE)"
+                      formData={formData}
+                      onChange={handleChange}
+                      error={formErrors.ukLicenseNumber}
+                    />
+                  </div>
+                )}
                 {show("medicalTreatment") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1600,35 +1655,111 @@ export default function CandidateApplicationForm({
                 )}
 
                 <SectionTitle>Address Details</SectionTitle>
-                {show("previousAddress") && (
-                  <AppInput
-                    label="Previous full address"
-                    name="previousAddress"
-                    placeholder="Enter your previous address"
-                    formData={formData}
-                    onChange={handleChange}
-                    className="md:col-span-2"
-                  />
-                )}
-                {show("startDate") && (
-                  <AppInput
-                    label="When did you start living at this address?"
-                    name="startDate"
-                    type="date"
-                    formData={formData}
-                    onChange={handleChange}
-                  />
-                )}
-                {show("endDate") && (
-                  <AppInput
-                    label="When did you stop living at this address?"
-                    name="endDate"
-                    type="date"
-                    formData={formData}
-                    onChange={handleChange}
-                    error={formErrors.endDate}
-                  />
-                )}
+                {(() => {
+                  const addrList = Array.isArray(formData.previousAddresses) && formData.previousAddresses.length > 0
+                    ? formData.previousAddresses
+                    : (formData.previousAddress || formData.startDate || formData.endDate
+                      ? [{ previousAddress: formData.previousAddress || "", startDate: formData.startDate || "", endDate: formData.endDate || "" }]
+                      : [{ previousAddress: "", startDate: "", endDate: "" }]);
+
+                  const updateAddressItem = (idx, field, val) => {
+                    const nextList = [...addrList];
+                    nextList[idx] = { ...nextList[idx], [field]: val };
+                    handleChange({ target: { name: "previousAddresses", value: nextList } });
+                    if (idx === 0) {
+                      if (field === "previousAddress") handleChange({ target: { name: "previousAddress", value: val } });
+                      if (field === "startDate") handleChange({ target: { name: "startDate", value: val } });
+                      if (field === "endDate") handleChange({ target: { name: "endDate", value: val } });
+                    }
+                  };
+
+                  const addAddressItem = () => {
+                    const nextList = [...addrList, { previousAddress: "", startDate: "", endDate: "" }];
+                    handleChange({ target: { name: "previousAddresses", value: nextList } });
+                  };
+
+                  const removeAddressItem = (idx) => {
+                    const nextList = addrList.filter((_, i) => i !== idx);
+                    const final = nextList.length > 0 ? nextList : [{ previousAddress: "", startDate: "", endDate: "" }];
+                    handleChange({ target: { name: "previousAddresses", value: final } });
+                    handleChange({ target: { name: "previousAddress", value: final[0]?.previousAddress || "" } });
+                    handleChange({ target: { name: "startDate", value: final[0]?.startDate || "" } });
+                    handleChange({ target: { name: "endDate", value: final[0]?.endDate || "" } });
+                  };
+
+                  return (
+                    <div className="md:col-span-2 space-y-4">
+                      {addrList.map((addrItem, idx) => (
+                        <div
+                          key={idx}
+                          className="relative rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition-all shadow-sm"
+                        >
+                          <div className="flex items-center justify-between border-b border-slate-200/80 pb-2 mb-3">
+                            <span className="text-xs font-bold uppercase tracking-wider text-secondary">
+                              Previous Address {idx + 1}
+                            </span>
+                            {addrList.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeAddressItem(idx)}
+                                className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Remove
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className="md:col-span-2">
+                              <label className={fieldLabelClass}>Previous full address</label>
+                              <textarea
+                                name={`prevAddr_${idx}`}
+                                value={addrItem.previousAddress || ""}
+                                onChange={(e) => updateAddressItem(idx, "previousAddress", e.target.value)}
+                                placeholder="Enter previous full address"
+                                rows={2}
+                                className={`${inputClass} resize-none`}
+                              />
+                            </div>
+
+                            <div>
+                              <label className={fieldLabelClass}>When did you start living at this address?</label>
+                              <DatePicker
+                                name={`prevStart_${idx}`}
+                                value={addrItem.startDate || ""}
+                                onChange={(e) => updateAddressItem(idx, "startDate", e.target.value)}
+                                placeholder="Select start date"
+                              />
+                            </div>
+
+                            <div>
+                              <label className={fieldLabelClass}>When did you stop living at this address?</label>
+                              <DatePicker
+                                name={`prevEnd_${idx}`}
+                                value={addrItem.endDate || ""}
+                                onChange={(e) => updateAddressItem(idx, "endDate", e.target.value)}
+                                error={formErrors[`prevAddress_endDate_${idx}`] || (idx === 0 ? formErrors.endDate : "")}
+                                placeholder="Select end date"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={addAddressItem}
+                          className="inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-secondary/40 bg-secondary/5 px-4 py-2.5 text-xs font-bold text-secondary hover:bg-secondary/10 hover:border-secondary transition-all"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Another Previous Address
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
