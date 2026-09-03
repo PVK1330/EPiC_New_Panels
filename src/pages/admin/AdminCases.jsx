@@ -63,7 +63,7 @@ const priorityBadge = {
 };
 
 const TABLE_COLS = [
-  "Case ID",
+  "Case",
   "Client",
   "Business",
   "CaseWorker (s)",

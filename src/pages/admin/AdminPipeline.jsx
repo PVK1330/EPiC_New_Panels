@@ -426,7 +426,7 @@ const AdminPipeline = () => {
                 <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Case ID</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Case</label>
                       <p className="text-sm font-mono font-semibold text-primary mt-1">{selectedCase.caseId}</p>
                     </div>
                     <div>

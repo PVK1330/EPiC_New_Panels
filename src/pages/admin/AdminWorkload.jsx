@@ -573,7 +573,7 @@ const AdminWorkload = () => {
               <thead>
                 <tr className="bg-gray-50 text-left">
                   {[
-                    "Case ID",
+                    "Case",
                     "Client",
                     "Caseworker",
                     "Case Deadline",

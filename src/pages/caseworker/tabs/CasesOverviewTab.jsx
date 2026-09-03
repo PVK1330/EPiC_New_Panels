@@ -57,10 +57,10 @@ function CasesOverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }
         onRefresh={onRefresh}
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <Field label="Case ID">
+        <Field label="Case Number">
           <span className="font-mono text-secondary">{c.caseId}</span>
         </Field>
-        <Field label="Candidate name">{c.candidate}</Field>
+        <Field label="Client name">{c.candidate}</Field>
         <Field label="Sponsor name">{c.business}</Field>
         <Field label="Visa type">{c.visa}</Field>
         <Field label="Case status">

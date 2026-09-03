@@ -505,7 +505,7 @@ export default function CaseworkerDocuments() {
 
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Case ID
+                  Case
                 </label>
                 <select
                   value={caseId}

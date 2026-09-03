@@ -355,7 +355,7 @@ export default function AdminDashboard() {
                 <table className="w-full min-w-[600px]">
                   <thead>
                     <tr className="bg-gray-50 text-left border-b border-gray-100">
-                      {["Case ID", "Client", "Visa Type", "Status"].map(
+                      {["Case", "Client", "Visa Type", "Status"].map(
                         (h) => (
                           <th
                             key={h}

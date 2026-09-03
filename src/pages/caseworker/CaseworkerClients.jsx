@@ -524,7 +524,7 @@ const CaseworkerClients = () => {
                         <div className="flex items-center gap-3">
                           <Briefcase size={16} className="text-gray-400" />
                           <div>
-                            <p className="text-xs text-gray-500">Case ID</p>
+                            <p className="text-xs text-gray-500">Case</p>
                             <p className="text-sm font-bold text-gray-900">{viewModal.data.code}</p>
                           </div>
                         </div>

@@ -438,7 +438,7 @@ const AdminEscalations = () => {
           <table className="w-full min-w-[600px]">
             <thead>
               <tr className="bg-gray-50 text-left">
-                {["Case ID", "Client", "Severity", "Trigger Reason", "Assigned Admin", "Days Open", "Status", "Actions"].map((h, i) => (
+                {["Case", "Client", "Severity", "Trigger Reason", "Assigned Admin", "Days Open", "Status", "Actions"].map((h, i) => (
                   <th key={i} className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider whitespace-nowrap">
                     {h || " "}
                   </th>
@@ -520,7 +520,7 @@ const AdminEscalations = () => {
             </div>
             <form onSubmit={handleCreateEscalation} className="p-4 sm:p-6 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Case ID</label>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Case</label>
                 <select
                   value={formData.caseId}
                   onChange={(e) => handleCaseChange(e.target.value)}
@@ -677,7 +677,7 @@ const AdminEscalations = () => {
             </div>
             <form onSubmit={handleUpdateEscalation} className="p-4 sm:p-6 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Case ID</label>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Case</label>
                 <select
                   value={formData.caseId}
                   onChange={(e) => handleCaseChange(e.target.value)}
