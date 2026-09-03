@@ -17,6 +17,12 @@ const FIELD_SECTIONS = [
       "contactNumber",
       "relationshipStatus",
       "address",
+      "addressStartDate",
+      "housingStatus",
+      "landlordName",
+      "landlordContactNumber",
+      "landlordEmail",
+      "landlordAddress",
       "contactNumber2",
       "previousAddress",
       "startDate",
@@ -108,7 +114,16 @@ function buildSections(form, customFieldDefinitions = []) {
   const sections = FIELD_SECTIONS.map((section) => ({
     title: section.title,
     fields: section.keys
-      .filter((key) => APPLICATION_FIELD_LABELS[key])
+      .filter((key) => {
+        if (!APPLICATION_FIELD_LABELS[key]) return false;
+        if (
+          ["landlordName", "landlordContactNumber", "landlordEmail", "landlordAddress"].includes(key) &&
+          form.housingStatus !== "Rent"
+        ) {
+          return false;
+        }
+        return true;
+      })
       .map((key) => ({
         key,
         label: APPLICATION_FIELD_LABELS[key],

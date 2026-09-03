@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { useNavigate } from "react-router-dom";
 import {
@@ -289,6 +289,7 @@ const DATE_FIELDS = [
   "expiryDate",
   "startDate",
   "endDate",
+  "addressStartDate",
   "parentDob",
   "parent2Dob",
   "entryDate",
@@ -299,6 +300,7 @@ const DATE_FIELDS = [
 /** PostgreSQL ENUM columns reject empty strings — must be null or a valid value. */
 const ENUM_FIELDS = [
   "applicationType",
+  "housingStatus",
   "passportAvailable",
   "ukLicense",
   "medicalTreatment",
@@ -392,6 +394,35 @@ function validateStep(stepIndex, data) {
       }
     }
     if (!data.gender) errs.gender = "Please select a gender";
+
+    // BUG-007: addressStartDate validation
+    if (!data.addressStartDate) {
+      errs.addressStartDate = "Move-in date is required";
+    } else {
+      const moveIn = new Date(`${data.addressStartDate}T00:00:00`);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (Number.isNaN(moveIn.getTime())) {
+        errs.addressStartDate = "Enter a valid move-in date";
+      } else if (moveIn > today) {
+        errs.addressStartDate = "Move-in date cannot be in the future";
+      }
+    }
+
+    // BUG-007: Landlord validation when renting
+    if (data.housingStatus === "Rent") {
+      if (!data.landlordName?.toString().trim()) {
+        errs.landlordName = "Landlord name is required when renting";
+      }
+      if (!data.landlordContactNumber?.toString().trim()) {
+        errs.landlordContactNumber = "Landlord contact number is required when renting";
+      }
+      if (data.landlordEmail?.toString().trim()) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.landlordEmail.trim())) {
+          errs.landlordEmail = "Please enter a valid landlord email address";
+        }
+      }
+    }
   }
 
   if (stepIndex === 1) {
@@ -1296,6 +1327,90 @@ export default function CandidateApplicationForm({
                     onChange={handleChange}
                     className="md:col-span-2"
                   />
+                )}
+
+                {show("addressStartDate") && (
+                  <AppInput
+                    label="When did you move into this address? *"
+                    name="addressStartDate"
+                    type="date"
+                    formData={formData}
+                    onChange={handleChange}
+                    error={formErrors.addressStartDate}
+                    max={new Date().toISOString().split("T")[0]}
+                  />
+                )}
+
+                {show("housingStatus") && (
+                  <div>
+                    <span className={fieldLabelClass}>Do you rent or own your current home?</span>
+                    <div className="mt-2 flex flex-wrap gap-6">
+                      {["Rent", "Own", "Other"].map((val) => (
+                        <label
+                          key={val}
+                          className="inline-flex cursor-pointer items-center gap-2 font-bold text-gray-800"
+                        >
+                          <input
+                            type="radio"
+                            name="housingStatus"
+                            value={val}
+                            checked={formData.housingStatus === val}
+                            onChange={handleChange}
+                            className="accent-secondary"
+                          />
+                          {val}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {formData.housingStatus === "Rent" && (
+                  <div className="md:col-span-2 rounded-2xl border border-secondary/15 bg-secondary/[0.02] p-5 space-y-4">
+                    <SectionTitle>Landlord Details</SectionTitle>
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+                      {show("landlordName") && (
+                        <AppInput
+                          label="Landlord Name *"
+                          name="landlordName"
+                          placeholder="Full landlord name or letting agency"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.landlordName}
+                        />
+                      )}
+                      {show("landlordContactNumber") && (
+                        <AppInput
+                          label="Landlord Contact Number *"
+                          name="landlordContactNumber"
+                          placeholder="e.g. 07123 456789"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.landlordContactNumber}
+                        />
+                      )}
+                      {show("landlordEmail") && (
+                        <AppInput
+                          label="Landlord Email"
+                          name="landlordEmail"
+                          type="email"
+                          placeholder="e.g. landlord@example.com"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.landlordEmail}
+                        />
+                      )}
+                      {show("landlordAddress") && (
+                        <AppInput
+                          label="Landlord Address"
+                          name="landlordAddress"
+                          placeholder="Landlord or agency physical address"
+                          formData={formData}
+                          onChange={handleChange}
+                        />
+                      )}
+                    </div>
+                  </div>
                 )}
 
               </div>

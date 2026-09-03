@@ -103,6 +103,12 @@ export default function LoginPage() {
     dob: "",
     phone: "",
     address: "",
+    addressStartDate: "",
+    housingStatus: "Rent",
+    landlordName: "",
+    landlordContactNumber: "",
+    landlordEmail: "",
+    landlordAddress: "",
     city: "",
     state: "",
     country: "",
@@ -198,6 +204,29 @@ export default function LoginPage() {
     else if (!/^\d{7,15}$/.test(registerForm.phone.trim().replace(/\s+/g, "")))
       errs.phone = "Mobile must be 7–15 digits (numbers only)";
     if (!registerForm.address.trim()) errs.address = "Address is required";
+    if (!registerForm.addressStartDate) {
+      errs.addressStartDate = "Move-in date is required";
+    } else {
+      const moveIn = new Date(registerForm.addressStartDate);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (moveIn > today) {
+        errs.addressStartDate = "Move-in date cannot be in the future";
+      }
+    }
+    if (registerForm.housingStatus === "Rent") {
+      if (!registerForm.landlordName.trim()) {
+        errs.landlordName = "Landlord name is required when renting";
+      }
+      if (!registerForm.landlordContactNumber.trim()) {
+        errs.landlordContactNumber = "Landlord contact number is required when renting";
+      }
+      if (registerForm.landlordEmail.trim()) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.landlordEmail.trim())) {
+          errs.landlordEmail = "Please enter a valid landlord email";
+        }
+      }
+    }
     if (!registerForm.city.trim()) errs.city = "City is required";
     if (!registerForm.state.trim()) errs.state = "State is required";
     if (!registerForm.country.trim()) errs.country = "Country is required";
@@ -296,6 +325,18 @@ export default function LoginPage() {
         mobile: registerForm.phone.trim().replace(/\s+/g, ""),
         date_of_birth: registerForm.dob || undefined,
         role_id: 1,
+        address: registerForm.address.trim(),
+        addressStartDate: registerForm.addressStartDate || undefined,
+        housingStatus: registerForm.housingStatus || undefined,
+        landlordName: registerForm.housingStatus === "Rent" ? registerForm.landlordName.trim() : undefined,
+        landlordContactNumber: registerForm.housingStatus === "Rent" ? registerForm.landlordContactNumber.trim() : undefined,
+        landlordEmail: registerForm.housingStatus === "Rent" ? registerForm.landlordEmail.trim() || undefined : undefined,
+        landlordAddress: registerForm.housingStatus === "Rent" ? registerForm.landlordAddress.trim() || undefined : undefined,
+        city: registerForm.city.trim(),
+        state: registerForm.state.trim(),
+        country: registerForm.country.trim(),
+        pincode: registerForm.pincode.trim(),
+        nationality: registerForm.nationality.trim(),
       });
       sessionStorage.setItem("pending_otp_email", registerForm.email.trim());
       // BUG-001: the OTP verify/resend calls must target the same organisation
@@ -632,10 +673,87 @@ export default function LoginPage() {
                 name="address"
                 value={registerForm.address}
                 onChange={handleRegisterChange}
-                placeholder="Your street address"
+                placeholder="Street address"
                 error={registerErrors.address}
                 required
               />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="When did you move into this address? *"
+                  name="addressStartDate"
+                  type="date"
+                  value={registerForm.addressStartDate}
+                  onChange={handleRegisterChange}
+                  error={registerErrors.addressStartDate}
+                  max={new Date().toISOString().split("T")[0]}
+                  required
+                />
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                    Housing status
+                  </label>
+                  <div className="flex gap-4 mt-2">
+                    {["Rent", "Own", "Other"].map((val) => (
+                      <label key={val} className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="housingStatus"
+                          value={val}
+                          checked={registerForm.housingStatus === val}
+                          onChange={handleRegisterChange}
+                          className="accent-secondary"
+                        />
+                        {val}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {registerForm.housingStatus === "Rent" && (
+                <div className="rounded-xl border border-secondary/20 bg-secondary/[0.02] p-4 space-y-3">
+                  <p className="text-xs font-black text-secondary">Landlord Details</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Input
+                      label="Landlord Name *"
+                      name="landlordName"
+                      value={registerForm.landlordName}
+                      onChange={handleRegisterChange}
+                      placeholder="Landlord or agency name"
+                      error={registerErrors.landlordName}
+                      required
+                    />
+                    <Input
+                      label="Landlord Contact Number *"
+                      name="landlordContactNumber"
+                      value={registerForm.landlordContactNumber}
+                      onChange={handleRegisterChange}
+                      placeholder="e.g. 07123456789"
+                      error={registerErrors.landlordContactNumber}
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Input
+                      label="Landlord Email"
+                      name="landlordEmail"
+                      type="email"
+                      value={registerForm.landlordEmail}
+                      onChange={handleRegisterChange}
+                      placeholder="landlord@example.com"
+                      error={registerErrors.landlordEmail}
+                    />
+                    <Input
+                      label="Landlord Address"
+                      name="landlordAddress"
+                      value={registerForm.landlordAddress}
+                      onChange={handleRegisterChange}
+                      placeholder="Landlord physical address"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input

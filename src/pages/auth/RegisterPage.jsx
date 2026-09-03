@@ -18,7 +18,6 @@ const ROLE_OPTIONS = [
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { register, isLoading } = useAuth();
-
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -28,6 +27,13 @@ export default function RegisterPage() {
     country_code: "+44",
     mobile: "",
     role_id: 1, // candidate (was 3 = admin — privilege-escalation bug)
+    address: "",
+    addressStartDate: "",
+    housingStatus: "Rent",
+    landlordName: "",
+    landlordContactNumber: "",
+    landlordEmail: "",
+    landlordAddress: "",
   });
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState("");
@@ -61,6 +67,33 @@ export default function RegisterPage() {
     if (!form.mobile.trim()) errs.mobile = "Mobile number is required";
     else if (!isValidPhone(form.country_code, form.mobile))
       errs.mobile = "Enter a valid phone number for the selected country";
+
+    if (form.role_id === 1) {
+      if (!form.address.trim()) errs.address = "Address is required";
+      if (!form.addressStartDate) {
+        errs.addressStartDate = "Move-in date is required";
+      } else {
+        const moveIn = new Date(form.addressStartDate);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        if (moveIn > today) {
+          errs.addressStartDate = "Move-in date cannot be in the future";
+        }
+      }
+      if (form.housingStatus === "Rent") {
+        if (!form.landlordName.trim()) {
+          errs.landlordName = "Landlord name is required when renting";
+        }
+        if (!form.landlordContactNumber.trim()) {
+          errs.landlordContactNumber = "Landlord contact number is required when renting";
+        }
+        if (form.landlordEmail.trim()) {
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.landlordEmail.trim())) {
+            errs.landlordEmail = "Please enter a valid landlord email";
+          }
+        }
+      }
+    }
     return errs;
   };
 
@@ -70,6 +103,15 @@ export default function RegisterPage() {
     if (Object.keys(errs).length) return setErrors(errs);
     try {
       const { confirmPassword, ...payload } = form;
+      if (form.role_id !== 1) {
+        delete payload.address;
+        delete payload.addressStartDate;
+        delete payload.housingStatus;
+        delete payload.landlordName;
+        delete payload.landlordContactNumber;
+        delete payload.landlordEmail;
+        delete payload.landlordAddress;
+      }
       await register(payload);
     } catch (err) {
       setApiError(err.message || "Registration failed");
@@ -149,13 +191,99 @@ export default function RegisterPage() {
             required
           />
 
+          {form.role_id === 1 && (
+            <>
+              <Input
+                label="Address"
+                name="address"
+                value={form.address}
+                onChange={handleChange}
+                placeholder="Street address"
+                error={errors.address}
+                required
+              />
+
+              <Input
+                label="When did you move into this address? *"
+                name="addressStartDate"
+                type="date"
+                value={form.addressStartDate}
+                onChange={handleChange}
+                error={errors.addressStartDate}
+                max={new Date().toISOString().split("T")[0]}
+                required
+              />
+
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Housing status
+                </label>
+                <div className="flex gap-4 mt-2">
+                  {["Rent", "Own", "Other"].map((val) => (
+                    <label key={val} className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="housingStatus"
+                        value={val}
+                        checked={form.housingStatus === val}
+                        onChange={handleChange}
+                        className="accent-secondary"
+                      />
+                      {val}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {form.housingStatus === "Rent" && (
+                <div className="rounded-xl border border-secondary/20 bg-secondary/[0.02] p-4 space-y-3">
+                  <p className="text-xs font-black text-secondary">Landlord Details</p>
+                  <Input
+                    label="Landlord Name *"
+                    name="landlordName"
+                    value={form.landlordName}
+                    onChange={handleChange}
+                    placeholder="Landlord or agency name"
+                    error={errors.landlordName}
+                    required
+                  />
+                  <Input
+                    label="Landlord Contact Number *"
+                    name="landlordContactNumber"
+                    value={form.landlordContactNumber}
+                    onChange={handleChange}
+                    placeholder="e.g. 07123456789"
+                    error={errors.landlordContactNumber}
+                    required
+                  />
+                  <Input
+                    label="Landlord Email"
+                    name="landlordEmail"
+                    type="email"
+                    value={form.landlordEmail}
+                    onChange={handleChange}
+                    placeholder="landlord@example.com"
+                    error={errors.landlordEmail}
+                  />
+                  <Input
+                    label="Landlord Address"
+                    name="landlordAddress"
+                    value={form.landlordAddress}
+                    onChange={handleChange}
+                    placeholder="Landlord physical address"
+                  />
+                </div>
+              )}
+            </>
+          )}
+
           <Input
             label="Password"
             name="password"
             type="password"
             value={form.password}
             onChange={handleChange}
-            placeholder="At least 8 characters"
+            placeholder="At least 12 characters"
             error={errors.password}
             required
           />
