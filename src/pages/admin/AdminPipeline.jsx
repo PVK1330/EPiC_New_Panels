@@ -199,13 +199,13 @@ const AdminPipeline = () => {
           instructions: payload.biometricInstructions,
         });
         showToast({
-          message: "Confirmation sent — candidate notified by email & in-app",
+          message: "Confirmation sent — client notified by email & in-app",
           variant: "success",
         });
       } else {
         await updatePipelineStage(caseId, "biometrics_booked", payload);
         showToast({
-          message: "Biometrics booked — candidate notified",
+          message: "Biometrics booked — client notified",
           variant: "success",
         });
       }
@@ -426,7 +426,7 @@ const AdminPipeline = () => {
                 <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Case ID</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Case</label>
                       <p className="text-sm font-mono font-semibold text-primary mt-1">{selectedCase.caseId}</p>
                     </div>
                     <div>

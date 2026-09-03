@@ -329,7 +329,7 @@ const AppRouter = () => {
           <Route path="performance" element={<CaseworkerPerformance />} />
           <Route path="licence-reviews" element={<CaseworkerLicenceApplications />} />
           <Route path="licence/v2/:id" element={<LicenceApplicationV2Detail role="caseworker" />} />
-          <Route path="cos-requests" element={<CaseworkerCosRequests />} />
+          <Route path="cos-requests" element={<Navigate to="/caseworker/dashboard" replace />} />
           <Route path="compliance-review" element={<CaseworkerComplianceReview />} />
         </Route>
 

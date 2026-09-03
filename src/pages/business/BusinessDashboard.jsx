@@ -322,7 +322,7 @@ export default function BusinessDashboard() {
                         {`${item.candidate?.first_name || ""} ${item.candidate?.last_name || ""}`.trim() || "Client"}
                       </h4>
                       <p className="text-xs font-bold text-gray-500">{item.jobTitle || "Case in progress"}</p>
-                      <p className="text-[10px] font-bold text-gray-400 mt-1">Case ID: {item.caseId || "N/A"}</p>
+                      <p className="text-[10px] font-bold text-gray-400 mt-1">Case: {item.caseId || "N/A"}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
                       <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${getPriorityColor(item.status === "Overdue" ? "High" : "Medium")}`}>

@@ -169,7 +169,7 @@ export function resolveNotificationTarget(notification, user = null) {
   // 3. Certificate of Sponsorship requests
   if (entityType === 'cos_request' || category === 'cos') {
     if (role === 'admin') return { path: '/admin/cos-requests' };
-    if (role === 'caseworker') return { path: '/caseworker/cos-requests' };
+    if (role === 'caseworker') return { path: '/caseworker/dashboard' };
     if (role === 'business') {
       // For info requests, allocation decisions, and rejections, take the sponsor
       // directly to the Request History tab where the message/status is visible.

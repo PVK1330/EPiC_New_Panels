@@ -159,14 +159,41 @@ export function mapApplicationToCandidateRow(application, overrides = {}) {
     gender: application.gender || null,
     relationshipStatus: application.relationshipStatus || null,
     address: application.address || null,
-    contactNumber2: combineAltContactNumber(application) || null,
+    addressStartDate: application.addressStartDate ? formatDateForInput(application.addressStartDate) : null,
+    housingStatus: application.housingStatus || null,
+    landlordName: application.landlordName || null,
+    landlordContactNumber: application.landlordContactNumber || null,
+    landlordEmail: application.landlordEmail || null,
+    landlordAddress: application.landlordAddress || null,
     previousFullAddress: application.previousFullAddress || null,
-    previousAddress: application.previousAddress || null,
-    startDate: application.startDate || null,
-    endDate: application.endDate || null,
+    previousAddress: (Array.isArray(application.previousAddresses) && application.previousAddresses.length > 0)
+      ? (application.previousAddresses[0]?.previousAddress || application.previousAddresses[0]?.address || application.previousAddress || null)
+      : (application.previousAddress || null),
+    previousAddresses: Array.isArray(application.previousAddresses)
+      ? application.previousAddresses.map((item) => ({
+          previousAddress: item.previousAddress || item.address || "",
+          startDate: item.startDate || null,
+          endDate: item.endDate || null,
+        })).filter((item) => item.previousAddress || item.startDate || item.endDate)
+      : (application.previousAddress ? [{
+          previousAddress: application.previousAddress,
+          startDate: application.startDate || null,
+          endDate: application.endDate || null,
+        }] : []),
+    startDate: (Array.isArray(application.previousAddresses) && application.previousAddresses.length > 0)
+      ? (application.previousAddresses[0]?.startDate || application.startDate || null)
+      : (application.startDate || null),
+    endDate: (Array.isArray(application.previousAddresses) && application.previousAddresses.length > 0)
+      ? (application.previousAddresses[0]?.endDate || application.endDate || null)
+      : (application.endDate || null),
     
     // Nationality & Identity
-    nationality: application.nationality || null,
+    nationality: (Array.isArray(application.nationalities) && application.nationalities.length > 0)
+      ? application.nationalities[0]
+      : (application.nationality || null),
+    nationalities: Array.isArray(application.nationalities)
+      ? application.nationalities.filter(Boolean)
+      : (application.nationality ? [application.nationality] : []),
     birthCountry: application.birthCountry || null,
     placeOfBirth: application.placeOfBirth || null,
     dob: application.dob || null,
@@ -181,7 +208,13 @@ export function mapApplicationToCandidateRow(application, overrides = {}) {
     idIssuingAuthorityNational: application.idIssuingAuthorityNational || null,
     otherNationality: application.otherNationality || null,
     ukLicense: application.ukLicense || null,
+    ukLicenseNumber: application.ukLicenseNumber || null,
     medicalTreatment: application.medicalTreatment || null,
+    medicalTreatmentHospitalClinicName: application.medicalTreatmentHospitalClinicName || null,
+    medicalTreatmentHospitalClinicAddress: application.medicalTreatmentHospitalClinicAddress || null,
+    medicalTreatmentStartDate: application.medicalTreatmentStartDate || null,
+    medicalTreatmentEndDate: application.medicalTreatmentEndDate || null,
+    medicalTreatmentDetails: application.medicalTreatmentDetails || null,
     ukStayDuration: application.ukStayDuration || null,
     
     // Parent Information
@@ -198,21 +231,35 @@ export function mapApplicationToCandidateRow(application, overrides = {}) {
     
     // Immigration History
     illegalEntry: application.illegalEntry || null,
+    illegalEntryDetails: application.illegalEntryDetails || null,
     overstayed: application.overstayed || null,
+    overstayedDetails: application.overstayedDetails || null,
     breach: application.breach || null,
+    breachDetails: application.breachDetails || null,
     falseInfo: application.falseInfo || null,
+    falseInfoDetails: application.falseInfoDetails || null,
     otherBreach: application.otherBreach || null,
+    otherBreachDetails: application.otherBreachDetails || null,
     refusedVisa: application.refusedVisa || null,
+    refusedVisaDetails: application.refusedVisaDetails || null,
     refusedEntry: application.refusedEntry || null,
+    refusedEntryDetails: application.refusedEntryDetails || null,
     refusedPermission: application.refusedPermission || null,
+    refusedPermissionDetails: application.refusedPermissionDetails || null,
     refusedAsylum: application.refusedAsylum || null,
+    refusedAsylumDetails: application.refusedAsylumDetails || null,
     deported: application.deported || null,
+    deportedDetails: application.deportedDetails || null,
     removed: application.removed || null,
+    removedDetails: application.removedDetails || null,
     requiredToLeave: application.requiredToLeave || null,
+    requiredToLeaveDetails: application.requiredToLeaveDetails || null,
     banned: application.banned || null,
+    bannedDetails: application.bannedDetails || null,
     
     // Travel History
     visitedOther: application.visitedOther || null,
+    travelHistory: Array.isArray(application.travelHistory) ? application.travelHistory : [],
     countryVisited: application.countryVisited || null,
     visitReason: application.visitReason || null,
     entryDate: application.entryDate || null,
@@ -224,6 +271,7 @@ export function mapApplicationToCandidateRow(application, overrides = {}) {
     visaEndDate: application.visaEndDate || null,
     niNumber: application.niNumber || null,
     sponsored: application.sponsored || null,
+    sponsoredDetails: application.sponsoredDetails || null,
     englishProof: application.englishProof || null,
     
     // Custom fields
@@ -300,15 +348,45 @@ export function candidateRowToApplicationForm(c) {
       gender: app.gender || "",
       relationshipStatus: app.relationshipStatus || "",
       address: app.address || "",
+      addressStartDate: formatDateForInput(app.addressStartDate || app.current_address_start_date),
+      housingStatus: app.housingStatus || app.housing_status || "",
+      landlordName: app.landlordName || app.landlord_name || "",
+      landlordContactNumber: app.landlordContactNumber || app.landlord_contact_number || "",
+      landlordEmail: app.landlordEmail || app.landlord_email || "",
+      landlordAddress: app.landlordAddress || app.landlord_address || "",
       contactCountryCode2,
       contactNumber2,
       previousFullAddress: app.previousFullAddress || "",
-      previousAddress: app.previousAddress || "",
-      startDate: formatDateForInput(app.startDate),
-      endDate: formatDateForInput(app.endDate),
+      previousAddress: (Array.isArray(app.previousAddresses) && app.previousAddresses.length > 0)
+        ? (app.previousAddresses[0]?.previousAddress || app.previousAddresses[0]?.address || app.previousAddress || "")
+        : (app.previousAddress || ""),
+      previousAddresses: (Array.isArray(app.previousAddresses) && app.previousAddresses.length > 0)
+        ? app.previousAddresses.map((item) => ({
+            previousAddress: item.previousAddress || item.address || "",
+            startDate: formatDateForInput(item.startDate),
+            endDate: formatDateForInput(item.endDate),
+          }))
+        : (app.previousAddress || app.startDate || app.endDate
+          ? [{
+              previousAddress: app.previousAddress || "",
+              startDate: formatDateForInput(app.startDate),
+              endDate: formatDateForInput(app.endDate),
+            }]
+          : []),
+      startDate: (Array.isArray(app.previousAddresses) && app.previousAddresses.length > 0)
+        ? (formatDateForInput(app.previousAddresses[0]?.startDate) || formatDateForInput(app.startDate))
+        : formatDateForInput(app.startDate),
+      endDate: (Array.isArray(app.previousAddresses) && app.previousAddresses.length > 0)
+        ? (formatDateForInput(app.previousAddresses[0]?.endDate) || formatDateForInput(app.endDate))
+        : formatDateForInput(app.endDate),
       
       // Nationality & Identity
-      nationality: app.nationality || "",
+      nationality: (Array.isArray(app.nationalities) && app.nationalities.length > 0)
+        ? app.nationalities[0]
+        : (app.nationality || c.nationality || ""),
+      nationalities: Array.isArray(app.nationalities) && app.nationalities.length > 0
+        ? app.nationalities.filter(Boolean)
+        : (app.nationality || c.nationality ? [app.nationality || c.nationality] : []),
       birthCountry: app.birthCountry || "",
       placeOfBirth: app.placeOfBirth || "",
       dob: formatDateForInput(app.dob || c.dob),
@@ -323,7 +401,13 @@ export function candidateRowToApplicationForm(c) {
       idIssuingAuthorityNational: app.idIssuingAuthorityNational || "",
       otherNationality: app.otherNationality || "",
       ukLicense: app.ukLicense || "",
+      ukLicenseNumber: app.ukLicenseNumber || "",
       medicalTreatment: app.medicalTreatment || "",
+      medicalTreatmentHospitalClinicName: app.medicalTreatmentHospitalClinicName || "",
+      medicalTreatmentHospitalClinicAddress: app.medicalTreatmentHospitalClinicAddress || "",
+      medicalTreatmentStartDate: formatDateForInput(app.medicalTreatmentStartDate),
+      medicalTreatmentEndDate: formatDateForInput(app.medicalTreatmentEndDate),
+      medicalTreatmentDetails: app.medicalTreatmentDetails || "",
       ukStayDuration: app.ukStayDuration || "",
       
       // Parent Information
@@ -340,21 +424,35 @@ export function candidateRowToApplicationForm(c) {
       
       // Immigration History
       illegalEntry: app.illegalEntry || "",
+      illegalEntryDetails: app.illegalEntryDetails || "",
       overstayed: app.overstayed || "",
+      overstayedDetails: app.overstayedDetails || "",
       breach: app.breach || "",
+      breachDetails: app.breachDetails || "",
       falseInfo: app.falseInfo || "",
+      falseInfoDetails: app.falseInfoDetails || "",
       otherBreach: app.otherBreach || "",
+      otherBreachDetails: app.otherBreachDetails || "",
       refusedVisa: app.refusedVisa || "",
+      refusedVisaDetails: app.refusedVisaDetails || "",
       refusedEntry: app.refusedEntry || "",
+      refusedEntryDetails: app.refusedEntryDetails || "",
       refusedPermission: app.refusedPermission || "",
+      refusedPermissionDetails: app.refusedPermissionDetails || "",
       refusedAsylum: app.refusedAsylum || "",
+      refusedAsylumDetails: app.refusedAsylumDetails || "",
       deported: app.deported || "",
+      deportedDetails: app.deportedDetails || "",
       removed: app.removed || "",
+      removedDetails: app.removedDetails || "",
       requiredToLeave: app.requiredToLeave || "",
+      requiredToLeaveDetails: app.requiredToLeaveDetails || "",
       banned: app.banned || "",
+      bannedDetails: app.bannedDetails || "",
       
       // Travel History
       visitedOther: app.visitedOther || "",
+      travelHistory: Array.isArray(app.travelHistory) ? app.travelHistory : [],
       countryVisited: app.countryVisited || "",
       visitReason: app.visitReason || "",
       entryDate: formatDateForInput(app.entryDate),
@@ -366,6 +464,7 @@ export function candidateRowToApplicationForm(c) {
       visaEndDate: formatDateForInput(app.visaEndDate),
       niNumber: app.niNumber || "",
       sponsored: app.sponsored || "",
+      sponsoredDetails: app.sponsoredDetails || "",
       englishProof: app.englishProof || "",
       
       // Custom responses
@@ -396,7 +495,16 @@ export function candidateRowToApplicationForm(c) {
     contactNumber,
     relationshipStatus: "",
     address: c.address ?? "",
+    addressStartDate: formatDateForInput(c.addressStartDate || c.current_address_start_date),
+    housingStatus: c.housingStatus || c.housing_status || "",
+    landlordName: c.landlordName || c.landlord_name || "",
+    landlordContactNumber: c.landlordContactNumber || c.landlord_contact_number || "",
+    landlordEmail: c.landlordEmail || c.landlord_email || "",
+    landlordAddress: c.landlordAddress || c.landlord_address || "",
     nationality: c.nationality ?? "",
+    nationalities: Array.isArray(c.nationalities) && c.nationalities.length > 0
+      ? c.nationalities.filter(Boolean)
+      : (c.nationality ? [c.nationality] : []),
     birthCountry: c.countryOfBirth ?? "",
     placeOfBirth: "",
     dob: formatDateForInput(c.dob),
@@ -411,11 +519,18 @@ export function candidateRowToApplicationForm(c) {
     idIssuingAuthorityNational: c.idIssuingAuthorityNational ?? "",
     otherNationality: c.otherNationality ?? "",
     ukLicense: c.ukLicense ?? "",
+    ukLicenseNumber: c.ukLicenseNumber ?? "",
     medicalTreatment: c.medicalTreatment ?? "",
+    medicalTreatmentHospitalClinicName: c.medicalTreatmentHospitalClinicName ?? "",
+    medicalTreatmentHospitalClinicAddress: c.medicalTreatmentHospitalClinicAddress ?? "",
+    medicalTreatmentStartDate: formatDateForInput(c.medicalTreatmentStartDate),
+    medicalTreatmentEndDate: formatDateForInput(c.medicalTreatmentEndDate),
+    medicalTreatmentDetails: c.medicalTreatmentDetails ?? "",
     ukStayDuration: c.ukStayDuration ?? "",
     contactNumber2: "",
     previousFullAddress: "",
     previousAddress: "",
+    previousAddresses: [],
     startDate: "",
     endDate: "",
     parentName: "",
@@ -429,23 +544,38 @@ export function candidateRowToApplicationForm(c) {
     parent2Nationality: "",
     parent2SameNationality: "",
     illegalEntry: "",
+    illegalEntryDetails: "",
     overstayed: "",
+    overstayedDetails: "",
     breach: "",
+    breachDetails: "",
     falseInfo: "",
+    falseInfoDetails: "",
     otherBreach: "",
+    otherBreachDetails: "",
     refusedVisa: "",
+    refusedVisaDetails: "",
     refusedEntry: "",
+    refusedEntryDetails: "",
     refusedPermission: "",
+    refusedPermissionDetails: "",
     refusedAsylum: "",
+    refusedAsylumDetails: "",
     deported: "",
+    deportedDetails: "",
     removed: "",
+    removedDetails: "",
     requiredToLeave: "",
+    requiredToLeaveDetails: "",
     banned: "",
+    bannedDetails: "",
     visitedOther: "",
     countryVisited: "",
     visitReason: "",
     entryDate: "",
     leaveDate: "",
+    sponsored: "",
+    sponsoredDetails: "",
     // Parent Information (fallback)
     parentName: c.parentName || "",
     parentRelation: c.parentRelation || "",
@@ -475,6 +605,7 @@ export function candidateRowToApplicationForm(c) {
     
     // Travel History (fallback)
     visitedOther: c.visitedOther || "",
+    travelHistory: Array.isArray(c.travelHistory) ? c.travelHistory : [],
     countryVisited: c.countryVisited || "",
     visitReason: c.visitReason || "",
     entryDate: formatDateForInput(c.entryDate),

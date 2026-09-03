@@ -159,9 +159,13 @@ const AdminLayout = () => {
               {pathnames.map((value, index) => {
                 const last = index === pathnames.length - 1;
                 const to = `/${pathnames.slice(0, index + 1).join("/")}`;
+                const BREADCRUMB_MAP = {
+                  candidates: "Clients",
+                };
                 const name =
+                  BREADCRUMB_MAP[value.toLowerCase()] ||
                   value.charAt(0).toUpperCase() +
-                  value.slice(1).replace(/-/g, " ");
+                    value.slice(1).replace(/-/g, " ");
 
                 return (
                   <div key={to} className="flex items-center shrink-0">

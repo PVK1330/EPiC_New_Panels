@@ -39,7 +39,6 @@ export const caseworkerNavSections = (taskCount = 0) => [
       { to: "/caseworker/people/candidates", label: "Candidates",   icon: User,        moduleKey: "caseworker.people" },
       { to: "/caseworker/people/sponsors",   label: "Sponsors",        icon: Users,       moduleKey: "caseworker.people" },
       { to: "/caseworker/licence-reviews",   label: "Licence Reviews", icon: ShieldCheck, moduleKey: "caseworker.licence-reviews" },
-      { to: "/caseworker/cos-requests",      label: "CoS Requests",    icon: ShieldCheck, moduleKey: "caseworker.licence-reviews" },
       { to: "/caseworker/compliance-review", label: "Compliance Review", icon: ShieldCheck, moduleKey: "caseworker.licence-reviews" },
     ],
   },

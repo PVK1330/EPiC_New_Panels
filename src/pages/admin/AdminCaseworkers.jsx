@@ -1160,7 +1160,7 @@ export default function AdminCaseworkers() {
                   (viewingDetails.metrics?.assignedCandidates ?? 0) > 0) && (
                   <div className="rounded-xl border border-violet-100/80 bg-violet-50/40 p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-violet-800 mb-3">
-                      Assigned candidates (
+                      Assigned clients (
                       {viewingDetails.candidates?.length ??
                         viewingDetails.metrics?.assignedCandidates ??
                         0}
@@ -1196,7 +1196,7 @@ export default function AdminCaseworkers() {
                       type="search"
                       value={caseSearch}
                       onChange={(e) => setCaseSearch(e.target.value)}
-                      placeholder="Search by candidate, case ID, visa type, or status…"
+                      placeholder="Search by client, case ID, visa type, or status…"
                       className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white/80 text-sm font-medium text-secondary placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
                     />
                   </div>

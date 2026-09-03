@@ -38,7 +38,7 @@ const statusBadge = {
   Processed: "bg-green-100 text-green-800",
 };
 
-const TABLE_COLS = ["Transaction ID", "Client", "Case ID", "Amount", "Type", "Status", "Date", "Actions"];
+const TABLE_COLS = ["Transaction ID", "Client", "Case", "Amount", "Type", "Status", "Date", "Actions"];
 
 const newItem = () => ({ id: `${Date.now()}`, description: "", quantity: 1, rate: 0, amount: 0 });
 
@@ -201,7 +201,7 @@ export default function AdminFinance() {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.clientEmail)) {
       newErrors.clientEmail = "Please enter a valid email address";
     }
-    if (!formData.caseId.trim())      newErrors.caseId      = "Case ID is required";
+    if (!formData.caseId.trim())      newErrors.caseId      = "Case is required";
     if (!formData.dueDate) {
       newErrors.dueDate = "Due date is required";
     } else if (
@@ -527,12 +527,12 @@ export default function AdminFinance() {
                       required
                     />
                     <Input
-                      label="Case ID"
+                      label="Case"
                       name="caseId"
                       value={formData.caseId}
                       onChange={handleInputChange}
                       error={errors.caseId}
-                      placeholder="Enter case ID"
+                      placeholder="Enter case number"
                       required
                     />
                     <Input
@@ -754,7 +754,7 @@ export default function AdminFinance() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
                 {[
                   ["Client", selectedTxn.client],
-                  ["Case ID", selectedTxn.caseId],
+                  ["Case", selectedTxn.caseId],
                   ["Invoice number", selectedTxn.invoiceNumber],
                   ["Transaction ref", selectedTxn.transactionRef],
                   ["Payment type", selectedTxn.paymentType],

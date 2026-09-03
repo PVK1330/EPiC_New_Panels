@@ -217,11 +217,11 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess }) => {
           </div>
 
           <Input
-            label="Related Case ID (optional)"
+            label="Related Case (optional)"
             name="related_case_id"
             value={form.related_case_id}
             onChange={handleChange}
-            placeholder="Enter case ID if applicable"
+            placeholder="Enter case number if applicable"
             type="number"
           />
 

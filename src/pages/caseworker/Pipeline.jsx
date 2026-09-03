@@ -443,7 +443,7 @@ export default function Pipeline() {
                 <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Case ID</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Case</label>
                       <p className="text-sm font-mono font-semibold text-primary mt-1">{selectedCase.caseId}</p>
                     </div>
                     <div>

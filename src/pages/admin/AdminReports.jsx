@@ -707,7 +707,7 @@ function PerformanceDetailModal({ caseworker, onClose, showToast }) {
                   <thead>
                     <tr className="bg-gray-50 text-left">
                       {[
-                        "Case ID",
+                        "Case",
                         "Client",
                         "Visa Type",
                         "Status",

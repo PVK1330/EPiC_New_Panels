@@ -79,10 +79,7 @@ export default function AssignCaseworkerModal({
       setReasonErr("Select a caseworker for this case");
       return;
     }
-    if (!reason.trim()) {
-      setReasonErr("Assignment reason is required");
-      return;
-    }
+    // BUG-016: the assignment reason is optional.
     setReasonErr("");
     setLoading(true);
     try {
@@ -199,7 +196,7 @@ export default function AssignCaseworkerModal({
 
             <div>
               <label htmlFor="assign-caseworker-reason" className="text-sm font-medium text-gray-700">
-                Reason <span className="text-red-500">*</span>
+                Reason <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <textarea
                 id="assign-caseworker-reason"

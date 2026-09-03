@@ -174,7 +174,7 @@ const tableHead =
 
 const TABLE_HEADER = [
   { key: "name", label: "Document name" },
-  { key: "case", label: "Case ID" },
+  { key: "case", label: "Case" },
   { key: "type", label: "Type" },
   { key: "by", label: "Uploaded by" },
   { key: "ver", label: "Version" },

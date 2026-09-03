@@ -17,10 +17,14 @@ const FIELD_SECTIONS = [
       "contactNumber",
       "relationshipStatus",
       "address",
+      "addressStartDate",
+      "housingStatus",
+      "landlordName",
+      "landlordContactNumber",
+      "landlordEmail",
+      "landlordAddress",
       "contactNumber2",
-      "previousAddress",
-      "startDate",
-      "endDate",
+      "previousAddresses",
     ],
   },
   {
@@ -39,7 +43,13 @@ const FIELD_SECTIONS = [
       "idIssuingAuthorityNational",
       "otherNationality",
       "ukLicense",
+      "ukLicenseNumber",
       "medicalTreatment",
+      "medicalTreatmentHospitalClinicName",
+      "medicalTreatmentHospitalClinicAddress",
+      "medicalTreatmentStartDate",
+      "medicalTreatmentEndDate",
+      "medicalTreatmentDetails",
       "ukStayDuration",
     ],
   },
@@ -47,18 +57,31 @@ const FIELD_SECTIONS = [
     title: APPLICATION_STEP_LABELS[2],
     keys: [
       "illegalEntry",
+      "illegalEntryDetails",
       "overstayed",
+      "overstayedDetails",
       "breach",
+      "breachDetails",
       "falseInfo",
+      "falseInfoDetails",
       "otherBreach",
+      "otherBreachDetails",
       "refusedVisa",
+      "refusedVisaDetails",
       "refusedEntry",
+      "refusedEntryDetails",
       "refusedPermission",
+      "refusedPermissionDetails",
       "refusedAsylum",
+      "refusedAsylumDetails",
       "deported",
+      "deportedDetails",
       "removed",
+      "removedDetails",
       "requiredToLeave",
+      "requiredToLeaveDetails",
       "banned",
+      "bannedDetails",
     ],
   },
   {
@@ -80,10 +103,7 @@ const FIELD_SECTIONS = [
     title: APPLICATION_STEP_LABELS[4],
     keys: [
       "visitedOther",
-      "countryVisited",
-      "visitReason",
-      "entryDate",
-      "leaveDate",
+      "travelHistory",
       "visaType",
       "brpNumber",
       "visaEndDate",
@@ -91,12 +111,15 @@ const FIELD_SECTIONS = [
   },
   {
     title: APPLICATION_STEP_LABELS[5],
-    keys: ["niNumber", "sponsored", "englishProof"],
+    keys: ["niNumber", "sponsored", "sponsoredDetails", "englishProof"],
   },
 ];
 
 function formatDisplayValue(value) {
   if (value === null || value === undefined || value === "") return "—";
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).join(", ") || "—";
+  }
   if (typeof value === "boolean") return value ? "Yes" : "No";
   const s = String(value).trim();
   if (s === "yes") return "Yes";
@@ -108,12 +131,89 @@ function buildSections(form, customFieldDefinitions = []) {
   const sections = FIELD_SECTIONS.map((section) => ({
     title: section.title,
     fields: section.keys
-      .filter((key) => APPLICATION_FIELD_LABELS[key])
-      .map((key) => ({
-        key,
-        label: APPLICATION_FIELD_LABELS[key],
-        value: formatDisplayValue(form[key]),
-      })),
+      .filter((key) => {
+        if (!APPLICATION_FIELD_LABELS[key]) return false;
+        if (
+          ["landlordName", "landlordContactNumber", "landlordEmail", "landlordAddress"].includes(key) &&
+          form.housingStatus !== "Rent"
+        ) {
+          return false;
+        }
+        if (key === "ukLicenseNumber" && form.ukLicense !== "Yes") {
+          return false;
+        }
+        // Hide detail fields if parent question is not Yes
+        const PARENT_MAP = {
+          medicalTreatmentHospitalClinicName: "medicalTreatment",
+          medicalTreatmentHospitalClinicAddress: "medicalTreatment",
+          medicalTreatmentStartDate: "medicalTreatment",
+          medicalTreatmentEndDate: "medicalTreatment",
+          medicalTreatmentDetails: "medicalTreatment",
+          illegalEntryDetails: "illegalEntry",
+          overstayedDetails: "overstayed",
+          breachDetails: "breach",
+          falseInfoDetails: "falseInfo",
+          otherBreachDetails: "otherBreach",
+          refusedVisaDetails: "refusedVisa",
+          refusedEntryDetails: "refusedEntry",
+          refusedPermissionDetails: "refusedPermission",
+          refusedAsylumDetails: "refusedAsylum",
+          deportedDetails: "deported",
+          removedDetails: "removed",
+          requiredToLeaveDetails: "requiredToLeave",
+          bannedDetails: "banned",
+          sponsoredDetails: "sponsored",
+        };
+        if (PARENT_MAP[key] && form[PARENT_MAP[key]] !== "Yes") {
+          return false;
+        }
+        return true;
+      })
+      .map((key) => {
+        let val = form[key];
+        if (key === "nationality" && Array.isArray(form.nationalities) && form.nationalities.length > 0) {
+          val = form.nationalities;
+        }
+        if (key === "previousAddresses") {
+          const list = Array.isArray(form.previousAddresses) && form.previousAddresses.length > 0
+            ? form.previousAddresses
+            : (form.previousAddress ? [{ previousAddress: form.previousAddress, startDate: form.startDate, endDate: form.endDate }] : []);
+          if (list.length === 0) {
+            val = "—";
+          } else {
+            val = list.map((item, idx) => {
+              const addr = item.previousAddress || item.address || "";
+              const dates = [item.startDate, item.endDate].filter(Boolean).join(" to ");
+              return `${idx + 1}. ${addr}${dates ? ` (${dates})` : ""}`;
+            }).join("\n");
+          }
+        }
+        if (key === "travelHistory") {
+          const list = Array.isArray(form.travelHistory) && form.travelHistory.length > 0
+            ? form.travelHistory
+            : (form.countryVisited ? [{ countryVisited: form.countryVisited, visitReason: form.visitReason, entryDate: form.entryDate, leaveDate: form.leaveDate }] : []);
+          if (list.length === 0) {
+            val = "—";
+          } else {
+            val = list.map((item, idx) => {
+              const dates = [item.entryDate, item.leaveDate].filter(Boolean).join(" to ");
+              const parts = [
+                item.countryVisited,
+                item.visitReason ? `purpose: ${item.visitReason}` : "",
+                dates,
+                item.duration ? `duration: ${item.duration}` : "",
+                item.details,
+              ].filter(Boolean).join(" · ");
+              return `${idx + 1}. ${parts}`;
+            }).join("\n");
+          }
+        }
+        return {
+          key,
+          label: APPLICATION_FIELD_LABELS[key],
+          value: formatDisplayValue(val),
+        };
+      }),
   }));
 
   const custom = (customFieldDefinitions || []).filter((d) => d?.label && d?.id);

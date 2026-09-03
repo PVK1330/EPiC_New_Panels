@@ -164,10 +164,7 @@ const AdminAssign = () => {
       setReasonErr("Please select a caseworker");
       return;
     }
-    if (!reason.trim()) {
-      setReasonErr("Reason is required");
-      return;
-    }
+    // BUG-016: the assignment reason is optional.
     setReasonErr("");
     setLoading(true);
     try {
@@ -250,7 +247,7 @@ const AdminAssign = () => {
           <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">Reassign Case</h2>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Search Case ID</label>
+              <label className="text-sm font-medium text-gray-700">Search Cases</label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 text-gray-400" size={18} />
                 <input
@@ -264,7 +261,7 @@ const AdminAssign = () => {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">
-                Case ID
+                Case
                 {fetchLoading && <span className="ml-2 text-xs text-gray-400 font-normal animate-pulse">Loading cases…</span>}
                 {!fetchLoading && cases.length === 0 && !fetchError && <span className="ml-2 text-xs text-amber-500 font-normal">No cases found</span>}
                 {!fetchLoading && cases.length > 0 && <span className="ml-2 text-xs text-gray-400 font-normal">({filteredCaseOptions.length} available)</span>}

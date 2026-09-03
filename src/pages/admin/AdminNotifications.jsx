@@ -885,7 +885,7 @@ export default function AdminNotifications() {
           <div>
             <h4 className="text-sm font-black text-secondary mb-4">Related to (optional)</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Case ID" name="caseId" value={formData.caseId} onChange={handleInputChange} placeholder="Related case ID" />
+              <Input label="Case" name="caseId" value={formData.caseId} onChange={handleInputChange} placeholder="Related case number" />
               <Input label="Business ID" name="businessId" value={formData.businessId} onChange={handleInputChange} placeholder="Related business ID" />
             </div>
           </div>

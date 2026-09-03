@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { useNavigate } from "react-router-dom";
 import {
@@ -24,8 +24,10 @@ import {
 import { formatDateLong } from "../../utils/datetime";
 import DatePicker from "../DatePicker";
 import NationalitySelect from "../NationalitySelect";
+import NationalityMultiSelect from "../NationalityMultiSelect";
 import CountrySelect from "../CountrySelect";
 import GlobalPhoneInput from "../PhoneInput";
+import { Plus, Trash2 } from "lucide-react";
 import { getCountryByCode, getCountryByDialCode } from "../../utils/countries";
 
 const inputClass =
@@ -84,6 +86,16 @@ function AppInput({
           error={error}
           max={max}
           placeholder={placeholder || "Select date"}
+        />
+      </div>
+    ) : as === "nationalities" || as === "nationality-multi" ? (
+      <div className="mt-1">
+        <NationalityMultiSelect
+          name={name}
+          value={formData[name] ?? []}
+          onChange={onChange}
+          error={error}
+          placeholder={placeholder || "Select or search nationalities…"}
         />
       </div>
     ) : as === "nationality" ? (
@@ -289,6 +301,7 @@ const DATE_FIELDS = [
   "expiryDate",
   "startDate",
   "endDate",
+  "addressStartDate",
   "parentDob",
   "parent2Dob",
   "entryDate",
@@ -299,6 +312,7 @@ const DATE_FIELDS = [
 /** PostgreSQL ENUM columns reject empty strings — must be null or a valid value. */
 const ENUM_FIELDS = [
   "applicationType",
+  "housingStatus",
   "passportAvailable",
   "ukLicense",
   "medicalTreatment",
@@ -392,11 +406,45 @@ function validateStep(stepIndex, data) {
       }
     }
     if (!data.gender) errs.gender = "Please select a gender";
+
+    // BUG-007: addressStartDate validation
+    if (!data.addressStartDate) {
+      errs.addressStartDate = "Move-in date is required";
+    } else {
+      const moveIn = new Date(`${data.addressStartDate}T00:00:00`);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (Number.isNaN(moveIn.getTime())) {
+        errs.addressStartDate = "Enter a valid move-in date";
+      } else if (moveIn > today) {
+        errs.addressStartDate = "Move-in date cannot be in the future";
+      }
+    }
+
+    // BUG-007: Landlord validation when renting
+    if (data.housingStatus === "Rent") {
+      if (!data.landlordName?.toString().trim()) {
+        errs.landlordName = "Landlord name is required when renting";
+      }
+      if (!data.landlordContactNumber?.toString().trim()) {
+        errs.landlordContactNumber = "Landlord contact number is required when renting";
+      }
+      if (data.landlordEmail?.toString().trim()) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.landlordEmail.trim())) {
+          errs.landlordEmail = "Please enter a valid landlord email address";
+        }
+      }
+    }
   }
 
   if (stepIndex === 1) {
-    if (!data.nationality?.toString().trim())
+    const selectedNats = Array.isArray(data.nationalities)
+      ? data.nationalities.filter(Boolean)
+      : (data.nationality?.toString().trim() ? [data.nationality.trim()] : []);
+    if (selectedNats.length === 0) {
+      errs.nationalities = "At least one nationality is required";
       errs.nationality = "Nationality is required";
+    }
     if (!data.dob) {
       errs.dob = "Date of birth is required";
     } else {
@@ -436,8 +484,13 @@ function validateStep(stepIndex, data) {
   }
 
   if (stepIndex === 2) {
-    if (data.ukLicense === "Yes" && !data.ukStayDuration?.toString().trim()) {
-      errs.ukStayDuration = "Please specify duration of stay";
+    if (data.ukLicense === "Yes") {
+      if (!data.ukLicenseNumber?.toString().trim()) {
+        errs.ukLicenseNumber = "UK driving licence number is required";
+      }
+      if (!data.ukStayDuration?.toString().trim()) {
+        errs.ukStayDuration = "Please specify duration of stay";
+      }
     }
     // Alternate contact number is optional, but must be a valid number for the
     // selected country when provided (same treatment as the main contact number).
@@ -454,7 +507,35 @@ function validateStep(stepIndex, data) {
           errs.contactNumber2 = "Enter a valid contact number (7–15 digits)";
       }
     }
-    // Validation for dates if both provided
+    if (data.medicalTreatment === "Yes") {
+      if (!data.medicalTreatmentHospitalClinicName?.toString().trim()) {
+        errs.medicalTreatmentHospitalClinicName = "Hospital or clinic name is required";
+      }
+      if (!data.medicalTreatmentHospitalClinicAddress?.toString().trim()) {
+        errs.medicalTreatmentHospitalClinicAddress = "Hospital or clinic address is required";
+      }
+      if (!data.medicalTreatmentStartDate) {
+        errs.medicalTreatmentStartDate = "Treatment start date is required";
+      }
+      if (!data.medicalTreatmentEndDate) {
+        errs.medicalTreatmentEndDate = "Treatment end date is required";
+      }
+      if (data.medicalTreatmentStartDate && data.medicalTreatmentEndDate) {
+        if (new Date(data.medicalTreatmentStartDate) > new Date(data.medicalTreatmentEndDate)) {
+          errs.medicalTreatmentEndDate = "End date cannot be before start date";
+        }
+      }
+    }
+    // Validation for dates if both provided across all previous addresses
+    const prevAddrs = Array.isArray(data.previousAddresses) ? data.previousAddresses : [];
+    for (let i = 0; i < prevAddrs.length; i++) {
+      const item = prevAddrs[i];
+      if (item.startDate && item.endDate) {
+        if (new Date(item.startDate) > new Date(item.endDate)) {
+          errs[`prevAddress_endDate_${i}`] = "End date cannot be before start date";
+        }
+      }
+    }
     if (data.startDate && data.endDate) {
       if (new Date(data.startDate) > new Date(data.endDate)) {
         errs.endDate = "End date cannot be before start date";
@@ -471,7 +552,52 @@ function validateStep(stepIndex, data) {
     }
   }
 
+  if (stepIndex === 4) {
+    if (data.illegalEntry === "Yes" && !data.illegalEntryDetails?.toString().trim()) {
+      errs.illegalEntryDetails = "Please provide details of illegal entry";
+    }
+    if (data.overstayed === "Yes" && !data.overstayedDetails?.toString().trim()) {
+      errs.overstayedDetails = "Please provide details of overstaying";
+    }
+    if (data.breach === "Yes" && !data.breachDetails?.toString().trim()) {
+      errs.breachDetails = "Please provide details of leave condition breach";
+    }
+    if (data.falseInfo === "Yes" && !data.falseInfoDetails?.toString().trim()) {
+      errs.falseInfoDetails = "Please provide details";
+    }
+    if (data.otherBreach === "Yes" && !data.otherBreachDetails?.toString().trim()) {
+      errs.otherBreachDetails = "Please provide details of immigration breach";
+    }
+    if (data.refusedVisa === "Yes" && !data.refusedVisaDetails?.toString().trim()) {
+      errs.refusedVisaDetails = "Please provide details of visa refusal";
+    }
+    if (data.refusedEntry === "Yes" && !data.refusedEntryDetails?.toString().trim()) {
+      errs.refusedEntryDetails = "Please provide details of entry refusal";
+    }
+    if (data.refusedPermission === "Yes" && !data.refusedPermissionDetails?.toString().trim()) {
+      errs.refusedPermissionDetails = "Please provide details of permission refusal";
+    }
+    if (data.refusedAsylum === "Yes" && !data.refusedAsylumDetails?.toString().trim()) {
+      errs.refusedAsylumDetails = "Please provide details of asylum refusal";
+    }
+    if (data.deported === "Yes" && !data.deportedDetails?.toString().trim()) {
+      errs.deportedDetails = "Please provide details of deportation";
+    }
+    if (data.removed === "Yes" && !data.removedDetails?.toString().trim()) {
+      errs.removedDetails = "Please provide details of removal";
+    }
+    if (data.requiredToLeave === "Yes" && !data.requiredToLeaveDetails?.toString().trim()) {
+      errs.requiredToLeaveDetails = "Please provide details";
+    }
+    if (data.banned === "Yes" && !data.bannedDetails?.toString().trim()) {
+      errs.bannedDetails = "Please provide details of exclusion/ban";
+    }
+  }
+
   if (stepIndex === 5) {
+    if (data.sponsored === "Yes" && !data.sponsoredDetails?.toString().trim()) {
+      errs.sponsoredDetails = "Please provide sponsorship details";
+    }
     if (
       data.visaType &&
       data.visaType !== "Other" &&
@@ -1298,6 +1424,90 @@ export default function CandidateApplicationForm({
                   />
                 )}
 
+                {show("addressStartDate") && (
+                  <AppInput
+                    label="When did you move into this address? *"
+                    name="addressStartDate"
+                    type="date"
+                    formData={formData}
+                    onChange={handleChange}
+                    error={formErrors.addressStartDate}
+                    max={new Date().toISOString().split("T")[0]}
+                  />
+                )}
+
+                {show("housingStatus") && (
+                  <div>
+                    <span className={fieldLabelClass}>Do you rent or own your current home?</span>
+                    <div className="mt-2 flex flex-wrap gap-6">
+                      {["Rent", "Own", "Other"].map((val) => (
+                        <label
+                          key={val}
+                          className="inline-flex cursor-pointer items-center gap-2 font-bold text-gray-800"
+                        >
+                          <input
+                            type="radio"
+                            name="housingStatus"
+                            value={val}
+                            checked={formData.housingStatus === val}
+                            onChange={handleChange}
+                            className="accent-secondary"
+                          />
+                          {val}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {formData.housingStatus === "Rent" && (
+                  <div className="md:col-span-2 rounded-2xl border border-secondary/15 bg-secondary/[0.02] p-5 space-y-4">
+                    <SectionTitle>Landlord Details</SectionTitle>
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+                      {show("landlordName") && (
+                        <AppInput
+                          label="Landlord Name *"
+                          name="landlordName"
+                          placeholder="Full landlord name or letting agency"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.landlordName}
+                        />
+                      )}
+                      {show("landlordContactNumber") && (
+                        <AppInput
+                          label="Landlord Contact Number *"
+                          name="landlordContactNumber"
+                          placeholder="e.g. 07123 456789"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.landlordContactNumber}
+                        />
+                      )}
+                      {show("landlordEmail") && (
+                        <AppInput
+                          label="Landlord Email"
+                          name="landlordEmail"
+                          type="email"
+                          placeholder="e.g. landlord@example.com"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.landlordEmail}
+                        />
+                      )}
+                      {show("landlordAddress") && (
+                        <AppInput
+                          label="Landlord Address"
+                          name="landlordAddress"
+                          placeholder="Landlord or agency physical address"
+                          formData={formData}
+                          onChange={handleChange}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+
               </div>
             )}
 
@@ -1305,14 +1515,26 @@ export default function CandidateApplicationForm({
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
                 <SectionTitle>Nationality details</SectionTitle>
                 {show("nationality") && (
-                  <AppInput
-                    label="Country of nationality *"
-                    name="nationality"
-                    as="country"
-                    formData={formData}
-                    onChange={handleChange}
-                    error={formErrors.nationality}
-                  />
+                  <div className="md:col-span-2">
+                    <label htmlFor="nationalities" className={fieldLabelClass}>
+                      {renderLabel("Country of nationality *")}
+                    </label>
+                    <NationalityMultiSelect
+                      name="nationalities"
+                      value={
+                        Array.isArray(formData.nationalities) && formData.nationalities.length > 0
+                          ? formData.nationalities
+                          : (formData.nationality ? [formData.nationality] : [])
+                      }
+                      onChange={(e) => {
+                        handleChange(e);
+                        const arr = Array.isArray(e.target.value) ? e.target.value : [];
+                        handleChange({ target: { name: "nationality", value: arr[0] || "" } });
+                      }}
+                      error={formErrors.nationalities || formErrors.nationality}
+                      placeholder="Select one or more nationalities…"
+                    />
+                  </div>
                 )}
                 {show("birthCountry") && (
                   <AppInput
@@ -1437,6 +1659,18 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.ukLicense === "Yes" && (
+                  <div className="md:col-span-2">
+                    <AppInput
+                      label="UK driving licence number *"
+                      name="ukLicenseNumber"
+                      placeholder="Enter UK driving licence number (e.g. SMITH957125AB9DE)"
+                      formData={formData}
+                      onChange={handleChange}
+                      error={formErrors.ukLicenseNumber}
+                    />
+                  </div>
+                )}
                 {show("medicalTreatment") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1445,6 +1679,73 @@ export default function CandidateApplicationForm({
                       formData={formData}
                       onChange={handleChange}
                     />
+                  </div>
+                )}
+                {formData.medicalTreatment === "Yes" && (
+                  <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50/40 p-4 space-y-4">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-secondary">
+                      Medical Treatment Details
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <AppInput
+                          label="Hospital / Clinic Name *"
+                          name="medicalTreatmentHospitalClinicName"
+                          placeholder="e.g. St Thomas' Hospital / Central Clinic"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.medicalTreatmentHospitalClinicName}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={fieldLabelClass}>Hospital / Clinic Address *</label>
+                        <textarea
+                          name="medicalTreatmentHospitalClinicAddress"
+                          value={formData.medicalTreatmentHospitalClinicAddress || ""}
+                          onChange={handleChange}
+                          placeholder="Full address of hospital or clinic"
+                          rows={2}
+                          className={`${inputClass} resize-none`}
+                        />
+                        {formErrors.medicalTreatmentHospitalClinicAddress && (
+                          <p className="mt-1 text-xs font-bold text-red-500">{formErrors.medicalTreatmentHospitalClinicAddress}</p>
+                        )}
+                      </div>
+                      <div>
+                        <AppInput
+                          label="Treatment Start Date *"
+                          name="medicalTreatmentStartDate"
+                          type="date"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.medicalTreatmentStartDate}
+                        />
+                      </div>
+                      <div>
+                        <AppInput
+                          label="Treatment End Date *"
+                          name="medicalTreatmentEndDate"
+                          type="date"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.medicalTreatmentEndDate}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={fieldLabelClass}>Other Treatment Details</label>
+                        <textarea
+                          name="medicalTreatmentDetails"
+                          value={formData.medicalTreatmentDetails || ""}
+                          onChange={handleChange}
+                          placeholder="Please provide any additional relevant details of medical treatment received"
+                          rows={3}
+                          className={`${inputClass} resize-none`}
+                        />
+                        {formErrors.medicalTreatmentDetails && (
+                          <p className="mt-1 text-xs font-bold text-red-500">{formErrors.medicalTreatmentDetails}</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
                 {show("ukStayDuration") && (
@@ -1485,35 +1786,111 @@ export default function CandidateApplicationForm({
                 )}
 
                 <SectionTitle>Address Details</SectionTitle>
-                {show("previousAddress") && (
-                  <AppInput
-                    label="Previous full address"
-                    name="previousAddress"
-                    placeholder="Enter your previous address"
-                    formData={formData}
-                    onChange={handleChange}
-                    className="md:col-span-2"
-                  />
-                )}
-                {show("startDate") && (
-                  <AppInput
-                    label="When did you start living at this address?"
-                    name="startDate"
-                    type="date"
-                    formData={formData}
-                    onChange={handleChange}
-                  />
-                )}
-                {show("endDate") && (
-                  <AppInput
-                    label="When did you stop living at this address?"
-                    name="endDate"
-                    type="date"
-                    formData={formData}
-                    onChange={handleChange}
-                    error={formErrors.endDate}
-                  />
-                )}
+                {(() => {
+                  const addrList = Array.isArray(formData.previousAddresses) && formData.previousAddresses.length > 0
+                    ? formData.previousAddresses
+                    : (formData.previousAddress || formData.startDate || formData.endDate
+                      ? [{ previousAddress: formData.previousAddress || "", startDate: formData.startDate || "", endDate: formData.endDate || "" }]
+                      : [{ previousAddress: "", startDate: "", endDate: "" }]);
+
+                  const updateAddressItem = (idx, field, val) => {
+                    const nextList = [...addrList];
+                    nextList[idx] = { ...nextList[idx], [field]: val };
+                    handleChange({ target: { name: "previousAddresses", value: nextList } });
+                    if (idx === 0) {
+                      if (field === "previousAddress") handleChange({ target: { name: "previousAddress", value: val } });
+                      if (field === "startDate") handleChange({ target: { name: "startDate", value: val } });
+                      if (field === "endDate") handleChange({ target: { name: "endDate", value: val } });
+                    }
+                  };
+
+                  const addAddressItem = () => {
+                    const nextList = [...addrList, { previousAddress: "", startDate: "", endDate: "" }];
+                    handleChange({ target: { name: "previousAddresses", value: nextList } });
+                  };
+
+                  const removeAddressItem = (idx) => {
+                    const nextList = addrList.filter((_, i) => i !== idx);
+                    const final = nextList.length > 0 ? nextList : [{ previousAddress: "", startDate: "", endDate: "" }];
+                    handleChange({ target: { name: "previousAddresses", value: final } });
+                    handleChange({ target: { name: "previousAddress", value: final[0]?.previousAddress || "" } });
+                    handleChange({ target: { name: "startDate", value: final[0]?.startDate || "" } });
+                    handleChange({ target: { name: "endDate", value: final[0]?.endDate || "" } });
+                  };
+
+                  return (
+                    <div className="md:col-span-2 space-y-4">
+                      {addrList.map((addrItem, idx) => (
+                        <div
+                          key={idx}
+                          className="relative rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition-all shadow-sm"
+                        >
+                          <div className="flex items-center justify-between border-b border-slate-200/80 pb-2 mb-3">
+                            <span className="text-xs font-bold uppercase tracking-wider text-secondary">
+                              Previous Address {idx + 1}
+                            </span>
+                            {addrList.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeAddressItem(idx)}
+                                className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Remove
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className="md:col-span-2">
+                              <label className={fieldLabelClass}>Previous full address</label>
+                              <textarea
+                                name={`prevAddr_${idx}`}
+                                value={addrItem.previousAddress || ""}
+                                onChange={(e) => updateAddressItem(idx, "previousAddress", e.target.value)}
+                                placeholder="Enter previous full address"
+                                rows={2}
+                                className={`${inputClass} resize-none`}
+                              />
+                            </div>
+
+                            <div>
+                              <label className={fieldLabelClass}>When did you start living at this address?</label>
+                              <DatePicker
+                                name={`prevStart_${idx}`}
+                                value={addrItem.startDate || ""}
+                                onChange={(e) => updateAddressItem(idx, "startDate", e.target.value)}
+                                placeholder="Select start date"
+                              />
+                            </div>
+
+                            <div>
+                              <label className={fieldLabelClass}>When did you stop living at this address?</label>
+                              <DatePicker
+                                name={`prevEnd_${idx}`}
+                                value={addrItem.endDate || ""}
+                                onChange={(e) => updateAddressItem(idx, "endDate", e.target.value)}
+                                error={formErrors[`prevAddress_endDate_${idx}`] || (idx === 0 ? formErrors.endDate : "")}
+                                placeholder="Select end date"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={addAddressItem}
+                          className="inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-secondary/40 bg-secondary/5 px-4 py-2.5 text-xs font-bold text-secondary hover:bg-secondary/10 hover:border-secondary transition-all"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Another Previous Address
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -1674,6 +2051,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.illegalEntry === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Illegal entry details *</label>
+                    <textarea
+                      name="illegalEntryDetails"
+                      value={formData.illegalEntryDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of illegal entry"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.illegalEntryDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.illegalEntryDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("overstayed") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1684,6 +2078,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.overstayed === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Overstaying details *</label>
+                    <textarea
+                      name="overstayedDetails"
+                      value={formData.overstayedDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of overstaying"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.overstayedDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.overstayedDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("breach") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1694,6 +2105,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.breach === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Condition breach details *</label>
+                    <textarea
+                      name="breachDetails"
+                      value={formData.breachDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of leave condition breach"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.breachDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.breachDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("falseInfo") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1704,6 +2132,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.falseInfo === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Details of false information *</label>
+                    <textarea
+                      name="falseInfoDetails"
+                      value={formData.falseInfoDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.falseInfoDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.falseInfoDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("otherBreach") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1712,6 +2157,22 @@ export default function CandidateApplicationForm({
                       formData={formData}
                       onChange={handleChange}
                     />
+                  </div>
+                )}
+                {formData.otherBreach === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Other immigration breach details *</label>
+                    <textarea
+                      name="otherBreachDetails"
+                      value={formData.otherBreachDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of other immigration breach"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.otherBreachDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.otherBreachDetails}</p>
+                    )}
                   </div>
                 )}
 
@@ -1726,6 +2187,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.refusedVisa === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Visa refusal details *</label>
+                    <textarea
+                      name="refusedVisaDetails"
+                      value={formData.refusedVisaDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of visa refusal (date, country, visa type, reason)"
+                      rows={3}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.refusedVisaDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedVisaDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("refusedEntry") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1736,6 +2214,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.refusedEntry === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Refused entry details *</label>
+                    <textarea
+                      name="refusedEntryDetails"
+                      value={formData.refusedEntryDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of entry refusal"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.refusedEntryDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedEntryDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("refusedPermission") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1746,6 +2241,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.refusedPermission === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Refused permission details *</label>
+                    <textarea
+                      name="refusedPermissionDetails"
+                      value={formData.refusedPermissionDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of permission refusal"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.refusedPermissionDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedPermissionDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("refusedAsylum") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1756,6 +2268,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.refusedAsylum === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Refused asylum details *</label>
+                    <textarea
+                      name="refusedAsylumDetails"
+                      value={formData.refusedAsylumDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of asylum refusal"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.refusedAsylumDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedAsylumDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("deported") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1766,6 +2295,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.deported === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Deportation details *</label>
+                    <textarea
+                      name="deportedDetails"
+                      value={formData.deportedDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of deportation"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.deportedDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.deportedDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("removed") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1776,6 +2322,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.removed === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Removal details *</label>
+                    <textarea
+                      name="removedDetails"
+                      value={formData.removedDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of removal"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.removedDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.removedDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("requiredToLeave") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1786,6 +2349,23 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
+                {formData.requiredToLeave === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Required to leave details *</label>
+                    <textarea
+                      name="requiredToLeaveDetails"
+                      value={formData.requiredToLeaveDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.requiredToLeaveDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.requiredToLeaveDetails}</p>
+                    )}
+                  </div>
+                )}
+
                 {show("banned") && (
                   <div className="md:col-span-2">
                     <YesNo
@@ -1794,6 +2374,22 @@ export default function CandidateApplicationForm({
                       formData={formData}
                       onChange={handleChange}
                     />
+                  </div>
+                )}
+                {formData.banned === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Exclusion / ban details *</label>
+                    <textarea
+                      name="bannedDetails"
+                      value={formData.bannedDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of ban or exclusion"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.bannedDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.bannedDetails}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -1812,42 +2408,84 @@ export default function CandidateApplicationForm({
                     />
                   </div>
                 )}
-                {show("countryVisited") && (
-                  <AppInput
-                    label="Which country did you visit?"
-                    name="countryVisited"
-                    placeholder="Country name"
-                    formData={formData}
-                    onChange={handleChange}
-                  />
-                )}
-                {show("visitReason") && (
-                  <AppInput
-                    label="What was the reason for your visit?"
-                    name="visitReason"
-                    placeholder="Reason"
-                    formData={formData}
-                    onChange={handleChange}
-                  />
-                )}
-                {show("entryDate") && (
-                  <AppInput
-                    label="When did you enter this country?"
-                    name="entryDate"
-                    type="date"
-                    formData={formData}
-                    onChange={handleChange}
-                  />
-                )}
-                {show("leaveDate") && (
-                  <AppInput
-                    label="When did you leave this country?"
-                    name="leaveDate"
-                    type="date"
-                    formData={formData}
-                    onChange={handleChange}
-                  />
-                )}
+                {/* BUG-014: multiple trips — each with country, purpose, dates,
+                    duration and other details. Shown once "Yes" is selected. */}
+                {show("countryVisited") && formData.visitedOther === "Yes" && (() => {
+                  const travelList = Array.isArray(formData.travelHistory) && formData.travelHistory.length > 0
+                    ? formData.travelHistory
+                    : (formData.countryVisited || formData.visitReason || formData.entryDate || formData.leaveDate
+                      ? [{ countryVisited: formData.countryVisited || "", visitReason: formData.visitReason || "", entryDate: formData.entryDate || "", leaveDate: formData.leaveDate || "", duration: "", details: "" }]
+                      : [{ countryVisited: "", visitReason: "", entryDate: "", leaveDate: "", duration: "", details: "" }]);
+
+                  const blank = { countryVisited: "", visitReason: "", entryDate: "", leaveDate: "", duration: "", details: "" };
+                  const syncFirst = (list) => {
+                    handleChange({ target: { name: "countryVisited", value: list[0]?.countryVisited || "" } });
+                    handleChange({ target: { name: "visitReason", value: list[0]?.visitReason || "" } });
+                    handleChange({ target: { name: "entryDate", value: list[0]?.entryDate || "" } });
+                    handleChange({ target: { name: "leaveDate", value: list[0]?.leaveDate || "" } });
+                  };
+                  const updateTravelItem = (idx, field, val) => {
+                    const nextList = [...travelList];
+                    nextList[idx] = { ...nextList[idx], [field]: val };
+                    handleChange({ target: { name: "travelHistory", value: nextList } });
+                    if (idx === 0 && ["countryVisited", "visitReason", "entryDate", "leaveDate"].includes(field)) {
+                      handleChange({ target: { name: field, value: val } });
+                    }
+                  };
+                  const addTravelItem = () => handleChange({ target: { name: "travelHistory", value: [...travelList, { ...blank }] } });
+                  const removeTravelItem = (idx) => {
+                    const nextList = travelList.filter((_, i) => i !== idx);
+                    const final = nextList.length > 0 ? nextList : [{ ...blank }];
+                    handleChange({ target: { name: "travelHistory", value: final } });
+                    syncFirst(final);
+                  };
+
+                  return (
+                    <div className="md:col-span-2 space-y-4">
+                      {travelList.map((item, idx) => (
+                        <div key={idx} className="relative rounded-2xl border border-slate-200 bg-slate-50/50 p-4 shadow-sm">
+                          <div className="flex items-center justify-between border-b border-slate-200/80 pb-2 mb-3">
+                            <span className="text-xs font-bold uppercase tracking-wider text-secondary">Trip {idx + 1}</span>
+                            {travelList.length > 1 && (
+                              <button type="button" onClick={() => removeTravelItem(idx)} className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg transition-colors">
+                                <Trash2 className="h-3.5 w-3.5" /> Remove
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                              <label className={fieldLabelClass}>Which country did you visit?</label>
+                              <input name={`trvCountry_${idx}`} value={item.countryVisited || ""} onChange={(e) => updateTravelItem(idx, "countryVisited", e.target.value)} placeholder="Country name" className={inputClass} />
+                            </div>
+                            <div>
+                              <label className={fieldLabelClass}>Purpose of travel</label>
+                              <input name={`trvReason_${idx}`} value={item.visitReason || ""} onChange={(e) => updateTravelItem(idx, "visitReason", e.target.value)} placeholder="e.g. tourism, work, study" className={inputClass} />
+                            </div>
+                            <div>
+                              <label className={fieldLabelClass}>Date of entry</label>
+                              <DatePicker name={`trvEntry_${idx}`} value={item.entryDate || ""} onChange={(e) => updateTravelItem(idx, "entryDate", e.target.value)} placeholder="Select entry date" />
+                            </div>
+                            <div>
+                              <label className={fieldLabelClass}>Date of leaving</label>
+                              <DatePicker name={`trvLeave_${idx}`} value={item.leaveDate || ""} onChange={(e) => updateTravelItem(idx, "leaveDate", e.target.value)} placeholder="Select leave date" />
+                            </div>
+                            <div>
+                              <label className={fieldLabelClass}>Duration of stay</label>
+                              <input name={`trvDuration_${idx}`} value={item.duration || ""} onChange={(e) => updateTravelItem(idx, "duration", e.target.value)} placeholder="e.g. 2 weeks" className={inputClass} />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className={fieldLabelClass}>Other relevant details (optional)</label>
+                              <textarea name={`trvDetails_${idx}`} value={item.details || ""} onChange={(e) => updateTravelItem(idx, "details", e.target.value)} rows={2} placeholder="Anything else about this trip" className={`${inputClass} resize-none`} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <button type="button" onClick={addTravelItem} className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary bg-secondary/10 hover:bg-secondary/20 px-3 py-2 rounded-lg transition-colors">
+                        + Add another country
+                      </button>
+                    </div>
+                  );
+                })()}
 
                 <SectionTitle>Current Status</SectionTitle>
                 {show("visaType") && (
@@ -1901,6 +2539,22 @@ export default function CandidateApplicationForm({
                       formData={formData}
                       onChange={handleChange}
                     />
+                  </div>
+                )}
+                {formData.sponsored === "Yes" && (
+                  <div className="md:col-span-2">
+                    <label className={fieldLabelClass}>Sponsorship details *</label>
+                    <textarea
+                      name="sponsoredDetails"
+                      value={formData.sponsoredDetails || ""}
+                      onChange={handleChange}
+                      placeholder="Please provide details of your government or scholarship sponsorship"
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                    {formErrors.sponsoredDetails && (
+                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.sponsoredDetails}</p>
+                    )}
                   </div>
                 )}
 
