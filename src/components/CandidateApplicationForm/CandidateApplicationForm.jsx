@@ -302,6 +302,7 @@ const DATE_FIELDS = [
   "startDate",
   "endDate",
   "addressStartDate",
+  "refusedVisaDate",
   "parentDob",
   "parent2Dob",
   "entryDate",
@@ -568,8 +569,29 @@ function validateStep(stepIndex, data) {
     if (data.otherBreach === "Yes" && !data.otherBreachDetails?.toString().trim()) {
       errs.otherBreachDetails = "Please provide details of immigration breach";
     }
-    if (data.refusedVisa === "Yes" && !data.refusedVisaDetails?.toString().trim()) {
-      errs.refusedVisaDetails = "Please provide details of visa refusal";
+    if (data.refusedVisa === "Yes") {
+      const reason = data.refusedVisaReason || data.refusedVisaDetails;
+      if (!reason?.toString().trim()) {
+        errs.refusedVisaReason = "Reason for visa refusal is required";
+      }
+      if (!data.refusedVisaDate) {
+        errs.refusedVisaDate = "Refusal date is required";
+      } else {
+        const refDate = new Date(`${data.refusedVisaDate}T00:00:00`);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        if (isNaN(refDate.getTime())) {
+          errs.refusedVisaDate = "Enter a valid refusal date";
+        } else if (refDate > today) {
+          errs.refusedVisaDate = "Refusal date cannot be in the future";
+        }
+      }
+      if (!data.refusedVisaCountry?.toString().trim()) {
+        errs.refusedVisaCountry = "Country of visa refusal is required";
+      }
+      if (!data.refusedVisaType?.toString().trim()) {
+        errs.refusedVisaType = "Visa or application type is required";
+      }
     }
     if (data.refusedEntry === "Yes" && !data.refusedEntryDetails?.toString().trim()) {
       errs.refusedEntryDetails = "Please provide details of entry refusal";
@@ -2188,19 +2210,86 @@ export default function CandidateApplicationForm({
                   </div>
                 )}
                 {formData.refusedVisa === "Yes" && (
-                  <div className="md:col-span-2">
-                    <label className={fieldLabelClass}>Visa refusal details *</label>
-                    <textarea
-                      name="refusedVisaDetails"
-                      value={formData.refusedVisaDetails || ""}
-                      onChange={handleChange}
-                      placeholder="Please provide details of visa refusal (date, country, visa type, reason)"
-                      rows={3}
-                      className={`${inputClass} resize-none`}
-                    />
-                    {formErrors.refusedVisaDetails && (
-                      <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedVisaDetails}</p>
-                    )}
+                  <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50/40 p-4 space-y-4">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-secondary">
+                      Visa / Application Refusal Details
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className={fieldLabelClass}>Reason for Visa/Application Refusal *</label>
+                        <textarea
+                          name="refusedVisaReason"
+                          value={formData.refusedVisaReason || formData.refusedVisaDetails || ""}
+                          onChange={handleChange}
+                          placeholder="Please provide reason and details of visa/application refusal"
+                          rows={3}
+                          className={`${inputClass} resize-none`}
+                        />
+                        {formErrors.refusedVisaReason && (
+                          <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedVisaReason}</p>
+                        )}
+                      </div>
+                      <div>
+                        <AppInput
+                          label="Refusal Date *"
+                          name="refusedVisaDate"
+                          type="date"
+                          max={new Date().toISOString().split("T")[0]}
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.refusedVisaDate}
+                        />
+                      </div>
+                      <div>
+                        <AppInput
+                          label="Country of Visa/Application Refusal *"
+                          name="refusedVisaCountry"
+                          as="country"
+                          placeholder="Select refusal country"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.refusedVisaCountry}
+                        />
+                      </div>
+                      <div>
+                        <label className={fieldLabelClass}>Visa / Application Type *</label>
+                        <input
+                          id="refusedVisaType"
+                          name="refusedVisaType"
+                          list="refusedVisaTypeSuggestions"
+                          type="text"
+                          value={formData.refusedVisaType ?? ""}
+                          onChange={handleChange}
+                          placeholder="e.g. Student Visa, Work Visa, Visitor Visa"
+                          className={`${inputClass} ${formErrors.refusedVisaType ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
+                        />
+                        <datalist id="refusedVisaTypeSuggestions">
+                          <option value="Student Visa" />
+                          <option value="Work Visa" />
+                          <option value="Visitor Visa" />
+                          <option value="Skilled Worker" />
+                          <option value="Tourist Visa" />
+                          <option value="Business Visa" />
+                          <option value="Spouse / Partner" />
+                          <option value="Graduate" />
+                          <option value="Global Talent" />
+                          <option value="Indefinite Leave to Remain (ILR)" />
+                        </datalist>
+                        {formErrors.refusedVisaType && (
+                          <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedVisaType}</p>
+                        )}
+                      </div>
+                      <div>
+                        <AppInput
+                          label="Refusal Reference Number / Details"
+                          name="refusedVisaReference"
+                          placeholder="e.g. REF-123456 or reference details"
+                          formData={formData}
+                          onChange={handleChange}
+                          error={formErrors.refusedVisaReference}
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
 
