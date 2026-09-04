@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import ProtectedRoute from './ProtectedRoute';
 import RequireAdminModule from './RequireAdminModule';
@@ -161,13 +161,18 @@ const Fallback = () => (
 const AppRouter = () => {
   const { user } = useSelector((state) => state.auth);
   const { sessionChecked } = useAuthContext();
+  const location = useLocation();
+
+  const fromTarget = location.state?.from?.pathname
+    ? `${location.state.from.pathname}${location.state.from.search || ''}`
+    : null;
 
   return (
     <Suspense fallback={<Fallback />}>
       <Routes>
         <Route
           path="/login"
-          element={user ? <Navigate to={getDashboardRouteForUser(user)} replace /> : <LoginPage />}
+          element={user ? <Navigate to={fromTarget || getDashboardRouteForUser(user)} replace /> : <LoginPage />}
         />
         <Route
           path="/register"
@@ -313,6 +318,7 @@ const AppRouter = () => {
           <Route index element={<Navigate to="/caseworker/dashboard" replace />} />
           <Route path="dashboard" element={<CaseworkerDashboard />} />
           <Route path="cases" element={<Cases />} />
+          <Route path="cases/:caseId" element={<Cases />} />
           <Route path="ccl-templates" element={<CaseworkerCclTemplates />} />
           <Route path="my-account" element={<MyAccount />} />
           <Route path="reschedule-form" element={<RescheduleForm />} />
