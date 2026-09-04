@@ -264,6 +264,7 @@ export function mapApplicationToCandidateRow(application, overrides = {}) {
     
     // Travel History
     visitedOther: application.visitedOther || null,
+    travelHistory: Array.isArray(application.travelHistory) ? application.travelHistory : [],
     countryVisited: application.countryVisited || null,
     visitReason: application.visitReason || null,
     entryDate: application.entryDate || null,
@@ -461,6 +462,7 @@ export function candidateRowToApplicationForm(c) {
       
       // Travel History
       visitedOther: app.visitedOther || "",
+      travelHistory: Array.isArray(app.travelHistory) ? app.travelHistory : [],
       countryVisited: app.countryVisited || "",
       visitReason: app.visitReason || "",
       entryDate: formatDateForInput(app.entryDate),
@@ -618,6 +620,7 @@ export function candidateRowToApplicationForm(c) {
     
     // Travel History (fallback)
     visitedOther: c.visitedOther || "",
+    travelHistory: Array.isArray(c.travelHistory) ? c.travelHistory : [],
     countryVisited: c.countryVisited || "",
     visitReason: c.visitReason || "",
     entryDate: formatDateForInput(c.entryDate),

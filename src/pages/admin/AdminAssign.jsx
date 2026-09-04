@@ -145,14 +145,8 @@ const AdminAssign = () => {
   }, [caseSearch, CASE_OPTIONS]);
 
   const toggleWorkerSelection = (workerId) => {
-    setAssignTo((prev) => {
-      if (prev.includes(workerId)) {
-        return prev.filter((id) => id !== workerId);
-      } else if (prev.length < 2) {
-        return [...prev, workerId];
-      }
-      return prev;
-    });
+    // BUG-017: single caseworker per case — selecting one replaces the previous.
+    setAssignTo((prev) => (prev.includes(workerId) ? [] : [workerId]));
   };
 
   const recommended = useMemo(() => {
@@ -167,13 +161,10 @@ const AdminAssign = () => {
       return;
     }
     if (assignTo.length === 0) {
-      setReasonErr("Please select at least one caseworker (max 2)");
+      setReasonErr("Please select a caseworker");
       return;
     }
-    if (!reason.trim()) {
-      setReasonErr("Reason is required");
-      return;
-    }
+    // BUG-016: the assignment reason is optional.
     setReasonErr("");
     setLoading(true);
     try {
@@ -234,7 +225,7 @@ const AdminAssign = () => {
         <RiUserAddLine size={32} className="text-primary shrink-0 mt-1" />
         <div>
           <h1 className="text-3xl font-black text-secondary tracking-tight">Assign / Reassign Cases</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage case assignments and workload distribution (max 2 caseworkers per case)</p>
+          <p className="text-sm text-gray-500 mt-0.5">Manage case assignments and workload distribution (one caseworker per case)</p>
         </div>
       </div>
 
@@ -302,12 +293,12 @@ const AdminAssign = () => {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-xs font-bold text-blue-800 flex items-center gap-2">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-600" />
-                Maximum 2 caseworkers can be assigned to a single case
+                One caseworker is assigned to a single case
               </p>
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Assign Caseworkers (Max 2)</label>
+              <label className="text-sm font-medium text-gray-700">Assign Caseworker</label>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {caseworkers.map((worker) => (
                   <label
@@ -322,7 +313,7 @@ const AdminAssign = () => {
                       type="checkbox"
                       checked={assignTo.includes(worker.id)}
                       onChange={() => toggleWorkerSelection(worker.id)}
-                      disabled={!assignTo.includes(worker.id) && assignTo.length >= 2}
+                      disabled={false}
                       className="accent-secondary rounded border-gray-300"
                     />
                     <div className="flex-1">

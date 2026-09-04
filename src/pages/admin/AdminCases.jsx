@@ -359,7 +359,7 @@ export default function AdminCases() {
 
     // ── Caseworkers (optional on create, but never more than 2) ──────────
     const n = formData.assignedCaseworkerIds?.length || 0;
-    if (n > 2) e.assignedCaseworkers = "Select at most 2 caseworkers";
+    if (n > 1) e.assignedCaseworkers = "Select one caseworker";
 
     // ── Target submission date: required, valid, not in the past ─────────
     if (!formData.targetSubmissionDate) {

@@ -54,11 +54,9 @@ export default function AssignCaseworkerModal({
   }, [open, caseRow]);
 
   const toggleWorker = (id) => {
-    setAssignTo((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= 2) return prev;
-      return [...prev, id];
-    });
+    // BUG-017: a case is assigned to a SINGLE caseworker — selecting one replaces
+    // any previous selection (radio behaviour), clicking it again clears it.
+    setAssignTo((prev) => (prev.includes(id) ? [] : [id]));
   };
 
   const currentNames = useMemo(() => {
@@ -78,13 +76,10 @@ export default function AssignCaseworkerModal({
   const submit = async () => {
     if (!caseRow?.caseId) return;
     if (assignTo.length === 0) {
-      setReasonErr("Select at least one caseworker (max 2)");
+      setReasonErr("Select a caseworker for this case");
       return;
     }
-    if (!reason.trim()) {
-      setReasonErr("Assignment reason is required");
-      return;
-    }
+    // BUG-016: the assignment reason is optional.
     setReasonErr("");
     setLoading(true);
     try {
@@ -148,7 +143,7 @@ export default function AssignCaseworkerModal({
             </div>
 
             <p className="text-xs font-bold text-blue-800 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-              Select up to 2 active caseworkers. The proposed amount will be sent to the
+              Select the caseworker for this case. The proposed amount will be sent to the
               candidate for review — the CCL fee is confirmed in a later step.
             </p>
 
@@ -161,7 +156,7 @@ export default function AssignCaseworkerModal({
               )}
               {caseworkers.map((worker) => {
                 const checked = assignTo.includes(worker.id);
-                const disabled = !checked && assignTo.length >= 2;
+                const disabled = false; // single-select: picking another just replaces it
                 return (
                   <label
                     key={worker.id}
@@ -201,7 +196,7 @@ export default function AssignCaseworkerModal({
 
             <div>
               <label htmlFor="assign-caseworker-reason" className="text-sm font-medium text-gray-700">
-                Reason <span className="text-red-500">*</span>
+                Reason <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <textarea
                 id="assign-caseworker-reason"
