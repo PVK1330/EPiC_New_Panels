@@ -67,6 +67,11 @@ const FIELD_SECTIONS = [
       "otherBreach",
       "otherBreachDetails",
       "refusedVisa",
+      "refusedVisaReason",
+      "refusedVisaDate",
+      "refusedVisaCountry",
+      "refusedVisaType",
+      "refusedVisaReference",
       "refusedVisaDetails",
       "refusedEntry",
       "refusedEntryDetails",
@@ -154,6 +159,11 @@ function buildSections(form, customFieldDefinitions = []) {
           breachDetails: "breach",
           falseInfoDetails: "falseInfo",
           otherBreachDetails: "otherBreach",
+          refusedVisaReason: "refusedVisa",
+          refusedVisaDate: "refusedVisa",
+          refusedVisaCountry: "refusedVisa",
+          refusedVisaType: "refusedVisa",
+          refusedVisaReference: "refusedVisa",
           refusedVisaDetails: "refusedVisa",
           refusedEntryDetails: "refusedEntry",
           refusedPermissionDetails: "refusedPermission",
@@ -165,6 +175,9 @@ function buildSections(form, customFieldDefinitions = []) {
           sponsoredDetails: "sponsored",
         };
         if (PARENT_MAP[key] && form[PARENT_MAP[key]] !== "Yes") {
+          return false;
+        }
+        if (key === "refusedVisaDetails" && form.refusedVisaReason) {
           return false;
         }
         return true;
