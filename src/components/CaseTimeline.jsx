@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Clock, Edit, Trash2, Filter, Plus, ChevronDown } from 'lucide-react';
-import { getCaseTimeline, addTimelineEntry, deleteTimelineEntry } from '../services/timelineService';
+import { Clock, Filter, ChevronDown } from 'lucide-react';
+import { getCaseTimeline } from '../services/timelineService';
 import { formatWithOptions } from '../utils/datetime';
 
 const ACTION_TYPES = [
@@ -39,17 +39,11 @@ const ACTION_TYPE_LABELS = {
   case_reopened: 'Case Reopened'
 };
 
-const CaseTimeline = ({ caseId, currentUser }) => {
+const CaseTimeline = ({ caseId }) => {
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterType, setFilterType] = useState('all');
-  const [newEntry, setNewEntry] = useState({
-    actionType: 'case_updated',
-    description: '',
-    visibility: 'public',
-  });
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -73,45 +67,7 @@ const CaseTimeline = ({ caseId, currentUser }) => {
     }
   };
 
-  const handleAddEntry = async (e) => {
-    e.preventDefault();
-    if (!newEntry.description.trim()) {
-      setError('Description is required');
-      return;
-    }
-
-    try {
-      await addTimelineEntry({
-        caseId,
-        actionType: newEntry.actionType,
-        description: newEntry.description,
-        performedBy: currentUser?.id,
-        visibility: newEntry.visibility,
-        isSystemAction: false,
-      });
-      setNewEntry({ actionType: 'case_updated', description: '', visibility: 'public' });
-      setShowAddForm(false);
-      setError('');
-      fetchTimeline();
-    } catch (err) {
-      console.error('Error adding timeline entry:', err);
-      setError('Failed to add timeline entry');
-    }
-  };
-
-  const handleDeleteEntry = async (entryId) => {
-    if (!confirm('Are you sure you want to delete this timeline entry?')) return;
-    
-    try {
-      await deleteTimelineEntry(entryId);
-      fetchTimeline();
-    } catch (err) {
-      console.error('Error deleting timeline entry:', err);
-      setError('Failed to delete timeline entry');
-    }
-  };
-
-  const filteredTimeline = filterType === 'all' 
+  const filteredTimeline = filterType === 'all'
     ? timeline 
     : timeline.filter(item => item.actionType === filterType);
 
@@ -132,7 +88,7 @@ const CaseTimeline = ({ caseId, currentUser }) => {
 
   return (
     <div className="space-y-4">
-      {/* Header with Add and Filter */}
+      {/* Header with Filter */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-black text-secondary">Case Timeline</h3>
         <div className="flex gap-2">
@@ -167,80 +123,11 @@ const CaseTimeline = ({ caseId, currentUser }) => {
               </div>
             )}
           </div>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-black text-white hover:bg-secondary/90 transition-colors"
-          >
-            <Plus size={14} />
-            Add Entry
-          </button>
         </div>
       </div>
 
-      {/* Add Entry Form */}
-      {showAddForm && (
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
-          <h4 className="text-xs font-black text-gray-900">Add Timeline Entry</h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Action Type
-              </label>
-              <select
-                value={newEntry.actionType}
-                onChange={(e) => setNewEntry({ ...newEntry, actionType: e.target.value })}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              >
-                {ACTION_TYPES.map(type => (
-                  <option key={type} value={type}>{ACTION_TYPE_LABELS[type]}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                Visibility
-              </label>
-              <select
-                value={newEntry.visibility}
-                onChange={(e) => setNewEntry({ ...newEntry, visibility: e.target.value })}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
-              >
-                <option value="public">Public</option>
-                <option value="internal">Internal</option>
-                <option value="admin_only">Admin Only</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-              Description
-            </label>
-            <textarea
-              value={newEntry.description}
-              onChange={(e) => setNewEntry({ ...newEntry, description: e.target.value })}
-              rows={2}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary resize-none"
-              placeholder="Describe what happened..."
-            />
-          </div>
-          {error && (
-            <p className="text-xs font-bold text-red-600">{error}</p>
-          )}
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => { setShowAddForm(false); setError(''); }}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-black text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAddEntry}
-              className="rounded-lg bg-secondary px-3 py-1.5 text-xs font-black text-white hover:bg-secondary/90"
-            >
-              Add Entry
-            </button>
-          </div>
-        </div>
+      {error && (
+        <p className="text-xs font-bold text-red-600">{error}</p>
       )}
 
       {/* Timeline List */}
@@ -257,7 +144,7 @@ const CaseTimeline = ({ caseId, currentUser }) => {
       ) : (
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {filteredTimeline.map((item, index) => (
-            <div key={item.id || index} className="flex gap-3 items-start group">
+            <div key={item.id || index} className="flex gap-3 items-start">
               <div className="flex flex-col items-center">
                 <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center">
                   {getActionIcon(item.actionType)}
@@ -297,17 +184,6 @@ const CaseTimeline = ({ caseId, currentUser }) => {
                       </p>
                     )}
                   </div>
-                  {!item.isSystemAction && (
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => handleDeleteEntry(item.id)}
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
-                        title="Delete entry"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
