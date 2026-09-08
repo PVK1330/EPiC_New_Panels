@@ -10,6 +10,9 @@ export const getCandidateWithApplication = (id) => api.get(`/api/admin/candidate
 
 export const createCandidate = (data) => api.post(`/api/admin/candidates/`, data);
 
+export const sendCredentialsToClient = (data) =>
+  api.post(`/api/admin/candidates/send-credentials`, data);
+
 export const updateCandidate = (id, data) => api.put(`/api/admin/candidates/${id}`, data);
 
 export const toggleCandidateStatus = (id) =>

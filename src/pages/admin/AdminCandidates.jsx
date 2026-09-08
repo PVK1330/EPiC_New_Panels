@@ -10,12 +10,15 @@ import {
   FiFolder,
   FiPrinter,
   FiBriefcase,
+  FiMail,
 } from "react-icons/fi";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
+import PhoneInput from "../../components/PhoneInput";
+import { isValidPhone } from "../../utils/countries";
 import useCandidate from "../../hooks/useCandidate";
 import useAdmin from "../../hooks/useAdmin";
 import { useToast } from "../../context/ToastContext";
@@ -36,6 +39,7 @@ import {
 } from "../../components/CandidateApplicationForm/applicationFormMapping";
 import {
   createCandidate,
+  sendCredentialsToClient,
   toggleCandidateStatus,
   getCandidateById,
   updateAdminCandidateApplication,
@@ -45,6 +49,7 @@ import {
   assignCandidateBusiness,
 } from "../../services/candidateApi";
 import { getSponsors } from "../../services/sponsorApi";
+import { getVisaTypesDropdown } from "../../services/settingsService";
 import { getApiError } from "../../utils/apiError";
 import { isInactiveUser } from "../../utils/userIdentity";
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
@@ -316,6 +321,151 @@ export default function AdminCandidates() {
   const [importResults, setImportResults] = useState(null);
   const [downloadingSample, setDownloadingSample] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  // ── Send Credentials to Client State ─────────────────────────────────────────
+  const [sendCredModalOpen, setSendCredModalOpen] = useState(false);
+  const [sendCredForm, setSendCredForm] = useState({
+    name: "",
+    email: "",
+    country_code: "+44",
+    contact_number: "",
+    visa_type: "",
+  });
+  const [sendCredErrors, setSendCredErrors] = useState({});
+  const [sendingCredentials, setSendingCredentials] = useState(false);
+  const [dynamicVisaOptions, setDynamicVisaOptions] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getVisaTypesDropdown()
+      .then((res) => {
+        if (cancelled) return;
+        const list = res.data?.data?.visaTypes;
+        if (Array.isArray(list) && list.length > 0) {
+          setDynamicVisaOptions(
+            list.map((v) => ({
+              value: v.name || v.id,
+              label: v.name || v.id,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const visaSelectOptions = dynamicVisaOptions.length > 0 ? dynamicVisaOptions : VISA_TYPE_OPTIONS;
+
+  const openSendCredentials = () => {
+    setSendCredForm({
+      name: "",
+      email: "",
+      country_code: "+44",
+      contact_number: "",
+      visa_type: "",
+    });
+    setSendCredErrors({});
+    setSendCredModalOpen(true);
+  };
+
+  const closeSendCredModal = () => {
+    if (sendingCredentials) return;
+    setSendCredModalOpen(false);
+    setSendCredForm({
+      name: "",
+      email: "",
+      country_code: "+44",
+      contact_number: "",
+      visa_type: "",
+    });
+    setSendCredErrors({});
+  };
+
+  const validateSendCredForm = () => {
+    const errs = {};
+    const trimmedName = sendCredForm.name?.trim();
+    if (!trimmedName) {
+      errs.name = "Client Name is required";
+    } else if (trimmedName.length > 150) {
+      errs.name = "Client Name must not exceed 150 characters";
+    }
+
+    const trimmedEmail = sendCredForm.email?.trim();
+    if (!trimmedEmail) {
+      errs.email = "Email ID is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      errs.email = "Please enter a valid email address";
+    }
+
+    const rawPhone = sendCredForm.contact_number?.trim();
+    const dialCode = sendCredForm.country_code?.trim() || "+44";
+    if (!rawPhone) {
+      errs.contact_number = "Contact Number is required";
+    } else if (!isValidPhone(dialCode, rawPhone)) {
+      errs.contact_number = "Please enter a valid phone number for the selected country";
+    } else if (rawPhone.length < 5 || rawPhone.length > 30) {
+      errs.contact_number = "Contact Number must be between 5 and 30 characters";
+    }
+
+    if (!sendCredForm.visa_type?.trim()) {
+      errs.visa_type = "Visa Type is required";
+    }
+
+    return errs;
+  };
+
+  const handleSendCredentialsSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (sendingCredentials) return;
+
+    const errs = validateSendCredForm();
+    if (Object.keys(errs).length > 0) {
+      setSendCredErrors(errs);
+      return;
+    }
+
+    setSendingCredentials(true);
+    try {
+      const payload = {
+        name: sendCredForm.name.trim(),
+        email: sendCredForm.email.trim().toLowerCase(),
+        country_code: sendCredForm.country_code?.trim() || "+44",
+        contact_number: sendCredForm.contact_number.trim(),
+        visa_type: sendCredForm.visa_type.trim(),
+      };
+      const res = await sendCredentialsToClient(payload);
+      const isEmailOk = res.data?.data?.emailSent !== false;
+      const successMsg =
+        res.data?.message ||
+        (isEmailOk
+          ? "Client account created successfully and login credentials have been sent to the client’s email address."
+          : "Client account created successfully, but credential email delivery failed.");
+      showToast({
+        message: successMsg,
+        variant: isEmailOk ? "success" : "warning",
+      });
+      setSendCredModalOpen(false);
+      setSendCredForm({
+        name: "",
+        email: "",
+        country_code: "+44",
+        contact_number: "",
+        visa_type: "",
+      });
+      setSendCredErrors({});
+      fetchCandidates(page, limit, debouncedSearch.trim(), statusParam, visaParam, payParam);
+    } catch (err) {
+      showToast({
+        message: getApiError(err) || "Failed to send credentials to client",
+        variant: "danger",
+      });
+    } finally {
+      setSendingCredentials(false);
+    }
+  };
+
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(searchInput), 400);
@@ -973,7 +1123,16 @@ export default function AdminCandidates() {
               <FiPlus size={14} />
               Add Client
             </Button>
+            <Button
+              type="button"
+              onClick={openSendCredentials}
+              className="rounded-xl shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600"
+            >
+              <FiMail size={14} />
+              Send Credentials to Client
+            </Button>
           </>
+
         }
       />
 
@@ -1649,6 +1808,121 @@ export default function AdminCandidates() {
           </div>
         )}
       </Modal>
+
+      <Modal
+        open={sendCredModalOpen}
+        onClose={closeSendCredModal}
+        title="Send Credentials to Client"
+        maxWidthClass="max-w-md"
+        bodyClassName="px-4 py-4 sm:px-6"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={closeSendCredModal}
+              disabled={sendingCredentials}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSendCredentialsSubmit}
+              disabled={sendingCredentials}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {sendingCredentials ? (
+                <>
+                  <Loader2 size={14} className="animate-spin mr-1.5" />
+                  Sending Credentials...
+                </>
+              ) : (
+                "Send Credentials"
+              )}
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSendCredentialsSubmit} className="space-y-4">
+          <Input
+            label="Client Name"
+            name="name"
+            placeholder="e.g. John Doe"
+            required
+            value={sendCredForm.name}
+            onChange={(e) => {
+              setSendCredForm((prev) => ({ ...prev, name: e.target.value }));
+              if (sendCredErrors.name) setSendCredErrors((prev) => ({ ...prev, name: "" }));
+            }}
+            error={sendCredErrors.name}
+            disabled={sendingCredentials}
+          />
+
+          <Input
+            label="Email ID"
+            name="email"
+            type="email"
+            placeholder="client@example.com"
+            required
+            value={sendCredForm.email}
+            onChange={(e) => {
+              setSendCredForm((prev) => ({ ...prev, email: e.target.value }));
+              if (sendCredErrors.email) setSendCredErrors((prev) => ({ ...prev, email: "" }));
+            }}
+            error={sendCredErrors.email}
+            disabled={sendingCredentials}
+          />
+
+          <PhoneInput
+            split
+            label="Contact Number"
+            dialCode={sendCredForm.country_code}
+            national={sendCredForm.contact_number}
+            dialName="country_code"
+            nationalName="contact_number"
+            onChange={(e) => {
+              const { name, value } = e.target;
+              setSendCredForm((prev) => ({ ...prev, [name]: value }));
+              if (sendCredErrors[name] || sendCredErrors.contact_number || sendCredErrors.country_code) {
+                setSendCredErrors((prev) => ({ ...prev, [name]: "", contact_number: "", country_code: "" }));
+              }
+            }}
+            placeholder="e.g. 7911 123456"
+            required
+            error={sendCredErrors.contact_number || sendCredErrors.country_code}
+            disabled={sendingCredentials}
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Visa Type <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={sendCredForm.visa_type}
+              onChange={(e) => {
+                setSendCredForm((prev) => ({ ...prev, visa_type: e.target.value }));
+                if (sendCredErrors.visa_type)
+                  setSendCredErrors((prev) => ({ ...prev, visa_type: "" }));
+              }}
+              disabled={sendingCredentials}
+              className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 focus:border-secondary transition-all bg-white text-slate-800 ${
+                sendCredErrors.visa_type ? "border-red-500" : "border-slate-200"
+              }`}
+            >
+              <option value="">Select Visa Type</option>
+              {visaSelectOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            {sendCredErrors.visa_type && (
+              <p className="text-xs text-red-500 mt-1 font-medium">{sendCredErrors.visa_type}</p>
+            )}
+          </div>
+        </form>
+      </Modal>
     </motion.div>
   );
 }
+
