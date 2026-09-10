@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { getDashboardRouteForUser } from '../utils/authResponse';
 import { useAuthContext } from '../context/AuthContext';
@@ -6,6 +6,7 @@ import { useAuthContext } from '../context/AuthContext';
 const ProtectedRoute = ({ children, allowedRoles, allowedRoleIds }) => {
   const { user } = useSelector((state) => state.auth);
   const { sessionChecked } = useAuthContext();
+  const location = useLocation();
 
   // Wait for session restoration before making redirect decisions
   if (!user && !sessionChecked) {
@@ -16,7 +17,7 @@ const ProtectedRoute = ({ children, allowedRoles, allowedRoleIds }) => {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
 
   // BUG-048: strict role gate. Previously, if the current path matched the user's
   // own dashboard route we returned children even when the role was not allowed —

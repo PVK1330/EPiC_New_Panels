@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { ChevronDown } from "lucide-react";
 import Input from "../../components/Input";
@@ -84,7 +84,19 @@ const COUNTRIES = [
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
+
+  const getTargetDestination = (user) => {
+    const from = location.state?.from;
+    if (from) {
+      if (typeof from === "string" && from.trim()) return from;
+      if (typeof from === "object" && from.pathname) {
+        return `${from.pathname}${from.search || ""}${from.hash || ""}`;
+      }
+    }
+    return getDashboardRouteForUser(user);
+  };
 
   const [view, setView] = useState(VIEWS.login);
 
@@ -298,7 +310,7 @@ export default function LoginPage() {
           if (subscriptionExpired && Number(user.role_id) === 3) {
             navigate("/admin/subscription");
           } else {
-            navigate(getDashboardRouteForUser(user));
+            navigate(getTargetDestination(user));
           }
         }
       }
@@ -394,7 +406,7 @@ export default function LoginPage() {
         new_password: resetPasswordForm.password,
       });
       dispatch(setCredentials(pendingResetData));
-      navigate(getDashboardRouteForUser(pendingResetData.user));
+      navigate(getTargetDestination(pendingResetData.user));
     } catch (err) {
       setResetPasswordError(err.message || "Failed to update password");
     } finally {
@@ -436,7 +448,7 @@ export default function LoginPage() {
         organisation_id: userData.organisation_id ?? null,
       };
       dispatch(setCredentials({ user, allowedModules }));
-      navigate(getDashboardRouteForUser(user));
+      navigate(getTargetDestination(user));
     } catch (err) {
       setTwoFactorError(err.message || "Invalid 2FA code");
     } finally {

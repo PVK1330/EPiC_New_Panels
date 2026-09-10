@@ -1,5 +1,5 @@
-﻿import { useMemo, useState, useCallback, useEffect, Fragment, lazy, Suspense } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useMemo, useState, useCallback, useEffect, Fragment, lazy, Suspense } from "react";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   Plus,
   Download,
@@ -87,6 +87,7 @@ const Cases = () => {
   const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
   const location = useLocation();
+  const params = useParams();
   const [viewMode, setViewMode] = useState("table"); // 'table' or 'kanban'
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -432,17 +433,121 @@ const Cases = () => {
 
   const closeDetail = useCallback(() => setDetailCase(null), []);
 
+  const [handledDeepLinkRef, setHandledDeepLinkRef] = useState(null);
+
   useEffect(() => {
-    const ref = location.state?.openCaseRef;
-    if (!ref || loading || !cases.length) return;
-    const found = cases.find(
-      (c) => c.caseId === ref || String(c.id) === String(ref),
-    );
-    if (found) {
-      openDetail(found);
-      navigate(location.pathname, { replace: true, state: {} });
+    const searchParams = new URLSearchParams(location.search);
+    const queryCaseId = searchParams.get("caseId") || searchParams.get("id");
+    const routeCaseId = params?.caseId;
+    const stateCaseRef = location.state?.openCaseRef;
+
+    const targetRef = queryCaseId || routeCaseId || stateCaseRef;
+    if (!targetRef) return;
+
+    // Avoid duplicate execution for the same target reference
+    if (handledDeepLinkRef === targetRef) return;
+
+    // 1. Try to find the case in the already loaded list
+    if (cases && cases.length > 0) {
+      const cleanTarget = String(targetRef).replace(/^#/, "").trim();
+      const found = cases.find(
+        (c) =>
+          c.caseId === targetRef ||
+          String(c.caseId).replace(/^#/, "").trim() === cleanTarget ||
+          String(c.id) === String(targetRef)
+      );
+      if (found) {
+        setHandledDeepLinkRef(targetRef);
+        openDetail(found);
+        return;
+      }
     }
-  }, [cases, loading, location.state, location.pathname, openDetail, navigate]);
+
+    // 2. If cases are still initially loading, wait for them to resolve
+    if (loading) return;
+
+    // 3. If not in current page's list, fetch directly via getCaseworkerCaseDetails API
+    let isMounted = true;
+    (async () => {
+      try {
+        const res = await getCaseworkerCaseDetails(targetRef);
+        if (!isMounted) return;
+        const data = res?.data?.data;
+        if (data && data.overview) {
+          const c = data.overview;
+          const candidate = data.candidate;
+          const sponsor = data.business?.sponsor;
+          const visaType = data.visaType;
+          const financial = data.financial || {};
+          const cwList = Array.isArray(data.caseworkers) ? data.caseworkers : [];
+
+          const mappedCase = {
+            caseId: c.caseId || `#C-${c.id || targetRef}`,
+            candidate: candidate
+              ? `${candidate.first_name} ${candidate.last_name}`
+              : "Unknown",
+            business: sponsor
+              ? sponsor.sponsorProfile?.companyName ||
+                sponsor.sponsorProfile?.tradingName ||
+                `${sponsor.first_name} ${sponsor.last_name || ""}`.trim()
+              : "No sponsor (private client)",
+            visa: visaType?.name || "Unknown",
+            status: mapApiStatus(c.status),
+            legacyStatus: c.status,
+            caseStage: c.caseStage,
+            target: c.targetSubmissionDate || c.created_at,
+            created_at: c.created_at,
+            decisionDate: c.decisionDate,
+            submissionDate: c.submissionDate,
+            biometricsDate: c.biometricsDate,
+            priority: c.priority?.toLowerCase() || "medium",
+            payment: mapPaymentStatus(financial.totalPaid, financial.totalFee),
+            totalAmount: financial.totalFee || 0,
+            paidAmount: financial.totalPaid || 0,
+            amountStatus: financial.amountStatus || "Not Submitted",
+            amountNotes: c.amountNotes || "",
+            id: c.id || targetRef,
+            candidateId: c.candidateId,
+            sponsorId: c.sponsorId,
+            businessId: c.businessId,
+            department: data.department,
+            sponsor: sponsor,
+            proposedAmount: c.proposedAmount ?? financial.proposedAmount ?? null,
+            caseworker: cwList.length > 0
+              ? cwList.map((cw) => `${cw.first_name} ${cw.last_name}`).join(", ")
+              : "Unassigned",
+          };
+
+          setHandledDeepLinkRef(targetRef);
+          openDetail(mappedCase);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        console.error("Deep link case lookup failed:", err);
+        setHandledDeepLinkRef(targetRef);
+        const errorMsg =
+          err?.response?.data?.message ||
+          "Case not found or you do not have permission to view this case.";
+        showToast({
+          message: errorMsg,
+          variant: "danger",
+        });
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    cases,
+    loading,
+    location.search,
+    location.state,
+    params,
+    handledDeepLinkRef,
+    openDetail,
+    showToast,
+  ]);
 
   const openNewCaseModal = useCallback(() => {
     setDetailCase(null);
