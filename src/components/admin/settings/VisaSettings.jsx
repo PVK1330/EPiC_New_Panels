@@ -108,6 +108,11 @@ export default function VisaSettings({
                           <FiLayers size={16} />
                         </div>
                         <span className="text-sm font-bold text-secondary truncate">{visa.name}</span>
+                        {visa.code && (
+                          <span className="text-[10px] font-bold text-gray-400 bg-white border border-gray-100 rounded-md px-1.5 py-0.5 shrink-0">
+                            {visa.code}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <button

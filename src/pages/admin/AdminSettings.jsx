@@ -293,6 +293,7 @@ export default function AdminSettings() {
   const [visaModalMode, setVisaModalMode] = useState("add");
   const [editingVisaId, setEditingVisaId] = useState(null);
   const [visaFormName, setVisaFormName] = useState("");
+  const [visaFormCode, setVisaFormCode] = useState("");
   const [visaFormError, setVisaFormError] = useState("");
 
   const [petitionModalOpen, setPetitionModalOpen] = useState(false);
@@ -504,8 +505,15 @@ export default function AdminSettings() {
     if (!visaFormName.trim()) return setVisaFormError("Name is required");
     try {
       if (visaModalMode === "add")
-        await createVisaType({ name: visaFormName.trim() });
-      else await updateVisaType(editingVisaId, { name: visaFormName.trim() });
+        await createVisaType({
+          name: visaFormName.trim(),
+          code: visaFormCode.trim(),
+        });
+      else
+        await updateVisaType(editingVisaId, {
+          name: visaFormName.trim(),
+          code: visaFormCode.trim(),
+        });
       loadData();
       setVisaModalOpen(false);
       showToast({
@@ -957,6 +965,7 @@ export default function AdminSettings() {
                 onAddVisa={() => {
                   setVisaModalMode("add");
                   setVisaFormName("");
+                  setVisaFormCode("");
                   setVisaModalOpen(true);
                 }}
                 onEditVisa={(id) => {
@@ -964,6 +973,7 @@ export default function AdminSettings() {
                   setVisaModalMode("edit");
                   setEditingVisaId(id);
                   setVisaFormName(v.name);
+                  setVisaFormCode(v.code || "");
                   setVisaModalOpen(true);
                 }}
                 onDeleteVisa={async (id) => {
@@ -1256,6 +1266,12 @@ export default function AdminSettings() {
             error={visaFormError}
             placeholder="e.g. EB-1 Extraordinary Ability"
             autoFocus
+          />
+          <Input
+            label="Case ID Code"
+            value={visaFormCode}
+            onChange={(e) => setVisaFormCode(e.target.value.toUpperCase())}
+            placeholder="e.g. SW"
           />
           <Button
             type="submit"
