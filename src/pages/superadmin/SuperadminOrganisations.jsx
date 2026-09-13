@@ -50,6 +50,7 @@ const capitalize = (s) =>
 const mapApiOrgToRow = (o) => ({
   id: o.id,
   name: o.name,
+  code: o.code || "",
   slug: o.slug,
   plan: capitalize(o.plan?.name || o.plan || "—"),
   plan_id: o.plan?.id ?? o.plan_id ?? "",
@@ -315,6 +316,7 @@ const SuperadminOrganisations = () => {
       );
       await updateOrganisation(selectedOrg.id, {
         name: selectedOrg.name?.trim(),
+        code: (selectedOrg.code || "").trim(),
         plan_id: chosen ? chosen.id : undefined,
         plan: (chosen?.name || selectedOrg.plan || "starter").toLowerCase(),
         status: (selectedOrg.status || "active").toLowerCase(),
@@ -492,6 +494,12 @@ const SuperadminOrganisations = () => {
               </dd>
             </div>
             <div className="flex justify-between gap-4">
+              <dt className="text-gray-400 font-semibold">Code</dt>
+              <dd className="font-mono text-xs text-secondary">
+                {viewOrg.code || "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
               <dt className="text-gray-400 font-semibold">Email</dt>
               <dd className="font-medium text-secondary">
                 {viewOrg.primaryEmail}
@@ -564,6 +572,21 @@ const SuperadminOrganisations = () => {
               setSelectedOrg({ ...selectedOrg, name: e.target.value })
             }
           />
+          <Input
+            label="Organisation Code"
+            placeholder="e.g. EPIC"
+            value={selectedOrg?.code || ""}
+            onChange={(e) =>
+              setSelectedOrg({
+                ...selectedOrg,
+                code: e.target.value.toUpperCase(),
+              })
+            }
+          />
+          <p className="text-[10px] text-gray-400 -mt-2 ml-1">
+            Used as the prefix on auto-generated Case IDs (e.g. EPIC-SW26-001).
+            Leave blank to derive one from the organisation name.
+          </p>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
