@@ -43,15 +43,17 @@ const Calendar = () => {
 
   const [workflowEvents, setWorkflowEvents] = useState([]);
 
+  const [calendarScope, setCalendarScope] = useState("mine");
+
   useEffect(() => {
     fetchTeamsMeetings();
     fetchAppointments();
-    fetchWorkflowEvents();
-  }, []);
+    fetchWorkflowEvents(calendarScope);
+  }, [calendarScope]);
 
-  const fetchWorkflowEvents = async () => {
+  const fetchWorkflowEvents = async (scope = calendarScope) => {
     try {
-      const response = await getWorkflowCalendarEvents();
+      const response = await getWorkflowCalendarEvents({ scope });
       const list = response.data?.data?.events || [];
       setWorkflowEvents(mapWorkflowEventsToCalendar(list));
     } catch (error) {
@@ -361,12 +363,22 @@ const Calendar = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-secondary">Calendar</h1>
+          <h1 className="text-2xl font-black text-secondary">
+            {calendarScope === "all" ? "Organisation Calendar" : "My Calendar"}
+          </h1>
           <p className="text-gray-500 mt-1">
             Schedule events, meetings, and deadlines
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={calendarScope}
+            onChange={(e) => setCalendarScope(e.target.value)}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="mine">My Calendar</option>
+            <option value="all">Organisation Calendar</option>
+          </select>
           <button
             type="button"
             onClick={() => {

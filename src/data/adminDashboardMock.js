@@ -57,7 +57,7 @@ export const MOCK_DASHBOARD_STATS = {
 export const MOCK_RECENT_CASES = [
   {
     id: 1,
-    caseId: "CAS-105201",
+    caseId: "CAS-100001",
     status: "In Progress",
     candidate: { first_name: "Amara", last_name: "Okafor" },
     visaType: { name: "Skilled Worker" },
@@ -78,7 +78,7 @@ export const MOCK_RECENT_CASES = [
   },
   {
     id: 4,
-    caseId: "CAS-105160",
+    caseId: "CAS-100004",
     status: "Completed",
     candidate: { first_name: "Tom", last_name: "Brennan" },
     visaType: { name: "Graduate Visa" },
@@ -96,7 +96,7 @@ export const MOCK_RECENT_ACTIVITIES = [
   {
     id: 1,
     type: "case",
-    title: "Case: CAS-105201",
+    title: "Case: CAS-100001",
     description: "New skilled worker enquiry submitted…",
     createdAt: new Date(Date.now() - 3600000).toISOString(),
     user: { first_name: "Amara", last_name: "Okafor" },
@@ -128,7 +128,7 @@ export const MOCK_RECENT_MESSAGES = [
       createdAt: new Date(Date.now() - 3600000).toISOString()
     },
     unreadCount: 2,
-    case: { caseId: "CAS-105201" }
+    case: { caseId: "CAS-100001" }
   },
   {
     id: 2,
@@ -152,26 +152,4 @@ export const MOCK_RECENT_MESSAGES = [
   }
 ];
 
-export const MOCK_NOTIFICATIONS = [
-  {
-    id: 1,
-    title: "Visa expiry alert",
-    message: "3 cases require review within the next 30 days.",
-    priority: "high",
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: 2,
-    title: "Document uploaded",
-    message: "New documents submitted for CAS-105201.",
-    priority: "medium",
-    createdAt: new Date(Date.now() - 10800000).toISOString(),
-  },
-  {
-    id: 3,
-    title: "Payment received",
-    message: "Case fee payment confirmed for CAS-105160.",
-    priority: "low",
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-];
+export const MOCK_NOTIFICATIONS = [];

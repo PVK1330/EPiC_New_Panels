@@ -139,9 +139,33 @@ const notificationSlice = createSlice({
           state.unreadCount += 1;
         }
       }
+    },
+    resetNotifications: (state) => {
+      state.notifications = [];
+      state.unreadCount = 0;
+      state.pagination = { total: 0, page: 1, limit: 20, pages: 0 };
+      state.loading = false;
+      state.error = null;
+      state.unreadCountLoading = false;
+      state.unreadCountError = null;
+      state.markingAllRead = false;
+      state.latestListRequestId = null;
+      state.latestCountRequestId = null;
     }
   },
   extraReducers: (builder) => {
+    builder.addCase('auth/logout', (state) => {
+      state.notifications = [];
+      state.unreadCount = 0;
+      state.pagination = { total: 0, page: 1, limit: 20, pages: 0 };
+      state.loading = false;
+      state.error = null;
+      state.unreadCountLoading = false;
+      state.unreadCountError = null;
+      state.markingAllRead = false;
+      state.latestListRequestId = null;
+      state.latestCountRequestId = null;
+    });
     // Fetch notifications
     builder
       .addCase(fetchNotifications.pending, (state, action) => {
@@ -245,5 +269,5 @@ const notificationSlice = createSlice({
   }
 });
 
-export const { addNotification, setUnreadCount, clearError, updateNotification } = notificationSlice.actions;
+export const { addNotification, setUnreadCount, clearError, updateNotification, resetNotifications } = notificationSlice.actions;
 export default notificationSlice.reducer;

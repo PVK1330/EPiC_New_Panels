@@ -29,7 +29,7 @@ import {
   formatLastMessagePreview,
   sortConversationsByRecent,
 } from "../../utils/messagingConversations";
-import { MOCK_NOTIFICATIONS } from "../../data/adminDashboardMock";
+
 import CaseWorkflowProgress from "../../components/case/CaseWorkflowProgress";
 import Button from "../../components/Button";
 import { Link } from "react-router-dom";
@@ -84,9 +84,9 @@ const CandidateDashboard = () => {
     getNotifications({ limit: 4 })
       .then((res) => {
         const list = res?.data?.data?.notifications || res?.data?.data || [];
-        setNotifications(Array.isArray(list) && list.length > 0 ? list : MOCK_NOTIFICATIONS);
+        setNotifications(Array.isArray(list) ? list : []);
       })
-      .catch(() => setNotifications(MOCK_NOTIFICATIONS));
+      .catch(() => setNotifications([]));
     messagingApi
       .getConversations()
       .then((res) => {
