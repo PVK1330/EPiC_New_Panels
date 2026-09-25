@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { ChevronDown } from "lucide-react";
+import toast from "react-hot-toast";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import DatePicker from "../components/DatePicker";
@@ -272,11 +273,17 @@ const Login = () => {
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     const errs = validateRegister();
-    if (Object.keys(errs).length) return setRegisterErrors(errs);
+    if (Object.keys(errs).length) {
+      setRegisterErrors(errs);
+      const firstErr = Object.values(errs)[0];
+      toast.error(firstErr, { duration: 5000 });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     setRegisterLoading(true);
     try {
       await registerUser({
-        organisation_id: registerForm.organisationId.trim(),
+        organisation_id: registerForm.organisationId.trim() || undefined,
         first_name: registerForm.firstName.trim(),
         last_name: registerForm.lastName.trim(),
         email: registerForm.email.trim(),
@@ -287,9 +294,13 @@ const Login = () => {
         role_id: 1,
       });
       sessionStorage.setItem("pending_otp_email", registerForm.email.trim());
+      toast.success("Registration initiated! Please verify your email with OTP.", { duration: 5000 });
       navigate("/verify-otp");
     } catch (err) {
-      setRegisterErrors({ email: err.message || "Registration failed" });
+      const errMsg = err.message || "Registration failed";
+      setRegisterErrors((prev) => ({ ...prev, general: errMsg, email: errMsg }));
+      toast.error(errMsg, { duration: 6000 });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setRegisterLoading(false);
     }
@@ -463,7 +474,7 @@ const Login = () => {
             </form>
 
             <p className="mt-6 text-center text-sm text-gray-600">
-              New candidate?{" "}
+              New client?{" "}
               <button
                 type="button"
                 onClick={() => {
@@ -481,29 +492,32 @@ const Login = () => {
         {view === VIEWS.register && (
           <>
             <h1 className="text-lg font-black text-secondary text-center mb-1">
-              Candidate registration
+              Client registration
             </h1>
             <p className="text-center text-xs font-bold text-gray-500 mb-6">
-              Register to access the candidate portal. Caseworkers and admins
+              Register to access the client portal. Caseworkers and admins
               are invited separately.
             </p>
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
-              {/* Organisation ID — must be first so the candidate knows which org they're joining */}
+              {registerErrors.general && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-sm font-semibold text-red-800 flex items-start gap-2.5">
+                  <span className="font-bold text-red-600">Error:</span>
+                  <span className="flex-1">{registerErrors.general}</span>
+                </div>
+              )}
+              {/* Organisation ID — must be first so the client knows which org they're joining */}
               <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
                 <Input
-                  label="Organisation ID"
+                  label="Organisation ID or code (optional)"
                   name="organisationId"
                   type="text"
-                  inputMode="numeric"
                   value={registerForm.organisationId}
                   onChange={handleRegisterChange}
-                  placeholder="e.g. 3"
+                  placeholder="Optional (e.g. organisation code or ID)"
                   error={registerErrors.organisationId}
-                  required
                 />
                 <p className="text-xs text-blue-600 mt-1.5 font-medium">
-                  Your organisation ID is provided by your immigration adviser
-                  or administrator.
+                  Optional. If your adviser provided an organisation code or link, it will be applied automatically.
                 </p>
               </div>
 
@@ -718,7 +732,7 @@ const Login = () => {
               >
                 {registerLoading
                   ? "Creating account…"
-                  : "Create candidate account"}
+                  : "Create client account"}
               </Button>
             </form>
 

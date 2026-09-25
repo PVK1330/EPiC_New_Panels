@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   APPLICATION_STEP_LABELS,
   APPLICATION_FIELD_LABELS,
@@ -308,6 +309,8 @@ const DATE_FIELDS = [
   "entryDate",
   "leaveDate",
   "visaEndDate",
+  "medicalTreatmentStartDate",
+  "medicalTreatmentEndDate",
 ];
 
 /** PostgreSQL ENUM columns reject empty strings — must be null or a valid value. */
@@ -745,11 +748,11 @@ export default function CandidateApplicationForm({
             setIsLocked(true);
             setSubmittedAt(app.submittedAt ?? null);
             const restored = candidateRowToApplicationForm({
-              first_name: app.firstName ?? "",
-              last_name: app.lastName ?? "",
-              email: app.email ?? "",
-              country_code: "",
-              mobile: app.contactNumber ?? "",
+              first_name: app.firstName || app.user?.first_name || "",
+              last_name: app.lastName || app.user?.last_name || "",
+              email: app.email || app.user?.email || "",
+              country_code: app.country_code || app.user?.country_code || "",
+              mobile: app.contactNumber || app.user?.mobile || "",
               application: app,
             });
             setInternalForm(restored);
@@ -757,16 +760,16 @@ export default function CandidateApplicationForm({
             return;
           }
 
-          // Submitted and locked  show read-only form with status banner
+          // Submitted and locked — show read-only form with status banner
           if (app.status === "submitted" && app.isLocked === true) {
             setIsLocked(true);
             setSubmittedAt(app.submittedAt ?? null);
             const restored = candidateRowToApplicationForm({
-              first_name: app.firstName ?? "",
-              last_name: app.lastName ?? "",
-              email: app.email ?? "",
-              country_code: "",
-              mobile: app.contactNumber ?? "",
+              first_name: app.firstName || app.user?.first_name || "",
+              last_name: app.lastName || app.user?.last_name || "",
+              email: app.email || app.user?.email || "",
+              country_code: app.country_code || app.user?.country_code || "",
+              mobile: app.contactNumber || app.user?.mobile || "",
               application: app,
             });
             setInternalForm(restored);
@@ -774,13 +777,13 @@ export default function CandidateApplicationForm({
             return;
           }
 
-          // Use the existing mapper: it normalises null†’"", ISO dates†’YYYY-MM-DD
+          // Use the existing mapper: it normalises null → "", ISO dates → YYYY-MM-DD
           const restored = candidateRowToApplicationForm({
-            first_name: app.firstName ?? "",
-            last_name: app.lastName ?? "",
-            email: app.email ?? "",
-            country_code: "",
-            mobile: app.contactNumber ?? "",
+            first_name: app.firstName || app.user?.first_name || "",
+            last_name: app.lastName || app.user?.last_name || "",
+            email: app.email || app.user?.email || "",
+            country_code: app.country_code || app.user?.country_code || "",
+            mobile: app.contactNumber || app.user?.mobile || "",
             application: app,
           });
           setInternalForm(restored);
@@ -974,14 +977,33 @@ export default function CandidateApplicationForm({
       return;
     }
 
-    // Candidate variant  required fields relaxed to allow fluid navigation and submission
+    // Validate required fields on candidate submission before calling API
+    for (let i = 0; i <= lastStep; i++) {
+      const stepErrs = filterValidationErrorsByVisibility(
+        validateStep(i, cleaned),
+        show,
+      );
+      if (Object.keys(stepErrs).length > 0) {
+        setFormErrors(stepErrs);
+        setStep(i);
+        const firstErrMsg = Object.values(stepErrs)[0];
+        toast.error(`Please complete required field: ${firstErrMsg}`, {
+          duration: 6000,
+        });
+        setApiError(
+          `Step ${i + 1} (${APPLICATION_STEP_LABELS[i] || "Details"}): ${firstErrMsg}`,
+        );
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+    }
     setFormErrors({});
 
     // BUG-107: block duplicate submissions from rapid double-clicks.
     if (submitInFlightRef.current) return;
     submitInFlightRef.current = true;
 
-    // Sanitize date fields  convert empty strings to null
+    // Sanitize date fields — convert empty strings to null
     const payload = sanitizeForApi(cleaned);
 
     setIsSubmitting(true);
@@ -995,17 +1017,66 @@ export default function CandidateApplicationForm({
     }
 
     if (result.ok) {
+      toast.success("Application submitted successfully!", { duration: 5000 });
       navigate("/candidate/dashboard");
     } else {
-      const status = result.error?.response?.status;
-      if (status === 409) {
-        setApiError(
-          result.error.response.data?.message ||
-          "Your application has already been submitted and is currently under review.",
-        );
-      } else {
-        setApiError("Something went wrong. Please try again.");
+      const resData = result.error?.response?.data;
+      let errMsg =
+        resData?.message ||
+        resData?.error ||
+        (Array.isArray(resData?.errors)
+          ? resData.errors
+              .map((err) => (typeof err === "string" ? err : err?.message))
+              .filter(Boolean)
+              .join(", ")
+          : null) ||
+        result.error?.message ||
+        "Failed to submit application. Please check your entries and try again.";
+
+      if (result.error?.response?.status === 409 && !resData?.message) {
+        errMsg =
+          "Your application has already been submitted and is currently under review.";
       }
+
+      setApiError(errMsg);
+      toast.error(errMsg, { duration: 8000 });
+
+      // If the error mentions a specific section or field, switch to that step so the user can fix it
+      const lower = errMsg.toLowerCase();
+      if (
+        lower.includes("move-in") ||
+        lower.includes("landlord") ||
+        lower.includes("address") ||
+        lower.includes("gender") ||
+        lower.includes("contact")
+      ) {
+        setStep(0);
+      } else if (
+        lower.includes("nationality") ||
+        lower.includes("birth") ||
+        lower.includes("dob") ||
+        lower.includes("passport")
+      ) {
+        setStep(1);
+      } else if (
+        lower.includes("license") ||
+        lower.includes("medical") ||
+        lower.includes("brp") ||
+        lower.includes("insurance")
+      ) {
+        setStep(2);
+      } else if (lower.includes("parent")) {
+        setStep(3);
+      } else if (
+        lower.includes("refus") ||
+        lower.includes("illegal") ||
+        lower.includes("deport") ||
+        lower.includes("visa")
+      ) {
+        setStep(5);
+      }
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -1018,6 +1089,7 @@ export default function CandidateApplicationForm({
       const result = await saveApplicationDraft(payload);
 
       if (result.ok) {
+        toast.success("Draft saved successfully", { duration: 4000 });
         try {
           localStorage.setItem(
             "elitepic_application_draft",
@@ -1027,14 +1099,19 @@ export default function CandidateApplicationForm({
           /* ignore storage errors */
         }
       } else {
+        const resData = result.error?.response?.data;
         const status = result.error?.response?.status;
-        if (status === 403) {
-          setApiError(
-            result.error.response.data?.message ||
-            "Your application is locked and cannot be edited. Contact your caseworker.",
-          );
-          return;
-        }
+        const errMsg =
+          status === 403
+            ? resData?.message ||
+              "Your application is locked and cannot be edited. Contact your caseworker."
+            : resData?.message ||
+              resData?.error ||
+              result.error?.message ||
+              "Failed to save draft";
+
+        setApiError(errMsg);
+        toast.error(errMsg, { duration: 6000 });
         try {
           localStorage.setItem(
             "elitepic_application_draft",
@@ -2767,6 +2844,53 @@ export default function CandidateApplicationForm({
                   </button>
                 </div>
               )}
+
+            {/* Bottom API/Validation error banner — always visible directly above action buttons */}
+            {apiError && (
+              <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm">
+                <svg
+                  className="mt-0.5 h-5 w-5 shrink-0 text-red-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-xs font-bold uppercase tracking-wider text-red-700">
+                    Submission Error
+                  </p>
+                  <p className="text-sm font-semibold text-red-900 mt-0.5">
+                    {apiError}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setApiError(null)}
+                  className="ml-auto shrink-0 text-red-400 hover:text-red-600 p-1"
+                  aria-label="Dismiss error"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            )}
 
             {!formDisabled && (
               <div className="flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">

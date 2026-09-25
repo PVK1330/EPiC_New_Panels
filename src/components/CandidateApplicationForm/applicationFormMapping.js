@@ -312,16 +312,17 @@ export function candidateRowToApplicationForm(c) {
     // Resolve country ISO code from stored dial code (e.g. "+44" → "GB").
     // getCountriesForCallingCode returns an array; pick the first (canonical) one.
     let contactCountryCode = "GB";
-    if (c.country_code) {
+    const dial = c.country_code || app.country_code || app.user?.country_code;
+    if (dial) {
       try {
-        const dialDigits = String(c.country_code).replace(/^\+/, "");
+        const dialDigits = String(dial).replace(/^\+/, "");
         const matches = getCountriesForCallingCode(dialDigits);
         if (matches && matches.length > 0) contactCountryCode = matches[0];
       } catch {
         // unknown dial code — keep default
       }
     }
-    const contactNumber = c.mobile || c.phone || "";
+    const contactNumber = c.mobile || c.phone || app.contactNumber || app.user?.mobile || "";
 
     // Alternate contact number is stored as one string, optionally prefixed
     // with its dial code (e.g. "+44 7911123456") — split it back into the ISO
@@ -342,9 +343,9 @@ export function candidateRowToApplicationForm(c) {
     return {
       ...base,
       // Core fields from user table
-      firstName: c.first_name ?? c.firstName ?? "",
-      lastName: c.last_name ?? c.lastName ?? "",
-      email: c.email ?? "",
+      firstName: c.first_name || c.firstName || app.firstName || app.user?.first_name || "",
+      lastName: c.last_name || c.lastName || app.lastName || app.user?.last_name || "",
+      email: c.email || app.email || app.user?.email || "",
       contactCountryCode,
       contactNumber,
       
@@ -352,8 +353,8 @@ export function candidateRowToApplicationForm(c) {
       applicationType: app.applicationType || "Single",
       gender: app.gender || "",
       relationshipStatus: app.relationshipStatus || "",
-      address: app.address || "",
-      addressStartDate: formatDateForInput(app.addressStartDate || app.current_address_start_date),
+      address: app.address || c.address || "",
+      addressStartDate: formatDateForInput(app.addressStartDate || app.current_address_start_date || c.addressStartDate),
       housingStatus: app.housingStatus || app.housing_status || "",
       landlordName: app.landlordName || app.landlord_name || "",
       landlordContactNumber: app.landlordContactNumber || app.landlord_contact_number || "",
@@ -394,7 +395,7 @@ export function candidateRowToApplicationForm(c) {
         : (app.nationality || c.nationality ? [app.nationality || c.nationality] : []),
       birthCountry: app.birthCountry || "",
       placeOfBirth: app.placeOfBirth || "",
-      dob: formatDateForInput(app.dob || c.dob),
+      dob: formatDateForInput(app.dob || c.dob || app.user?.date_of_birth),
       passportNumber: app.passportNumber || "",
       issuingAuthority: app.issuingAuthority || "",
       issueDate: formatDateForInput(app.issueDate),
