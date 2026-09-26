@@ -48,6 +48,7 @@ import {
   assignCase,
 } from "../../services/caseApi";
 import { useToast } from "../../context/ToastContext";
+import { getApiError } from "../../utils/apiError";
 import CaseworkerApplicationTab from "../../components/caseDetail/CaseworkerApplicationTab";
 import { sendBiometricSlot } from "../../services/workflowApi";
 import { formatDate, formatDateLong } from "../../utils/datetime";
@@ -710,13 +711,36 @@ const Cases = () => {
     const e = {};
 
     //  Required selections 
-    if (!newCaseForm.candidateId) e.candidateId = "Please select a candidate";
+    if (!newCaseForm.candidateId) e.candidateId = "Please select a client";
     // Sponsor is optional (BUG-031) — private clients have no sponsor.
     if (!newCaseForm.visaTypeId) e.visaTypeId = "Please select a visa type";
 
-    //  Caseworkers: 1 or 2 required 
-    const n = newCaseForm.assignedCaseworkerIds?.length || 0;
-    if (n !== 1) e.assignedCaseworkers = "Select one caseworker";
+    // Strictly exactly 2 caseworkers per case required.
+    // The creating caseworker is automatically included by the backend,
+    // so exactly 1 additional caseworker must be selected.
+    const currentCwId = Number(user?.id || user?.userId);
+    const selectedCwIds = (
+      Array.isArray(newCaseForm.assignedCaseworkerIds)
+        ? newCaseForm.assignedCaseworkerIds
+        : newCaseForm.assignedCaseworkerIds
+        ? [newCaseForm.assignedCaseworkerIds]
+        : []
+    )
+      .map((id) => Number(id))
+      .filter((id) => !isNaN(id) && id > 0);
+
+    const finalCwSet = new Set(selectedCwIds);
+    if (currentCwId && !isNaN(currentCwId) && currentCwId > 0) {
+      finalCwSet.add(currentCwId);
+    }
+    const finalCount =
+      currentCwId && !isNaN(currentCwId) && currentCwId > 0
+        ? finalCwSet.size
+        : selectedCwIds.length + 1;
+
+    if (finalCount !== 2) {
+      e.assignedCaseworkers = "Exactly 2 caseworkers are required (select 1 additional caseworker)";
+    }
 
     //  Target submission date: required, valid, not in the past 
     if (!newCaseForm.targetSubmissionDate) {
@@ -732,7 +756,7 @@ const Cases = () => {
       }
     }
 
-    //  Financials: non-negative, total > 0, paid ‰¤ total 
+    //  Financials: non-negative, total > 0, paid ≤ total 
     const total = Number(newCaseForm.totalAmount);
     const paid = Number(newCaseForm.paidAmount);
     const salary = Number(newCaseForm.salaryOffered);
@@ -847,9 +871,13 @@ const Cases = () => {
     } catch (error) {
       setIsLoading(false);
       console.error("Error creating case:", error);
-      alert(
-        "Error creating case. Please ensure Candidate ID, Business ID, Visa Type, and Petition Type are provided.",
-      );
+      showToast({
+        message: getApiError(
+          error,
+          "Error creating case. Please check the required fields and try again.",
+        ),
+        variant: "danger",
+      });
     }
   }, [
     newCaseForm,

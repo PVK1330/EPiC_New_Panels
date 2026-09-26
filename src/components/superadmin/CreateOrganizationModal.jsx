@@ -28,6 +28,7 @@ const SORTED_COUNTRIES = [...COUNTRIES].sort((a, b) =>
 const initialForm = () => ({
   name: '',
   slug: '',
+  code: '',
   primaryEmail: '',
   country: 'United Kingdom',
   plan_id: '',
@@ -136,7 +137,11 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
 
     setSubmitting(true);
     try {
-      await onSubmit({ ...formData, slug });
+      await onSubmit({
+        ...formData,
+        slug,
+        code: formData.code?.trim() ? formData.code.trim().toUpperCase() : undefined,
+      });
       onClose();
     } catch (e) {
       const isTimeout =
@@ -237,38 +242,56 @@ const CreateOrganizationModal = ({ isOpen, onClose, onSubmit }) => {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-gray-700 ml-1">Subscription Plan</label>
-            <div className="relative">
-              <select
-                name="plan_id"
-                value={formData.plan_id}
-                onChange={handleChange}
-                disabled={plansLoading}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-sm font-semibold text-secondary outline-none focus:ring-2 focus:ring-primary/10 transition-all appearance-none cursor-pointer disabled:opacity-60"
-              >
-                {plansLoading && <option value="">Loading plans...</option>}
-                {!plansLoading && plans.length === 0 && <option value="">No active plans found</option>}
-                {!plansLoading && plans.map((p) => (
-                  <option key={p.id} value={String(p.id)}>
-                    {p.name} — {formatCurrencyExact(p.price, currency)}/{p.billing_cycle === 'monthly' ? 'mo' : 'yr'}
-                  </option>
-                ))}
-              </select>
-              <RiArrowDownSLine
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                size={18}
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-gray-700 ml-1">Subscription Plan</label>
+              <div className="relative">
+                <select
+                  name="plan_id"
+                  value={formData.plan_id}
+                  onChange={handleChange}
+                  disabled={plansLoading}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-sm font-semibold text-secondary outline-none focus:ring-2 focus:ring-primary/10 transition-all appearance-none cursor-pointer disabled:opacity-60"
+                >
+                  {plansLoading && <option value="">Loading plans...</option>}
+                  {!plansLoading && plans.length === 0 && <option value="">No active plans found</option>}
+                  {!plansLoading && plans.map((p) => (
+                    <option key={p.id} value={String(p.id)}>
+                      {p.name} — {formatCurrencyExact(p.price, currency)}/{p.billing_cycle === 'monthly' ? 'mo' : 'yr'}
+                    </option>
+                  ))}
+                </select>
+                <RiArrowDownSLine
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                  size={18}
+                />
+              </div>
+              {trialSettings.free_trial_enabled ? (
+                <p className="text-[11px] text-green-600 font-semibold ml-1">
+                  ✓ {trialSettings.free_trial_days}-day free trial — admin can access platform immediately.
+                </p>
+              ) : (
+                <p className="text-[11px] text-amber-600 font-semibold ml-1">
+                  ⚠ No trial — payment required before access.
+                </p>
+              )}
             </div>
-            {trialSettings.free_trial_enabled ? (
-              <p className="text-[11px] text-green-600 font-semibold ml-1">
-                ✓ {trialSettings.free_trial_days}-day free trial — admin can access the platform immediately, payment required after trial ends.
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-gray-700 ml-1">
+                Organisation Code <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input
+                name="code"
+                value={formData.code}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-sm font-semibold text-secondary outline-none focus:ring-2 focus:ring-primary/10 transition-all uppercase placeholder:normal-case"
+                placeholder="e.g. ACME (auto-generated if empty)"
+              />
+              <p className="text-[11px] text-gray-400 ml-1">
+                Used by candidates for self-registration.
               </p>
-            ) : (
-              <p className="text-[11px] text-amber-600 font-semibold ml-1">
-                ⚠ No trial — admin will be redirected to billing and must pay for this plan before accessing the platform.
-              </p>
-            )}
+            </div>
           </div>
         </div>
 

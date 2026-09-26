@@ -226,6 +226,7 @@ const SuperadminOrganisations = () => {
     const res = await createOrganisationWithAdmin({
       name: data.name.trim(),
       slug: data.slug?.trim() || undefined,
+      code: data.code?.trim() || undefined,
       primaryEmail: data.primaryEmail.trim(),
       country: data.country?.trim() || null,
       plan_id: data.plan_id ? parseInt(data.plan_id, 10) : undefined,
