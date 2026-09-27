@@ -573,27 +573,64 @@ function validateStep(stepIndex, data) {
       errs.otherBreachDetails = "Please provide details of immigration breach";
     }
     if (data.refusedVisa === "Yes") {
-      const reason = data.refusedVisaReason || data.refusedVisaDetails;
-      if (!reason?.toString().trim()) {
-        errs.refusedVisaReason = "Reason for visa refusal is required";
-      }
-      if (!data.refusedVisaDate) {
-        errs.refusedVisaDate = "Refusal date is required";
-      } else {
-        const refDate = new Date(`${data.refusedVisaDate}T00:00:00`);
-        const today = new Date();
-        today.setHours(23, 59, 59, 999);
-        if (isNaN(refDate.getTime())) {
-          errs.refusedVisaDate = "Enter a valid refusal date";
-        } else if (refDate > today) {
-          errs.refusedVisaDate = "Refusal date cannot be in the future";
+      const refusals = Array.isArray(data.visaRefusals) ? data.visaRefusals : [];
+      if (refusals.length === 0) {
+        const reason = data.refusedVisaReason || data.refusedVisaDetails;
+        if (!reason?.toString().trim()) {
+          errs.refusedVisaReason = "Reason for visa refusal is required";
         }
-      }
-      if (!data.refusedVisaCountry?.toString().trim()) {
-        errs.refusedVisaCountry = "Country of visa refusal is required";
-      }
-      if (!data.refusedVisaType?.toString().trim()) {
-        errs.refusedVisaType = "Visa or application type is required";
+        if (!data.refusedVisaDate) {
+          errs.refusedVisaDate = "Refusal date is required";
+        } else {
+          const refDate = new Date(`${data.refusedVisaDate}T00:00:00`);
+          const today = new Date();
+          today.setHours(23, 59, 59, 999);
+          if (isNaN(refDate.getTime())) {
+            errs.refusedVisaDate = "Enter a valid refusal date";
+          } else if (refDate > today) {
+            errs.refusedVisaDate = "Refusal date cannot be in the future";
+          }
+        }
+        if (!data.refusedVisaCountry?.toString().trim()) {
+          errs.refusedVisaCountry = "Country of visa refusal is required";
+        }
+        if (!data.refusedVisaType?.toString().trim()) {
+          errs.refusedVisaType = "Visa or application type is required";
+        }
+      } else {
+        refusals.forEach((r, idx) => {
+          const rReason = r.reason || r.refusedVisaReason || r.refusedVisaDetails;
+          if (!rReason?.toString().trim()) {
+            errs[`visaRefusal_${idx}_reason`] = "Reason for visa refusal is required";
+            if (idx === 0) errs.refusedVisaReason = "Reason for visa refusal is required";
+          }
+          const rDate = r.refusalDate || r.refusedVisaDate;
+          if (!rDate) {
+            errs[`visaRefusal_${idx}_refusalDate`] = "Refusal date is required";
+            if (idx === 0) errs.refusedVisaDate = "Refusal date is required";
+          } else {
+            const refDate = new Date(`${rDate}T00:00:00`);
+            const today = new Date();
+            today.setHours(23, 59, 59, 999);
+            if (isNaN(refDate.getTime())) {
+              errs[`visaRefusal_${idx}_refusalDate`] = "Enter a valid refusal date";
+              if (idx === 0) errs.refusedVisaDate = "Enter a valid refusal date";
+            } else if (refDate > today) {
+              errs[`visaRefusal_${idx}_refusalDate`] = "Refusal date cannot be in the future";
+              if (idx === 0) errs.refusedVisaDate = "Refusal date cannot be in the future";
+            }
+          }
+          const rCountry = r.country || r.refusedVisaCountry;
+          if (!rCountry?.toString().trim()) {
+            errs[`visaRefusal_${idx}_country`] = "Country of visa refusal is required";
+            if (idx === 0) errs.refusedVisaCountry = "Country of visa refusal is required";
+          }
+          const rType = r.visaType || r.refusedVisaType;
+          if (!rType?.toString().trim()) {
+            errs[`visaRefusal_${idx}_visaType`] = "Visa or application type is required";
+            if (idx === 0) errs.refusedVisaType = "Visa or application type is required";
+          }
+        });
       }
     }
     if (data.refusedEntry === "Yes" && !data.refusedEntryDetails?.toString().trim()) {
@@ -2282,91 +2319,247 @@ export default function CandidateApplicationForm({
                       label="Refused a visa"
                       name="refusedVisa"
                       formData={formData}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "Yes") {
+                          const existingRefusals = Array.isArray(formData.visaRefusals) && formData.visaRefusals.length > 0
+                            ? formData.visaRefusals
+                            : [{
+                                refusalDate: formData.refusedVisaDate || "",
+                                country: formData.refusedVisaCountry || "",
+                                visaType: formData.refusedVisaType || "",
+                                reason: formData.refusedVisaReason || formData.refusedVisaDetails || "",
+                                referenceNumber: formData.refusedVisaReference || "",
+                                details: formData.refusedVisaDetails || "",
+                              }];
+                          setFormData((prev) => ({
+                            ...prev,
+                            refusedVisa: "Yes",
+                            visaRefusals: existingRefusals,
+                          }));
+                        } else {
+                          setFormData((prev) => ({
+                            ...prev,
+                            refusedVisa: "No",
+                            visaRefusals: [],
+                            refusedVisaDate: "",
+                            refusedVisaCountry: "",
+                            refusedVisaType: "",
+                            refusedVisaReason: "",
+                            refusedVisaDetails: "",
+                            refusedVisaReference: "",
+                          }));
+                        }
+                      }}
                     />
                   </div>
                 )}
                 {formData.refusedVisa === "Yes" && (
-                  <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50/40 p-4 space-y-4">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-secondary">
-                      Visa / Application Refusal Details
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="md:col-span-2">
-                        <label className={fieldLabelClass}>Reason for Visa/Application Refusal *</label>
-                        <textarea
-                          name="refusedVisaReason"
-                          value={formData.refusedVisaReason || formData.refusedVisaDetails || ""}
-                          onChange={handleChange}
-                          placeholder="Please provide reason and details of visa/application refusal"
-                          rows={3}
-                          className={`${inputClass} resize-none`}
-                        />
-                        {formErrors.refusedVisaReason && (
-                          <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedVisaReason}</p>
-                        )}
-                      </div>
-                      <div>
-                        <AppInput
-                          label="Refusal Date *"
-                          name="refusedVisaDate"
-                          type="date"
-                          max={new Date().toISOString().split("T")[0]}
-                          formData={formData}
-                          onChange={handleChange}
-                          error={formErrors.refusedVisaDate}
-                        />
-                      </div>
-                      <div>
-                        <AppInput
-                          label="Country of Visa/Application Refusal *"
-                          name="refusedVisaCountry"
-                          as="country"
-                          placeholder="Select refusal country"
-                          formData={formData}
-                          onChange={handleChange}
-                          error={formErrors.refusedVisaCountry}
-                        />
-                      </div>
-                      <div>
-                        <label className={fieldLabelClass}>Visa / Application Type *</label>
-                        <input
-                          id="refusedVisaType"
-                          name="refusedVisaType"
-                          list="refusedVisaTypeSuggestions"
-                          type="text"
-                          value={formData.refusedVisaType ?? ""}
-                          onChange={handleChange}
-                          placeholder="e.g. Student Visa, Work Visa, Visitor Visa"
-                          className={`${inputClass} ${formErrors.refusedVisaType ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
-                        />
-                        <datalist id="refusedVisaTypeSuggestions">
-                          <option value="Student Visa" />
-                          <option value="Work Visa" />
-                          <option value="Visitor Visa" />
-                          <option value="Skilled Worker" />
-                          <option value="Tourist Visa" />
-                          <option value="Business Visa" />
-                          <option value="Spouse / Partner" />
-                          <option value="Graduate" />
-                          <option value="Global Talent" />
-                          <option value="Indefinite Leave to Remain (ILR)" />
-                        </datalist>
-                        {formErrors.refusedVisaType && (
-                          <p className="mt-1 text-xs font-bold text-red-500">{formErrors.refusedVisaType}</p>
-                        )}
-                      </div>
-                      <div>
-                        <AppInput
-                          label="Refusal Reference Number / Details"
-                          name="refusedVisaReference"
-                          placeholder="e.g. REF-123456 or reference details"
-                          formData={formData}
-                          onChange={handleChange}
-                          error={formErrors.refusedVisaReference}
-                        />
-                      </div>
+                  <div className="md:col-span-2 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-secondary">
+                        Previous Visa Refusals
+                      </h4>
+                      <button
+                        type="button"
+                        id="add-refusal-btn"
+                        onClick={() => {
+                          const currentList = Array.isArray(formData.visaRefusals) && formData.visaRefusals.length > 0
+                            ? formData.visaRefusals
+                            : [{
+                                refusalDate: formData.refusedVisaDate || "",
+                                country: formData.refusedVisaCountry || "",
+                                visaType: formData.refusedVisaType || "",
+                                reason: formData.refusedVisaReason || formData.refusedVisaDetails || "",
+                                referenceNumber: formData.refusedVisaReference || "",
+                                details: formData.refusedVisaDetails || "",
+                              }];
+                          const updated = [
+                            ...currentList,
+                            { refusalDate: "", country: "", visaType: "", reason: "", referenceNumber: "", details: "" },
+                          ];
+                          setFormData((prev) => ({
+                            ...prev,
+                            visaRefusals: updated,
+                          }));
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-secondary hover:bg-secondary/90 rounded-lg shadow-sm transition-all"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        + Add Refusal
+                      </button>
                     </div>
+
+                    {((Array.isArray(formData.visaRefusals) && formData.visaRefusals.length > 0)
+                      ? formData.visaRefusals
+                      : [{
+                          refusalDate: formData.refusedVisaDate || "",
+                          country: formData.refusedVisaCountry || "",
+                          visaType: formData.refusedVisaType || "",
+                          reason: formData.refusedVisaReason || formData.refusedVisaDetails || "",
+                          referenceNumber: formData.refusedVisaReference || "",
+                          details: formData.refusedVisaDetails || "",
+                        }]
+                    ).map((refusal, idx) => {
+                      const refusalList = Array.isArray(formData.visaRefusals) && formData.visaRefusals.length > 0
+                        ? formData.visaRefusals
+                        : [{
+                            refusalDate: formData.refusedVisaDate || "",
+                            country: formData.refusedVisaCountry || "",
+                            visaType: formData.refusedVisaType || "",
+                            reason: formData.refusedVisaReason || formData.refusedVisaDetails || "",
+                            referenceNumber: formData.refusedVisaReference || "",
+                            details: formData.refusedVisaDetails || "",
+                          }];
+
+                      const updateItem = (field, value) => {
+                        const next = refusalList.map((r, i) => i === idx ? { ...r, [field]: value } : r);
+                        setFormData((prev) => {
+                          const patch = {
+                            ...prev,
+                            visaRefusals: next,
+                          };
+                          if (idx === 0) {
+                            if (field === "reason") {
+                              patch.refusedVisaReason = value;
+                              patch.refusedVisaDetails = value;
+                            } else if (field === "refusalDate") {
+                              patch.refusedVisaDate = value;
+                            } else if (field === "country") {
+                              patch.refusedVisaCountry = value;
+                            } else if (field === "visaType") {
+                              patch.refusedVisaType = value;
+                            } else if (field === "referenceNumber") {
+                              patch.refusedVisaReference = value;
+                            }
+                          }
+                          return patch;
+                        });
+                      };
+
+                      const removeItem = () => {
+                        if (refusalList.length <= 1) {
+                          const cleared = [{ refusalDate: "", country: "", visaType: "", reason: "", referenceNumber: "", details: "" }];
+                          setFormData((prev) => ({
+                            ...prev,
+                            visaRefusals: cleared,
+                            refusedVisaDate: "",
+                            refusedVisaCountry: "",
+                            refusedVisaType: "",
+                            refusedVisaReason: "",
+                            refusedVisaDetails: "",
+                            refusedVisaReference: "",
+                          }));
+                          return;
+                        }
+                        const next = refusalList.filter((_, i) => i !== idx);
+                        setFormData((prev) => {
+                          const patch = {
+                            ...prev,
+                            visaRefusals: next,
+                          };
+                          if (next.length > 0) {
+                            patch.refusedVisaDate = next[0].refusalDate || "";
+                            patch.refusedVisaCountry = next[0].country || "";
+                            patch.refusedVisaType = next[0].visaType || "";
+                            patch.refusedVisaReason = next[0].reason || "";
+                            patch.refusedVisaDetails = next[0].reason || "";
+                            patch.refusedVisaReference = next[0].referenceNumber || "";
+                          }
+                          return patch;
+                        });
+                      };
+
+                      return (
+                        <div key={refusal.id || `refusal-${idx}`} className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 space-y-4">
+                          <div className="flex items-center justify-between border-b border-blue-100 pb-2">
+                            <span className="text-xs font-bold text-gray-700">Refusal #{idx + 1}</span>
+                            {refusalList.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={removeItem}
+                                className="text-xs font-semibold text-red-500 hover:text-red-700 hover:underline flex items-center gap-1"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="md:col-span-2">
+                              <label className={fieldLabelClass}>Reason for Visa/Application Refusal *</label>
+                              <textarea
+                                value={refusal.reason || ""}
+                                onChange={(e) => updateItem("reason", e.target.value)}
+                                placeholder="Please provide reason and details of visa/application refusal"
+                                rows={3}
+                                className={`${inputClass} resize-none`}
+                              />
+                              {(formErrors[`visaRefusal_${idx}_reason`] || (idx === 0 && formErrors.refusedVisaReason)) && (
+                                <p className="mt-1 text-xs font-bold text-red-500">
+                                  {formErrors[`visaRefusal_${idx}_reason`] || formErrors.refusedVisaReason}
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <label className={fieldLabelClass}>Refusal Date *</label>
+                              <input
+                                type="date"
+                                max={new Date().toISOString().split("T")[0]}
+                                value={refusal.refusalDate || ""}
+                                onChange={(e) => updateItem("refusalDate", e.target.value)}
+                                className={inputClass}
+                              />
+                              {(formErrors[`visaRefusal_${idx}_refusalDate`] || (idx === 0 && formErrors.refusedVisaDate)) && (
+                                <p className="mt-1 text-xs font-bold text-red-500">
+                                  {formErrors[`visaRefusal_${idx}_refusalDate`] || formErrors.refusedVisaDate}
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <label className={fieldLabelClass}>Country of Visa/Application Refusal *</label>
+                              <input
+                                type="text"
+                                value={refusal.country || ""}
+                                onChange={(e) => updateItem("country", e.target.value)}
+                                placeholder="Select or enter refusal country"
+                                className={inputClass}
+                              />
+                              {(formErrors[`visaRefusal_${idx}_country`] || (idx === 0 && formErrors.refusedVisaCountry)) && (
+                                <p className="mt-1 text-xs font-bold text-red-500">
+                                  {formErrors[`visaRefusal_${idx}_country`] || formErrors.refusedVisaCountry}
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <label className={fieldLabelClass}>Visa / Application Type *</label>
+                              <input
+                                type="text"
+                                list="refusedVisaTypeSuggestions"
+                                value={refusal.visaType || ""}
+                                onChange={(e) => updateItem("visaType", e.target.value)}
+                                placeholder="e.g. Student Visa, Work Visa, Visitor Visa"
+                                className={inputClass}
+                              />
+                              {(formErrors[`visaRefusal_${idx}_visaType`] || (idx === 0 && formErrors.refusedVisaType)) && (
+                                <p className="mt-1 text-xs font-bold text-red-500">
+                                  {formErrors[`visaRefusal_${idx}_visaType`] || formErrors.refusedVisaType}
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <label className={fieldLabelClass}>Refusal Reference Number / Details</label>
+                              <input
+                                type="text"
+                                value={refusal.referenceNumber || ""}
+                                onChange={(e) => updateItem("referenceNumber", e.target.value)}
+                                placeholder="e.g. REF-123456 or reference details"
+                                className={inputClass}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 

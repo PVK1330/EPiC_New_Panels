@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import CaseRefLink from "../../components/common/CaseRefLink";
 
 import { Skeleton } from "boneyard-js/react";
 import {
@@ -244,7 +245,10 @@ export default function AdminDashboard() {
           to: "/admin/finance",
         },
         {
-          label: "Visa Alerts",
+          // Phase 2 UAT 3.1: show the firm's alert window (Settings → SLA Rules).
+          label: dashboardStats.caseStats?.visaExpiryAlertDays
+            ? `Visa Alerts (next ${dashboardStats.caseStats.visaExpiryAlertDays} days)`
+            : "Visa Alerts",
           value: (dashboardStats.caseStats?.visaExpiryAlerts || 0).toString(),
           icon: RiErrorWarningLine,
           iconColor: "text-red-500",
@@ -374,7 +378,9 @@ export default function AdminDashboard() {
                         className="hover:bg-gray-50 transition-colors group"
                       >
                         <td className="px-5 py-3.5 font-mono text-[11px] font-bold text-secondary">
-                          {row.caseId || `#${row.id}`}
+                          <CaseRefLink caseRef={row.caseId} fallbackId={row.id} className="text-secondary">
+                            {row.caseId || `#${row.id}`}
+                          </CaseRefLink>
                         </td>
                         <td className="px-5 py-3.5 text-xs font-bold text-gray-700">
                           {row.candidate
@@ -432,7 +438,7 @@ export default function AdminDashboard() {
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-[11px] font-black text-secondary uppercase tracking-tight">
-                          {esc.caseId} — {esc.triggerType || "Issue"}
+                          <CaseRefLink caseRef={esc.caseId} className="text-secondary" /> — {esc.triggerType || "Issue"}
                         </p>
                         <p className="text-[10px] text-gray-500 mt-1 line-clamp-2">
                           {esc.trigger || esc.candidate}
@@ -545,7 +551,7 @@ export default function AdminDashboard() {
                         {conv.case && (
                           <div className="mt-1 flex items-center gap-1.5">
                             <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-widest">
-                              {conv.case.caseId}
+                              <CaseRefLink caseRef={conv.case.caseId} fallbackId={conv.case.id} className="text-blue-600" />
                             </span>
                           </div>
                         )}

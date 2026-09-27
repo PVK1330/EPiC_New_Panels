@@ -41,6 +41,7 @@ const BusinessMessages = () => {
         initials: u.initials,
         role: (u.role?.toLowerCase() === 'candidate' ? 'Client' : u.role) || "User",
         profile_pic: u.profile_pic || u.avatar_url,
+        hasLoggedIn: u.hasLoggedIn,
       });
     });
 
@@ -54,6 +55,7 @@ const BusinessMessages = () => {
           initials: t.initials,
           role: (t.role?.toLowerCase() === 'candidate' ? 'Client' : t.role) || "User",
           profile_pic: t.profile_pic || t.avatar_url,
+          hasLoggedIn: t.hasLoggedIn,
         });
       }
     });
@@ -73,6 +75,7 @@ const BusinessMessages = () => {
         initials: u.initials,
         role: u.role || "User",
         profile_pic: u.profile_pic || u.avatar_url,
+        hasLoggedIn: u.hasLoggedIn,
         preview:
           primary?.preview ||
           (convs.length ? "Open thread" : "No messages yet — click to start"),

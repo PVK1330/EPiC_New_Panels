@@ -3,6 +3,7 @@ import { Calendar } from "lucide-react";
 import { formatDateLong } from "../../utils/datetime";
 import CaseWorkflowProgress from "../case/CaseWorkflowProgress";
 import CaseWorkflowBadge from "../case/CaseWorkflowBadge";
+import TargetDateVisaWarning from "../case/TargetDateVisaWarning";
 
 const Field = ({ label, children }) => (
   <div>
@@ -83,11 +84,12 @@ const CaseDetailOverview = ({ data }) => {
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Visa Type</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Application Type</p>
             <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-100 text-blue-800">
               {k.visaType}
             </span>
           </div>
+          <Field label="Client's Current Visa">{k.currentVisa || "—"}</Field>
           <div>
             <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Workflow stage</p>
             <CaseWorkflowBadge caseRecord={{ caseStage: k.caseStage, status: k.caseStatus }} />
@@ -101,8 +103,10 @@ const CaseDetailOverview = ({ data }) => {
           <Field label="Date Opened">{k.dateOpened}</Field>
           <Field label="Target Date">
             <span className="text-green-600 font-bold">{k.targetDate}</span>
+            {/* Phase 2 UAT 3.2 */}
+            <TargetDateVisaWarning targetDate={k.targetDateRaw} visaExpiry={k.visaExpiryRaw} />
           </Field>
-          <Field label="Visa Expiry">
+          <Field label="Current Visa Expiry">
             <span className="text-green-600 font-bold">{k.visaExpiry}</span>
           </Field>
           <div>

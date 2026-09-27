@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
+import CaseRefLink from "../../components/common/CaseRefLink";
 import { CalendarDays, Check, Bell, Send, MessageSquareMore } from "lucide-react";
 import api from "../../services/api";
 import {
@@ -361,11 +362,19 @@ const CaseworkerDashboard = () => {
                   <tr
                     key={row.id}
                     className="hover:bg-gray-50/80 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/caseworker/cases`)}
+                    onClick={() =>
+                      navigate(
+                        row.caseId
+                          ? `/caseworker/cases/${encodeURIComponent(row.caseId)}`
+                          : `/caseworker/cases`,
+                      )
+                    }
                   >
                     <td className="py-3 px-4">
                       <span className="font-mono text-xs font-black text-secondary">
-                        {row.caseId || `#C-${row.id}`}
+                        <CaseRefLink role="caseworker" caseRef={row.caseId} fallbackId={row.id} className="text-secondary">
+                          {row.caseId || `#C-${row.id}`}
+                        </CaseRefLink>
                       </span>
                     </td>
                     <td className="py-3 px-4 text-sm font-bold text-gray-900">
@@ -454,7 +463,12 @@ const CaseworkerDashboard = () => {
                       {t.title}
                     </p>
                     <p className="text-[11px] font-mono font-bold text-gray-500 mt-0.5">
-                      {t.case ? `${t.case.caseId} · ${t.case.candidate?.first_name} ${t.case.candidate?.last_name}` : "No case"}
+                      {t.case ? (
+                        <>
+                          <CaseRefLink role="caseworker" caseRef={t.case.caseId} fallbackId={t.case.id} className="text-gray-600" />
+                          {` · ${t.case.candidate?.first_name} ${t.case.candidate?.last_name}`}
+                        </>
+                      ) : "No case"}
                     </p>
                   </div>
                   <span

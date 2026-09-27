@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import CaseRefLink from "../../components/common/CaseRefLink";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiPlus, FiTable, FiBriefcase, FiX, FiCalendar, FiUser, FiBriefcase as FiWork, FiFileText } from "react-icons/fi";
 import { Banknote } from "lucide-react";
@@ -427,7 +428,9 @@ const AdminPipeline = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Case</label>
-                      <p className="text-sm font-mono font-semibold text-primary mt-1">{selectedCase.caseId}</p>
+                      <p className="text-sm font-mono font-semibold text-primary mt-1">
+                        <CaseRefLink caseRef={selectedCase.caseId} fallbackId={selectedCase.id} className="text-primary" />
+                      </p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Workflow stage</label>
@@ -440,7 +443,7 @@ const AdminPipeline = () => {
                       <p className="text-sm font-semibold mt-1">{selectedCase.status || "—"}</p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Candidate</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Client</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
                         <FiUser size={14} className="text-gray-400" />
                         {selectedCase.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : '—'}
@@ -458,7 +461,7 @@ const AdminPipeline = () => {
                       <p className="text-sm font-semibold mt-1">{selectedCase.visaType?.name || '—'}</p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Petition Type</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Application Type</label>
                       <p className="text-sm font-semibold mt-1">{selectedCase.petitionType?.name || '—'}</p>
                     </div>
                     <div>
@@ -473,32 +476,32 @@ const AdminPipeline = () => {
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">LCA Number</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">CoS Reference Number</label>
                       <p className="text-sm font-semibold mt-1">{selectedCase.lcaNumber || '—'}</p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Receipt Number</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">UKVI Reference Number</label>
                       <p className="text-sm font-semibold mt-1">{selectedCase.receiptNumber || '—'}</p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Salary Offered</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
                         <Banknote size={14} className="text-gray-400" />
-                        {selectedCase.salaryOffered || 0}
+                        £{selectedCase.salaryOffered || 0}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Total Amount</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
                         <Banknote size={14} className="text-gray-400" />
-                        {selectedCase.totalAmount || 0}
+                        £{selectedCase.totalAmount || 0}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Paid Amount</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
                         <Banknote size={14} className="text-gray-400" />
-                        {selectedCase.paidAmount || 0}
+                        £{selectedCase.paidAmount || 0}
                       </p>
                     </div>
                     <div className="col-span-1 sm:col-span-2">

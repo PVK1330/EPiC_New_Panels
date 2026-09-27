@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import Button from "../Button";
 import Input from "../Input";
 import DatePicker from "../DatePicker";
+import TargetDateVisaWarning from "../case/TargetDateVisaWarning";
 import NationalitySelect from "../NationalitySelect";
 
 const priorityLevels = [
@@ -173,10 +174,10 @@ function AdminCaseFormModal({
                 {errors.visaTypeId && <span className="text-xs text-red-500">{errors.visaTypeId}</span>}
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">Petition Type</label>
+                <label className="text-sm font-medium text-gray-700">Application Type</label>
                 <select name="petitionTypeId" value={formData.petitionTypeId} onChange={onChange}
                   className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all">
-                  <option value="">Select type</option>
+                  <option value="">Select application type</option>
                   {petitionTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
@@ -187,9 +188,18 @@ function AdminCaseFormModal({
                   {priorityLevels.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
                 </select>
               </div>
-              <DatePicker label="Target Submission Date" name="targetSubmissionDate" value={formData.targetSubmissionDate} onChange={onChange} error={errors.targetSubmissionDate} min={new Date().toISOString().split("T")[0]} required />
-              <Input label="LCA Number" name="lcaNumber" value={formData.lcaNumber} onChange={onChange} placeholder="e.g. I-200-24001" />
-              <Input label="Receipt Number" name="receiptNumber" value={formData.receiptNumber} onChange={onChange} placeholder="e.g. EAC240..." />
+              <div>
+                <DatePicker label="Target Submission Date" name="targetSubmissionDate" value={formData.targetSubmissionDate} onChange={onChange} error={errors.targetSubmissionDate} min={new Date().toISOString().split("T")[0]} required />
+                {/* Phase 2 UAT 3.2: warn (not block) when the target date is after the client's visa expiry */}
+                <TargetDateVisaWarning
+                  targetDate={formData.targetSubmissionDate}
+                  visaExpiry={
+                    (candidates || []).find((c) => String(c.id) === String(formData.candidateId))?.application?.visaEndDate
+                  }
+                />
+              </div>
+              <Input label="CoS Reference Number" name="lcaNumber" value={formData.lcaNumber} onChange={onChange} placeholder="e.g. CoS reference number" />
+              <Input label="UKVI Reference Number" name="receiptNumber" value={formData.receiptNumber} onChange={onChange} placeholder="e.g. UAN / GWF reference" />
             </div>
           </div>
 
@@ -208,13 +218,13 @@ function AdminCaseFormModal({
           <div>
             <h4 className="text-sm font-black text-secondary mb-4">Financial Information</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Input label="Salary Offered ($)" name="salaryOffered" type="number" min="0" value={formData.salaryOffered} onChange={onChange} error={errors.salaryOffered} placeholder="Annual salary" />
-              <Input label="Total Amount ($)" name="totalAmount" type="number" min="0" step="0.01" value={formData.totalAmount} onChange={onChange} error={errors.totalAmount} placeholder="Total fee" required />
-              <Input label="Paid Amount ($)" name="paidAmount" type="number" min="0" step="0.01" value={formData.paidAmount} onChange={onChange} error={errors.paidAmount} placeholder="Amount paid so far" />
-              <Input label="CCL fee (£) — amount candidate must pay" name="proposedAmount" type="number" min="0" step="0.01" value={formData.proposedAmount} onChange={onChange} error={errors.proposedAmount} placeholder="e.g. 1500.00" />
+              <Input label="Salary Offered (£)" name="salaryOffered" type="number" min="0" value={formData.salaryOffered} onChange={onChange} error={errors.salaryOffered} placeholder="Annual salary" />
+              <Input label="Total Amount (£)" name="totalAmount" type="number" min="0" step="0.01" value={formData.totalAmount} onChange={onChange} error={errors.totalAmount} placeholder="Total fee" required />
+              <Input label="Paid Amount (£)" name="paidAmount" type="number" min="0" step="0.01" value={formData.paidAmount} onChange={onChange} error={errors.paidAmount} placeholder="Amount paid so far" />
+              <Input label="CCL fee (£) — amount Client must pay" name="proposedAmount" type="number" min="0" step="0.01" value={formData.proposedAmount} onChange={onChange} error={errors.proposedAmount} placeholder="e.g. 1500.00" />
             </div>
             <p className="text-xs font-bold text-blue-800 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mt-2">
-              Sets the Client Care Letter fee issued to the candidate. This is the amount they must pay.
+              Sets the Client Care Letter fee issued to the Client. This is the amount they must pay.
             </p>
           </div>
 

@@ -37,6 +37,7 @@ import EmailSettings from "../../components/admin/settings/EmailSettings";
 import PaymentSettings from "../../components/admin/settings/PaymentSettings";
 import SmtpSettings from "../../components/admin/settings/SmtpSettings";
 import SLASettings from "../../components/admin/settings/SLASettings";
+import VisaAlertSettings from "../../components/admin/settings/VisaAlertSettings";
 import DepartmentSettings from "../../components/admin/settings/DepartmentSettings";
 import CategorySettings from "../../components/admin/settings/CategorySettings";
 // Lazy: pulls in react-quill (heavy rich-text editor) — only load when the email editor modal opens.
@@ -538,7 +539,7 @@ export default function AdminSettings() {
       loadData();
       setPetitionModalOpen(false);
       showToast({
-        message: `Petition type ${petitionModalMode === "add" ? "added" : "updated"}.`,
+        message: `Application type ${petitionModalMode === "add" ? "added" : "updated"}.`,
       });
     } catch (e) {
       setPetitionFormError(getApiError(e));
@@ -1004,8 +1005,8 @@ export default function AdminSettings() {
                 }}
                 onDeletePetition={async (id) => {
                   const confirmed = await confirm({
-                    title: "Delete Petition Type?",
-                    message: "This petition type will be permanently removed.",
+                    title: "Delete Application Type?",
+                    message: "This application type will be permanently removed.",
                     confirmLabel: "Delete",
                     variant: "danger",
                   });
@@ -1212,6 +1213,7 @@ export default function AdminSettings() {
               />
             )}
 
+            {configTab === "sla" && <VisaAlertSettings />}
             {configTab === "sla" && (
               <SLASettings
                 rules={slaRules}
@@ -1285,22 +1287,22 @@ export default function AdminSettings() {
       <Modal
         open={petitionModalOpen}
         onClose={() => setPetitionModalOpen(false)}
-        title="Petition Type Setup"
+        title="Application Type Setup"
       >
         <form onSubmit={submitPetitionForm} className="space-y-4 p-2">
           <Input
-            label="Petition Identifier"
+            label="Application Type Name"
             value={petitionFormName}
             onChange={(e) => setPetitionFormName(e.target.value)}
             error={petitionFormError}
-            placeholder="e.g. Form I-140"
+            placeholder="e.g. Extension"
             autoFocus
           />
           <Button
             type="submit"
             className="w-full rounded-2xl py-4 shadow-xl shadow-primary/20"
           >
-            Initialize Petition
+            Save Application Type
           </Button>
         </form>
       </Modal>

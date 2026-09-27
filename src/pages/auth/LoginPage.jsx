@@ -99,7 +99,18 @@ export default function LoginPage() {
     return getDashboardRouteForUser(user);
   };
 
-  const [view, setView] = useState(VIEWS.login);
+  // Firm registration links look like /login?tab=register&org=CODE — open the
+  // registration form directly (Phase 2 UAT 2.1). Anything else starts on Sign in.
+  const [view, setView] = useState(() => {
+    try {
+      const tab = new URLSearchParams(location.search).get("tab");
+      return tab && ["register", "signup", "sign-up"].includes(tab.toLowerCase())
+        ? VIEWS.register
+        : VIEWS.login;
+    } catch {
+      return VIEWS.login;
+    }
+  });
 
   useEffect(() => {
     try {

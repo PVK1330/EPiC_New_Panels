@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import CaseWorkflowPanel from "../../../components/case/CaseWorkflowPanel";
 import CaseWorkflowGuidance from "../../../components/case/CaseWorkflowGuidance";
 import CaseWorkflowActions from "../../../components/case/CaseWorkflowActions";
+import TargetDateVisaWarning from "../../../components/case/TargetDateVisaWarning";
 import PrintClientApplicationButton from "../../../components/CandidateApplicationForm/PrintClientApplicationButton";
 import {
   IMMIGRATION_CASE_STEPS,
@@ -62,7 +63,11 @@ function CasesOverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }
         </Field>
         <Field label="Client name">{c.candidate}</Field>
         <Field label="Sponsor name">{c.business}</Field>
-        <Field label="Visa type">{c.visa}</Field>
+        <Field label="Application type">{c.visa}</Field>
+        <Field label="Client's current visa">{c.currentVisa || <span className="text-gray-500">—</span>}</Field>
+        <Field label="Current visa expiry">
+          {c.visaExpiry ? formatTarget(String(c.visaExpiry).slice(0, 10)) : <span className="text-gray-500">—</span>}
+        </Field>
         <Field label="Case status">
           <span
             className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black ${st.className}`}
@@ -78,7 +83,11 @@ function CasesOverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }
             <span className="text-gray-500">—</span>
           )}
         </Field>
-        <Field label="Target submission">{formatTarget(c.target)}</Field>
+        <Field label="Target submission">
+          {formatTarget(c.target)}
+          {/* Phase 2 UAT 3.2 */}
+          <TargetDateVisaWarning targetDate={c.target} visaExpiry={c.visaExpiry} />
+        </Field>
         <Field label="Decision date">
           {c.decisionDate ? (
             formatTarget(String(c.decisionDate).slice(0, 10))

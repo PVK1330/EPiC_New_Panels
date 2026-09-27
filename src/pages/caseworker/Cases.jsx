@@ -1,5 +1,7 @@
 import { useMemo, useState, useCallback, useEffect, Fragment, lazy, Suspense } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
+import CaseRefLink from "../../components/common/CaseRefLink";
+import TargetDateVisaWarning from "../../components/case/TargetDateVisaWarning";
 import {
   Plus,
   Download,
@@ -202,6 +204,9 @@ const Cases = () => {
           legacyStatus: c.status,
           caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
+          // Phase 2 UAT 3.1/3.2: client's current visa + the expiry that applies to the case
+          currentVisa: c.currentVisa || c.candidate?.application?.visaType || null,
+          visaExpiry: c.visaExpiry || c.visaEndDate || c.candidate?.application?.visaEndDate || null,
           created_at: c.created_at,
           decisionDate: c.decisionDate,
           submissionDate: c.submissionDate,
@@ -497,6 +502,9 @@ const Cases = () => {
             legacyStatus: c.status,
             caseStage: c.caseStage,
             target: c.targetSubmissionDate || c.created_at,
+            // Phase 2 UAT 3.1/3.2: client's current visa + the expiry that applies to the case
+            currentVisa: c.currentVisa || c.candidate?.application?.visaType || null,
+            visaExpiry: c.visaExpiry || c.visaEndDate || c.candidate?.application?.visaEndDate || null,
             created_at: c.created_at,
             decisionDate: c.decisionDate,
             submissionDate: c.submissionDate,
@@ -640,6 +648,9 @@ const Cases = () => {
           legacyStatus: c.status,
           caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
+          // Phase 2 UAT 3.1/3.2: client's current visa + the expiry that applies to the case
+          currentVisa: c.currentVisa || c.candidate?.application?.visaType || null,
+          visaExpiry: c.visaExpiry || c.visaEndDate || c.candidate?.application?.visaEndDate || null,
           created_at: c.created_at,
           decisionDate: c.decisionDate,
           submissionDate: c.submissionDate,
@@ -715,31 +726,18 @@ const Cases = () => {
     // Sponsor is optional (BUG-031) — private clients have no sponsor.
     if (!newCaseForm.visaTypeId) e.visaTypeId = "Please select a visa type";
 
-    // Strictly exactly 2 caseworkers per case required.
-    // The creating caseworker is automatically included by the backend,
-    // so exactly 1 additional caseworker must be selected.
-    const currentCwId = Number(user?.id || user?.userId);
-    const selectedCwIds = (
+    // BUG-017 / Phase 2: a case has exactly ONE caseworker. Leaving the field
+    // empty assigns the case to the caseworker creating it (the backend does
+    // this); choosing someone else assigns it to that caseworker only.
+    const selectedCwCount = (
       Array.isArray(newCaseForm.assignedCaseworkerIds)
         ? newCaseForm.assignedCaseworkerIds
         : newCaseForm.assignedCaseworkerIds
         ? [newCaseForm.assignedCaseworkerIds]
         : []
-    )
-      .map((id) => Number(id))
-      .filter((id) => !isNaN(id) && id > 0);
-
-    const finalCwSet = new Set(selectedCwIds);
-    if (currentCwId && !isNaN(currentCwId) && currentCwId > 0) {
-      finalCwSet.add(currentCwId);
-    }
-    const finalCount =
-      currentCwId && !isNaN(currentCwId) && currentCwId > 0
-        ? finalCwSet.size
-        : selectedCwIds.length + 1;
-
-    if (finalCount !== 2) {
-      e.assignedCaseworkers = "Exactly 2 caseworkers are required (select 1 additional caseworker)";
+    ).filter((id) => id !== null && id !== undefined && id !== "").length;
+    if (selectedCwCount > 1) {
+      e.assignedCaseworkers = "A case can only be assigned to one caseworker";
     }
 
     //  Target submission date: required, valid, not in the past 
@@ -839,6 +837,9 @@ const Cases = () => {
           legacyStatus: c.status,
           caseStage: c.caseStage,
           target: c.targetSubmissionDate || c.created_at,
+          // Phase 2 UAT 3.1/3.2: client's current visa + the expiry that applies to the case
+          currentVisa: c.currentVisa || c.candidate?.application?.visaType || null,
+          visaExpiry: c.visaExpiry || c.visaEndDate || c.candidate?.application?.visaEndDate || null,
           created_at: c.created_at,
           decisionDate: c.decisionDate,
           submissionDate: c.submissionDate,
@@ -1187,7 +1188,12 @@ const Cases = () => {
                             onClick={() => openDetail(c)}
                           >
                             <Td className="text-sm font-bold text-secondary">
-                              {c.caseId}
+                              <CaseRefLink
+                                role="caseworker"
+                                caseRef={c.caseId}
+                                fallbackId={c.id}
+                                className="text-secondary"
+                              />
                             </Td>
                             <Td className="text-sm font-bold text-gray-900">
                               {c.candidate?.first_name && c.candidate?.last_name
@@ -1630,7 +1636,7 @@ const Cases = () => {
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">
-                  Petition Type
+                  Application Type
                 </label>
                 <select
                   name="petitionTypeId"
@@ -1638,7 +1644,7 @@ const Cases = () => {
                   onChange={handleInputChange}
                   className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
                 >
-                  <option value="">Select type</option>
+                  <option value="">Select application type</option>
                   {petitionTypes.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -1675,30 +1681,37 @@ const Cases = () => {
                   min={new Date().toISOString().split("T")[0]}
                   placeholder="Select target date"
                 />
+                {/* Phase 2 UAT 3.2: warn (not block) when after the client's visa expiry */}
+                <TargetDateVisaWarning
+                  targetDate={newCaseForm.targetSubmissionDate}
+                  visaExpiry={
+                    candidates.find((c) => String(c.id) === String(newCaseForm.candidateId))?.application?.visaEndDate
+                  }
+                />
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  LCA Number
+                  CoS Reference Number
                 </label>
                 <input
                   type="text"
                   name="lcaNumber"
                   value={newCaseForm.lcaNumber}
                   onChange={handleInputChange}
-                  placeholder="e.g. I-200-24001"
+                  placeholder="e.g. CoS reference number"
                   className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
                 />
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Receipt Number
+                  UKVI Reference Number
                 </label>
                 <input
                   type="text"
                   name="receiptNumber"
                   value={newCaseForm.receiptNumber}
                   onChange={handleInputChange}
-                  placeholder="e.g. EAC240..."
+                  placeholder="e.g. UAN / GWF reference"
                   className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
                 />
               </div>
@@ -1722,6 +1735,8 @@ const Cases = () => {
                 value={newCaseForm.assignedCaseworkerIds || []}
                 onChange={handleCaseworkerIdsChange}
                 error={newCaseErrors.assignedCaseworkers}
+                required={false}
+                hint="Leave empty to assign this case to yourself."
               />
             </div>
           </div>
@@ -1733,7 +1748,7 @@ const Cases = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Salary Offered ($)
+                  Salary Offered (£)
                 </label>
                 <input
                   type="number"
@@ -1753,7 +1768,7 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Total Amount ($) <span className="text-red-500">*</span>
+                  Total Amount (£) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -1773,7 +1788,7 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Paid Amount ($)
+                  Paid Amount (£)
                 </label>
                 <input
                   type="number"
@@ -2334,7 +2349,7 @@ const Cases = () => {
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">
-                  Petition Type
+                  Application Type
                 </label>
                 <select
                   name="petitionTypeId"
@@ -2342,7 +2357,7 @@ const Cases = () => {
                   onChange={handleInputChange}
                   className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
                 >
-                  <option value="">Select type</option>
+                  <option value="">Select application type</option>
                   {petitionTypes.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -2379,30 +2394,37 @@ const Cases = () => {
                   min={new Date().toISOString().split("T")[0]}
                   placeholder="Select target date"
                 />
+                {/* Phase 2 UAT 3.2: warn (not block) when after the client's visa expiry */}
+                <TargetDateVisaWarning
+                  targetDate={newCaseForm.targetSubmissionDate}
+                  visaExpiry={
+                    candidates.find((c) => String(c.id) === String(newCaseForm.candidateId))?.application?.visaEndDate
+                  }
+                />
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  LCA Number
+                  CoS Reference Number
                 </label>
                 <input
                   type="text"
                   name="lcaNumber"
                   value={newCaseForm.lcaNumber}
                   onChange={handleInputChange}
-                  placeholder="e.g. I-200-24001"
+                  placeholder="e.g. CoS reference number"
                   className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
                 />
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Receipt Number
+                  UKVI Reference Number
                 </label>
                 <input
                   type="text"
                   name="receiptNumber"
                   value={newCaseForm.receiptNumber}
                   onChange={handleInputChange}
-                  placeholder="e.g. EAC240..."
+                  placeholder="e.g. UAN / GWF reference"
                   className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
                 />
               </div>
@@ -2426,6 +2448,8 @@ const Cases = () => {
                 value={newCaseForm.assignedCaseworkerIds || []}
                 onChange={handleCaseworkerIdsChange}
                 error={newCaseErrors.assignedCaseworkers}
+                required={false}
+                hint="Leave empty to assign this case to yourself."
               />
             </div>
           </div>
@@ -2437,7 +2461,7 @@ const Cases = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Salary Offered ($)
+                  Salary Offered (£)
                 </label>
                 <input
                   type="number"
@@ -2457,7 +2481,7 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Total Amount ($) <span className="text-red-500">*</span>
+                  Total Amount (£) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -2477,7 +2501,7 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Paid Amount ($)
+                  Paid Amount (£)
                 </label>
                 <input
                   type="number"

@@ -241,11 +241,41 @@ export function mapApplicationToCandidateRow(application, overrides = {}) {
     otherBreach: application.otherBreach || null,
     otherBreachDetails: application.otherBreachDetails || null,
     refusedVisa: application.refusedVisa || null,
-    refusedVisaReason: application.refusedVisaReason || application.refusedVisaDetails || null,
-    refusedVisaDate: application.refusedVisaDate || null,
-    refusedVisaCountry: application.refusedVisaCountry || null,
-    refusedVisaType: application.refusedVisaType || null,
-    refusedVisaReference: application.refusedVisaReference || null,
+    visaRefusals: Array.isArray(application.visaRefusals)
+      ? application.visaRefusals.map((r) => ({
+          ...(r.id ? { id: r.id } : {}),
+          refusalDate: formatDateForInput(r.refusalDate),
+          country: r.country || r.refusedVisaCountry || "",
+          visaType: r.visaType || r.refusedVisaType || "",
+          reason: r.reason || r.refusedVisaReason || r.refusedVisaDetails || "",
+          referenceNumber: r.referenceNumber || r.refusedVisaReference || null,
+          details: r.details || null,
+        })).filter((r) => r.refusalDate || r.country || r.visaType || r.reason)
+      : (application.refusedVisa === 'Yes' && application.refusedVisaDate
+          ? [{
+              refusalDate: formatDateForInput(application.refusedVisaDate),
+              country: application.refusedVisaCountry || "",
+              visaType: application.refusedVisaType || "",
+              reason: application.refusedVisaReason || application.refusedVisaDetails || "",
+              referenceNumber: application.refusedVisaReference || null,
+              details: application.refusedVisaDetails || null,
+            }]
+          : []),
+    refusedVisaReason: (Array.isArray(application.visaRefusals) && application.visaRefusals.length > 0)
+      ? (application.visaRefusals[0].reason || application.visaRefusals[0].refusedVisaReason || application.refusedVisaReason || null)
+      : (application.refusedVisaReason || application.refusedVisaDetails || null),
+    refusedVisaDate: (Array.isArray(application.visaRefusals) && application.visaRefusals.length > 0)
+      ? (formatDateForInput(application.visaRefusals[0].refusalDate) || application.refusedVisaDate || null)
+      : (application.refusedVisaDate || null),
+    refusedVisaCountry: (Array.isArray(application.visaRefusals) && application.visaRefusals.length > 0)
+      ? (application.visaRefusals[0].country || application.visaRefusals[0].refusedVisaCountry || application.refusedVisaCountry || null)
+      : (application.refusedVisaCountry || null),
+    refusedVisaType: (Array.isArray(application.visaRefusals) && application.visaRefusals.length > 0)
+      ? (application.visaRefusals[0].visaType || application.visaRefusals[0].refusedVisaType || application.refusedVisaType || null)
+      : (application.refusedVisaType || null),
+    refusedVisaReference: (Array.isArray(application.visaRefusals) && application.visaRefusals.length > 0)
+      ? (application.visaRefusals[0].referenceNumber || application.visaRefusals[0].refusedVisaReference || application.refusedVisaReference || null)
+      : (application.refusedVisaReference || null),
     refusedVisaDetails: application.refusedVisaReason || application.refusedVisaDetails || null,
     refusedEntry: application.refusedEntry || null,
     refusedEntryDetails: application.refusedEntryDetails || null,
@@ -439,7 +469,28 @@ export function candidateRowToApplicationForm(c) {
       falseInfoDetails: app.falseInfoDetails || "",
       otherBreach: app.otherBreach || "",
       otherBreachDetails: app.otherBreachDetails || "",
-      refusedVisa: app.refusedVisa || "",
+      refusedVisa: app.refusedVisa || (Array.isArray(app.visaRefusals) && app.visaRefusals.length > 0 ? "Yes" : ""),
+      visaRefusals: (Array.isArray(app.visaRefusals) && app.visaRefusals.length > 0)
+        ? app.visaRefusals.map((item) => ({
+            id: item.id || null,
+            refusalDate: formatDateForInput(item.refusalDate),
+            country: item.country || item.refusedVisaCountry || "",
+            visaType: item.visaType || item.refusedVisaType || "",
+            reason: item.reason || item.refusedVisaReason || item.refusedVisaDetails || "",
+            referenceNumber: item.referenceNumber || item.refusedVisaReference || "",
+            details: item.details || "",
+          }))
+        : (app.refusedVisa === "Yes" && (app.refusedVisaDate || app.refusedVisaReason || app.refusedVisaDetails)
+          ? [{
+              id: null,
+              refusalDate: formatDateForInput(app.refusedVisaDate),
+              country: app.refusedVisaCountry || "",
+              visaType: app.refusedVisaType || "",
+              reason: app.refusedVisaReason || app.refusedVisaDetails || "",
+              referenceNumber: app.refusedVisaReference || "",
+              details: app.refusedVisaDetails || "",
+            }]
+          : []),
       refusedVisaReason: app.refusedVisaReason || app.refusedVisaDetails || "",
       refusedVisaDate: formatDateForInput(app.refusedVisaDate),
       refusedVisaCountry: app.refusedVisaCountry || "",

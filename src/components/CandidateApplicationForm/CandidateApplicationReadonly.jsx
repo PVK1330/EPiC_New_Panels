@@ -67,6 +67,7 @@ const FIELD_SECTIONS = [
       "otherBreach",
       "otherBreachDetails",
       "refusedVisa",
+      "visaRefusals",
       "refusedVisaReason",
       "refusedVisaDate",
       "refusedVisaCountry",
@@ -165,6 +166,7 @@ function buildSections(form, customFieldDefinitions = []) {
           refusedVisaType: "refusedVisa",
           refusedVisaReference: "refusedVisa",
           refusedVisaDetails: "refusedVisa",
+          visaRefusals: "refusedVisa",
           refusedEntryDetails: "refusedEntry",
           refusedPermissionDetails: "refusedPermission",
           refusedAsylumDetails: "refusedAsylum",
@@ -175,6 +177,14 @@ function buildSections(form, customFieldDefinitions = []) {
           sponsoredDetails: "sponsored",
         };
         if (PARENT_MAP[key] && form[PARENT_MAP[key]] !== "Yes") {
+          return false;
+        }
+        if (Array.isArray(form.visaRefusals) && form.visaRefusals.length > 0 && [
+          "refusedVisaReason", "refusedVisaDate", "refusedVisaCountry", "refusedVisaType", "refusedVisaReference", "refusedVisaDetails"
+        ].includes(key)) {
+          return false;
+        }
+        if (key === "visaRefusals" && (!form.visaRefusals || form.visaRefusals.length === 0)) {
           return false;
         }
         if (key === "refusedVisaDetails" && form.refusedVisaReason) {
@@ -198,6 +208,23 @@ function buildSections(form, customFieldDefinitions = []) {
               const addr = item.previousAddress || item.address || "";
               const dates = [item.startDate, item.endDate].filter(Boolean).join(" to ");
               return `${idx + 1}. ${addr}${dates ? ` (${dates})` : ""}`;
+            }).join("\n");
+          }
+        }
+        if (key === "visaRefusals") {
+          const list = Array.isArray(form.visaRefusals) ? form.visaRefusals : [];
+          if (list.length === 0) {
+            val = "—";
+          } else {
+            val = list.map((item, idx) => {
+              const parts = [
+                item.refusalDate ? `Date: ${item.refusalDate}` : "",
+                item.visaType ? `Type: ${item.visaType}` : "",
+                item.country ? `Country: ${item.country}` : "",
+                item.reason ? `Reason: ${item.reason}` : "",
+                item.referenceNumber ? `Ref: ${item.referenceNumber}` : "",
+              ].filter(Boolean).join(" · ");
+              return `${idx + 1}. ${parts}`;
             }).join("\n");
           }
         }

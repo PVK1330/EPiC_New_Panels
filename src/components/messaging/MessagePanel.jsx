@@ -1,8 +1,26 @@
-import { ChevronLeft, FileText, Paperclip, Search, Send, X } from "lucide-react";
+import { Check, CheckCheck, ChevronLeft, FileText, Paperclip, Search, Send, X } from "lucide-react";
 import { resolveAssetUrl } from "../../utils/assetUrl";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import useMediaQuery from "../../hooks/useMediaQuery";
 import { API_BASE_URL } from "../../utils/constants";
+
+// Phase 2 UAT 3.4 — status of messages I sent: sent → delivered → read.
+const MESSAGE_STATUS_UI = {
+  sent: { Icon: Check, label: "Sent — waiting for them to open the portal", cls: "text-gray-400" },
+  delivered: { Icon: CheckCheck, label: "Delivered to their portal", cls: "text-gray-400" },
+  read: { Icon: CheckCheck, label: "Read", cls: "text-sky-500" },
+};
+
+const MessageStatusTick = ({ status }) => {
+  const ui = MESSAGE_STATUS_UI[status] || MESSAGE_STATUS_UI.sent;
+  const { Icon } = ui;
+  return (
+    <span className={`inline-flex items-center gap-0.5 ${ui.cls}`} title={ui.label} aria-label={ui.label}>
+      <Icon size={14} strokeWidth={2.5} />
+      <span className="sr-only">{ui.label}</span>
+    </span>
+  );
+};
 
 /**
  * Reusable messages UI used across portals (Candidate/Caseworker/Business/Admin).
@@ -238,6 +256,14 @@ const MessagePanel = ({
                   </p>
                   <p className="text-xs font-bold text-gray-500 truncate">
                     {activeMeta.role ?? "Secure thread"}
+                    {activeMeta.hasLoggedIn === false && (
+                      <span
+                        className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800"
+                        title="They will see your messages after their first login. We email them when a new message is waiting."
+                      >
+                        Hasn't logged in yet
+                      </span>
+                    )}
                   </p>
                 </div>
                 {showOnline && onlineThreadId && activeThreadId === onlineThreadId && (
@@ -290,12 +316,13 @@ const MessagePanel = ({
                           </div>
                         )}
                       </div>
-                      {msg.meta && (
+                      {(msg.meta || msg.from === "me") && (
                         <p
-                          className={`text-[11px] font-bold text-gray-400 mt-1 px-1 ${msg.from === "me" ? "text-right" : "text-left"
+                          className={`text-[11px] font-bold text-gray-400 mt-1 px-1 flex items-center gap-1 ${msg.from === "me" ? "justify-end" : "justify-start"
                             }`}
                         >
                           {msg.meta}
+                          {msg.from === "me" && <MessageStatusTick status={msg.status} />}
                         </p>
                       )}
                     </div>
@@ -305,6 +332,12 @@ const MessagePanel = ({
               </div>
 
               <div className="p-2 sm:p-3 border-t border-gray-100 bg-gray-50/90 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                {/* Phase 2 UAT 3.4: make the channel explicit */}
+                <p className="px-2 pb-1.5 text-[10px] font-bold text-gray-400">
+                  Messages are delivered inside the portal (not by SMS or WhatsApp). If the
+                  recipient isn't online, they get an email saying a message is waiting.
+                  ✓ sent · ✓✓ delivered · <span className="text-sky-500">✓✓</span> read
+                </p>
                 {selectedFile && (
                   <div className="mb-2 px-3 flex items-center gap-2">
                     <div className="bg-primary/10 border border-primary/20 text-primary px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-bold max-w-full">
