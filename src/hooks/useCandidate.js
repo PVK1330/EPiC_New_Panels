@@ -17,6 +17,7 @@ export default function useCandidate() {
     pages: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [visaExpiryAlertsCount, setVisaExpiryAlertsCount] = useState(0);
 
   const fetchCandidates = useCallback(
     async (page, limit, search, status, visaType, paymentStatus) => {
@@ -35,10 +36,15 @@ export default function useCandidate() {
         setPagination(
           payload?.pagination ?? { page, limit, total: 0, pages: 0 },
         );
+        const alertsCount = Number(
+          payload?.visaExpiryAlerts?.count ?? payload?.visaExpiryAlertsCount ?? 0,
+        );
+        setVisaExpiryAlertsCount(Number.isFinite(alertsCount) ? alertsCount : 0);
         return { ok: true };
       } catch (e) {
         setCandidates([]);
         setPagination({ page: 1, limit: 10, total: 0, pages: 0 });
+        setVisaExpiryAlertsCount(0);
         return { ok: false, error: e };
       } finally {
         setLoading(false);
@@ -123,6 +129,7 @@ export default function useCandidate() {
     pagination,
     loading,
     fetchCandidates,
+    visaExpiryAlertsCount,
 
     // candidate's own application
     myApplication,

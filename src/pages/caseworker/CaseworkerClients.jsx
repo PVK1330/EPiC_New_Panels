@@ -97,6 +97,24 @@ const getCandidateStatus = (cases = []) => {
   return "On Track";
 };
 
+const TERMINAL_CASE_STATUSES = new Set(["Completed", "Cancelled", "Closed", "Rejected"]);
+
+function resolveCurrentCase(cases = []) {
+  if (!Array.isArray(cases) || cases.length === 0) return null;
+  const validCases = cases.filter((c) => c && !c.deleted_at);
+  if (validCases.length === 0) return null;
+
+  const activeCases = validCases.filter((c) => !TERMINAL_CASE_STATUSES.has(c.status));
+  const pool = activeCases.length > 0 ? activeCases : validCases;
+
+  return [...pool].sort((a, b) => {
+    const timeB = new Date(b.updated_at || b.updatedAt || b.created_at || b.createdAt || 0).getTime();
+    const timeA = new Date(a.updated_at || a.updatedAt || a.created_at || a.createdAt || 0).getTime();
+    if (timeB !== timeA) return timeB - timeA;
+    return (b.id || 0) - (a.id || 0);
+  })[0];
+}
+
 const buildAssignedCandidates = (cases = []) => {
   const grouped = new Map();
   cases.forEach((item) => {
@@ -112,9 +130,7 @@ const buildAssignedCandidates = (cases = []) => {
     const name = `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() || "Unknown Candidate";
     const initials = `${(candidate.first_name || "").charAt(0)}${(candidate.last_name || "").charAt(0)}`
       .toUpperCase() || "C";
-    const latestCase = [...candidateCases].sort(
-      (a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0),
-    )[0];
+    const latestCase = resolveCurrentCase(candidateCases);
     const track = latestCase?.visaType?.name || "Visa Case";
     const code = latestCase?.caseId ? `#${latestCase.caseId}` : `#C-${candidate.id}`;
     const sub = `${latestCase?.nationality || "Client"}${latestCase?.jobTitle ? ` · ${latestCase.jobTitle}` : ""}`;

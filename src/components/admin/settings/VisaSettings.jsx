@@ -189,8 +189,8 @@ export default function VisaSettings({
               <FiFileText size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-secondary">Petition Types</h3>
-              <p className="text-xs text-gray-500">Manage petition categories for case filing</p>
+              <h3 className="text-base font-bold text-secondary">Application Types</h3>
+              <p className="text-xs text-gray-500">Manage application categories for case filing</p>
             </div>
           </motion.div>
           <Button
@@ -198,7 +198,7 @@ export default function VisaSettings({
             variant="secondary"
             className="rounded-xl px-4 py-2 text-xs flex items-center gap-2"
           >
-            <FiPlus /> Add Petition Type
+            <FiPlus /> Add Application Type
           </Button>
         </div>
         <div className="p-6">
@@ -208,8 +208,9 @@ export default function VisaSettings({
             </div>
           ) : petitionTypes.length === 0 ? (
             <div className="py-12 text-center">
-              <p className="text-sm text-gray-400 italic">No petition types configured.</p>
+              <p className="text-sm text-gray-400 italic">No application types configured.</p>
             </div>
+            
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {petitionTypes.map((pet) => (

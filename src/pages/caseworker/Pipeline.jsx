@@ -457,7 +457,7 @@ export default function Pipeline() {
                       <p className="text-sm font-semibold mt-1">{selectedCase.status || "—"}</p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Candidate</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Client</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
                         <FiUser size={14} className="text-gray-400" />
                         {selectedCase.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : '—'}
@@ -475,7 +475,7 @@ export default function Pipeline() {
                       <p className="text-sm font-semibold mt-1">{selectedCase.visaType?.name || '—'}</p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Petition Type</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Application Type</label>
                       <p className="text-sm font-semibold mt-1">{selectedCase.petitionType?.name || '—'}</p>
                     </div>
                     <div>
@@ -490,32 +490,32 @@ export default function Pipeline() {
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">LCA Number</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">CoS Reference Number</label>
                       <p className="text-sm font-semibold mt-1">{selectedCase.lcaNumber || '—'}</p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Receipt Number</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">UKVI Reference Number</label>
                       <p className="text-sm font-semibold mt-1">{selectedCase.receiptNumber || '—'}</p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Salary Offered</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
                         <Banknote size={14} className="text-gray-400" />
-                        {selectedCase.salaryOffered || 0}
+                        £{selectedCase.salaryOffered || 0}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Total Amount</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
                         <Banknote size={14} className="text-gray-400" />
-                        {selectedCase.totalAmount || 0}
+                        £{selectedCase.totalAmount || 0}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Paid Amount</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
                         <Banknote size={14} className="text-gray-400" />
-                        {selectedCase.paidAmount || 0}
+                        £{selectedCase.paidAmount || 0}
                       </p>
                     </div>
                     <div className="col-span-2">

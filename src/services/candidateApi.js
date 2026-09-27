@@ -3,6 +3,9 @@ import api from "./api";
 export const getCandidates = (page = 1, limit = 10, search = "", status = "", visaType = "", paymentStatus = "") =>
   api.get(`/api/admin/candidates`, { params: { page, limit, search, status, visaType, paymentStatus } });
 
+export const getVisaExpiryAlerts = (windowDays = 30) =>
+  api.get(`/api/admin/candidates/visa-expiry-alerts`, { params: { windowDays } });
+
 export const getCandidateById = (id) => api.get(`/api/admin/candidates/${id}`);
 
 // Enhanced function to fetch candidate with full application data

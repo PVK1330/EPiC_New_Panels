@@ -1630,7 +1630,7 @@ const Cases = () => {
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">
-                  Petition Type
+                  Application Type
                 </label>
                 <select
                   name="petitionTypeId"
@@ -1638,7 +1638,7 @@ const Cases = () => {
                   onChange={handleInputChange}
                   className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
                 >
-                  <option value="">Select type</option>
+                  <option value="">Select application type</option>
                   {petitionTypes.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -1678,27 +1678,27 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  LCA Number
+                  CoS Reference Number
                 </label>
                 <input
                   type="text"
                   name="lcaNumber"
                   value={newCaseForm.lcaNumber}
                   onChange={handleInputChange}
-                  placeholder="e.g. I-200-24001"
+                  placeholder="e.g. CoS reference number"
                   className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
                 />
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Receipt Number
+                  UKVI Reference Number
                 </label>
                 <input
                   type="text"
                   name="receiptNumber"
                   value={newCaseForm.receiptNumber}
                   onChange={handleInputChange}
-                  placeholder="e.g. EAC240..."
+                  placeholder="e.g. UAN / GWF reference"
                   className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
                 />
               </div>
@@ -1733,7 +1733,7 @@ const Cases = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Salary Offered ($)
+                  Salary Offered (£)
                 </label>
                 <input
                   type="number"
@@ -1753,7 +1753,7 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Total Amount ($) <span className="text-red-500">*</span>
+                  Total Amount (£) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -1773,7 +1773,7 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Paid Amount ($)
+                  Paid Amount (£)
                 </label>
                 <input
                   type="number"
@@ -2334,7 +2334,7 @@ const Cases = () => {
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">
-                  Petition Type
+                  Application Type
                 </label>
                 <select
                   name="petitionTypeId"
@@ -2342,7 +2342,7 @@ const Cases = () => {
                   onChange={handleInputChange}
                   className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
                 >
-                  <option value="">Select type</option>
+                  <option value="">Select application type</option>
                   {petitionTypes.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -2382,27 +2382,27 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  LCA Number
+                  CoS Reference Number
                 </label>
                 <input
                   type="text"
                   name="lcaNumber"
                   value={newCaseForm.lcaNumber}
                   onChange={handleInputChange}
-                  placeholder="e.g. I-200-24001"
+                  placeholder="e.g. CoS reference number"
                   className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
                 />
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Receipt Number
+                  UKVI Reference Number
                 </label>
                 <input
                   type="text"
                   name="receiptNumber"
                   value={newCaseForm.receiptNumber}
                   onChange={handleInputChange}
-                  placeholder="e.g. EAC240..."
+                  placeholder="e.g. UAN / GWF reference"
                   className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
                 />
               </div>
@@ -2437,7 +2437,7 @@ const Cases = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Salary Offered ($)
+                  Salary Offered (£)
                 </label>
                 <input
                   type="number"
@@ -2457,7 +2457,7 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Total Amount ($) <span className="text-red-500">*</span>
+                  Total Amount (£) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -2477,7 +2477,7 @@ const Cases = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                  Paid Amount ($)
+                  Paid Amount (£)
                 </label>
                 <input
                   type="number"

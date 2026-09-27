@@ -183,6 +183,28 @@ function canonicalVisaLabel(value) {
   return value; // unknown — show the raw stored value
 }
 
+const TERMINAL_CASE_STATUSES = new Set(["Completed", "Cancelled", "Closed", "Rejected"]);
+
+/**
+ * Resolve the current active case for a candidate from their cases list.
+ * Prioritizes active cases over closed/terminal cases, and sorts by most recent update/creation.
+ */
+export function resolveCurrentCase(cases = []) {
+  if (!Array.isArray(cases) || cases.length === 0) return null;
+  const validCases = cases.filter((c) => c && !c.deleted_at);
+  if (validCases.length === 0) return null;
+
+  const activeCases = validCases.filter((c) => !TERMINAL_CASE_STATUSES.has(c.status));
+  const pool = activeCases.length > 0 ? activeCases : validCases;
+
+  return [...pool].sort((a, b) => {
+    const timeB = new Date(b.updated_at || b.updatedAt || b.created_at || b.createdAt || 0).getTime();
+    const timeA = new Date(a.updated_at || a.updatedAt || a.created_at || a.createdAt || 0).getTime();
+    if (timeB !== timeA) return timeB - timeA;
+    return (b.id || 0) - (a.id || 0);
+  })[0];
+}
+
 const ROLE_OPTIONS = [{ value: "1", label: "Client" }];
 
 const VISA_TYPE_OPTIONS = [
@@ -255,7 +277,7 @@ function formatDate(date) {
 
 export default function AdminCandidates() {
   const { showToast } = useToast();
-  const { candidates, pagination, loading, fetchCandidates } = useCandidate();
+  const { candidates, pagination, loading, fetchCandidates, visaExpiryAlertsCount } = useCandidate();
   const {
     applicationFieldSettings,
     applicationCustomFields,
@@ -645,7 +667,8 @@ export default function AdminCandidates() {
   };
 
   const openAssign = (row) => {
-    const caseRecord = row.cases?.[0] || {};
+    const currentCase = row.currentCase || resolveCurrentCase(row.cases);
+    const caseRecord = currentCase || {};
     setAssignBusinessId(caseRecord.sponsorId ? String(caseRecord.sponsorId) : "");
     setModal({ type: "assign", data: row });
     if (!businesses.length) loadBusinesses();
@@ -728,10 +751,13 @@ export default function AdminCandidates() {
   };
 
   const handleApplicationSave = (payload) => {
+    const currentCase = modal.type === "edit" && modal.data
+      ? (modal.data.currentCase || resolveCurrentCase(modal.data.cases))
+      : null;
     const rowExtras = modal.type === "edit" && modal.data
       ? {
-          caseStatus:      modal.data.cases?.[0]?.status || "On Track",
-          paymentStatus:   modal.data.cases?.[0]?.paymentStatus || "Outstanding",
+          caseStatus:      currentCase?.status || "On Track",
+          paymentStatus:   currentCase?.paymentStatus || "Outstanding",
         }
       : {};
 
@@ -790,9 +816,10 @@ export default function AdminCandidates() {
     const payloadClean = pruneCustomResponsesToDefinitions(payload, customDefsForForm);
 
     if (modal.type === "edit" && modal.data) {
+      const currentCase = modal.data.currentCase || resolveCurrentCase(modal.data.cases);
       const rowExtras = {
-        caseStatus: modal.data.cases?.[0]?.status || "On Track",
-        paymentStatus: modal.data.cases?.[0]?.paymentStatus || "Outstanding",
+        caseStatus: currentCase?.status || "On Track",
+        paymentStatus: currentCase?.paymentStatus || "Outstanding",
       };
       const mapped = mapApplicationToCandidateRow(payloadClean, {
         ...rowExtras,
@@ -1258,7 +1285,13 @@ export default function AdminCandidates() {
         </div>
         <div className="bg-red-50 rounded-xl p-4 border border-gray-100">
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Visa Expiry Alerts</p>
-          <p className="text-2xl font-black text-red-500">0</p>
+          <p className="text-2xl font-black text-red-500">
+            {loading ? (
+              <span className="inline-block w-8 h-7 animate-pulse bg-red-100 rounded" />
+            ) : (
+              typeof visaExpiryAlertsCount === 'number' ? visaExpiryAlertsCount : 0
+            )}
+          </p>
         </div>
         <div className="bg-yellow-50 rounded-xl p-4 border border-gray-100">
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Outstanding Fees</p>
@@ -1314,14 +1347,22 @@ export default function AdminCandidates() {
                 candidates.map((c, idx) => {
                   // Use application data from CandidateApplication table
                   const app = c.application || {};
-                  const caseRecord = c.cases?.[0] || {};
+                  const currentCase = c.currentCase || resolveCurrentCase(c.cases);
+                  const caseRecord = currentCase || {};
                   const dob = app.dob ? formatDate(app.dob) : c.dob ? formatDate(c.dob) : '—';
-                  // visaType: prefer application field, then nested visaType name from Case.
-                  // Normalise to the canonical short label so the chip colours correctly.
-                  const visaTypeRaw = app.visaType || caseRecord.visaType?.name || '';
-                  const visaType = canonicalVisaLabel(visaTypeRaw);
+                  // Issue #7: The Client list must show the visa/application type relevant to the CURRENT case/application,
+                  // NOT an unrelated previous visa, refusal, or holding history value.
+                  const currentVisaType = c.currentVisaType || caseRecord.visaType?.name || null;
+                  const visaType = canonicalVisaLabel(currentVisaType);
                   const caseStatus = caseRecord.status || '—';
-                  const visaExpiry = app.visaEndDate ? formatDate(app.visaEndDate) : '—';
+                  const effectiveExpiry = c.currentVisaExpiry
+                    ? c.currentVisaExpiry
+                    : caseRecord.visaEndDate
+                      ? caseRecord.visaEndDate
+                      : (app.visaEndDate && (!c.cases || c.cases.filter(cs => !cs.deleted_at).length <= 1))
+                        ? app.visaEndDate
+                        : null;
+                  const visaExpiry = effectiveExpiry ? formatDate(effectiveExpiry) : '—';
                   // Compute payment status from Case amounts
                   const total = parseFloat(caseRecord.totalAmount || 0);
                   const paid  = parseFloat(caseRecord.paidAmount  || 0);
@@ -1448,9 +1489,11 @@ export default function AdminCandidates() {
         {modal.data && (() => {
           const c = modal.data;
           const app = c.application || {};
+          const currentCase = c.currentCase || resolveCurrentCase(c.cases);
+          const caseRecord = currentCase || {};
           const dob = formatDate(app.dob || c.dob);
-          const caseStatus = c.cases?.[0]?.status || '—';
-          const paymentStatus = c.cases?.[0]?.paymentStatus || '—';
+          const caseStatus = caseRecord.status || '—';
+          const paymentStatus = caseRecord.paymentStatus || '—';
           return (
             <>
               <div className="shrink-0 border-b border-gray-100 px-4 sm:px-6 py-4 bg-gray-50/80 flex flex-wrap items-start justify-between gap-3">
@@ -1462,9 +1505,9 @@ export default function AdminCandidates() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
-                  {c.cases?.[0] && (
+                  {caseRecord.id && (
                     <a
-                      href={`/admin/case-detail/${c.cases[0].id}`}
+                      href={`/admin/case-detail/${caseRecord.id}`}
                       className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white hover:bg-indigo-700 inline-flex items-center print:hidden"
                     >
                       View Case Dashboard
