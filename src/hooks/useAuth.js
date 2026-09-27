@@ -47,10 +47,17 @@ const useAuth = () => {
   const register = async (data) => {
     setIsLoading(true);
     try {
-      await registerUser(data);
+      const res = await registerUser(data);
       sessionStorage.setItem("pending_otp_email", data.email);
-      if (data.organisation_id) {
-        sessionStorage.setItem("pending_otp_org_id", data.organisation_id);
+      // Prefer the organisation the backend resolved (a firm code such as
+      // "EPIC2026" from a registration link becomes its numeric id), matching
+      // the login page, so OTP verification hits the same tenant.
+      const resolvedOrgId =
+        res?.data?.organisation_id || res?.organisation_id || data.organisation_id || "";
+      if (resolvedOrgId) {
+        sessionStorage.setItem("pending_otp_org_id", String(resolvedOrgId));
+      } else {
+        sessionStorage.removeItem("pending_otp_org_id");
       }
       navigate("/verify-otp");
       return { success: true };

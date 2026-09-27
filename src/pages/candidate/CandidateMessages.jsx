@@ -31,6 +31,7 @@ export default function CandidateMessages() {
         initials: u.initials,
         role: u.role || "User",
           profile_pic: u.profile_pic || u.avatar_url,
+          hasLoggedIn: u.hasLoggedIn,
       });
     });
 
@@ -44,6 +45,7 @@ export default function CandidateMessages() {
           initials: t.initials,
           role: t.role || "User",
             profile_pic: t.profile_pic || t.avatar_url,
+            hasLoggedIn: t.hasLoggedIn,
         });
       }
     });
@@ -63,6 +65,7 @@ export default function CandidateMessages() {
         initials: u.initials,
         role: u.role || "User",
           profile_pic: u.profile_pic || u.avatar_url,
+          hasLoggedIn: u.hasLoggedIn,
         preview:
           primary?.preview ||
           (convs.length ? "Open thread" : "No messages yet — click to start"),

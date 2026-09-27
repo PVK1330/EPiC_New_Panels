@@ -37,6 +37,7 @@ import EmailSettings from "../../components/admin/settings/EmailSettings";
 import PaymentSettings from "../../components/admin/settings/PaymentSettings";
 import SmtpSettings from "../../components/admin/settings/SmtpSettings";
 import SLASettings from "../../components/admin/settings/SLASettings";
+import VisaAlertSettings from "../../components/admin/settings/VisaAlertSettings";
 import DepartmentSettings from "../../components/admin/settings/DepartmentSettings";
 import CategorySettings from "../../components/admin/settings/CategorySettings";
 // Lazy: pulls in react-quill (heavy rich-text editor) — only load when the email editor modal opens.
@@ -1212,6 +1213,7 @@ export default function AdminSettings() {
               />
             )}
 
+            {configTab === "sla" && <VisaAlertSettings />}
             {configTab === "sla" && (
               <SLASettings
                 rules={slaRules}

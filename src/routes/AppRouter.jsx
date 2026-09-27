@@ -19,7 +19,6 @@ const DocumentChecklist = lazy(() => import('../pages/candidate/DocumentChecklis
 const UploadDocuments = lazy(() => import('../pages/candidate/UploadDocuments'));
 const ThirdPartyDocs = lazy(() => import('../pages/candidate/ThirdPartyDocs'));
 const Payments = lazy(() => import('../pages/candidate/Payments'));
-const Communication = lazy(() => import('../pages/candidate/Communication'));
 const Appointments = lazy(() => import('../pages/candidate/Appointments'));
 const Application = lazy(() => import('../pages/candidate/Application'));
 const CandidateMessages = lazy(() => import('../pages/candidate/CandidateMessages'));
@@ -283,7 +282,8 @@ const AppRouter = () => {
           <Route path="payments" element={<Payments />} />
           <Route path="payment-summary" element={<Navigate to="/candidate/payments" replace />} />
           <Route path="payment-history" element={<Navigate to="/candidate/payments?tab=history" replace />} />
-          <Route path="communication" element={<Communication />} />
+          {/* Phase 2 UAT 3.4: the old page showed hard-coded mock conversations; send people to the real Messaging Center. */}
+          <Route path="communication" element={<Navigate to="/candidate/messages" replace />} />
           <Route path="messages" element={<CandidateMessages />} />
           <Route path="notifications" element={<CandidateNotifications />} />
           <Route path="tasks" element={<CandidateTasks />} />

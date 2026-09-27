@@ -28,6 +28,7 @@ import { getCandidateById } from "../../services/candidateApi";
 import { createEscalation } from "../../services/escalationApi";
 import { useToast } from "../../context/ToastContext";
 import { formatDate, formatDateTime, formatDateLong } from "../../utils/datetime";
+import { formatCurrencyExact } from "../../utils/currencyFormatter";
 import {
   getCaseDetails,
   updateCaseStatus,
@@ -360,7 +361,7 @@ const AdminCaseDetail = () => {
 
     const paymentHistory = (financial?.payments || []).map((p) => ({
       date: p.paymentDate || "N/A",
-      amount: `$${parseFloat(p.amount || 0).toLocaleString()}`,
+      amount: formatCurrencyExact(parseFloat(p.amount || 0)),
       method: p.paymentMethod || "N/A",
       invoice: p.invoiceNumber || "N/A",
     }));
@@ -383,6 +384,7 @@ const AdminCaseDetail = () => {
       ...EMPTY_CASE_DETAIL,
       internalCaseId: internalId,
       caseId: overview?.caseId,
+      previousCaseIds: Array.isArray(overview?.previousCaseIds) ? overview.previousCaseIds : [],
       candidateName: candidate
         ? `${candidate.first_name} ${candidate.last_name}`
         : "Unknown",
@@ -427,14 +429,22 @@ const AdminCaseDetail = () => {
             .join(", ") || "Unassigned",
       },
       case: {
-        visaType: visaType?.name || candidate?.visaType || "Unknown",
+        // Phase 2 UAT 3.1: the case's application type and the client's CURRENT
+        // visa are different things — never fall back from one to the other.
+        visaType: visaType?.name || "Not set",
+        currentVisa: candidate?.visaType || null,
         caseStage: overview?.caseStage,
         caseStatus: overview?.status || "Unknown",
         dateOpened: keyDates?.submitted || "N/A",
-        targetDate: keyDates?.targetSubmissionDate || "N/A",
-        visaExpiry: candidate?.visaEndDate
-          ? formatDateLong(candidate.visaEndDate, { month: "short" })
+        targetDate: keyDates?.targetSubmissionDate
+          ? formatDateLong(keyDates.targetSubmissionDate, { month: "short" })
           : "N/A",
+        visaExpiry: (keyDates?.visaExpiry || candidate?.visaEndDate)
+          ? formatDateLong(keyDates?.visaExpiry || candidate.visaEndDate, { month: "short" })
+          : "N/A",
+        // Raw dates for the Phase 2 UAT 3.2 target-date warning.
+        targetDateRaw: keyDates?.targetSubmissionDate || null,
+        visaExpiryRaw: keyDates?.visaExpiry || candidate?.visaEndDate || null,
         paymentStatus: financial?.amountStatus || (totalFee === 0 ? "Pending" : outstanding === 0 ? "Fully Paid" : "Partially Paid"),
         biometricsDate: overview?.biometricsDate || keyDates?.biometricsDate,
         biometricLocation: overview?.biometricLocation,
@@ -454,7 +464,7 @@ const AdminCaseDetail = () => {
           mappedTasks.length > 0
             ? `${mappedTasks.filter((t) => t.status === "completed").length}/${mappedTasks.length} done`
             : "N/A",
-        payment: `$${totalPaid.toLocaleString()} paid`,
+        payment: `${formatCurrencyExact(totalPaid)} paid`,
         daysLeft: "N/A",
       },
       // Real documents only (hook list, else case-detail aggregate). An empty case
@@ -786,6 +796,14 @@ const AdminCaseDetail = () => {
                   <span className="font-mono text-lg font-black text-primary">
                     {displayId}
                   </span>
+                  {data.previousCaseIds?.length > 0 && (
+                    <span
+                      className="text-[11px] font-mono text-gray-400"
+                      title="Earlier references for this case — searches and old links still find it"
+                    >
+                      (previously {data.previousCaseIds.join(", ")})
+                    </span>
+                  )}
                   <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-green-100 text-green-800">
                     {data.statusChip}
                   </span>

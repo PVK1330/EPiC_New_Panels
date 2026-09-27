@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import CaseRefLink from "../../components/common/CaseRefLink";
 import { Filter, Briefcase, Table, Plus, Banknote } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiX, FiCalendar, FiUser, FiBriefcase as FiWork } from "react-icons/fi";
@@ -444,7 +445,9 @@ export default function Pipeline() {
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Case</label>
-                      <p className="text-sm font-mono font-semibold text-primary mt-1">{selectedCase.caseId}</p>
+                      <p className="text-sm font-mono font-semibold text-primary mt-1">
+                        <CaseRefLink role="caseworker" caseRef={selectedCase.caseId} fallbackId={selectedCase.id} className="text-primary" />
+                      </p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Workflow stage</label>

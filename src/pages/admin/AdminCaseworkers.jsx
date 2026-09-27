@@ -1,3 +1,4 @@
+import CaseRefLink from "../../components/common/CaseRefLink";
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import {
@@ -1261,7 +1262,9 @@ export default function AdminCaseworkers() {
                           >
                             <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
                               <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-secondary/10 text-secondary text-xs font-black tracking-wide">
-                                {c.caseId || `CASE-${c.id}`}
+                                <CaseRefLink caseRef={c.caseId} fallbackId={c.id} className="text-secondary">
+                                  {c.caseId || `CASE-${c.id}`}
+                                </CaseRefLink>
                               </span>
                               <div className="flex flex-wrap items-center gap-2">
                                 {showOverdue && (

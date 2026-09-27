@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import CaseRefLink from "../../components/common/CaseRefLink";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiPlus, FiTable, FiBriefcase, FiX, FiCalendar, FiUser, FiBriefcase as FiWork, FiFileText } from "react-icons/fi";
 import { Banknote } from "lucide-react";
@@ -427,7 +428,9 @@ const AdminPipeline = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Case</label>
-                      <p className="text-sm font-mono font-semibold text-primary mt-1">{selectedCase.caseId}</p>
+                      <p className="text-sm font-mono font-semibold text-primary mt-1">
+                        <CaseRefLink caseRef={selectedCase.caseId} fallbackId={selectedCase.id} className="text-primary" />
+                      </p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Workflow stage</label>

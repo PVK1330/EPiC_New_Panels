@@ -1,9 +1,11 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, useContext } from "react";
 import { useSelector } from "react-redux";
 import { io } from "socket.io-client";
 import messagingApi from "../services/messagingApi";
 import { getMessagingSocketUrl } from "../utils/socketOrigin";
 import { formatTime, formatDateLong } from "../utils/datetime";
+import ToastContext from "../context/ToastContext";
+import { getApiError } from "../utils/apiError";
 
 const readListFromEnvelope = (resData, key) => {
   if (!resData) return [];
@@ -93,8 +95,17 @@ const mapApiMessageToUi = (msg, myId) => {
     attachment: msg.messageType === "file" ? (originalName || "Attachment") : null,
     attachmentUrl: msg.messageType === "file" ? attachmentUrl : null,
     isRead: Boolean(msg.isRead),
+    // Phase 2 UAT 3.4: sent → delivered → read (shown as ticks on my messages).
+    status:
+      msg.status ||
+      (msg.readAt || msg.isRead ? "read" : msg.deliveredAt ? "delivered" : "sent"),
   };
 };
+
+// Upgrade a message's status; never downgrade (read > delivered > sent).
+const STATUS_RANK = { sent: 1, delivered: 2, read: 3 };
+const upgradeStatus = (current, next) =>
+  (STATUS_RANK[next] || 0) > (STATUS_RANK[current] || 0) ? next : current;
 
 /**
  * @param {object} [opts]
@@ -103,6 +114,9 @@ const mapApiMessageToUi = (msg, myId) => {
 const useMessaging = (opts = {}) => {
   const { activeThreadPartnerId } = opts;
   const { user, token } = useSelector((state) => state.auth);
+  const toastCtx = useContext(ToastContext);
+  const showToastRef = useRef(null);
+  showToastRef.current = toastCtx?.showToast || null;
   const [threads, setThreads] = useState([]);
   const [messagesByThread, setMessagesByThread] = useState({});
   const [availableUsers, setAvailableUsers] = useState([]);
@@ -163,6 +177,7 @@ const useMessaging = (opts = {}) => {
           caseDisplayId: caseData.caseId,
           avatarClass: "bg-indigo-600",
           profile_pic: otherUser.profile_pic || otherUser.avatar_url,
+          hasLoggedIn: otherUser.hasLoggedIn,
         };
       });
       setThreads(sortThreadsByRecent(mappedThreads));
@@ -253,6 +268,7 @@ const useMessaging = (opts = {}) => {
           initials: name?.split(" ").map((n) => n[0]).join("").toUpperCase() || "??",
           role: normalizeRoleLabel(u.role?.name),
           profile_pic: u.profile_pic || u.avatar_url,
+          hasLoggedIn: u.hasLoggedIn,
         };
       });
       setAvailableUsers(mapped);
@@ -264,6 +280,7 @@ const useMessaging = (opts = {}) => {
   const sendMessage = useCallback(
     async (receiverId, content, caseId = null, file = null) => {
       try {
+        let res;
         if (file) {
           const formData = new FormData();
           formData.append("receiverId", receiverId);
@@ -272,17 +289,27 @@ const useMessaging = (opts = {}) => {
           formData.append("messageType", "file");
           formData.append("file", file);
 
-          await messagingApi.sendMessage(formData, {
+          res = await messagingApi.sendMessage(formData, {
             headers: {
               "Content-Type": "multipart/form-data",
             },
           });
         } else {
-          await messagingApi.sendMessage({
+          res = await messagingApi.sendMessage({
             receiverId,
             content,
             caseId,
             messageType: "text",
+          });
+        }
+
+        // Phase 2 UAT 3.4: say how the message reaches someone who is not online.
+        const delivery = res?.data?.delivery;
+        if (delivery && !delivery.recipientOnline && delivery.emailNotificationSent) {
+          showToastRef.current?.({
+            variant: "info",
+            message:
+              "Sent. They're not in the portal right now, so we've emailed them to say a message is waiting.",
           });
         }
 
@@ -291,6 +318,11 @@ const useMessaging = (opts = {}) => {
         return { success: true };
       } catch (err) {
         console.error("Failed to send message", err);
+        // Phase 2 UAT 3.4: a failed send used to look like nothing happened.
+        showToastRef.current?.({
+          variant: "danger",
+          message: `Message not sent: ${getApiError(err, "please check your connection")}. Your text is still in the box — try again.`,
+        });
         return { success: false, error: err };
       }
     },
@@ -311,11 +343,11 @@ const useMessaging = (opts = {}) => {
 
   /** Socket.IO — server emits `message:new`, `conversation:updated`, `messages:read` */
   useEffect(() => {
-    if (!user?.id || !token) return undefined;
+    if (!user?.id) return undefined;
 
     const url = getMessagingSocketUrl();
     const socket = io(url, {
-      auth: { token },
+      auth: token ? { token } : {},
       // Auth lives in an HttpOnly cookie; withCredentials sends it on the handshake.
       withCredentials: true,
       transports: ["websocket", "polling"],
@@ -438,9 +470,32 @@ const useMessaging = (opts = {}) => {
       });
     });
 
+    socket.on("messages:delivered", (payload) => {
+      const other = Number(payload?.receiverId);
+      const ids = new Set((payload?.messageIds || []).map(Number));
+      if (!other || !ids.size) return;
+      setMessagesByThread((prev) => ({
+        ...prev,
+        [other]: (prev[other] || []).map((msg) =>
+          msg.from === "me" && ids.has(Number(msg.id))
+            ? { ...msg, status: upgradeStatus(msg.status, "delivered") }
+            : msg,
+        ),
+      }));
+    });
+
     socket.on("messages:read", (payload) => {
       const reader = Number(payload?.readerUserId);
       const my = me();
+      if (Number(payload?.senderId) === my && reader && reader !== my) {
+        // I sent these; the other person has now read them.
+        setMessagesByThread((prev) => ({
+          ...prev,
+          [reader]: (prev[reader] || []).map((msg) =>
+            msg.from === "me" ? { ...msg, isRead: true, status: "read" } : msg,
+          ),
+        }));
+      }
       if (reader === my) {
         const sender = Number(payload?.senderId);
         setMessagesByThread((prev) => ({

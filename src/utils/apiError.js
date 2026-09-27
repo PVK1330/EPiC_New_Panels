@@ -16,8 +16,9 @@
 export function getApiError(error, fallback = "Something went wrong") {
   const d = error?.response?.data;
 
-  // 1) Specific field-level validation detail(s), when present.
-  const fieldErrors = d?.errors;
+  // 1) Specific field-level validation detail(s), when present. Some endpoints
+  //    return them at the top level (`errors`), others nested (`data.errors`).
+  const fieldErrors = Array.isArray(d?.errors) ? d.errors : d?.data?.errors;
   if (Array.isArray(fieldErrors) && fieldErrors.length) {
     const messages = fieldErrors
       .map((e) => (typeof e === "string" ? e : e?.message))

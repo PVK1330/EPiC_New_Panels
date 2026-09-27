@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import CaseRefLink from "../../components/common/CaseRefLink";
 import { Eye, X, FileText, Briefcase, Phone, Mail, Calendar, MapPin, User, Building, Check, AlertCircle, Clock, Download, Loader2 } from "lucide-react";
 import api from "../../services/api";
 import { getCaseworkerCases, getCaseworkerCaseDetails, downloadDocument } from "../../services/caseApi";
@@ -25,7 +26,7 @@ const Badge = ({ variant = "blue", children }) => {
   );
 };
 
-const CandidateCard = ({ initials, name, sub, status, track, code, accent = "secondary", onView }) => {
+const CandidateCard = ({ initials, name, sub, status, track, code, caseRef, accent = "secondary", onView }) => {
   const accentMap = {
     secondary: "bg-secondary/10 text-secondary",
     primary: "bg-primary/10 text-primary",
@@ -51,7 +52,13 @@ const CandidateCard = ({ initials, name, sub, status, track, code, accent = "sec
       <div className="flex flex-wrap gap-2 items-center mb-3">
         {statusPill}
         <Badge variant="blue">{track}</Badge>
-        <span className="text-[11px] font-mono text-gray-400">{code}</span>
+        {caseRef ? (
+          <CaseRefLink role="caseworker" caseRef={caseRef} className="text-[11px] font-mono text-secondary">
+            {code}
+          </CaseRefLink>
+        ) : (
+          <span className="text-[11px] font-mono text-gray-400">{code}</span>
+        )}
       </div>
       <button
         onClick={() => onView && onView({ initials, name, sub, status, track, code, accent })}
@@ -131,7 +138,7 @@ const buildAssignedCandidates = (cases = []) => {
     const initials = `${(candidate.first_name || "").charAt(0)}${(candidate.last_name || "").charAt(0)}`
       .toUpperCase() || "C";
     const latestCase = resolveCurrentCase(candidateCases);
-    const track = latestCase?.visaType?.name || "Visa Case";
+    const track = latestCase?.visaType?.name || "Application type not set";
     const code = latestCase?.caseId ? `#${latestCase.caseId}` : `#C-${candidate.id}`;
     const sub = `${latestCase?.nationality || "Client"}${latestCase?.jobTitle ? ` · ${latestCase.jobTitle}` : ""}`;
 
@@ -143,6 +150,7 @@ const buildAssignedCandidates = (cases = []) => {
       status: getCandidateStatus(candidateCases),
       track,
       code,
+      caseRef: latestCase?.caseId || null,
       accent: CASE_ACCENTS[idx % CASE_ACCENTS.length],
       email: candidate.email || "",
       phone: latestCase?.candidate?.mobile || "",
@@ -393,6 +401,7 @@ const CaseworkerClients = () => {
                 status={candidate.status}
                 track={candidate.track}
                 code={candidate.code}
+                caseRef={candidate.caseRef}
                 accent={candidate.accent}
                 onView={() => openViewModal("candidate", candidate)}
               />
@@ -547,8 +556,29 @@ const CaseworkerClients = () => {
                         <div className="flex items-center gap-3">
                           <FileText size={16} className="text-gray-400" />
                           <div>
-                            <p className="text-xs text-gray-500">Visa Type</p>
+                            <p className="text-xs text-gray-500">Application Type</p>
                             <p className="text-sm font-bold text-gray-900">{viewModal.data.track}</p>
+                          </div>
+                        </div>
+                        {/* Phase 2 UAT 3.1: client's CURRENT visa, separate from the application type */}
+                        <div className="flex items-center gap-3">
+                          <FileText size={16} className="text-gray-400" />
+                          <div>
+                            <p className="text-xs text-gray-500">Current Visa</p>
+                            <p className="text-sm font-bold text-gray-900">
+                              {viewModal.data.primaryCase?.candidate?.application?.visaType || "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Calendar size={16} className="text-gray-400" />
+                          <div>
+                            <p className="text-xs text-gray-500">Current Visa Expiry</p>
+                            <p className="text-sm font-bold text-gray-900">
+                              {viewModal.data.primaryCase?.visaEndDate || viewModal.data.primaryCase?.candidate?.application?.visaEndDate
+                                ? formatDate(viewModal.data.primaryCase?.visaEndDate || viewModal.data.primaryCase.candidate.application.visaEndDate)
+                                : "—"}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">

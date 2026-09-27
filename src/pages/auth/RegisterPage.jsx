@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Input from "../../components/Input";
 import PhoneInput from "../../components/PhoneInput";
 import Button from "../../components/Button";
@@ -17,7 +17,19 @@ const ROLE_OPTIONS = [
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { register, isLoading } = useAuth();
+  // Firm code from a registration link (?org=CODE, same params as the login page).
+  const linkOrg = (() => {
+    try {
+      const p = new URLSearchParams(location.search);
+      const v =
+        p.get("org") || p.get("orgId") || p.get("organisation_id") || p.get("code") || p.get("orgCode");
+      return v ? v.trim() : "";
+    } catch {
+      return "";
+    }
+  })();
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -103,6 +115,7 @@ export default function RegisterPage() {
     if (Object.keys(errs).length) return setErrors(errs);
     try {
       const { confirmPassword, ...payload } = form;
+      if (linkOrg) payload.organisation_id = linkOrg;
       if (form.role_id !== 1) {
         delete payload.address;
         delete payload.addressStartDate;

@@ -277,7 +277,7 @@ function formatDate(date) {
 
 export default function AdminCandidates() {
   const { showToast } = useToast();
-  const { candidates, pagination, loading, fetchCandidates, visaExpiryAlertsCount } = useCandidate();
+  const { candidates, pagination, loading, fetchCandidates, visaExpiryAlertsCount, visaExpiryAlertDays } = useCandidate();
   const {
     applicationFieldSettings,
     applicationCustomFields,
@@ -1280,11 +1280,13 @@ export default function AdminCandidates() {
           <p className="text-2xl font-black text-blue-600">{pagination.total || 0}</p>
         </div>
         <div className="bg-green-50 rounded-xl p-4 border border-gray-100">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Active Cases</p>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Active Clients</p>
           <p className="text-2xl font-black text-green-600">{candidates.filter(c => c.status === 'active').length}</p>
         </div>
         <div className="bg-red-50 rounded-xl p-4 border border-gray-100">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Visa Expiry Alerts</p>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">
+            Visa Expiry Alerts{visaExpiryAlertDays ? ` (next ${visaExpiryAlertDays} days)` : ""}
+          </p>
           <p className="text-2xl font-black text-red-500">
             {loading ? (
               <span className="inline-block w-8 h-7 animate-pulse bg-red-100 rounded" />
@@ -1309,7 +1311,7 @@ export default function AdminCandidates() {
           />
           <div className="flex items-center gap-2 flex-wrap">
             <select value={visaFilter} onChange={(e) => setVisaFilter(e.target.value)} className="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all">
-              <option value="All">All Visa Types</option>
+              <option value="All">All Application Types</option>
               {VISA_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all">
@@ -1336,7 +1338,7 @@ export default function AdminCandidates() {
           <table className="w-full min-w-[600px] border-collapse text-left">
             <Thead>
               <tr>
-                {["Name","DOB","Nationality","Linked Business","Visa Type","Case Status","Visa Expiry","Payment","Status"].map((h) => (
+                {["Name","DOB","Nationality","Linked Business","Current Visa","Application Type","Case Status","Current Visa Expiry","Payment","Status"].map((h) => (
                   <Th key={h}>{h}</Th>
                 ))}
                 <Th align="right">Actions</Th>
@@ -1354,14 +1356,15 @@ export default function AdminCandidates() {
                   // NOT an unrelated previous visa, refusal, or holding history value.
                   const currentVisaType = c.currentVisaType || caseRecord.visaType?.name || null;
                   const visaType = canonicalVisaLabel(currentVisaType);
+                  // Phase 2 UAT 3.1: the client's CURRENT visa (application "Type of
+                  // Visa"), shown separately from the application type above.
+                  const currentVisa = c.currentVisa || app.visaType || null;
                   const caseStatus = caseRecord.status || '—';
                   const effectiveExpiry = c.currentVisaExpiry
                     ? c.currentVisaExpiry
                     : caseRecord.visaEndDate
                       ? caseRecord.visaEndDate
-                      : (app.visaEndDate && (!c.cases || c.cases.filter(cs => !cs.deleted_at).length <= 1))
-                        ? app.visaEndDate
-                        : null;
+                      : app.visaEndDate || null;
                   const visaExpiry = effectiveExpiry ? formatDate(effectiveExpiry) : '—';
                   // Compute payment status from Case amounts
                   const total = parseFloat(caseRecord.totalAmount || 0);
@@ -1395,6 +1398,7 @@ export default function AdminCandidates() {
                       <Td className="text-xs text-gray-500 whitespace-nowrap font-mono">{dob}</Td>
                       <Td className="whitespace-nowrap">{nationality}</Td>
                       <Td className="whitespace-nowrap">{linkedBusiness}</Td>
+                      <Td className="whitespace-nowrap text-xs text-gray-700">{currentVisa || '—'}</Td>
                       <Td className="whitespace-nowrap">
                         <span className={`${CHIP_BASE} ${VISA_CHIPS[visaType] ?? "bg-gray-100 text-gray-500 border-gray-200"}`}>
                           {visaType}

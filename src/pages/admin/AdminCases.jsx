@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import CaseRefLink from "../../components/common/CaseRefLink";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase,
@@ -1029,7 +1030,12 @@ export default function AdminCases() {
                   transition={{ duration: 0.2, delay: i * 0.04 }}
                 >
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-secondary">
-                    {c.caseId}
+                    <CaseRefLink
+                      caseRef={c.caseId ? String(c.caseId).replace(/^#/, "") : null}
+                      className="text-secondary"
+                    >
+                      {c.caseId}
+                    </CaseRefLink>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
                     {c.candidate}

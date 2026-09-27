@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import Button from "../Button";
 import Input from "../Input";
 import DatePicker from "../DatePicker";
+import TargetDateVisaWarning from "../case/TargetDateVisaWarning";
 import NationalitySelect from "../NationalitySelect";
 
 const priorityLevels = [
@@ -187,7 +188,16 @@ function AdminCaseFormModal({
                   {priorityLevels.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
                 </select>
               </div>
-              <DatePicker label="Target Submission Date" name="targetSubmissionDate" value={formData.targetSubmissionDate} onChange={onChange} error={errors.targetSubmissionDate} min={new Date().toISOString().split("T")[0]} required />
+              <div>
+                <DatePicker label="Target Submission Date" name="targetSubmissionDate" value={formData.targetSubmissionDate} onChange={onChange} error={errors.targetSubmissionDate} min={new Date().toISOString().split("T")[0]} required />
+                {/* Phase 2 UAT 3.2: warn (not block) when the target date is after the client's visa expiry */}
+                <TargetDateVisaWarning
+                  targetDate={formData.targetSubmissionDate}
+                  visaExpiry={
+                    (candidates || []).find((c) => String(c.id) === String(formData.candidateId))?.application?.visaEndDate
+                  }
+                />
+              </div>
               <Input label="CoS Reference Number" name="lcaNumber" value={formData.lcaNumber} onChange={onChange} placeholder="e.g. CoS reference number" />
               <Input label="UKVI Reference Number" name="receiptNumber" value={formData.receiptNumber} onChange={onChange} placeholder="e.g. UAN / GWF reference" />
             </div>

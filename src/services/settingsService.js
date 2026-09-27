@@ -35,6 +35,10 @@ export const createSlaRule = (data) => api.post("/api/settings/sla-rules", data)
 export const updateSlaRule = (id, data) => api.patch(`/api/settings/sla-rules/${id}`, data);
 export const deleteSlaRule = (id) => api.delete(`/api/settings/sla-rules/${id}`);
 
+// Phase 2 UAT 3.1: visa expiry alert window (days before expiry), per firm.
+export const getVisaAlertSettings = () => api.get("/api/settings/visa-alert-settings");
+export const updateVisaAlertSettings = (data) => api.put("/api/settings/visa-alert-settings", data);
+
 export const getEmailTemplates = () => api.get("/api/settings/email-templates");
 export const createEmailTemplate = (data) => api.post("/api/settings/email-templates", data);
 export const getEmailTemplate = (key) => api.get(`/api/settings/email-templates/${key}`);

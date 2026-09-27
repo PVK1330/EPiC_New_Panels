@@ -196,7 +196,14 @@ export const priorityLabel = (p) => {
   return p.charAt(0).toUpperCase() + p.slice(1);
 };
 
-export function CaseworkerMultiSelect({ options, value, onChange, error }) {
+export function CaseworkerMultiSelect({
+  options,
+  value,
+  onChange,
+  error,
+  required = true,
+  hint,
+}) {
   const [open, setOpen] = useState(false);
 
   const toggleId = (id) => {
@@ -216,9 +223,11 @@ export function CaseworkerMultiSelect({ options, value, onChange, error }) {
   return (
     <div className="relative md:col-span-2 space-y-2">
       <label className="text-sm font-medium text-gray-700">
-        Caseworker Assignment <span className="text-red-500">*</span>
+        Caseworker Assignment{" "}
+        {required && <span className="text-red-500">*</span>}
         <span className="text-gray-400 font-normal ml-1">(one caseworker)</span>
       </label>
+      {hint && <p className="text-xs text-gray-500">{hint}</p>}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
