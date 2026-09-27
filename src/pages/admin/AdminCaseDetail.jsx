@@ -292,6 +292,12 @@ const AdminCaseDetail = () => {
           ? formatDate(n.created_at)
           : "N/A",
         body: n.content || "",
+        noteType: n.noteType || "internal",
+        title: n.title || "",
+        participants: n.participants || [],
+        attendees: (n.participants || [])
+          .map((p) => (p.caseworker ? `${p.caseworker.first_name} ${p.caseworker.last_name}`.trim() : ""))
+          .filter(Boolean),
       })),
     [notes]
   );
@@ -636,11 +642,17 @@ const AdminCaseDetail = () => {
   };
 
   // ── Note handlers (passed as props so CaseDetailNotes can wire them up) ───
-  const handleAddNote = async (content) => {
-    if (!caseId || !content?.trim()) return;
+  const handleAddNote = async (notePayload) => {
+    if (!caseId) return;
     const cleanId = caseId.replace(/^#/, "");
     const noteCaseId = caseData?.internalId ?? cleanId;
-    await addNoteHandler({ caseId: noteCaseId, content });
+    if (typeof notePayload === "string") {
+      if (!notePayload.trim()) return;
+      await addNoteHandler({ caseId: noteCaseId, content: notePayload });
+    } else {
+      if (!notePayload?.content?.trim()) return;
+      await addNoteHandler({ caseId: noteCaseId, ...notePayload });
+    }
     await fetchNotes(cleanId);
   };
 
