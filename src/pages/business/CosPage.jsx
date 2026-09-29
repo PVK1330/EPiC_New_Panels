@@ -581,7 +581,7 @@ const COSPage = () => {
                   </tbody>
                 </table>
               </div>
-              {pagination.totalPages > 1 && (
+              {pagination.total > 0 && (
                 <div className="mt-4">
                   <Pagination
                     page={page}

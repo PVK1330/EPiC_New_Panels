@@ -10,6 +10,7 @@ import {
  RiMoneyPoundCircleLine,
 } from 'react-icons/ri';
 import PageHero, { HeroButton } from '../../components/superadmin/PageHero';
+import Pagination from '../../components/common/Pagination';
 import { fetchPlatformAuditLogs } from '../../services/superadminAudit.service';
 import useDownloads from '../../hooks/useDownloads';
 import { formatDateTime } from '../../utils/datetime';
@@ -213,24 +214,14 @@ const SuperadminAuditLog = () => {
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2.5 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
-          <button 
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(p => p - 1)}
-            className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-secondary transition-colors disabled:opacity-30 disabled:hover:text-gray-400"
-          >
-            &larr; Prev
-          </button>
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            Page {currentPage} of {totalPages} ({totalLogs} total)
-          </p>
-          <button 
-            disabled={currentPage === totalPages || totalPages === 0}
-            onClick={() => setCurrentPage(p => p + 1)}
-            className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-secondary transition-colors disabled:opacity-30 disabled:hover:text-gray-400"
-          >
-            Next &rarr;
-          </button>
+        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            total={totalLogs}
+            limit={10}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </motion.div>
     </div>

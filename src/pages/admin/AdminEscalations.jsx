@@ -8,6 +8,7 @@ import { useToast } from "../../context/ToastContext";
 import { getEscalations, createEscalation, updateEscalation, assignEscalation, deleteEscalation, exportEscalationsExcel } from "../../services/escalationApi";
 import { getCases } from "../../services/caseApi";
 import { getAdmins } from "../../services/adminApi";
+import Pagination from "../../components/common/Pagination";
 
 const OTHER_CATEGORY_MARKER = /\n\n\(Other category:\s([\s\S]+?)\)\s*$/;
 
@@ -40,6 +41,8 @@ const AdminEscalations = () => {
   const { showToast } = useToast();
   const [sev, setSev] = useState("All");
   const [typ, setTyp] = useState("All");
+  const [page, setPage] = useState(1);
+  const limit = 10;
   const [loading, setLoading] = useState(false);
   const [escalations, setEscalations] = useState([]);
   const [cases, setCases] = useState([]);
@@ -357,6 +360,13 @@ const AdminEscalations = () => {
     };
   });
 
+  const totalPages = Math.max(1, Math.ceil(mappedRows.length / limit));
+  const pagedRows = mappedRows.slice((page - 1) * limit, page * limit);
+
+  useEffect(() => {
+    setPage(1);
+  }, [sev, typ]);
+
   return (
     <motion.div
       className="space-y-4 pb-6"
@@ -453,7 +463,7 @@ const AdminEscalations = () => {
                   </td>
                 </tr>
               ) : (
-                mappedRows.map((r) => (
+                pagedRows.map((r) => (
                   <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
                     <td className="px-4 py-3 font-mono text-sm font-bold text-primary whitespace-nowrap">#{r.caseId}</td>
                     <td className="px-4 py-3 text-sm font-semibold text-secondary whitespace-nowrap">{r.candidate}</td>
@@ -504,6 +514,17 @@ const AdminEscalations = () => {
             </tbody>
           </table>
         </div>
+        {mappedRows.length > 0 && (
+          <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={mappedRows.length}
+              limit={limit}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
 
       {showModal && (

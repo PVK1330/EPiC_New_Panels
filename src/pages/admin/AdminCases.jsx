@@ -18,6 +18,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import Button from "../../components/Button";
+import Pagination from "../../components/common/Pagination";
 import CaseWorkflowBadge from "../../components/case/CaseWorkflowBadge";
 import { formatDate } from "../../utils/datetime";
 import { getApiError as getApiErrorMessage } from "../../utils/apiError";
@@ -119,6 +120,9 @@ export default function AdminCases() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [cases, setCases] = useState([]);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 1 });
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
@@ -154,7 +158,7 @@ export default function AdminCases() {
   const stats = [
     {
       label: "Total Cases",
-      value: cases.length,
+      value: pagination?.total || cases.length,
       bg: "bg-blue-100",
       color: "text-blue-600",
       Icon: FileText,
@@ -187,9 +191,12 @@ export default function AdminCases() {
   const [filterType, setFilterType] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [visaTypeFilter, setVisaTypeFilter] = useState("all");
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, filterType, priorityFilter, visaTypeFilter]);
 
   // Fetch cases from API with pagination and filters
   useEffect(() => {
@@ -198,7 +205,7 @@ export default function AdminCases() {
         setLoading(true);
         const params = {
           page,
-          limit: 50,
+          limit,
           search: searchQuery,
           status: filterType === "all" ? "" : { approved: "Approved", pending: "Pending", rejected: "Rejected", review: "Under Review" }[filterType] || filterType,
           priority: priorityFilter === "all" ? "" : priorityFilter,
@@ -207,6 +214,10 @@ export default function AdminCases() {
           sortOrder: "DESC",
         };
         const response = await getCases(params);
+
+        if (response.data?.data?.pagination) {
+          setPagination(response.data.data.pagination);
+        }
 
         // Map API response to component structure
         const mappedCases = (response.data?.data?.cases || []).map((c) => ({
@@ -240,6 +251,7 @@ export default function AdminCases() {
               : "Unassigned",
           caseworkerId: Array.isArray(c.assignedcaseworkerId) ? c.assignedcaseworkerId.join(', ') : c.assignedcaseworkerId,
           visaType: c.visaType?.name || "Unknown",
+          visaTypeId: c.visaTypeId || c.visaType?.id,
           petitionType: c.petitionType?.name || "Unknown",
           submitted: c.submitted ? formatDate(c.submitted) : formatDate(c.created_at),
           targetSubmissionDate: c.targetSubmissionDate,
@@ -844,7 +856,9 @@ export default function AdminCases() {
       (priorityFilter === "urgent" && c.priority === "urgent");
 
     const matchesVisaType =
-      visaTypeFilter === "all" || c.visaType === visaTypeFilter;
+      visaTypeFilter === "all" ||
+      c.visaType === visaTypeFilter ||
+      String(c.visaTypeId) === String(visaTypeFilter);
 
     return matchesSearch && matchesFilter && matchesPriority && matchesVisaType;
   });
@@ -879,7 +893,7 @@ export default function AdminCases() {
             <UserPlus size={15} className="mr-1.5 inline" />
             Assign caseworkers
           </Button>
-          <Button
+          {/* <Button
             onClick={() => {
               setFormData(emptyForm);
               setErrors({});
@@ -887,7 +901,7 @@ export default function AdminCases() {
             }}
           >
             Add New Case
-          </Button>
+          </Button> */}
         </div>
       </motion.div>
 
@@ -1143,6 +1157,16 @@ export default function AdminCases() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+          <Pagination
+            page={page}
+            totalPages={pagination.pages || Math.ceil((pagination.total || 0) / limit) || 1}
+            total={pagination.total ?? cases.length}
+            limit={limit}
+            onPageChange={(newPage) => setPage(newPage)}
+          />
         </div>
       </motion.div>
 

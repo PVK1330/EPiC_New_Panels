@@ -664,7 +664,7 @@ export default function AdminNotifications() {
           )}
         </div>
         {pagination.pages > 1 && (
-          <div className="px-6 pb-4">
+          <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
             <Pagination
               page={pagination.page}
               totalPages={pagination.pages}

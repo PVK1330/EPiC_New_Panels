@@ -16,6 +16,7 @@ import {
   Check
 } from "lucide-react";
 import Button from "../../components/Button";
+import Pagination from "../../components/common/Pagination";
 import { useToast } from "../../context/ToastContext";
 import { getPendingCclFeeApprovals, reviewCclFees } from "../../services/workflowApi";
 import { formatDateLong } from "../../utils/datetime";
@@ -352,43 +353,15 @@ export default function AdminCclFeeApprovals() {
           </div>
 
           {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm text-xs font-bold text-gray-500">
-              <p>
-                Showing Page {currentPage} of {totalPages} ({totalItems} total entries)
-              </p>
-              <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-xl disabled:opacity-40 transition-all border border-gray-100"
-                >
-                  Previous
-                </button>
-                {[...Array(totalPages)].map((_, i) => {
-                  const p = i + 1;
-                  return (
-                    <button
-                      key={p}
-                      onClick={() => setCurrentPage(p)}
-                      className={`px-3.5 py-2 rounded-xl transition-all border ${
-                        currentPage === p
-                          ? "bg-primary text-white border-primary shadow-md shadow-primary/10"
-                          : "bg-gray-50 hover:bg-gray-100 border-gray-100"
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  );
-                })}
-                <button
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-xl disabled:opacity-40 transition-all border border-gray-100"
-                >
-                  Next
-                </button>
-              </div>
+          {totalItems > 0 && (
+            <div className="px-5 py-4 border border-gray-100 bg-gray-50/50 rounded-2xl shadow-sm">
+              <Pagination
+                page={currentPage}
+                totalPages={totalPages}
+                total={totalItems}
+                limit={pageSize}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </>

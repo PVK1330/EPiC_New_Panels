@@ -773,8 +773,8 @@ export default function CaseworkerDocuments() {
               </tbody>
             </table>
           </div>
-          {totalPages > 1 && (
-            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/80">
+          {pagination.total > 0 && (
+            <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
               <Pagination
                 page={pageClamped}
                 totalPages={totalPages}

@@ -20,6 +20,7 @@ import CosReviewModal from "../../components/cos/CosReviewModal";
 import CosHistoryPanel from "../../components/cos/CosHistoryPanel";
 import { useToast } from "../../context/ToastContext";
 import { formatDateLong } from "../../utils/datetime";
+import Pagination from "../../components/common/Pagination";
 import {
   getAdminCosRequests,
   approveCosRequestAdmin,
@@ -56,6 +57,8 @@ export default function AdminCosRequests() {
   const [assign, setAssign] = useState({ open: false, request: null, ids: [] });
   const [historyRequest, setHistoryRequest] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 10;
 
   const fetchRequests = async () => {
     try {
@@ -145,6 +148,12 @@ export default function AdminCosRequests() {
   };
 
   const requests = sectionMap[activeTab] || [];
+  const totalPages = Math.max(1, Math.ceil(requests.length / limit));
+  const pagedRequests = requests.slice((page - 1) * limit, page * limit);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, search]);
 
   return (
     <div className="space-y-4 pb-6">
@@ -242,8 +251,8 @@ export default function AdminCosRequests() {
                   <td colSpan={8} className="px-4 py-4 h-16 bg-gray-50/20" />
                 </tr>
               ))
-            ) : requests.length > 0 ? (
-              requests.map((r) => {
+            ) : pagedRequests.length > 0 ? (
+              pagedRequests.map((r) => {
                 const isPending = r.status === "Pending";
                 const isReviewable = isPending || r.status === "Under Review";
                 return (
@@ -316,6 +325,17 @@ export default function AdminCosRequests() {
             )}
           </tbody>
         </table>
+        {requests.length > 0 && (
+          <div className="px-5 py-4 border-t border-gray-50 bg-gray-50/30">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={requests.length}
+              limit={limit}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* Review / Request Info modal */}

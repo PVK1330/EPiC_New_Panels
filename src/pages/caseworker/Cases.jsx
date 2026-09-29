@@ -1023,10 +1023,10 @@ const Cases = () => {
               <Download size={18} />
               Export
             </Button>
-            <Button variant="primary" onClick={openNewCaseModal}>
+            {/* <Button variant="primary" onClick={openNewCaseModal}>
               <Plus size={18} strokeWidth={2.5} />
               Add New Cases
-            </Button>
+            </Button> */}
           </>
         }
       />
@@ -1142,7 +1142,19 @@ const Cases = () => {
               </Tbody>
             </TableShell>
           ) : (
-          <TableShell>
+          <TableShell
+            footer={
+              <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+                <Pagination
+                  page={pageClamped}
+                  totalPages={totalPages}
+                  total={pagination.total}
+                  limit={PAGE_SIZE}
+                  onPageChange={(next) => setPage(next)}
+                />
+              </div>
+            }
+          >
                 <Thead>
                   <Tr>
                     {[
@@ -1324,13 +1336,6 @@ const Cases = () => {
                 </Tbody>
           </TableShell>
           )}
-          <Pagination
-            page={pageClamped}
-            totalPages={totalPages}
-            total={pagination.total}
-            limit={PAGE_SIZE}
-            onPageChange={(next) => setPage(next)}
-          />
         </>
       )}
 

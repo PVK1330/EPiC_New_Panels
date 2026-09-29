@@ -216,7 +216,7 @@ const Invoices = () => {
             </table>
           </div>
         )}
-        {pagination.totalPages > 1 && (
+        {pagination.total > 0 && (
           <div className="px-5 pb-5 pt-1">
             <Pagination
               page={pagination.page}

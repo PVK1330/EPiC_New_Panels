@@ -304,7 +304,7 @@ const BusinessNotifications = () => {
       </motion.div>
 
       {pagination.pages > 1 && (
-        <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-gray-50/50 px-5 py-4 shadow-sm">
           <Pagination
             page={pagination.page}
             totalPages={pagination.pages}

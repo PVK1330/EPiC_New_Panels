@@ -1102,22 +1102,13 @@ const SuperadminOrganisations = () => {
           </table>
         </div>
         <div className="px-5 py-4 border-t border-gray-50 bg-gray-50/30">
-          {pagination.totalPages > 1 ? (
-            <Pagination
-              page={page}
-              totalPages={pagination.totalPages}
-              total={pagination.total}
-              limit={pagination.limit}
-              onPageChange={setPage}
-            />
-          ) : (
-            <p className="text-xs font-bold text-gray-400">
-              Showing{" "}
-              {pagination.total === 0 ? 0 : (page - 1) * pagination.limit + 1}{" "}
-              to {Math.min(page * pagination.limit, pagination.total)} of{" "}
-              {pagination.total} results
-            </p>
-          )}
+          <Pagination
+            page={page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={setPage}
+          />
         </div>
       </div>
     </div>
