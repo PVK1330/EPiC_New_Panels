@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Button from "../../components/Button";
 import DatePicker from "../../components/DatePicker";
+import Pagination from "../../components/common/Pagination";
 import { getAuditLogs, exportAuditLogs } from "../../services/audit.service";
 import { formatDateTime } from "../../utils/datetime";
 
@@ -290,41 +291,14 @@ const AdminAuditLogs = () => {
         </div>
 
         {/* Pagination */}
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-xs text-gray-400">
-            Showing page{" "}
-            <span className="font-bold text-secondary">{meta.page}</span> of{" "}
-            <span className="font-bold text-secondary">{meta.pages || 1}</span>{" "}
-            <span className="text-gray-400">({meta.total} total)</span>
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              disabled={meta.page <= 1 || loading}
-              onClick={() =>
-                setFilters((p) => ({ ...p, page: Math.max(1, p.page - 1) }))
-              }
-              className="rounded-xl text-xs"
-            >
-              Previous
-            </Button>
-            <span className="text-xs text-gray-500 font-semibold">
-              Page {meta.page} / {Math.max(1, meta.pages || 1)}
-            </span>
-            <Button
-              variant="ghost"
-              disabled={meta.page >= (meta.pages || 1) || loading}
-              onClick={() =>
-                setFilters((p) => ({
-                  ...p,
-                  page: Math.min(meta.pages || 1, p.page + 1),
-                }))
-              }
-              className="rounded-xl text-xs"
-            >
-              Next
-            </Button>
-          </div>
+        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+          <Pagination
+            page={meta.page}
+            totalPages={meta.pages || 1}
+            total={meta.total}
+            limit={filters.limit || 20}
+            onPageChange={(newPage) => setFilters((p) => ({ ...p, page: newPage }))}
+          />
         </div>
       </div>
 

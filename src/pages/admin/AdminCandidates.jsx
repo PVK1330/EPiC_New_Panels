@@ -1442,7 +1442,7 @@ export default function AdminCandidates() {
         </div>
         )}
 
-        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
           <Pagination
             page={page}
             totalPages={totalPages}
@@ -1450,11 +1450,6 @@ export default function AdminCandidates() {
             limit={pagination.limit || limit}
             onPageChange={setPage}
           />
-          {totalPages <= 1 && (
-            <p className="text-xs font-bold text-gray-500">
-              Showing {candidates.length} of {pagination.total} clients
-            </p>
-          )}
         </div>
       </div>
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { FiEdit2, FiTrash2, FiPlus } from "react-icons/fi";
 import { Loader2, X } from "lucide-react";
 import { motion } from "framer-motion";
+import Pagination from "../../components/common/Pagination";
 import { useToast } from "../../context/ToastContext";
 import {
   getDepartments,
@@ -14,6 +15,10 @@ const AdminDepartments = () => {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const totalPages = Math.max(1, Math.ceil(departments.length / limit));
+  const pagedDepartments = departments.slice((page - 1) * limit, page * limit);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState("create"); // create, edit
   const [editingDepartment, setEditingDepartment] = useState(null);
@@ -186,7 +191,7 @@ const AdminDepartments = () => {
                   </td>
                 </tr>
               ) : (
-                departments.map((department) => (
+                pagedDepartments.map((department) => (
                   <tr
                     key={department}
                     className="hover:bg-gray-50/70 transition-colors"
@@ -220,6 +225,17 @@ const AdminDepartments = () => {
             </tbody>
           </table>
         </div>
+        {departments.length > 0 && (
+          <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={departments.length}
+              limit={limit}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
 
       {showModal && (

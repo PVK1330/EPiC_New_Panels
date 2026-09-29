@@ -312,7 +312,7 @@ const SuperadminNotifications = () => {
 
         {/* Pagination (auto-hidden when there's a single page) */}
         {!loading && pagination.pages > 1 && (
-          <div className="border-t border-gray-50 px-4 py-3 bg-gray-50/30">
+          <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
             <Pagination
               page={pagination.page}
               totalPages={pagination.pages}

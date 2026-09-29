@@ -321,7 +321,7 @@ export default function AdminAnnouncements() {
         )}
 
         {!loadingList && items.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-100">
+          <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
             <Pagination
               page={page}
               totalPages={totalPages}

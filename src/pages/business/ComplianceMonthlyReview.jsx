@@ -26,6 +26,7 @@ import {
   Minus,
   Zap,
 } from "lucide-react";
+import Pagination from "../../components/common/Pagination";
 import { useToast } from "../../context/ToastContext";
 import {
   listMonthlyReviews,
@@ -438,6 +439,7 @@ export default function ComplianceMonthlyReview() {
   const [generating, setGenerating] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const fetchReviews = useCallback(
     async (p = 1) => {
@@ -447,6 +449,7 @@ export default function ComplianceMonthlyReview() {
         const data = res?.data?.data;
         setReviews(data?.reviews || []);
         setTotalPages(data?.pagination?.totalPages || 1);
+        setTotal(data?.pagination?.total ?? (data?.reviews?.length || 0));
       } catch (err) {
         showToast({ message: "Failed to load monthly reviews", variant: "danger" });
         setReviews([]);
@@ -539,25 +542,15 @@ export default function ComplianceMonthlyReview() {
       )}
 
       {/* Pagination */}
-      {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1.5 text-xs font-black rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 transition-colors"
-          >
-            Previous
-          </button>
-          <span className="text-xs font-semibold text-gray-500">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-3 py-1.5 text-xs font-black rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 transition-colors"
-          >
-            Next
-          </button>
+      {!loading && reviews.length > 0 && (
+        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50 rounded-2xl">
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            limit={PAGE_SIZE}
+            onPageChange={(p) => setPage(p)}
+          />
         </div>
       )}
     </div>

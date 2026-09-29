@@ -20,6 +20,7 @@ import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import PhoneInput from "../../components/PhoneInput";
 import Button from "../../components/Button";
+import Pagination from "../../components/common/Pagination";
 import { isValidPhone } from "../../utils/countries";
 import { getApiError } from "../../utils/apiError";
 import { userRowClass } from "../../utils/userIdentity";
@@ -909,11 +910,14 @@ export default function AdminCaseworkers() {
           </table>
         </div>
 
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50">
-          <p className="text-xs text-gray-400">
-            Showing <span className="font-bold text-secondary">{caseworkers.length}</span> of{" "}
-            <span className="font-bold text-secondary">{pagination.total}</span> caseworkers
-          </p>
+        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+          <Pagination
+            page={page}
+            totalPages={pagination.pages || Math.ceil((pagination.total || 0) / (pagination.limit || limit)) || 1}
+            total={pagination.total || 0}
+            limit={pagination.limit || limit}
+            onPageChange={setPage}
+          />
         </div>
       </div>
 

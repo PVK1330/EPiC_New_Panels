@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { Plus, Check, Search, FileText, AlertCircle, Clock } from "lucide-react";
 import Modal from "../../components/Modal";
 import DatePicker from "../../components/DatePicker";
+import Pagination from "../../components/common/Pagination";
 import { INITIAL_CASES } from "../../data/casesData";
 import api from "../../services/api";
 import { getMyLicenceStageTasks } from "../../services/licenceApi";
@@ -928,32 +929,15 @@ export default function Tasks() {
       )}
 
       {/* Pagination */}
-      {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-          <p className="text-xs font-bold text-gray-500">
-            Showing {((page - 1) * pagination.limit) + 1} to {Math.min(page * pagination.limit, pagination.total)} of {pagination.total} tasks
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-black text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <span className="text-xs font-bold text-gray-600 py-1.5">
-              Page {page} of {pagination.totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-              disabled={page === pagination.totalPages}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-black text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
+      {pagination.total > 0 && (
+        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50 rounded-2xl">
+          <Pagination
+            page={page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={setPage}
+          />
         </div>
       )}
     </div>

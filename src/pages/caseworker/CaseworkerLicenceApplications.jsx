@@ -30,6 +30,7 @@ import { triggerDownload } from "../../services/documentApi";
 import LicenceStages from "../../components/licence/LicenceStages";
 import IntakeDocumentChecklist from "../../components/licence/IntakeDocumentChecklist";
 import DatePicker from "../../components/DatePicker";
+import Pagination from "../../components/common/Pagination";
 import { useToast } from "../../context/ToastContext";
 import { formatDate } from "../../utils/datetime";
 
@@ -653,38 +654,15 @@ const CaseworkerLicenceApplications = () => {
           </table>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
-              <p className="text-xs font-bold text-gray-400">
-                Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filteredApps.length)} of {filteredApps.length}
-              </p>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black text-gray-500 bg-gray-50 border border-gray-100 hover:bg-gray-100 disabled:opacity-40 transition-all">
-                  ←
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
-                  .reduce((acc, n, i, arr) => {
-                    if (i > 0 && n - arr[i - 1] > 1) acc.push("…");
-                    acc.push(n);
-                    return acc;
-                  }, [])
-                  .map((n, i) =>
-                    n === "…" ? (
-                      <span key={`e-${i}`} className="px-2 text-xs text-gray-300">…</span>
-                    ) : (
-                      <button key={n} onClick={() => setPage(n)}
-                        className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${n === page ? "bg-primary text-white shadow-sm" : "text-gray-500 bg-gray-50 border border-gray-100 hover:bg-gray-100"}`}>
-                        {n}
-                      </button>
-                    )
-                  )}
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black text-gray-500 bg-gray-50 border border-gray-100 hover:bg-gray-100 disabled:opacity-40 transition-all">
-                  →
-                </button>
-              </div>
+          {filteredApps.length > 0 && (
+            <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                total={filteredApps.length}
+                limit={PER_PAGE}
+                onPageChange={setPage}
+              />
             </div>
           )}
         </div>

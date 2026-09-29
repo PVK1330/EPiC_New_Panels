@@ -36,6 +36,7 @@ import {
 const PASSWORD_MIN = 6;
 
 import { RoleBadge, StatusBadge } from "../../components/common/Badge";
+import Pagination from "../../components/common/Pagination";
 import { formatDateLong } from "../../utils/datetime";
 import { AVATAR_COLORS, initialsFrom, fullName, fmtDate } from "./adminHelpers";
 
@@ -792,39 +793,14 @@ export default function AdminBusinesses() {
           </table>
         </div>
 
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-xs text-gray-400">
-            Showing{" "}
-            <span className="font-bold text-secondary">
-              {pagination.total === 0 ? 0 : startIdx}
-            </span>
-            –
-            <span className="font-bold text-secondary">{endIdx}</span> of{" "}
-            <span className="font-bold text-secondary">
-              {pagination.total}
-            </span>
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              disabled={page <= 1 || loading}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="rounded-xl text-xs"
-            >
-              Previous
-            </Button>
-            <span className="text-xs text-gray-500 font-semibold">
-              Page {page} / {Math.max(1, totalPages)}
-            </span>
-            <Button
-              variant="ghost"
-              disabled={page >= totalPages || loading}
-              onClick={() => setPage((p) => p + 1)}
-              className="rounded-xl text-xs"
-            >
-              Next
-            </Button>
-          </div>
+        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={pagination.total}
+            limit={pagination.limit || limit}
+            onPageChange={setPage}
+          />
         </div>
       </div>
 

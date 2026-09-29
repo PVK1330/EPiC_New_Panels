@@ -35,12 +35,13 @@ export const TABLE_CLASS = {
 const alignClass = (align) =>
   align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
 
-export function TableShell({ children, className = "" }) {
+export function TableShell({ children, className = "", footer = null }) {
   return (
     <div className={`${TABLE_CLASS.container} ${className}`}>
       <div className={TABLE_CLASS.scroll}>
         <table className={TABLE_CLASS.table}>{children}</table>
       </div>
+      {footer}
     </div>
   );
 }

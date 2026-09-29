@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -15,6 +15,7 @@ import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 import DatePicker from "../../components/DatePicker";
+import Pagination from "../../components/common/Pagination";
 
 const TYPE_FILTER_OPTIONS = [
   { value: "all", label: "All types" },
@@ -252,6 +253,15 @@ const AdminDocuments = () => {
     });
   }, [search, typeFilter, statusFilter]);
 
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / limit));
+  const pagedRows = filteredRows.slice((page - 1) * limit, page * limit);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, typeFilter, statusFilter]);
+
   const handleUploadField = (e) => {
     const { name, value, files, type } = e.target;
     if (type === "file" && files?.length) {
@@ -420,7 +430,7 @@ const AdminDocuments = () => {
                   </td>
                 </tr>
               ) : (
-                filteredRows.map((row) => (
+                pagedRows.map((row) => (
                   <tr
                     key={row.id}
                     className="hover:bg-gray-50/80 transition-colors"
@@ -476,6 +486,17 @@ const AdminDocuments = () => {
             </tbody>
           </table>
         </div>
+        {filteredRows.length > 0 && (
+          <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={filteredRows.length}
+              limit={limit}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
 
       <Modal

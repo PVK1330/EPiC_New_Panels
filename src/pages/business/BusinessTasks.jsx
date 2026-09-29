@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { CheckSquare, Clock, AlertCircle, Check, Search, Loader2, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+import Pagination from "../../components/common/Pagination";
 import api from "../../services/api";
 import { getMyLicenceStageTasks } from "../../services/licenceApi";
 import { formatDateLong } from "../../utils/datetime";
@@ -249,25 +250,15 @@ export default function BusinessTasks() {
       )}
 
       {/* Pagination */}
-      {pagination.totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-black text-gray-600 hover:border-primary/40 disabled:opacity-40"
-          >
-            Previous
-          </button>
-          <span className="px-3 py-1.5 text-xs font-black text-gray-500">
-            {page} / {pagination.totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-            disabled={page === pagination.totalPages}
-            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-black text-gray-600 hover:border-primary/40 disabled:opacity-40"
-          >
-            Next
-          </button>
+      {pagination.total > 0 && (
+        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50 rounded-2xl">
+          <Pagination
+            page={page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={20}
+            onPageChange={setPage}
+          />
         </div>
       )}
     </div>

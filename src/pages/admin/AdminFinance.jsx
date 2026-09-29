@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, Banknote, Clock, CheckCircle, TrendingUp, CreditCard, Landmark, Globe, X, RefreshCw, Eye } from "lucide-react";
 import Button from "../../components/Button";
+import Pagination from "../../components/common/Pagination";
 import Input from "../../components/Input";
 import DatePicker from "../../components/DatePicker";
 import { getFinancialReport, getFinancialTransactions } from "../../services/reportingApi";
@@ -392,6 +393,16 @@ export default function AdminFinance() {
               })}
             </tbody>
           </table>
+        </div>
+
+        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+          <Pagination
+            page={pagination.page}
+            totalPages={pagination.pages || Math.ceil((pagination.total || 0) / 10) || 1}
+            total={pagination.total || 0}
+            limit={10}
+            onPageChange={(newPage) => setPagination((prev) => ({ ...prev, page: newPage }))}
+          />
         </div>
       </motion.div>
 
