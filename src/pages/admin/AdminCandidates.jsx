@@ -277,7 +277,7 @@ function formatDate(date) {
 
 export default function AdminCandidates() {
   const { showToast } = useToast();
-  const { candidates, pagination, loading, fetchCandidates, visaExpiryAlertsCount, visaExpiryAlertDays } = useCandidate();
+  const { candidates, pagination, loading, fetchCandidates, visaExpiryAlertsCount, visaExpiredAlertsCount, visaExpiryAlertDays } = useCandidate();
   const {
     applicationFieldSettings,
     applicationCustomFields,
@@ -1274,7 +1274,7 @@ export default function AdminCandidates() {
       )}
 
       {/* KPI Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div className="bg-blue-50 rounded-xl p-4 border border-gray-100">
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Clients</p>
           <p className="text-2xl font-black text-blue-600">{pagination.total || 0}</p>
@@ -1283,13 +1283,26 @@ export default function AdminCandidates() {
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Active Clients</p>
           <p className="text-2xl font-black text-green-600">{candidates.filter(c => c.status === 'active').length}</p>
         </div>
-        <div className="bg-red-50 rounded-xl p-4 border border-gray-100">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">
-            Visa Expiry Alerts{visaExpiryAlertDays ? ` (next ${visaExpiryAlertDays} days)` : ""}
-          </p>
-          <p className="text-2xl font-black text-red-500">
+        <div className="bg-rose-50 rounded-xl p-4 border border-rose-100">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[11px] font-bold text-rose-500 uppercase tracking-wide">Expired Visas</p>
+            <span className="text-[9px] font-black uppercase tracking-wider bg-rose-200/80 text-rose-700 px-1.5 py-0.5 rounded">Urgent</span>
+          </div>
+          <p className="text-2xl font-black text-rose-600">
             {loading ? (
-              <span className="inline-block w-8 h-7 animate-pulse bg-red-100 rounded" />
+              <span className="inline-block w-8 h-7 animate-pulse bg-rose-100 rounded" />
+            ) : (
+              typeof visaExpiredAlertsCount === 'number' ? visaExpiredAlertsCount : 0
+            )}
+          </p>
+        </div>
+        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+          <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wide mb-1">
+            Visa Alerts{visaExpiryAlertDays ? ` (next ${visaExpiryAlertDays} days)` : ""}
+          </p>
+          <p className="text-2xl font-black text-amber-600">
+            {loading ? (
+              <span className="inline-block w-8 h-7 animate-pulse bg-amber-100 rounded" />
             ) : (
               typeof visaExpiryAlertsCount === 'number' ? visaExpiryAlertsCount : 0
             )}
@@ -1366,6 +1379,9 @@ export default function AdminCandidates() {
                       ? caseRecord.visaEndDate
                       : app.visaEndDate || null;
                   const visaExpiry = effectiveExpiry ? formatDate(effectiveExpiry) : '—';
+                  const expiryTimestamp = effectiveExpiry ? new Date(effectiveExpiry).setHours(23, 59, 59, 999) : null;
+                  const isExpired = expiryTimestamp !== null && expiryTimestamp < Date.now();
+                  const isExpiringSoon = !isExpired && expiryTimestamp !== null && expiryTimestamp <= (Date.now() + (visaExpiryAlertDays || 90) * 86400000);
                   // Compute payment status from Case amounts
                   const total = parseFloat(caseRecord.totalAmount || 0);
                   const paid  = parseFloat(caseRecord.paidAmount  || 0);
@@ -1409,7 +1425,21 @@ export default function AdminCandidates() {
                           {caseStatus}
                         </span>
                       </Td>
-                      <Td className="text-xs font-mono whitespace-nowrap text-gray-500">{visaExpiry}</Td>
+                      <Td className="whitespace-nowrap font-mono text-xs">
+                        {isExpired ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-rose-600 font-bold">{visaExpiry}</span>
+                            <span className="inline-block text-[9px] font-black uppercase tracking-wider text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded">Expired</span>
+                          </div>
+                        ) : isExpiringSoon ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-amber-600 font-semibold">{visaExpiry}</span>
+                            <span className="inline-block text-[9px] font-black uppercase tracking-wider text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Soon</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500">{visaExpiry}</span>
+                        )}
+                      </Td>
                       <Td className="whitespace-nowrap">
                         <span className={`${CHIP_BASE} ${PAYMENT_CHIPS[paymentStatus] ?? "bg-gray-100 text-gray-500 border-gray-200"}`}>
                           {paymentStatus}

@@ -18,6 +18,7 @@ export default function useCandidate() {
   });
   const [loading, setLoading] = useState(true);
   const [visaExpiryAlertsCount, setVisaExpiryAlertsCount] = useState(0);
+  const [visaExpiredAlertsCount, setVisaExpiredAlertsCount] = useState(0);
   // Phase 2 UAT 3.1: the firm's alert window (days before expiry).
   const [visaExpiryAlertDays, setVisaExpiryAlertDays] = useState(null);
 
@@ -42,6 +43,10 @@ export default function useCandidate() {
           payload?.visaExpiryAlerts?.count ?? payload?.visaExpiryAlertsCount ?? 0,
         );
         setVisaExpiryAlertsCount(Number.isFinite(alertsCount) ? alertsCount : 0);
+        const expiredCount = Number(
+          payload?.visaExpiryAlerts?.expiredCount ?? payload?.visaExpiredAlertsCount ?? 0,
+        );
+        setVisaExpiredAlertsCount(Number.isFinite(expiredCount) ? expiredCount : 0);
         const alertDays = Number(payload?.visaExpiryAlertDays);
         setVisaExpiryAlertDays(Number.isFinite(alertDays) && alertDays > 0 ? alertDays : null);
         return { ok: true };
@@ -49,6 +54,7 @@ export default function useCandidate() {
         setCandidates([]);
         setPagination({ page: 1, limit: 10, total: 0, pages: 0 });
         setVisaExpiryAlertsCount(0);
+        setVisaExpiredAlertsCount(0);
         return { ok: false, error: e };
       } finally {
         setLoading(false);
@@ -134,6 +140,7 @@ export default function useCandidate() {
     loading,
     fetchCandidates,
     visaExpiryAlertsCount,
+    visaExpiredAlertsCount,
     visaExpiryAlertDays,
 
     // candidate's own application
