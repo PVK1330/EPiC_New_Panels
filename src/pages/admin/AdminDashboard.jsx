@@ -245,14 +245,23 @@ export default function AdminDashboard() {
           to: "/admin/finance",
         },
         {
+          label: "Expired Visas",
+          value: (dashboardStats.caseStats?.visaExpiredAlerts || 0).toString(),
+          icon: RiAlarmWarningLine,
+          iconColor: "text-rose-600",
+          iconBg: "bg-rose-50",
+          to: "/admin/candidates",
+        },
+        {
           // Phase 2 UAT 3.1: show the firm's alert window (Settings → SLA Rules).
           label: dashboardStats.caseStats?.visaExpiryAlertDays
             ? `Visa Alerts (next ${dashboardStats.caseStats.visaExpiryAlertDays} days)`
             : "Visa Alerts",
           value: (dashboardStats.caseStats?.visaExpiryAlerts || 0).toString(),
           icon: RiErrorWarningLine,
-          iconColor: "text-red-500",
-          iconBg: "bg-red-50",
+          iconColor: "text-amber-600",
+          iconBg: "bg-amber-50",
+          to: "/admin/candidates",
         },
         {
           label: "Sponsor Alerts",
