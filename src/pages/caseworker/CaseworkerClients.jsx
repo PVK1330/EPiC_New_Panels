@@ -1,13 +1,35 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { FiPlus } from "react-icons/fi";
 import CaseRefLink from "../../components/common/CaseRefLink";
 import { Eye, X, FileText, Briefcase, Phone, Mail, Calendar, MapPin, User, Building, Check, AlertCircle, Clock, Download, Loader2 } from "lucide-react";
 import api from "../../services/api";
 import { getCaseworkerCases, getCaseworkerCaseDetails, downloadDocument } from "../../services/caseApi";
+import { createCandidate } from "../../services/candidateApi";
+import { getVisaTypesDropdown } from "../../services/settingsService";
 import { formatDate, formatDateTime } from "../../utils/datetime";
+import { isValidPhone } from "../../utils/countries";
+import { getApiError } from "../../utils/apiError";
+import { useToast } from "../../context/ToastContext";
+import Button from "../../components/Button";
+import Modal from "../../components/Modal";
+import Input from "../../components/Input";
+import PhoneInput from "../../components/PhoneInput";
+
+const INITIAL_CLIENT_FORM = {
+  first_name: "",
+  last_name: "",
+  email: "",
+  country_code: "+44",
+  mobile: "",
+  nationality: "",
+  visaType: "",
+  jobTitle: "",
+};
 
 const TABS = [
-  // { id: "candidates", label: "Candidate Profiles", path: "/caseworker/people/candidates" },
+  { id: "candidates", label: "Client Profiles", path: "/caseworker/people/candidates" },
   { id: "sponsors", label: "Sponsor Profiles", path: "/caseworker/people/sponsors" },
 ];
 
@@ -134,7 +156,7 @@ const buildAssignedCandidates = (cases = []) => {
   });
 
   return Array.from(grouped.values()).map(({ candidate, cases: candidateCases }, idx) => {
-    const name = `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() || "Unknown Candidate";
+    const name = `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() || "Unknown Client";
     const initials = `${(candidate.first_name || "").charAt(0)}${(candidate.last_name || "").charAt(0)}`
       .toUpperCase() || "C";
     const latestCase = resolveCurrentCase(candidateCases);
@@ -179,6 +201,20 @@ const CaseworkerClients = () => {
   const [candidateMessages, setCandidateMessages] = useState([]);
   const [loadingCandidateDetails, setLoadingCandidateDetails] = useState(false);
   const [downloadingDocId, setDownloadingDocId] = useState(null);
+
+  const authUser = useSelector((state) => state.auth.user);
+  const { showToast } = useToast();
+  const canAddClients = Boolean(
+    authUser?.can_add_clients ||
+    authUser?.caseworkerProfile?.can_add_clients ||
+    authUser?.permissions?.includes("caseworker.candidates.create")
+  );
+
+  const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [clientForm, setClientForm] = useState(INITIAL_CLIENT_FORM);
+  const [clientErrors, setClientErrors] = useState({});
+  const [creatingClient, setCreatingClient] = useState(false);
+  const [visaTypeOptions, setVisaTypeOptions] = useState([]);
 
   const activeTab = useMemo(() => {
     return location.pathname.includes("/people/sponsors") ? "sponsors" : "candidates";
@@ -288,25 +324,99 @@ const CaseworkerClients = () => {
     fetchSponsors();
   }, []);
 
-  useEffect(() => {
-    const fetchAssignedCandidates = async () => {
-      try {
-        setLoadingCandidates(true);
-        const response = await getCaseworkerCases({ page: 1, limit: 200 });
-        const assignedCases = response?.data?.data?.cases || [];
-        setCandidates(buildAssignedCandidates(assignedCases));
-      } catch (error) {
-        console.error("Error fetching assigned candidates:", error);
-        setCandidates([]);
-      } finally {
-        setLoadingCandidates(false);
-      }
-    };
+  const fetchVisaOptions = useCallback(async () => {
+    try {
+      const res = await getVisaTypesDropdown();
+      const payload = res.data?.data;
+      const list = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.visa_types)
+        ? payload.visa_types
+        : Array.isArray(payload?.visaTypes)
+        ? payload.visaTypes
+        : [];
+      setVisaTypeOptions(
+        list.map((v) => ({
+          value: v.name || v.id,
+          label: v.name || v.id,
+        }))
+      );
+    } catch (err) {
+      console.error("Error fetching visa types dropdown:", err);
+    }
+  }, []);
 
+  useEffect(() => {
+    fetchVisaOptions();
+  }, [fetchVisaOptions]);
+
+  const fetchAssignedCandidates = useCallback(async () => {
+    try {
+      setLoadingCandidates(true);
+      const response = await getCaseworkerCases({ page: 1, limit: 200 });
+      const assignedCases = response?.data?.data?.cases || [];
+      setCandidates(buildAssignedCandidates(assignedCases));
+    } catch (error) {
+      console.error("Error fetching assigned candidates:", error);
+      setCandidates([]);
+    } finally {
+      setLoadingCandidates(false);
+    }
+  }, []);
+
+  useEffect(() => {
     if (activeTab === "candidates") {
       fetchAssignedCandidates();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchAssignedCandidates]);
+
+  const handleCreateClient = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const errs = {};
+    if (!clientForm.first_name.trim()) errs.first_name = "First name is required";
+    if (!clientForm.last_name.trim()) errs.last_name = "Last name is required";
+    if (!clientForm.email.trim()) errs.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(clientForm.email)) errs.email = "Enter a valid email address";
+    if (!clientForm.mobile.trim()) errs.mobile = "Mobile is required";
+    else if (!isValidPhone(clientForm.country_code, clientForm.mobile)) {
+      errs.mobile = "Enter a valid phone number for selected country";
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setClientErrors(errs);
+      return;
+    }
+
+    setCreatingClient(true);
+    try {
+      const payload = {
+        first_name: clientForm.first_name.trim(),
+        last_name: clientForm.last_name.trim(),
+        email: clientForm.email.trim().toLowerCase(),
+        country_code: clientForm.country_code.trim(),
+        mobile: clientForm.mobile.trim(),
+        application: {
+          applicationType: clientForm.visaType || undefined,
+          nationality: clientForm.nationality || undefined,
+          visaType: clientForm.visaType || undefined,
+        },
+        jobTitle: clientForm.jobTitle || undefined,
+      };
+      const res = await createCandidate(payload);
+      showToast({
+        message: res.data?.message || "Client created successfully and assigned to your workload",
+        variant: "success",
+      });
+      setClientModalOpen(false);
+      setClientForm(INITIAL_CLIENT_FORM);
+      setClientErrors({});
+      fetchAssignedCandidates();
+    } catch (err) {
+      showToast({ message: getApiError(err), variant: "danger" });
+    } finally {
+      setCreatingClient(false);
+    }
+  };
 
   const handleSponsorView = async (sponsor) => {
     try {
@@ -356,9 +466,31 @@ const CaseworkerClients = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl md:text-4xl font-black text-secondary">Clients</h1>
-        <p className="text-gray-500 mt-2">Manage candidate and sponsor profiles</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-black text-secondary">
+            {activeTab === "sponsors" ? "Sponsors" : "Clients"}
+          </h1>
+          <p className="text-gray-500 mt-2">
+            {activeTab === "sponsors"
+              ? "Manage sponsor profiles and compliance records"
+              : "Manage client profiles and assigned cases"}
+          </p>
+        </div>
+        {canAddClients && activeTab === "candidates" && (
+          <Button
+            onClick={() => {
+              fetchVisaOptions();
+              setClientForm(INITIAL_CLIENT_FORM);
+              setClientErrors({});
+              setClientModalOpen(true);
+            }}
+            className="rounded-xl shadow-sm self-start sm:self-auto"
+          >
+            <FiPlus size={14} className="mr-1.5" />
+            Add Client
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-2 border-b border-gray-200">
@@ -389,7 +521,7 @@ const CaseworkerClients = () => {
             </div>
           ) : candidates.length === 0 ? (
             <div className="col-span-full text-center py-8 text-sm font-bold text-gray-500">
-              No assigned candidates found
+              No assigned clients found
             </div>
           ) : (
             candidates.map((candidate) => (
@@ -444,7 +576,7 @@ const CaseworkerClients = () => {
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="border-b border-gray-200 p-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-black text-secondary">Candidate Profile</h2>
+                <h2 className="text-2xl font-black text-secondary">Client Profile</h2>
                 <button
                   onClick={closeViewModal}
                   className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
@@ -1066,6 +1198,130 @@ const CaseworkerClients = () => {
           </div>
         </div>
       )}
+
+      {/* Add Client Modal (Available only to permitted caseworkers) */}
+      <Modal
+        open={clientModalOpen}
+        onClose={() => setClientModalOpen(false)}
+        title="Add New Client"
+        maxWidthClass="max-w-2xl"
+        bodyClassName="px-5 py-5 sm:px-6"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setClientModalOpen(false)}
+              className="rounded-xl"
+              disabled={creatingClient}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleCreateClient}
+              disabled={creatingClient}
+              className="rounded-xl"
+            >
+              {creatingClient ? (
+                <>
+                  <Loader2 size={14} className="animate-spin mr-2" />
+                  Adding Client…
+                </>
+              ) : (
+                "Add Client"
+              )}
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreateClient} className="space-y-4">
+          <p className="text-xs text-gray-500 font-medium">
+            Register a new client. A Lead case will automatically be generated and assigned to your workload.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="First Name"
+              name="first_name"
+              value={clientForm.first_name}
+              onChange={(e) => {
+                setClientForm((p) => ({ ...p, first_name: e.target.value }));
+                if (clientErrors.first_name) setClientErrors((p) => ({ ...p, first_name: "" }));
+              }}
+              placeholder="e.g. John"
+              required
+              error={clientErrors.first_name}
+            />
+            <Input
+              label="Last Name"
+              name="last_name"
+              value={clientForm.last_name}
+              onChange={(e) => {
+                setClientForm((p) => ({ ...p, last_name: e.target.value }));
+                if (clientErrors.last_name) setClientErrors((p) => ({ ...p, last_name: "" }));
+              }}
+              placeholder="e.g. Doe"
+              required
+              error={clientErrors.last_name}
+            />
+            <Input
+              label="Email Address"
+              name="email"
+              type="email"
+              value={clientForm.email}
+              onChange={(e) => {
+                setClientForm((p) => ({ ...p, email: e.target.value }));
+                if (clientErrors.email) setClientErrors((p) => ({ ...p, email: "" }));
+              }}
+              placeholder="e.g. john.doe@example.com"
+              required
+              error={clientErrors.email}
+            />
+            <PhoneInput
+              split
+              label="Mobile Number"
+              dialCode={clientForm.country_code}
+              national={clientForm.mobile}
+              dialName="country_code"
+              nationalName="mobile"
+              onChange={(e) => {
+                const { name, value } = e.target;
+                setClientForm((p) => ({ ...p, [name]: value }));
+                if (clientErrors.mobile) setClientErrors((p) => ({ ...p, mobile: "" }));
+              }}
+              placeholder="e.g. 7911 123456"
+              required
+              error={clientErrors.mobile}
+            />
+            <Input
+              label="Nationality"
+              name="nationality"
+              value={clientForm.nationality}
+              onChange={(e) => setClientForm((p) => ({ ...p, nationality: e.target.value }))}
+              placeholder="e.g. British, Indian, Canadian"
+            />
+            <Input
+              label="Application / Visa Route"
+              name="visaType"
+              value={clientForm.visaType}
+              onChange={(e) => setClientForm((p) => ({ ...p, visaType: e.target.value }))}
+              options={[
+                { value: "", label: "Select Visa Route (Optional)" },
+                ...visaTypeOptions,
+              ]}
+            />
+            <div className="sm:col-span-2">
+              <Input
+                label="Job Title / Notes"
+                name="jobTitle"
+                value={clientForm.jobTitle}
+                onChange={(e) => setClientForm((p) => ({ ...p, jobTitle: e.target.value }))}
+                placeholder="e.g. Software Engineer / Initial enquiry for Skilled Worker"
+              />
+            </div>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

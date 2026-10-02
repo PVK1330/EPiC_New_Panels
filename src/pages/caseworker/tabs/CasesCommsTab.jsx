@@ -23,7 +23,7 @@ function CasesCommsTab({ candidate, caseId }) {
     <div className="space-y-4">
       <div className="flex gap-2">
         <button type="button" className="rounded-lg border border-secondary bg-secondary/10 px-3 py-1.5 text-xs font-black text-secondary">
-          Candidate chat
+          Client chat
         </button>
         <button type="button"
           onClick={() => navigate(`/caseworker/messages${caseId ? `?caseId=${encodeURIComponent(caseId)}` : ""}`)}

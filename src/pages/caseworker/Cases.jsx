@@ -17,6 +17,7 @@ import {
   FileText,
   Clock,
   Check,
+  Loader2,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import Modal from "../../components/Modal";
@@ -53,7 +54,7 @@ import { useToast } from "../../context/ToastContext";
 import { getApiError } from "../../utils/apiError";
 import CaseworkerApplicationTab from "../../components/caseDetail/CaseworkerApplicationTab";
 import { sendBiometricSlot } from "../../services/workflowApi";
-import { formatDate, formatDateLong } from "../../utils/datetime";
+import { formatDate, formatDateLong, formatDateTime } from "../../utils/datetime";
 import CasesOverviewTab from "./tabs/CasesOverviewTab";
 import CasesDocumentsTab from "./tabs/CasesDocumentsTab";
 import CasesTasksTab from "./tabs/CasesTasksTab";
@@ -169,84 +170,84 @@ const Cases = () => {
   };
 
   // Fetch cases from API
-  useEffect(() => {
-    const fetchCases = async () => {
-      try {
-        setLoading(true);
-        const params = {
-          page,
-          limit: PAGE_SIZE,
-          search,
-          status: chip === "all" ? "" : chip,
-          priority:
-            priorityFilter === "All priorities"
-              ? ""
-              : priorityFilter.toLowerCase(),
-          visaTypeId: visaFilter === "All visa types" ? "" : visaFilter,
-          sortBy: "created_at",
-          sortOrder: "DESC",
-        };
-        const response = await getCaseworkerCases(params);
+  const fetchCases = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = {
+        page,
+        limit: PAGE_SIZE,
+        search,
+        status: chip === "all" ? "" : chip,
+        priority:
+          priorityFilter === "All priorities"
+            ? ""
+            : priorityFilter.toLowerCase(),
+        visaTypeId: visaFilter === "All visa types" ? "" : visaFilter,
+        sortBy: "created_at",
+        sortOrder: "DESC",
+      };
+      const response = await getCaseworkerCases(params);
 
-        // Map API response to component structure
-        const mappedCases = (response.data?.data?.cases || []).map((c) => ({
-          caseId: c.caseId || `#C-${c.id}`,
-          candidate: c.candidate
-            ? `${c.candidate.first_name} ${c.candidate.last_name}`
-            : "Unknown",
-          business: c.sponsor
-            ? c.sponsor.sponsorProfile?.companyName ||
-              c.sponsor.sponsorProfile?.tradingName ||
-              `${c.sponsor.first_name} ${c.sponsor.last_name || ""}`.trim()
-            : "No sponsor (private client)",
-          visa: c.visaType?.name || "Unknown",
-          status: mapApiStatus(c.status),
-          legacyStatus: c.status,
-          caseStage: c.caseStage,
-          target: c.targetSubmissionDate || c.created_at,
-          // Phase 2 UAT 3.1/3.2: client's current visa + the expiry that applies to the case
-          currentVisa: c.currentVisa || c.candidate?.application?.visaType || null,
-          visaExpiry: c.visaExpiry || c.visaEndDate || c.candidate?.application?.visaEndDate || null,
-          created_at: c.created_at,
-          decisionDate: c.decisionDate,
-          submissionDate: c.submissionDate,
-          biometricsDate: c.biometricsDate,
-          priority: c.priority?.toLowerCase() || "medium",
-          payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
-          totalAmount: c.totalAmount || 0,
-          paidAmount: c.paidAmount || 0,
-          amountStatus: c.amountStatus || "Not Submitted",
-          amountNotes: c.amountNotes || "",
-          id: c.id,
-          candidateId: c.candidateId,
-          sponsorId: c.sponsorId,
-          businessId: c.businessId,
-          department: c.department,
-          sponsor: c.sponsor,
-          proposedAmount: c.proposedAmount ?? null,
-          caseworker:
-            c.caseworkers && c.caseworkers.length > 0
-              ? c.caseworkers
-                  .map((cw) => `${cw.first_name} ${cw.last_name}`)
-                  .join(", ")
-              : "Unassigned",
-        }));
+      // Map API response to component structure
+      const mappedCases = (response.data?.data?.cases || []).map((c) => ({
+        caseId: c.caseId || `#C-${c.id}`,
+        candidate: c.candidate
+          ? `${c.candidate.first_name} ${c.candidate.last_name}`
+          : "Unknown",
+        business: c.sponsor
+          ? c.sponsor.sponsorProfile?.companyName ||
+            c.sponsor.sponsorProfile?.tradingName ||
+            `${c.sponsor.first_name} ${c.sponsor.last_name || ""}`.trim()
+          : "No sponsor (private client)",
+        visa: c.visaType?.name || "Unknown",
+        status: mapApiStatus(c.status),
+        legacyStatus: c.status,
+        caseStage: c.caseStage,
+        target: c.targetSubmissionDate || c.created_at,
+        // Phase 2 UAT 3.1/3.2: client's current visa + the expiry that applies to the case
+        currentVisa: c.currentVisa || c.candidate?.application?.visaType || null,
+        visaExpiry: c.visaExpiry || c.visaEndDate || c.candidate?.application?.visaEndDate || null,
+        created_at: c.created_at,
+        decisionDate: c.decisionDate,
+        submissionDate: c.submissionDate,
+        biometricsDate: c.biometricsDate,
+        priority: c.priority?.toLowerCase() || "medium",
+        payment: mapPaymentStatus(c.paidAmount, c.totalAmount),
+        totalAmount: c.totalAmount || 0,
+        paidAmount: c.paidAmount || 0,
+        amountStatus: c.amountStatus || "Not Submitted",
+        amountNotes: c.amountNotes || "",
+        id: c.id,
+        candidateId: c.candidateId,
+        sponsorId: c.sponsorId,
+        businessId: c.businessId,
+        department: c.department,
+        sponsor: c.sponsor,
+        proposedAmount: c.proposedAmount ?? null,
+        caseworker:
+          c.caseworkers && c.caseworkers.length > 0
+            ? c.caseworkers
+                .map((cw) => `${cw.first_name} ${cw.last_name}`)
+                .join(", ")
+            : "Unassigned",
+      }));
 
-        setCases(mappedCases);
-        setPagination(response.data.data.pagination);
-        setError(null);
-      } catch (err) {
-        console.error("Error fetching cases:", err);
-        setError("Failed to load cases. Please try again.");
-        // Fallback to demo data on error
-        setCases([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCases();
+      setCases(mappedCases);
+      setPagination(response.data.data.pagination);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching cases:", err);
+      setError("Failed to load cases. Please try again.");
+      // Fallback to demo data on error
+      setCases([]);
+    } finally {
+      setLoading(false);
+    }
   }, [page, search, chip, visaFilter, priorityFilter]);
+
+  useEffect(() => {
+    fetchCases();
+  }, [fetchCases]);
 
   // Fetch dropdown data for new case form
   useEffect(() => {
@@ -307,7 +308,8 @@ const Cases = () => {
   const [reassignCaseId, setReassignCaseId] = useState(null);
   const [reassignForm, setReassignForm] = useState(emptyReassignForm());
   const [reassignErrors, setReassignErrors] = useState({});
-  // Map: caseId †’ { caseworker, reason, at }
+  const [reassignSubmitting, setReassignSubmitting] = useState(false);
+  // Map: caseId -> { caseworker, caseworkerRole, caseworkers, reason, at }
   const [reassignments, setReassignments] = useState({});
   // 
 
@@ -907,6 +909,7 @@ const Cases = () => {
   }, []);
 
   const submitReassign = useCallback(async () => {
+    if (reassignSubmitting) return;
     const err = {};
     if (!reassignForm.caseworkerIds || reassignForm.caseworkerIds.length === 0)
       err.caseworkerIds = "Please select at least one caseworker";
@@ -919,6 +922,7 @@ const Cases = () => {
     setReassignErrors(err);
     if (Object.keys(err).length) return;
 
+    setReassignSubmitting(true);
     const selectedCaseworkers = reassignForm.caseworkerIds
       .map((id) => caseworkers.find((w) => w.id === id))
       .filter(Boolean);
@@ -927,20 +931,23 @@ const Cases = () => {
         ? reassignForm.reasonCustom.trim()
         : reassignForm.reasonPreset;
 
+    const cwNames = selectedCaseworkers.map((cw) => `${cw.first_name} ${cw.last_name}`).join(", ") || "Caseworker";
+    const cwRoles = selectedCaseworkers.map((cw) => cw.role?.name || cw.role || "Caseworker").join(", ") || "Caseworker";
+
     try {
       await assignCase(reassignCaseId, {
         assignTo: reassignForm.caseworkerIds,
         reason,
-        assignToName: selectedCaseworkers
-          .map((cw) => `${cw.first_name} ${cw.last_name}`)
-          .join(", "),
+        assignToName: cwNames,
       });
       setReassignments((prev) => ({
         ...prev,
         [reassignCaseId]: {
+          caseworker: cwNames,
+          caseworkerRole: cwRoles,
           caseworkers: selectedCaseworkers.map((cw) => ({
             name: `${cw.first_name} ${cw.last_name}`,
-            role: cw.role || "Caseworker",
+            role: cw.role?.name || cw.role || "Caseworker",
           })),
           reason,
           at: new Date(),
@@ -948,14 +955,19 @@ const Cases = () => {
       }));
       showToast({ message: "Case reassigned successfully." });
       closeReassign();
+      if (typeof fetchCases === "function") {
+        fetchCases();
+      }
     } catch (e) {
       console.error("Reassign error:", e);
       showToast({
         variant: "danger",
         message: e?.response?.data?.message || "Failed to reassign case.",
       });
+    } finally {
+      setReassignSubmitting(false);
     }
-  }, [reassignCaseId, reassignForm, closeReassign, caseworkers, showToast]);
+  }, [reassignSubmitting, reassignCaseId, reassignForm, closeReassign, caseworkers, showToast, fetchCases]);
   // 
 
   // Filtering is now handled by the API, so we use cases directly
@@ -1435,12 +1447,12 @@ const Cases = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="text-sm font-black text-secondary mb-4">
-                Candidate Information
+                Client Information
               </h4>
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">
-                    Candidate <span className="text-red-500">*</span>
+                    Client <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <select
@@ -1465,7 +1477,7 @@ const Cases = () => {
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.candidateId ? "border-red-400" : "border-gray-300"}`}
                     >
-                      <option value="">Select candidate</option>
+                      <option value="">Select client</option>
                       {candidates.map((c, idx) => (
                         <option key={`${c.id}-${idx}`} value={c.id}>
                           {c.first_name} {c.last_name}
@@ -1481,7 +1493,7 @@ const Cases = () => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                    Candidate Name
+                    Client Name
                   </label>
                   <input
                     type="text"
@@ -1973,11 +1985,21 @@ const Cases = () => {
               </button>
               <button
                 type="button"
+                disabled={reassignSubmitting}
                 onClick={submitReassign}
-                className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-md shadow-violet-200 hover:bg-violet-700 transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-md shadow-violet-200 hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <UserRoundCog size={16} />
-                Confirm reassignment
+                {reassignSubmitting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Reassigning...
+                  </>
+                ) : (
+                  <>
+                    <UserRoundCog size={16} />
+                    Confirm reassignment
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -2148,12 +2170,12 @@ const Cases = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="text-sm font-black text-secondary mb-4">
-                Candidate Information
+                Client Information
               </h4>
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">
-                    Candidate <span className="text-red-500">*</span>
+                    Client <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <select
@@ -2178,7 +2200,7 @@ const Cases = () => {
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.candidateId ? "border-red-400" : "border-gray-300"}`}
                     >
-                      <option value="">Select candidate</option>
+                      <option value="">Select client</option>
                       {candidates.map((c, idx) => (
                         <option key={`${c.id}-${idx}`} value={c.id}>
                           {c.first_name} {c.last_name}
@@ -2194,7 +2216,7 @@ const Cases = () => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                    Candidate Name
+                    Client Name
                   </label>
                   <input
                     type="text"

@@ -867,7 +867,7 @@ export default function CaseworkerDocuments() {
                     }
                     className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-secondary/15 focus:border-secondary"
                   >
-                    <option value="candidate">Candidate</option>
+                    <option value="candidate">Client</option>
                     <option value="business">Business</option>
                     <option value="personal">Personal</option>
                     <option value="legal">Legal</option>
