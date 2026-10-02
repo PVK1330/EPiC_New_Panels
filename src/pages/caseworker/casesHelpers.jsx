@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Search, X } from "lucide-react";
 import { formatDateLong, formatDateTime as fmtDateTime } from "../../utils/datetime";
 
 export const PAGE_SIZE = 7;
@@ -205,11 +206,21 @@ export function CaseworkerMultiSelect({
   hint,
 }) {
   const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const toggleId = (id) => {
     // BUG-017: one caseworker per case — selecting one replaces the previous.
     onChange(value.includes(id) ? [] : [id]);
   };
+
+  const filteredOptions = options.filter((o) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      (o.name && o.name.toLowerCase().includes(term)) ||
+      (o.id && String(o.id).includes(term))
+    );
+  });
 
   const summaryText = value.length
     ? value
@@ -252,35 +263,62 @@ export function CaseworkerMultiSelect({
             type="button"
             className="fixed inset-0 z-[60] cursor-default bg-transparent"
             aria-label="Close menu"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false);
+              setSearchTerm("");
+            }}
           />
-          <div className="absolute z-[70] left-0 right-0 mt-1 border border-gray-200 rounded-xl bg-white shadow-xl py-1 max-h-60 overflow-y-auto">
-            {options.map((o) => {
-              const checked = value.includes(o.id);
-              const disabled = false; // single-select: picking another replaces it
-              return (
-                <label
-                  key={o.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${
-                    disabled
-                      ? "opacity-40 cursor-not-allowed"
-                      : "cursor-pointer hover:bg-secondary/5"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    className="accent-secondary rounded border-gray-300"
-                    checked={checked}
-                    disabled={disabled}
-                    onChange={() => toggleId(o.id)}
-                  />
-                  <span className="font-semibold text-gray-800">{o.name}</span>
-                  <span className="text-xs font-mono text-gray-500 ml-auto">
-                    {o.id}
-                  </span>
-                </label>
-              );
-            })}
+          <div className="absolute z-[70] left-0 right-0 mt-1 border border-gray-200 rounded-xl bg-white shadow-xl py-1 max-h-64 overflow-hidden flex flex-col">
+            <div className="p-2 border-b border-gray-100 bg-gray-50/70">
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search caseworker by name or ID..."
+                  className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-secondary focus:border-secondary"
+                  autoFocus
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="overflow-y-auto max-h-52 divide-y divide-gray-50">
+              {filteredOptions.length === 0 ? (
+                <div className="px-3 py-4 text-xs text-gray-400 text-center font-medium">
+                  No caseworkers found matching &quot;{searchTerm}&quot;
+                </div>
+              ) : (
+                filteredOptions.map((o) => {
+                  const checked = value.includes(o.id);
+                  return (
+                    <label
+                      key={o.id}
+                      className="flex items-center gap-3 px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 cursor-pointer hover:bg-secondary/5 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        className="accent-secondary rounded border-gray-300"
+                        checked={checked}
+                        onChange={() => toggleId(o.id)}
+                      />
+                      <span className="font-semibold text-gray-800">{o.name}</span>
+                      <span className="text-xs font-mono text-gray-400 ml-auto">
+                        #{o.id}
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
           </div>
         </>
       )}

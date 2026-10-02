@@ -100,7 +100,7 @@ function CasesPaymentsTab({ caseDetail, onUpdate }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-secondary/10 bg-gradient-to-r from-secondary/[0.03] to-secondary/[0.08] p-5 shadow-sm">
         <div>
           <h3 className="text-base font-black text-secondary tracking-tight">Financial Request & Approval</h3>
-          <p className="text-xs font-bold text-gray-500 mt-0.5">Propose case amounts to be authorized by Admin before requesting payment from Candidate.</p>
+          <p className="text-xs font-bold text-gray-500 mt-0.5">Propose case amounts to be authorized by Admin before requesting payment from Client.</p>
         </div>
         <div className="shrink-0">
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black border shadow-xs ${STATUS_COLORS[currentStatus] || STATUS_COLORS["Not Submitted"]}`}>

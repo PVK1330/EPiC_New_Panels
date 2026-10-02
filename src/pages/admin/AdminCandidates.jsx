@@ -362,7 +362,14 @@ export default function AdminCandidates() {
     getVisaTypesDropdown()
       .then((res) => {
         if (cancelled) return;
-        const list = res.data?.data?.visaTypes;
+        const payload = res.data?.data;
+        const list = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.visa_types)
+          ? payload.visa_types
+          : Array.isArray(payload?.visaTypes)
+          ? payload.visaTypes
+          : [];
         if (Array.isArray(list) && list.length > 0) {
           setDynamicVisaOptions(
             list.map((v) => ({

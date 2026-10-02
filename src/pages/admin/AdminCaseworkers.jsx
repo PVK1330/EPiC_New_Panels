@@ -72,6 +72,7 @@ const EMPTY_CREATE = {
   mobile: "",
   role_id: "2",
   department: "",
+  can_add_clients: false,
   password: "",
   confirm_password: "",
 };
@@ -257,6 +258,7 @@ export default function AdminCaseworkers() {
       mobile: row.mobile || "",
       role_id: String(row.role_id ?? 2),
       department: row?.caseworkerProfile?.department || "",
+      can_add_clients: Boolean(row?.caseworkerProfile?.can_add_clients),
       status: row.status === "inactive" ? "inactive" : "active",
     });
     setErrors({});
@@ -409,6 +411,7 @@ export default function AdminCaseworkers() {
         mobile: createForm.mobile.trim(),
         role_id: Number(createForm.role_id),
         department: createForm.department,
+        can_add_clients: Boolean(createForm.can_add_clients),
         password: generatedPassword,
         confirm_password: generatedPassword,
       });
@@ -452,6 +455,7 @@ export default function AdminCaseworkers() {
         mobile: editForm.mobile.trim(),
         role_id: Number(editForm.role_id),
         department: editForm.department,
+        can_add_clients: Boolean(editForm.can_add_clients),
         status: editForm.status,
       });
       showToast({
@@ -856,7 +860,14 @@ export default function AdminCaseworkers() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-800 whitespace-nowrap">{fullName(user)}</p>
-                            <RoleBadge role={displayRoleName(user)} />
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <RoleBadge role={displayRoleName(user)} />
+                              {user.caseworkerProfile?.can_add_clients && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  Can Add Clients
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -1003,6 +1014,25 @@ export default function AdminCaseworkers() {
               required
               error={errors.department}
             />
+            <div className="sm:col-span-2 p-3.5 rounded-xl border border-gray-100 bg-gray-50/70 hover:bg-gray-50 transition-colors">
+              <label className="flex items-center justify-between cursor-pointer">
+                <div>
+                  <span className="text-xs font-black text-secondary uppercase tracking-wider block">
+                    Client Creation Authority
+                  </span>
+                  <span className="text-xs text-gray-500 font-medium">
+                    Allow this caseworker to register and create new client profiles
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  name="can_add_clients"
+                  checked={Boolean(createForm.can_add_clients)}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, can_add_clients: e.target.checked }))}
+                  className="w-4 h-4 rounded text-secondary focus:ring-secondary/20 accent-secondary cursor-pointer"
+                />
+              </label>
+            </div>
           </div>
         )}
         {modal.type === "edit" && editForm && (
@@ -1072,6 +1102,25 @@ export default function AdminCaseworkers() {
               options={EDIT_STATUS_OPTIONS}
               required
             />
+            <div className="sm:col-span-2 p-3.5 rounded-xl border border-gray-100 bg-gray-50/70 hover:bg-gray-50 transition-colors">
+              <label className="flex items-center justify-between cursor-pointer">
+                <div>
+                  <span className="text-xs font-black text-secondary uppercase tracking-wider block">
+                    Client Creation Authority
+                  </span>
+                  <span className="text-xs text-gray-500 font-medium">
+                    Allow this caseworker to register and create new client profiles
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  name="can_add_clients"
+                  checked={Boolean(editForm.can_add_clients)}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, can_add_clients: e.target.checked }))}
+                  className="w-4 h-4 rounded text-secondary focus:ring-secondary/20 accent-secondary cursor-pointer"
+                />
+              </label>
+            </div>
           </div>
         )}
       </Modal>
@@ -1096,6 +1145,11 @@ export default function AdminCaseworkers() {
                 <h3 className="text-lg font-black text-secondary truncate">{fullName(viewingDetails)}</h3>
                 <p className="text-sm text-gray-600">
                   {displayRoleName(viewingDetails)} · {departmentLabel(viewingDetails)}
+                  {viewingDetails.caseworkerProfile?.can_add_clients && (
+                    <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Can Add Clients
+                    </span>
+                  )}
                 </p>
                 <p className="text-xs text-gray-500 mt-1 truncate">
                   <UserEmail email={viewingDetails.email} /> · {viewingDetails.country_code} {viewingDetails.mobile}
