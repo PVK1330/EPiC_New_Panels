@@ -24,6 +24,7 @@ const INITIAL_CLIENT_FORM = {
   country_code: "+44",
   mobile: "",
   nationality: "",
+  applicationType: "Single",
   visaType: "",
   jobTitle: "",
 };
@@ -396,7 +397,7 @@ const CaseworkerClients = () => {
         country_code: clientForm.country_code.trim(),
         mobile: clientForm.mobile.trim(),
         application: {
-          applicationType: clientForm.visaType || undefined,
+          applicationType: clientForm.applicationType || 'Single',
           nationality: clientForm.nationality || undefined,
           visaType: clientForm.visaType || undefined,
         },
@@ -1301,6 +1302,16 @@ const CaseworkerClients = () => {
               placeholder="e.g. British, Indian, Canadian"
             />
             <Input
+              label="Application Type"
+              name="applicationType"
+              value={clientForm.applicationType || "Single"}
+              onChange={(e) => setClientForm((p) => ({ ...p, applicationType: e.target.value }))}
+              options={[
+                { value: "Single", label: "Single" },
+                { value: "Family", label: "Family" },
+              ]}
+            />
+            <Input
               label="Application / Visa Route"
               name="visaType"
               value={clientForm.visaType}
@@ -1310,15 +1321,13 @@ const CaseworkerClients = () => {
                 ...visaTypeOptions,
               ]}
             />
-            <div className="sm:col-span-2">
-              <Input
-                label="Job Title / Notes"
-                name="jobTitle"
-                value={clientForm.jobTitle}
-                onChange={(e) => setClientForm((p) => ({ ...p, jobTitle: e.target.value }))}
-                placeholder="e.g. Software Engineer / Initial enquiry for Skilled Worker"
-              />
-            </div>
+            <Input
+              label="Job Title / Notes"
+              name="jobTitle"
+              value={clientForm.jobTitle}
+              onChange={(e) => setClientForm((p) => ({ ...p, jobTitle: e.target.value }))}
+              placeholder="e.g. Software Engineer / Initial enquiry for Skilled Worker"
+            />
           </div>
         </form>
       </Modal>
