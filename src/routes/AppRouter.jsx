@@ -61,6 +61,7 @@ const AdminFinance = lazy(() => import('../pages/admin/AdminFinance'));
 const AdminReports = lazy(() => import('../pages/admin/AdminReports'));
 const AdminNotifications = lazy(() => import('../pages/admin/AdminNotifications'));
 const AdminAuditLogs = lazy(() => import('../pages/admin/AdminAuditLogs'));
+const AdminBackup = lazy(() => import('../pages/admin/AdminBackup'));
 const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
 const AdminUsers = lazy(() => import('../pages/admin/AdminUsers'));
 const AdminPermissions = lazy(() => import('../pages/admin/AdminPermissions'));
@@ -139,6 +140,7 @@ const SuperadminFrontend = lazy(() => import('../pages/superadmin/SuperadminFron
 const SuperadminProfile = lazy(() => import('../pages/superadmin/SuperadminProfile'));
 const SuperadminNotifications = lazy(() => import('../pages/superadmin/SuperadminNotifications'));
 const SuperadminAnnouncements = lazy(() => import('../pages/superadmin/SuperadminAnnouncements'));
+const SuperadminBackups = lazy(() => import('../pages/superadmin/SuperadminBackups'));
 const SuperadminGDPR = lazy(() => import('../pages/superadmin/SuperadminGDPR'));
 
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
@@ -238,6 +240,7 @@ const AppRouter = () => {
           <Route path="announcements" element={<AdminAnnouncements />} />
           <Route path="notifications" element={<AdminNotifications />} />
           <Route path="audit-logs" element={<AdminAuditLogs />} />
+          <Route path="backups" element={<AdminBackup />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="admin-users" element={<AdminUsers />} />
           <Route path="permissions" element={<AdminPermissions />} />
@@ -411,6 +414,14 @@ const AppRouter = () => {
             element={
               <ProtectedRoute allowedRoleIds={[5]}>
                 <SuperadminGDPR />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="backups"
+            element={
+              <ProtectedRoute allowedRoleIds={[5]}>
+                <SuperadminBackups />
               </ProtectedRoute>
             }
           />
