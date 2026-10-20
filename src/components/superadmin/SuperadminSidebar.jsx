@@ -6,6 +6,7 @@ import { performLogout } from "../../utils/performLogout";
 import { getIdentitySettings } from "../../services/platformSettingsApi";
 import {
   RiDashboardLine,
+  RiDatabase2Line,
   RiBuilding4Line,
   RiMegaphoneLine,
   RiFileSettingsLine,
@@ -57,6 +58,7 @@ const navSections = [
     items: [
       { label: "Audit Log", to: "/superadmin/audit-log", icon: RiHistoryLine, moduleKey: "audit-logs" },
       { label: "GDPR & Privacy", to: "/superadmin/gdpr", icon: RiFileShieldLine, moduleKey: "audit-logs" },
+      { label: "Backups", to: "/superadmin/backups", icon: RiDatabase2Line, moduleKey: "audit-logs" },
       { label: "Staff", to: "/superadmin/team", icon: RiShieldUserLine, moduleKey: "team" },
     ],
   },

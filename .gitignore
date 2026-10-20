@@ -27,3 +27,4 @@ local-creds.txt
 *.sln
 *.sw?
 .env.production
+doc
