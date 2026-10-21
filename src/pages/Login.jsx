@@ -155,9 +155,9 @@ const Login = () => {
   const validateRegister = () => {
     const errs = {};
     if (!registerForm.organisationId.trim())
-      errs.organisationId = "Organisation ID is required";
-    else if (!/^\d+$/.test(registerForm.organisationId.trim()))
-      errs.organisationId = "Organisation ID must be a number";
+      errs.organisationId = "Organisation ID or code is required";
+    else if (!/^[A-Za-z0-9][A-Za-z0-9 ._-]{0,63}$/.test(registerForm.organisationId.trim()))
+      errs.organisationId = "Enter a valid Organisation ID or code";
     if (!registerForm.firstName.trim())
       errs.firstName = "First name is required";
     if (!registerForm.lastName.trim()) errs.lastName = "Last name is required";
@@ -508,16 +508,16 @@ const Login = () => {
               {/* Organisation ID — must be first so the client knows which org they're joining */}
               <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
                 <Input
-                  label="Organisation ID or code (optional)"
+                  label="Organisation ID or code *"
                   name="organisationId"
                   type="text"
                   value={registerForm.organisationId}
                   onChange={handleRegisterChange}
-                  placeholder="Optional (e.g. organisation code or ID)"
+                  placeholder="Enter organisation code or ID"
                   error={registerErrors.organisationId}
                 />
                 <p className="text-xs text-blue-600 mt-1.5 font-medium">
-                  Optional. If your adviser provided an organisation code or link, it will be applied automatically.
+                  Required. Use the organisation code or ID given by your adviser. If you opened their registration link, it is filled in automatically.
                 </p>
               </div>
 

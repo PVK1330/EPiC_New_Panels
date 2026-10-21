@@ -489,6 +489,12 @@ const SuperadminOrganisations = () => {
               </dd>
             </div>
             <div className="flex justify-between gap-4">
+              <dt className="text-gray-400 font-semibold">Organisation ID</dt>
+              <dd className="font-mono text-xs text-secondary">
+                {viewOrg.id ?? "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
               <dt className="text-gray-400 font-semibold">Slug</dt>
               <dd className="font-mono text-xs text-secondary">
                 {viewOrg.slug}
