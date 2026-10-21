@@ -205,13 +205,10 @@ export default function LoginPage() {
 
   const validateRegister = () => {
     const errs = {};
-    // Organisation ID/code is optional for client self-registration.
-    // If entered, ensure it matches an alphanumeric format.
-    if (
-      registerForm.organisationId &&
-      registerForm.organisationId.trim() &&
-      !/^[A-Za-z0-9][A-Za-z0-9 ._-]{0,63}$/.test(registerForm.organisationId.trim())
-    ) {
+    // Organisation ID/code is mandatory for client self-registration.
+    if (!registerForm.organisationId || !registerForm.organisationId.trim()) {
+      errs.organisationId = "Organisation ID or code is required";
+    } else if (!/^[A-Za-z0-9][A-Za-z0-9 ._-]{0,63}$/.test(registerForm.organisationId.trim())) {
       errs.organisationId = "Enter a valid Organisation ID or code";
     }
     if (!registerForm.firstName.trim())
@@ -614,16 +611,16 @@ export default function LoginPage() {
               )}
               <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
                 <Input
-                  label="Organisation ID or code (optional)"
+                  label="Organisation ID or code *"
                   name="organisationId"
                   type="text"
                   value={registerForm.organisationId}
                   onChange={handleRegisterChange}
-                  placeholder="Optional (e.g. organisation code or ID)"
+                  placeholder="Enter organisation code or ID"
                   error={registerErrors.organisationId}
                 />
                 <p className="text-xs text-blue-600 mt-1.5 font-medium">
-                  Optional. If your adviser provided an organisation code or link, it will be applied automatically.
+                  Required. Use the organisation code or ID given by your adviser. If you opened their registration link, it is filled in automatically.
                 </p>
               </div>
 
