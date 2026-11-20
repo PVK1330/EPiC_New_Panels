@@ -106,10 +106,10 @@ function AdminCaseFormModal({
         <form onSubmit={onSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h4 className="text-sm font-black text-secondary mb-4">Client Information</h4>
+              <h4 className="text-sm font-black text-secondary mb-4">Individual Information</h4>
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700">Client <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-medium text-gray-700">Individual <span className="text-red-500">*</span></label>
                   <select name="candidateId" value={formData.candidateId}
                     onChange={(e) => {
                       const selectedCandidate = candidates.find((c) => c.id === parseInt(e.target.value));
@@ -117,12 +117,12 @@ function AdminCaseFormModal({
                       if (errors.candidateId) setErrors((prev) => ({ ...prev, candidateId: "" }));
                     }}
                     className={`w-full border rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all ${errors.candidateId ? "border-red-500" : "border-slate-200"}`}>
-                    <option value="">Select client</option>
+                    <option value="">Select individual</option>
                     {candidates.map((c, idx) => <option key={`${c.id}-${idx}`} value={c.id}>{c.first_name} {c.last_name}</option>)}
                   </select>
                   {errors.candidateId && <span className="text-xs text-red-500">{errors.candidateId}</span>}
                 </div>
-                <Input label="Client Name" name="candidateName" value={formData.candidateName} onChange={onChange} placeholder="Auto-filled from selection" disabled />
+                <Input label="Individual Name" name="candidateName" value={formData.candidateName} onChange={onChange} placeholder="Auto-filled from selection" disabled />
                 <NationalitySelect label="Nationality" name="nationality" value={formData.nationality} onChange={onChange} placeholder="Select nationality" />
                 <Input label="Job Title" name="jobTitle" value={formData.jobTitle} onChange={onChange} placeholder="e.g. Software Engineer" />
                 <div className="flex flex-col gap-1">
@@ -139,7 +139,7 @@ function AdminCaseFormModal({
               <h4 className="text-sm font-black text-secondary mb-4">Business Information</h4>
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700">Sponsor <span className="text-gray-400 font-normal">(optional)</span></label>
+                  <label className="text-sm font-medium text-gray-700">Organisation <span className="text-gray-400 font-normal">(optional)</span></label>
                   <select name="businessId" value={formData.businessId}
                     onChange={(e) => {
                       const selectedSponsor = sponsors.find((s) => s.id === parseInt(e.target.value));
@@ -147,7 +147,7 @@ function AdminCaseFormModal({
                       if (errors.businessId) setErrors((prev) => ({ ...prev, businessId: "" }));
                     }}
                     className={`w-full border rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30 transition-all ${errors.businessId ? "border-red-500" : "border-slate-200"}`}>
-                    <option value="">No sponsor (private client)</option>
+                    <option value="">No organisation (private individual)</option>
                     {sponsors.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.sponsorProfile?.companyName || s.sponsorProfile?.tradingName || `${s.first_name} ${s.last_name}`}
@@ -221,10 +221,10 @@ function AdminCaseFormModal({
               <Input label="Salary Offered (£)" name="salaryOffered" type="number" min="0" value={formData.salaryOffered} onChange={onChange} error={errors.salaryOffered} placeholder="Annual salary" />
               <Input label="Total Amount (£)" name="totalAmount" type="number" min="0" step="0.01" value={formData.totalAmount} onChange={onChange} error={errors.totalAmount} placeholder="Total fee" required />
               <Input label="Paid Amount (£)" name="paidAmount" type="number" min="0" step="0.01" value={formData.paidAmount} onChange={onChange} error={errors.paidAmount} placeholder="Amount paid so far" />
-              <Input label="CCL fee (£) — amount Client must pay" name="proposedAmount" type="number" min="0" step="0.01" value={formData.proposedAmount} onChange={onChange} error={errors.proposedAmount} placeholder="e.g. 1500.00" />
+              <Input label="CCL fee (£) — amount Individual must pay" name="proposedAmount" type="number" min="0" step="0.01" value={formData.proposedAmount} onChange={onChange} error={errors.proposedAmount} placeholder="e.g. 1500.00" />
             </div>
             <p className="text-xs font-bold text-blue-800 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mt-2">
-              Sets the Client Care Letter fee issued to the Client. This is the amount they must pay.
+              Sets the Client Care Letter fee issued to the Individual. This is the amount they must pay.
             </p>
           </div>
 

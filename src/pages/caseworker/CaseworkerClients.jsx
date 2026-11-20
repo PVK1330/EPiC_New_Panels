@@ -30,8 +30,8 @@ const INITIAL_CLIENT_FORM = {
 };
 
 const TABS = [
-  { id: "candidates", label: "Client Profiles", path: "/caseworker/people/candidates" },
-  { id: "sponsors", label: "Sponsor Profiles", path: "/caseworker/people/sponsors" },
+  { id: "candidates", label: "Individual Profiles", path: "/caseworker/people/candidates" },
+  { id: "sponsors", label: "Organisation Profiles", path: "/caseworker/people/sponsors" },
 ];
 
 const Badge = ({ variant = "blue", children }) => {
@@ -157,13 +157,13 @@ const buildAssignedCandidates = (cases = []) => {
   });
 
   return Array.from(grouped.values()).map(({ candidate, cases: candidateCases }, idx) => {
-    const name = `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() || "Unknown Client";
+    const name = `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() || "Unknown Individual";
     const initials = `${(candidate.first_name || "").charAt(0)}${(candidate.last_name || "").charAt(0)}`
       .toUpperCase() || "C";
     const latestCase = resolveCurrentCase(candidateCases);
     const track = latestCase?.visaType?.name || "Application type not set";
     const code = latestCase?.caseId ? `#${latestCase.caseId}` : `#C-${candidate.id}`;
-    const sub = `${latestCase?.nationality || "Client"}${latestCase?.jobTitle ? ` · ${latestCase.jobTitle}` : ""}`;
+    const sub = `${latestCase?.nationality || "Individual"}${latestCase?.jobTitle ? ` · ${latestCase.jobTitle}` : ""}`;
 
     return {
       id: candidate.id,
@@ -316,7 +316,7 @@ const CaseworkerClients = () => {
         const response = await api.get("/api/caseworker/sponsors");
         setSponsors(response.data.data.sponsors || []);
       } catch (error) {
-        console.error("Error fetching sponsors:", error);
+        console.error("Error fetching organisations:", error);
       } finally {
         setLoading(false);
       }
@@ -405,7 +405,7 @@ const CaseworkerClients = () => {
       };
       const res = await createCandidate(payload);
       showToast({
-        message: res.data?.message || "Client created successfully and assigned to your workload",
+        message: res.data?.message || "Individual created successfully and assigned to your workload",
         variant: "success",
       });
       setClientModalOpen(false);
@@ -432,7 +432,7 @@ const CaseworkerClients = () => {
         badgeVariant: sponsor.sponsorProfile?.licenceStatus === 'Active' ? 'green' : 'yellow'
       });
     } catch (error) {
-      console.error("Error fetching sponsor details:", error);
+      console.error("Error fetching organisation details:", error);
     }
   };
 
@@ -470,12 +470,12 @@ const CaseworkerClients = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-black text-secondary">
-            {activeTab === "sponsors" ? "Sponsors" : "Clients"}
+            {activeTab === "sponsors" ? "Organisations" : "Individuals"}
           </h1>
           <p className="text-gray-500 mt-2">
             {activeTab === "sponsors"
-              ? "Manage sponsor profiles and compliance records"
-              : "Manage client profiles and assigned cases"}
+              ? "Manage organisation profiles and compliance records"
+              : "Manage individual profiles and assigned cases"}
           </p>
         </div>
         {canAddClients && activeTab === "candidates" && (
@@ -489,7 +489,7 @@ const CaseworkerClients = () => {
             className="rounded-xl shadow-sm self-start sm:self-auto"
           >
             <FiPlus size={14} className="mr-1.5" />
-            Add Client
+            Add Individual
           </Button>
         )}
       </div>
@@ -522,7 +522,7 @@ const CaseworkerClients = () => {
             </div>
           ) : candidates.length === 0 ? (
             <div className="col-span-full text-center py-8 text-sm font-bold text-gray-500">
-              No assigned clients found
+              No assigned individuals found
             </div>
           ) : (
             candidates.map((candidate) => (
@@ -549,7 +549,7 @@ const CaseworkerClients = () => {
             </div>
           ) : sponsors.length === 0 ? (
             <div className="col-span-full text-center py-8 text-sm font-bold text-gray-500">
-              No sponsors found
+              No organisations found
             </div>
           ) : (
             sponsors.map((sponsor) => {
@@ -577,7 +577,7 @@ const CaseworkerClients = () => {
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="border-b border-gray-200 p-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-black text-secondary">Client Profile</h2>
+                <h2 className="text-2xl font-black text-secondary">Individual Profile</h2>
                 <button
                   onClick={closeViewModal}
                   className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
@@ -945,7 +945,7 @@ const CaseworkerClients = () => {
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="border-b border-gray-200 p-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-black text-secondary">Sponsor Profile</h2>
+                <h2 className="text-2xl font-black text-secondary">Organisation Profile</h2>
                 <button
                   onClick={closeViewModal}
                   className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
@@ -1040,7 +1040,7 @@ const CaseworkerClients = () => {
                         <div className="flex items-center gap-3">
                           <Briefcase size={16} className="text-gray-400" />
                           <div>
-                            <p className="text-xs text-gray-500">Sponsor Code</p>
+                            <p className="text-xs text-gray-500">Organisation Code</p>
                             <p className="text-sm font-bold text-gray-900">{selectedSponsor?.sponsor?.sponsorProfile?.sponsorLicenceNumber || viewModal.data.code}</p>
                           </div>
                         </div>
@@ -1204,7 +1204,7 @@ const CaseworkerClients = () => {
       <Modal
         open={clientModalOpen}
         onClose={() => setClientModalOpen(false)}
-        title="Add New Client"
+        title="Add New Individual"
         maxWidthClass="max-w-2xl"
         bodyClassName="px-5 py-5 sm:px-6"
         footer={
@@ -1226,10 +1226,10 @@ const CaseworkerClients = () => {
               {creatingClient ? (
                 <>
                   <Loader2 size={14} className="animate-spin mr-2" />
-                  Adding Client…
+                  Adding Individual…
                 </>
               ) : (
-                "Add Client"
+                "Add Individual"
               )}
             </Button>
           </>
@@ -1237,7 +1237,7 @@ const CaseworkerClients = () => {
       >
         <form onSubmit={handleCreateClient} className="space-y-4">
           <p className="text-xs text-gray-500 font-medium">
-            Register a new client. A Lead case will automatically be generated and assigned to your workload.
+            Register a new individual. A Lead case will automatically be generated and assigned to your workload.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

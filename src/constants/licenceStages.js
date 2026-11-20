@@ -12,7 +12,7 @@
  */
 
 export const STAGE_ROLES = [
-  { key: "sponsor",    label: "Sponsor",    chip: "bg-blue-50 text-blue-600 border-blue-100" },
+  { key: "sponsor",    label: "Organisation",    chip: "bg-blue-50 text-blue-600 border-blue-100" },
   { key: "caseworker", label: "Caseworker", chip: "bg-indigo-50 text-indigo-600 border-indigo-100" },
   { key: "admin",      label: "Admin",      chip: "bg-primary/5 text-primary border-primary/10" },
 ];
@@ -24,7 +24,7 @@ export const LICENCE_STAGES = [
     order: 1,
     title: "Enquiry & Onboarding",
     govSection: "Intake",
-    description: "The sponsor approaches the firm; the case is opened and a caseworker assigned.",
+    description: "The organisation approaches the firm; the case is opened and a caseworker assigned.",
     tasks: {
       sponsor: "Submit a sponsor licence enquiry with basic business details.",
       caseworker: "Acknowledge the assignment and schedule an introductory call.",
@@ -146,10 +146,10 @@ export const LICENCE_STAGES = [
     order: 11,
     title: "Sponsor Information Provision",
     govSection: "Government Prep",
-    description: "Caseworker validates completeness of the sponsor's information pack before government portal entry.",
+    description: "Caseworker validates completeness of the organisation's information pack before government portal entry.",
     tasks: {
       sponsor: "Confirm all organisational details, personnel, and documents are accurate and up-to-date before portal submission.",
-      caseworker: "Validate completeness of the sponsor's information pack and confirm readiness for government portal entry.",
+      caseworker: "Validate completeness of the organisation's information pack and confirm readiness for government portal entry.",
       admin: "Authorise the information pack for government portal submission.",
     },
   },
@@ -158,10 +158,10 @@ export const LICENCE_STAGES = [
     order: 12,
     title: "Government SMS Registration",
     govSection: "Government Prep",
-    description: "Register the sponsor on the UKVI Sponsorship Management System (SMS) portal.",
+    description: "Register the organisation on the UKVI Sponsorship Management System (SMS) portal.",
     tasks: {
       sponsor: "Await confirmation that your organisation has been registered on the UKVI Sponsorship Management System (SMS).",
-      caseworker: "Register the sponsor organisation on the SMS portal and obtain the SMS portal username and registration reference.",
+      caseworker: "Register the organisation on the SMS portal and obtain the SMS portal username and registration reference.",
       admin: "Verify the SMS registration details and record the reference number.",
     },
   },
@@ -170,11 +170,11 @@ export const LICENCE_STAGES = [
     order: 13,
     title: "Sponsor Portal Onboarding",
     govSection: "Government Prep",
-    description: "Onboard the sponsor onto the UKVI SMS portal with login credentials.",
+    description: "Onboard the organisation onto the UKVI SMS portal with login credentials.",
     tasks: {
       sponsor: "Log in to the UKVI Sponsor Management System using the credentials provided and confirm access.",
-      caseworker: "Guide the sponsor through the SMS portal login and confirm the sponsor can access their account.",
-      admin: "Record that the sponsor has been successfully onboarded to the SMS portal.",
+      caseworker: "Guide the organisation through the SMS portal login and confirm the organisation can access their account.",
+      admin: "Record that the organisation has been successfully onboarded to the SMS portal.",
     },
   },
   {
@@ -182,10 +182,10 @@ export const LICENCE_STAGES = [
     order: 14,
     title: "Government Portal Credentials",
     govSection: "Government Application",
-    description: "Generate and securely share the UKVI online application portal credentials with the sponsor.",
+    description: "Generate and securely share the UKVI online application portal credentials with the organisation.",
     tasks: {
       sponsor: "Receive and confirm receipt of the UKVI online application portal credentials.",
-      caseworker: "Generate the UKVI online application portal user ID and password; share securely with the sponsor.",
+      caseworker: "Generate the UKVI online application portal user ID and password; share securely with the organisation.",
       admin: "Confirm credentials have been generated and securely transmitted.",
     },
   },
@@ -197,7 +197,7 @@ export const LICENCE_STAGES = [
     description: "Complete the online sponsor licence application forms on the UKVI portal.",
     tasks: {
       sponsor: "Log in to the UKVI portal and complete the online sponsor licence application forms.",
-      caseworker: "Review and verify all form entries with the sponsor; ensure declarations and supporting data are correctly entered.",
+      caseworker: "Review and verify all form entries with the organisation; ensure declarations and supporting data are correctly entered.",
       admin: "Carry out a final QA check of the completed government application forms before submission.",
     },
   },

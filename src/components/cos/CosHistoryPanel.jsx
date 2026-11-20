@@ -43,7 +43,7 @@ export default function CosHistoryPanel({ request }) {
       icon: MessageSquare,
       ring: "bg-amber-50 text-amber-600",
       title: "Information Requested",
-      detail: reviewer ? `Requested by ${reviewer}` : "Additional information requested from sponsor",
+      detail: reviewer ? `Requested by ${reviewer}` : "Additional information requested from organisation",
       at: request.reviewedAt || request.updated_at,
       notes: request.reviewNotes,
     });

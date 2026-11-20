@@ -18,7 +18,7 @@ import { formatDateTime } from "../../utils/datetime";
 const ENTITY_OPTIONS = [
   { value: "", label: "All Entities" },
   { value: "CandidateApplication", label: "Candidate Profile" },
-  { value: "SponsorProfile", label: "Sponsor Profile" },
+  { value: "SponsorProfile", label: "Organisation Profile" },
   { value: "User", label: "User Account" },
   { value: "Case", label: "Case" },
 ];
@@ -105,7 +105,7 @@ const AdminAuditLogs = () => {
             Audit Logs
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Track every change made across candidates, sponsors, users, and cases
+            Track every change made across candidates, organisations, users, and cases
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

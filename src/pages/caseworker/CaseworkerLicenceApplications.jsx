@@ -313,14 +313,14 @@ const CaseworkerLicenceApplications = () => {
           ...(grantForm.expiryDate    && { expiryDate:    grantForm.expiryDate }),
           ...(grantForm.cosAllocation && { cosAllocation: Number(grantForm.cosAllocation) }),
         });
-        showToast({ message: "Licence granted — sponsor has been notified by email", variant: "success" });
+        showToast({ message: "Licence granted — organisation has been notified by email", variant: "success" });
       } else {
         if (!rejectReason.trim()) {
           showToast({ message: "A rejection reason is required", variant: "warning" });
           setDecisionLoading(false); return;
         }
         await rejectLicenceCaseworker(selectedApp.id, { rejectionReason: rejectReason.trim() });
-        showToast({ message: "Application rejected — sponsor has been notified", variant: "success" });
+        showToast({ message: "Application rejected — organisation has been notified", variant: "success" });
       }
       closeDecisionModal();
       setSelectedApp(null);
@@ -397,7 +397,7 @@ const CaseworkerLicenceApplications = () => {
         // UKVI sends portal credentials directly to the sponsor's registered email.
         // case "requestCreds":
         //   await requestGovCredentials(app.id);
-        //   msg = "Credentials sent to sponsor";
+        //   msg = "Credentials sent to organisation";
         //   break;
         case "submitUKVI":
           if (!subForm.submissionRef.trim() || !subForm.submissionDate) {
@@ -430,7 +430,7 @@ const CaseworkerLicenceApplications = () => {
       fd.append("documentName", cwDispatch.documentName || cwDispatchFile.name);
       if (cwDispatch.message.trim()) fd.append("message", cwDispatch.message.trim());
       await dispatchDocumentToCaseworker(selectedApp.id, fd);
-      showToast({ message: "Document sent to sponsor successfully", variant: "success" });
+      showToast({ message: "Document sent to organisation successfully", variant: "success" });
       setCwDispatch({ documentType: "sponsor_licence", documentName: "", message: "" });
       setCwDispatchFile(null);
     } catch (err) {
@@ -963,7 +963,7 @@ const CaseworkerLicenceApplications = () => {
                           <div className="space-y-2">
                             <div className="rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
                               <p className="text-xs font-bold text-orange-800">
-                                The application has been submitted to UKVI. UKVI sends their decision directly to the sponsor.
+                                The application has been submitted to UKVI. UKVI sends their decision directly to the organisation.
                               </p>
                             </div>
 
@@ -973,7 +973,7 @@ const CaseworkerLicenceApplications = () => {
                                 <div className="flex items-center gap-2">
                                   <BadgeCheck size={14} className="text-green-600 shrink-0" />
                                   <span className="text-[11px] font-black text-green-800">
-                                    Sponsor confirmed the UKVI decision on {new Date(selectedApp.ukviDecisionConfirmedAt).toLocaleString("en-GB")}
+                                    Organisation confirmed the UKVI decision on {new Date(selectedApp.ukviDecisionConfirmedAt).toLocaleString("en-GB")}
                                   </span>
                                 </div>
                                 {selectedApp.ukviDecisionLetterPath ? (
@@ -996,7 +996,7 @@ const CaseworkerLicenceApplications = () => {
                                     </button>
                                   </div>
                                 ) : (
-                                  <p className="text-[11px] font-bold text-gray-400">No decision letter was attached by the sponsor.</p>
+                                  <p className="text-[11px] font-bold text-gray-400">No decision letter was attached by the organisation.</p>
                                 )}
                                 <div className="flex gap-2 pt-1">
                                   <button
@@ -1016,7 +1016,7 @@ const CaseworkerLicenceApplications = () => {
                             ) : (
                               <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
                                 <p className="text-xs font-bold text-amber-800">
-                                  Waiting for the sponsor to confirm they received the UKVI decision. You can grant &amp; close the case once they confirm on their portal.
+                                  Waiting for the organisation to confirm they received the UKVI decision. You can grant &amp; close the case once they confirm on their portal.
                                 </p>
                               </div>
                             )}
@@ -1031,7 +1031,7 @@ const CaseworkerLicenceApplications = () => {
                               <p className="text-[10px] font-black uppercase tracking-widest text-green-700">UKVI Licence Fee Payment</p>
                             </div>
                             <p className="text-xs font-bold text-green-900">
-                              Sponsor confirmed payment on {new Date(selectedApp.ukviPaymentConfirmedAt).toLocaleString("en-GB")}.
+                              Organisation confirmed payment on {new Date(selectedApp.ukviPaymentConfirmedAt).toLocaleString("en-GB")}.
                             </p>
                             {selectedApp.ukviPaymentProofPath ? (
                               <div className="mt-2 flex items-center gap-2">
@@ -1053,7 +1053,7 @@ const CaseworkerLicenceApplications = () => {
                                 </button>
                               </div>
                             ) : (
-                              <p className="mt-1 text-[11px] font-bold text-gray-400">No payment slip was attached by the sponsor.</p>
+                              <p className="mt-1 text-[11px] font-bold text-gray-400">No payment slip was attached by the organisation.</p>
                             )}
                           </div>
                         )}
@@ -1074,8 +1074,8 @@ const CaseworkerLicenceApplications = () => {
                           </div>
                         ) : !submittedCreds ? (
                           <div className="rounded-xl border border-violet-100 bg-white px-4 py-3 text-xs text-gray-500">
-                            The sponsor has not yet submitted their UKVI portal credentials.
-                            <p className="mt-1 text-[10px] text-gray-400">UKVI sends portal credentials directly to the sponsor's registered email. Once received, the sponsor submits them here.</p>
+                            The organisation has not yet submitted their UKVI portal credentials.
+                            <p className="mt-1 text-[10px] text-gray-400">UKVI sends portal credentials directly to the organisation's registered email. Once received, the organisation submits them here.</p>
                           </div>
                         ) : (
                           <div className="space-y-3">
@@ -1116,7 +1116,7 @@ const CaseworkerLicenceApplications = () => {
                             {submittedCreds.caseworkerVerifiedAt ? (
                               <div className="flex items-center gap-2 rounded-xl bg-green-50 border border-green-200 px-4 py-2.5 text-xs font-black text-green-700">
                                 <BadgeCheck size={15} />
-                                Credentials verified{submittedCreds.caseworkerVerifiedAt ? ` on ${new Date(submittedCreds.caseworkerVerifiedAt).toLocaleString("en-GB")}` : ""}. Sponsor has been notified.
+                                Credentials verified{submittedCreds.caseworkerVerifiedAt ? ` on ${new Date(submittedCreds.caseworkerVerifiedAt).toLocaleString("en-GB")}` : ""}. Organisation has been notified.
                               </div>
                             ) : (
                               <div className="flex gap-2 pt-1">
@@ -1128,7 +1128,7 @@ const CaseworkerLicenceApplications = () => {
                                       await verifyCaseworkerCredentials(selectedApp.id);
                                       const res = await getCaseworkerSubmittedCredentials(selectedApp.id).catch(() => null);
                                       setSubmittedCreds(res?.data?.data || null);
-                                      showToast({ message: "Credentials verified — sponsor notified", variant: "success" });
+                                      showToast({ message: "Credentials verified — organisation notified", variant: "success" });
                                       fetchApplications();
                                     } catch {
                                       showToast({ message: "Failed to verify credentials", variant: "danger" });
@@ -1146,7 +1146,7 @@ const CaseworkerLicenceApplications = () => {
                                       setCredsActionLoading(true);
                                       await requestCaseworkerCredentialsResubmission(selectedApp.id);
                                       setSubmittedCreds(null);
-                                      showToast({ message: "Sponsor notified to resubmit credentials", variant: "success" });
+                                      showToast({ message: "Organisation notified to resubmit credentials", variant: "success" });
                                     } catch {
                                       showToast({ message: "Failed to send resubmission request", variant: "danger" });
                                     } finally { setCredsActionLoading(false); }
@@ -1168,10 +1168,10 @@ const CaseworkerLicenceApplications = () => {
                       <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4 space-y-3">
                         <div className="flex items-center gap-2 mb-1">
                           <Upload className="text-teal-600 shrink-0" size={14} />
-                          <p className="text-[10px] font-black uppercase tracking-widest text-teal-600">Dispatch Document to Sponsor</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-teal-600">Dispatch Document to Organisation</p>
                         </div>
                         <p className="text-xs font-bold text-teal-800">
-                          Upload the approved UKVI sponsor licence or any other document to send to the sponsor via email and their portal.
+                          Upload the approved UKVI sponsor licence or any other document to send to the organisation via email and their portal.
                         </p>
                         <select
                           value={cwDispatch.documentType}
@@ -1192,7 +1192,7 @@ const CaseworkerLicenceApplications = () => {
                           className="w-full bg-white border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none"
                         />
                         <textarea
-                          placeholder="Message to sponsor (optional)"
+                          placeholder="Message to organisation (optional)"
                           value={cwDispatch.message}
                           onChange={(e) => setCwDispatch((f) => ({ ...f, message: e.target.value }))}
                           rows={2}
@@ -1216,7 +1216,7 @@ const CaseworkerLicenceApplications = () => {
                           className="w-full bg-teal-600 text-white font-black rounded-xl py-3 flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-teal-700 transition-all active:scale-95"
                         >
                           {cwDispatchLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                          {cwDispatchLoading ? "Sending…" : "Send to Sponsor"}
+                          {cwDispatchLoading ? "Sending…" : "Send to Organisation"}
                         </button>
                       </div>
                     )}
@@ -1456,7 +1456,7 @@ const CaseworkerLicenceApplications = () => {
                   {govModal.type === "startReview" && (
                     <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3">
                       <p className="text-sm font-bold text-indigo-800">
-                        This will move the application from <strong>Pending</strong> to <strong>Under Review</strong>. The sponsor will be notified that casework has begun.
+                        This will move the application from <strong>Pending</strong> to <strong>Under Review</strong>. The organisation will be notified that casework has begun.
                       </p>
                     </div>
                   )}
@@ -1465,7 +1465,7 @@ const CaseworkerLicenceApplications = () => {
                   {govModal.type === "startGovReg" && (
                     <div className="rounded-xl border border-violet-100 bg-violet-50 px-4 py-3">
                       <p className="text-sm font-bold text-violet-800">
-                        This transitions the application to <strong>Government Processing</strong> and creates a government tracking record. The sponsor and admin will be notified.
+                        This transitions the application to <strong>Government Processing</strong> and creates a government tracking record. The organisation and admin will be notified.
                       </p>
                     </div>
                   )}
@@ -1613,7 +1613,7 @@ const CaseworkerLicenceApplications = () => {
                         className={inp}
                         placeholder="e.g. ABCD1234E"
                       />
-                      <p className="text-[10px] text-gray-400 mt-1.5">Appears in the grant email sent to the sponsor.</p>
+                      <p className="text-[10px] text-gray-400 mt-1.5">Appears in the grant email sent to the organisation.</p>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -1644,7 +1644,7 @@ const CaseworkerLicenceApplications = () => {
                     </div>
                     <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
                       <p className="text-xs font-bold text-emerald-800">
-                        This activates the sponsor licence, notifies the sponsor by email, and closes the case.
+                        This activates the sponsor licence, notifies the organisation by email, and closes the case.
                       </p>
                     </div>
                   </>
@@ -1664,7 +1664,7 @@ const CaseworkerLicenceApplications = () => {
                     </div>
                     <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
                       <p className="text-xs font-bold text-red-700">
-                        This rejects the application and notifies the sponsor. A 6-month reapplication cooldown applies.
+                        This rejects the application and notifies the organisation. A 6-month reapplication cooldown applies.
                       </p>
                     </div>
                   </>

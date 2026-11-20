@@ -297,7 +297,7 @@ const Payments = () => {
                             isReceipt: true,
                             candidateName: user
                               ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
-                              : "Client",
+                              : "Individual",
                             platformName: platformName,
                           });
                           if (!result?.ok) {
@@ -599,7 +599,7 @@ const Payments = () => {
                               isReceipt: true,
                               candidateName: user
                                 ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
-                                : "Client",
+                                : "Individual",
                               platformName: platformName,
                             });
                             if (!result?.ok) {

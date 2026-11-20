@@ -108,7 +108,7 @@ export default function CosReviewQueue({
         showToast({ message: "CoS request rejected", variant: "success" });
       } else if (action === "requestInfo") {
         await requestInfoRequest(request.id, payload);
-        showToast({ message: "Information requested from sponsor", variant: "success" });
+        showToast({ message: "Information requested from organisation", variant: "success" });
       }
       setReview({ open: false, request: null, action: "approve" });
       refreshAll();
@@ -191,7 +191,7 @@ export default function CosReviewQueue({
           <Search className="absolute left-4 top-3.5 text-gray-300" size={18} />
           <input
             type="text"
-            placeholder="Search by sponsor or visa type..."
+            placeholder="Search by organisation or visa type..."
             className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-primary/20 transition-all text-sm font-bold"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -226,7 +226,7 @@ export default function CosReviewQueue({
               <table className="w-full min-w-0 text-left table-auto">
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    {["Sr No", "Sponsor", "Visa Type", "Requested / Approved", "Status", "Requested Date", "Reviewer", "Actions"].map((h) => (
+                    {["Sr No", "Organisation", "Visa Type", "Requested / Approved", "Status", "Requested Date", "Reviewer", "Actions"].map((h) => (
                       <th key={h} className={`px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400 ${h === "Actions" ? "text-right" : ""}`}>
                         {h}
                       </th>
@@ -245,7 +245,7 @@ export default function CosReviewQueue({
                         </td>
                         <td className="px-6 py-4">
                         <p className="text-sm font-black text-secondary group-hover:text-primary transition-colors">
-                          {fullName(r.sponsor) || `Sponsor #${r.sponsorId}`}
+                          {fullName(r.sponsor) || `Organisation #${r.sponsorId}`}
                         </p>
                         <p className="text-xs font-bold text-gray-400 mt-0.5">{r.sponsor?.email}</p>
                       </td>
@@ -331,7 +331,7 @@ export default function CosReviewQueue({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="text-base font-black text-secondary">
-                        {fullName(r.sponsor) || `Sponsor #${r.sponsorId}`}
+                        {fullName(r.sponsor) || `Organisation #${r.sponsorId}`}
                       </h3>
                       <p className="text-xs font-bold text-gray-400 mt-0.5">{r.sponsor?.email}</p>
                     </div>
@@ -469,7 +469,7 @@ export default function CosReviewQueue({
               {/* Summary fields */}
               <div className="grid grid-cols-2 gap-3 mb-6">
                 {[
-                  ["Sponsor", fullName(historyRequest.sponsor) || `#${historyRequest.sponsorId}`],
+                  ["Organisation", fullName(historyRequest.sponsor) || `#${historyRequest.sponsorId}`],
                   ["Visa Type", historyRequest.visaType || "—"],
                   ["Requested", historyRequest.requestedAmount],
                   ["Approved", historyRequest.approvedAmount != null ? historyRequest.approvedAmount : "—"],

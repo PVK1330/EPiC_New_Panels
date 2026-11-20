@@ -229,7 +229,7 @@ export default function BusinessDashboard() {
     return (
       <div className="min-h-[420px] flex flex-col items-center justify-center gap-3">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-sm font-bold text-gray-600">Loading sponsor dashboard...</p>
+        <p className="text-sm font-bold text-gray-600">Loading organisation dashboard...</p>
       </div>
     );
   }
@@ -319,7 +319,7 @@ export default function BusinessDashboard() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="text-sm font-black text-secondary">
-                        {`${item.candidate?.first_name || ""} ${item.candidate?.last_name || ""}`.trim() || "Client"}
+                        {`${item.candidate?.first_name || ""} ${item.candidate?.last_name || ""}`.trim() || "Individual"}
                       </h4>
                       <p className="text-xs font-bold text-gray-500">{item.jobTitle || "Case in progress"}</p>
                       <p className="text-[10px] font-bold text-gray-400 mt-1">Case: {item.caseId || "N/A"}</p>

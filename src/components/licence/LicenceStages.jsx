@@ -40,7 +40,7 @@ function SlaChip({ slaStatus }) {
   );
 }
 
-const ROLE_LABEL = { sponsor: "Sponsor", caseworker: "Caseworker", admin: "Admin", candidate: "Client" };
+const ROLE_LABEL = { sponsor: "Organisation", caseworker: "Caseworker", admin: "Admin", candidate: "Individual" };
 
 /**
  * Ownership panel — shown inside each expanded stage.

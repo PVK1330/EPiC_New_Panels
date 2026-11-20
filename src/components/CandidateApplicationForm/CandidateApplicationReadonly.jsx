@@ -312,7 +312,7 @@ export default function CandidateApplicationReadonly({
     return (
       <p className="text-sm text-gray-500 text-center py-8">
         {tabId === "documents"
-          ? "Documents are available on the client’s case detail page."
+          ? "Documents are available on the individual’s case detail page."
           : `${tabId.charAt(0).toUpperCase() + tabId.slice(1)} is available on the case detail page.`}
       </p>
     );
@@ -326,7 +326,7 @@ export default function CandidateApplicationReadonly({
       {tabId === "overview" && candidate && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl border border-[#e0e7ff] bg-[#eef2ff]">
           <div>
-            <p className="text-[10px] font-black uppercase text-gray-400">Client</p>
+            <p className="text-[10px] font-black uppercase text-gray-400">Individual</p>
             <p className="text-sm font-black text-gray-900">
               {[candidate.first_name, candidate.last_name].filter(Boolean).join(" ") || "—"}
             </p>

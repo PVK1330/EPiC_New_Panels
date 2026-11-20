@@ -152,7 +152,7 @@ function CaseworkerReviewPanel({ doc, applicationId, onRefresh }) {
       {action === "info" && (
         <div className="mt-2 space-y-2">
           <textarea
-            placeholder="Notes for sponsor (required)"
+            placeholder="Notes for organisation (required)"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 h-16 resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"

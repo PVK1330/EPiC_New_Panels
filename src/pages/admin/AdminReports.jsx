@@ -625,7 +625,7 @@ function PerformanceDetailModal({ caseworker, onClose, showToast }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">
-                Client Satisfaction
+                Individual Satisfaction
               </p>
               <StarRating value={caseworker.clientSatisfaction || 3} />
               <p className="text-xs text-gray-400 mt-1.5">
@@ -708,7 +708,7 @@ function PerformanceDetailModal({ caseworker, onClose, showToast }) {
                     <tr className="bg-gray-50 text-left">
                       {[
                         "Case",
-                        "Client",
+                        "Individual",
                         "Visa Type",
                         "Status",
                         "Date",
@@ -1708,7 +1708,7 @@ export default function AdminReports() {
                   type="search"
                   value={financeSearch}
                   onChange={(e) => setFinanceSearch(e.target.value)}
-                  placeholder="Filter visa type or sponsor…"
+                  placeholder="Filter visa type or organisation…"
                   className="w-full border border-gray-200 rounded-xl pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30"
                 />
               </div>
@@ -1954,7 +1954,7 @@ export default function AdminReports() {
           {/* Revenue by Sponsor */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
             <h2 className="text-sm font-black text-secondary pb-3 mb-4 border-b border-gray-100">
-              Revenue by Sponsor
+              Revenue by Organisation
             </h2>
             {financeLoading ? (
               <div className="text-center py-8">
@@ -1973,7 +1973,7 @@ export default function AdminReports() {
               </div>
             ) : filteredFinanceSponsor.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-8">
-                No sponsor revenue data available.
+                No organisation revenue data available.
               </p>
             ) : (
               <div className="flex flex-col gap-2.5">

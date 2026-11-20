@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, Loader2, AlertTriangle, MessageSquare } from "lucide-react";
 
 const fullName = (u) =>
-  u ? `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email : "Sponsor";
+  u ? `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email : "Organisation";
 
 /**
  * Approve / Reject confirmation dialog for a CoS request.
@@ -104,10 +104,10 @@ export default function CosReviewModal({ open, request, action, onClose, onSubmi
                 className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm font-bold text-secondary outline-none resize-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20"
                 placeholder={
                   isApprove
-                    ? "Optional notes for the sponsor…"
+                    ? "Optional notes for the organisation…"
                     : isReject
                     ? "Reason for rejection (required)…"
-                    : "Describe what additional information is needed from the sponsor…"
+                    : "Describe what additional information is needed from the organisation…"
                 }
               />
             </div>
@@ -116,7 +116,7 @@ export default function CosReviewModal({ open, request, action, onClose, onSubmi
               <div className="flex items-start gap-2 text-amber-700">
                 <AlertTriangle size={16} className="shrink-0 mt-0.5" />
                 <p className="text-xs font-bold">
-                  This will reject the request and notify the sponsor. This cannot be undone.
+                  This will reject the request and notify the organisation. This cannot be undone.
                 </p>
               </div>
             )}
@@ -124,7 +124,7 @@ export default function CosReviewModal({ open, request, action, onClose, onSubmi
               <div className="flex items-start gap-2 text-blue-700 bg-blue-50 rounded-2xl p-3">
                 <MessageSquare size={16} className="shrink-0 mt-0.5" />
                 <p className="text-xs font-bold">
-                  The sponsor will be notified by email and in-app to provide the information above. The request will remain Under Review.
+                  The organisation will be notified by email and in-app to provide the information above. The request will remain Under Review.
                 </p>
               </div>
             )}

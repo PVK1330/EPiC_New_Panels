@@ -52,8 +52,8 @@ const navSections = [
     items: [
       { to: "/admin/admin-users",  label: "Admin Users",          icon: RiShieldUserLine,  moduleKey: "admin.dashboard" },
       { to: "/admin/caseworkers",  label: "Caseworkers",          icon: RiUserStarLine,    moduleKey: "admin.caseworkers" },
-      { to: "/admin/candidates",   label: "Clients",           icon: RiContactsLine,    moduleKey: "admin.candidates" },
-      { to: "/admin/businesses",   label: "Sponsors",             icon: RiBuildingLine,    moduleKey: "admin.businesses" },
+      { to: "/admin/candidates",   label: "Individuals",           icon: RiContactsLine,    moduleKey: "admin.candidates" },
+      { to: "/admin/businesses",   label: "Organisations",             icon: RiBuildingLine,    moduleKey: "admin.businesses" },
     ],
   },
   {

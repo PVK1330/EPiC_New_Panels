@@ -101,7 +101,7 @@ test('A-04 — Caseworkers page loads with data', async () => {
    5. BUSINESSES
 ═══════════════════════════════════════════════════════════════ */
 
-test('A-05 — Businesses/Sponsors page loads', async () => {
+test('A-05 — Businesses/Organisations page loads', async () => {
   await pg.goto(`${BASE}/admin/businesses`);
   await waitForContent(pg);
   await pg.screenshot({ path: 'test-screenshots/admin-05-businesses.png' });

@@ -7,7 +7,7 @@ const ThirdPartyDocs = () => (
       Third-party documents
     </h1>
     <p className="text-sm font-bold text-gray-500 mt-2">
-      Request or upload documents from sponsors, employers, or other parties.
+      Request or upload documents from organisations, employers, or other parties.
       This section will connect to your caseworker workflow when the backend is
       ready.
     </p>

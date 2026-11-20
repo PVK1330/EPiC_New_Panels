@@ -8,7 +8,8 @@ function formatRoleTab(roleKey) {
   if (roleKey === "All") return "All";
   if (!roleKey) return roleKey;
   const lower = roleKey.toLowerCase();
-  if (lower === "business" || lower === "sponsor") return "Business/Sponsor";
+  if (lower === "client") return "Individual";
+  if (lower === "business" || lower === "sponsor") return "Business/Organisation";
   return roleKey.charAt(0).toUpperCase() + roleKey.slice(1).toLowerCase();
 }
 
@@ -38,7 +39,7 @@ const CaseworkerMessages = () => {
         name: u.name,
         email: u.email || "",
         initials: u.initials,
-        role: (u.role?.toLowerCase() === 'candidate' ? 'Client' : u.role) || "User",
+        role: (u.role?.toLowerCase() === 'candidate' ? 'Individual' : u.role) || "User",
         profile_pic: u.profile_pic || u.avatar_url,
         hasLoggedIn: u.hasLoggedIn,
       });
@@ -52,7 +53,7 @@ const CaseworkerMessages = () => {
           name: t.name,
           email: "",
           initials: t.initials,
-          role: (t.role?.toLowerCase() === 'candidate' ? 'Client' : t.role) || "User",
+          role: (t.role?.toLowerCase() === 'candidate' ? 'Individual' : t.role) || "User",
           profile_pic: t.profile_pic || t.avatar_url,
           hasLoggedIn: t.hasLoggedIn,
         });
@@ -104,7 +105,7 @@ const CaseworkerMessages = () => {
     mergedThreads.forEach((t) => {
       if (t.role) {
         let r = t.role.toLowerCase();
-        if (r === "candidate") r = "client";
+        if (r === "candidate" || r === "individual") r = "client";
         if (r === "sponsor") roles.add("business");
         else roles.add(r);
       }
@@ -117,7 +118,7 @@ const CaseworkerMessages = () => {
     if (roleFilter !== "All") {
       list = list.filter((t) => {
         let tRole = (t.role || "").toLowerCase();
-        if (tRole === "candidate") tRole = "client";
+        if (tRole === "candidate" || tRole === "individual") tRole = "client";
         
         const fRole = roleFilter.toLowerCase();
         if (fRole === "business") return tRole === "business" || tRole === "sponsor";

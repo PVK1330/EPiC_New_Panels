@@ -92,7 +92,7 @@ export const DEFAULT_CASE_DETAIL = {
     { id: "l6", dot: "warn", time: "10 Apr 2026 · Expected", desc: "Bank statements deadline.", user: "Upcoming" },
   ],
   threads: [
-    { id: "th1", name: "Priya Sharma (Client)", preview: "Please find the documents attached…", active: true },
+    { id: "th1", name: "Priya Sharma (Individual)", preview: "Please find the documents attached…", active: true },
     { id: "th2", name: "TechNova HR", preview: "CoS has been issued, ref TN-2841", active: false },
     { id: "th3", name: "Internal — Alice Patel", preview: "Need to chase bank statements", active: false },
   ],
@@ -102,8 +102,8 @@ export const DEFAULT_CASE_DETAIL = {
     { id: "m3", in: true, text: "Understood, I'll get them uploaded today.", time: "2 Apr · 11:45" },
   ],
   internalNotes: [
-    { author: "Alice Patel", date: "2 Apr 2026", body: "Client has been slow to respond. May need to escalate if bank statements not received by 10 Apr. CoS looks fine." },
-    { author: "Sarah Anand", date: "28 Jan 2026", body: "High-priority client. Ensure SLA is maintained. Director referral from TechNova." },
+    { author: "Alice Patel", date: "2 Apr 2026", body: "Individual has been slow to respond. May need to escalate if bank statements not received by 10 Apr. CoS looks fine." },
+    { author: "Sarah Anand", date: "28 Jan 2026", body: "High-priority individual. Ensure SLA is maintained. Director referral from TechNova." },
   ],
   audit: [
     { ts: "2026-04-02 11:30", user: "Alice Patel", action: "UPDATE", actionClass: "bg-blue-100 text-blue-800", module: "Tasks", oldVal: "Pending", newVal: "In Progress", newClass: "text-amber-600" },

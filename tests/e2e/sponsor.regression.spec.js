@@ -36,7 +36,7 @@ async function waitForPage(page) {
    1. DASHBOARD
 ═══════════════════════════════════════════════════════════════ */
 
-test('SP-01 — Sponsor dashboard loads', async ({ page }) => {
+test('SP-01 — Organisation dashboard loads', async ({ page }) => {
   await login(page);
   await page.goto(`${BASE}/business/dashboard`);
   await waitForPage(page);

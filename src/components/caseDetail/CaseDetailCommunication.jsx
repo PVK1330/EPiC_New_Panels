@@ -59,7 +59,7 @@ const CaseDetailCommunication = ({ threads, messages }) => {
               {active?.name?.replace(/\s*\([^)]*\)\s*/g, "").trim() || "Thread"}
             </p>
             <p className="text-[11px] text-gray-400">
-              {active?.name?.includes("Internal") ? "Internal" : active?.name?.includes("HR") ? "Sponsor" : "Client"} · Online
+              {active?.name?.includes("Internal") ? "Internal" : active?.name?.includes("HR") ? "Organisation" : "Individual"} · Online
             </p>
           </div>
         </div>

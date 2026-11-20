@@ -66,7 +66,7 @@ const priorityBadge = {
 
 const TABLE_COLS = [
   "Case",
-  "Client",
+  "Individual",
   "Business",
   "CaseWorker (s)",
   "Visa Type",
@@ -366,7 +366,7 @@ export default function AdminCases() {
     const e = {};
 
     // ── Required selections ──────────────────────────────────────────────
-    if (!formData.candidateId) e.candidateId = "Please select a client";
+    if (!formData.candidateId) e.candidateId = "Please select an individual";
     // Sponsor is optional (BUG-031) — private clients have no sponsor.
     if (!formData.visaTypeId) e.visaTypeId = "Please select a visa type";
 
@@ -465,7 +465,7 @@ export default function AdminCases() {
             ? c.sponsor.sponsorProfile?.companyName ||
               c.sponsor.sponsorProfile?.tradingName ||
               `${c.sponsor.first_name} ${c.sponsor.last_name}`
-            : "No sponsor (private client)",
+            : "No organisation (private individual)",
           businessId: c.sponsorId,
           visaType: c.visaType?.name || "—",
           petitionType: c.petitionType?.name || "—",
@@ -590,7 +590,7 @@ export default function AdminCases() {
             ? c.sponsor.sponsorProfile?.companyName ||
               c.sponsor.sponsorProfile?.tradingName ||
               `${c.sponsor.first_name} ${c.sponsor.last_name}`
-            : "No sponsor (private client)",
+            : "No organisation (private individual)",
           businessId: c.sponsorId,
           visaType: c.visaType?.name || "—",
           petitionType: c.petitionType?.name || "—",
@@ -653,7 +653,7 @@ export default function AdminCases() {
             ? c.sponsor.sponsorProfile?.companyName ||
               c.sponsor.sponsorProfile?.tradingName ||
               `${c.sponsor.first_name} ${c.sponsor.last_name}`
-            : "No sponsor (private client)",
+            : "No organisation (private individual)",
           businessId: c.sponsorId,
           visaType: c.visaType?.name || "—",
           petitionType: c.petitionType?.name || "—",
@@ -738,7 +738,7 @@ export default function AdminCases() {
             ? c.sponsor.sponsorProfile?.companyName ||
               c.sponsor.sponsorProfile?.tradingName ||
               `${c.sponsor.first_name} ${c.sponsor.last_name}`
-            : "No sponsor (private client)",
+            : "No organisation (private individual)",
           businessId: c.sponsorId,
           visaType: c.visaType?.name || "—",
           petitionType: c.petitionType?.name || "—",
@@ -1252,8 +1252,8 @@ export default function AdminCases() {
               </h3>
               <p className="text-sm text-gray-600 mb-4">
                 {approveRejectAction === "approve"
-                  ? "Approving this case will send a notification to the client and assigned caseworkers."
-                  : "Rejecting this case will send a notification to the client and assigned caseworkers."}
+                  ? "Approving this case will send a notification to the individual and assigned caseworkers."
+                  : "Rejecting this case will send a notification to the individual and assigned caseworkers."}
               </p>
               <div className="mb-4">
                 <label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -1262,7 +1262,7 @@ export default function AdminCases() {
                 <textarea
                   value={approveRejectNote}
                   onChange={(e) => setApproveRejectNote(e.target.value)}
-                  placeholder="Add a note for the client and caseworkers..."
+                  placeholder="Add a note for the individual and caseworkers..."
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
                   rows={3}
                 />

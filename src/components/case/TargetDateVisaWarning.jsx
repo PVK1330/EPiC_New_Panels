@@ -15,7 +15,7 @@ export default function TargetDateVisaWarning({ targetDate, visaExpiry, classNam
     >
       <AlertTriangle size={14} className="mt-0.5 shrink-0" />
       <span>
-        Target date ({formatUkDate(targetDate)}) is after the client's visa expiry (
+        Target date ({formatUkDate(targetDate)}) is after the individual's visa expiry (
         {formatUkDate(visaExpiry)}). In-country applications usually have to be made
         before current leave expires.
       </span>

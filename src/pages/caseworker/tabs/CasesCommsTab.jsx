@@ -5,7 +5,7 @@ import { formatTime } from "../../../utils/datetime";
 
 function CasesCommsTab({ candidate, caseId }) {
   const navigate = useNavigate();
-  const candidateName = typeof candidate === "string" && candidate.trim() ? candidate : "Client";
+  const candidateName = typeof candidate === "string" && candidate.trim() ? candidate : "Individual";
   const initial = candidateName.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState([
@@ -23,7 +23,7 @@ function CasesCommsTab({ candidate, caseId }) {
     <div className="space-y-4">
       <div className="flex gap-2">
         <button type="button" className="rounded-lg border border-secondary bg-secondary/10 px-3 py-1.5 text-xs font-black text-secondary">
-          Client chat
+          Individual chat
         </button>
         <button type="button"
           onClick={() => navigate(`/caseworker/messages${caseId ? `?caseId=${encodeURIComponent(caseId)}` : ""}`)}

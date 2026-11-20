@@ -94,7 +94,7 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
                 ElitePic
               </h2>
               <p className="text-[10px] font-black text-primary tracking-wide mt-1.5 opacity-80">
-                Client
+                Individual
               </p>
             </div>
           </div>
@@ -177,7 +177,7 @@ const CandidateSidebar = ({ isOpen, onClose }) => {
                 {fullName}
               </p>
               <p className="text-[9px] font-black text-primary tracking-wider">
-                Client Portal
+                Individual Portal
               </p>
             </div>
             <button

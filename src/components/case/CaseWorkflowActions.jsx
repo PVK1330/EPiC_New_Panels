@@ -59,8 +59,8 @@ function ResponseModal({ open, onClose, responses, fields }) {
 
 function cclStatusLabel(ccl, caseStage) {
   if (!ccl) return "not started";
-  if (ccl.status === "signed") return "Accepted by client ✓";
-  if (ccl.status === "issued") return "With client — awaiting acceptance";
+  if (ccl.status === "signed") return "Accepted by individual ✓";
+  if (ccl.status === "issued") return "With individual — awaiting acceptance";
   if (ccl.status === "fee_proposed") {
     return "Awaiting admin fee approval";
   }
@@ -198,7 +198,7 @@ export default function CaseWorkflowActions({ caseId, candidateName, totalAmount
             <div className="flex flex-col gap-1.5">
               <div className="inline-flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1.5 text-[11px] font-bold text-green-700">
-                  <CheckCircle2 size={13} /> Upload Documents request sent to {candidateName || "the client"}
+                  <CheckCircle2 size={13} /> Upload Documents request sent to {candidateName || "the individual"}
                 </span>
                 <Button
                   type="button"
@@ -220,8 +220,8 @@ export default function CaseWorkflowActions({ caseId, candidateName, totalAmount
               {/* BUG-031: say when it was sent and whether the client has responded */}
               <p className="text-[11px] font-bold text-gray-500">
                 {dcs.status === "submitted" || dcs.status === "approved"
-                  ? `The client responded${dcs.submittedAt ? ` on ${formatDate(dcs.submittedAt)}` : ""}.`
-                  : `Sent${dcs.created_at || dcs.createdAt ? ` on ${formatDate(dcs.created_at || dcs.createdAt)}` : ""} — the client was emailed the required-documents request and has not uploaded anything yet.`}
+                  ? `The individual responded${dcs.submittedAt ? ` on ${formatDate(dcs.submittedAt)}` : ""}.`
+                  : `Sent${dcs.created_at || dcs.createdAt ? ` on ${formatDate(dcs.created_at || dcs.createdAt)}` : ""} — the individual was emailed the required-documents request and has not uploaded anything yet.`}
               </p>
             </div>
           )}
@@ -280,7 +280,7 @@ export default function CaseWorkflowActions({ caseId, candidateName, totalAmount
                   )
                 }
               >
-                {busy === "ccl-approve" ? "Approving…" : "Approve & send CCL to client"}
+                {busy === "ccl-approve" ? "Approving…" : "Approve & send CCL to individual"}
               </Button>
               <Button
                 type="button"

@@ -881,7 +881,7 @@ export default function LicenceApplicationV2Detail({ role = "admin" }) {
       >
         <div className="space-y-3">
           <p className="text-sm font-bold text-gray-500 leading-relaxed">
-            Tell the sponsor why this document was rejected. They'll be notified
+            Tell the organisation why this document was rejected. They'll be notified
             and asked to re-upload a corrected copy, and this status updates
             everywhere the document appears.
           </p>

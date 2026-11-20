@@ -23,15 +23,15 @@ import {
 
 const AUDIENCE_OPTIONS = [
   { id: "caseworker", label: "All caseworkers (staff)" },
-  { id: "sponsor", label: "All sponsors" },
+  { id: "sponsor", label: "All organisations" },
   { id: "candidate", label: "All candidates" },
 ];
 
 const ROLE_LABEL = {
   caseworker: "Caseworkers",
-  sponsor: "Sponsors",
-  candidate: "Clients",
-  business: "Sponsors",
+  sponsor: "Organisations",
+  candidate: "Individuals",
+  business: "Organisations",
 };
 
 const FORM_ID = "admin-announcement-form";
@@ -202,7 +202,7 @@ export default function AdminAnnouncements() {
           <div>
             <h1 className="text-2xl font-black text-secondary">Announcements</h1>
             <p className="text-sm text-gray-500">
-              Send updates to your caseworkers, sponsors, and candidates
+              Send updates to your caseworkers, organisations, and candidates
             </p>
           </div>
         </div>

@@ -240,7 +240,7 @@ const AdminLicenceApplications = () => {
           ...(grantForm.expiryDate    && { expiryDate:    grantForm.expiryDate }),
           ...(grantForm.cosAllocation && { cosAllocation: Number(grantForm.cosAllocation) }),
         });
-        showToast({ message: "Licence granted — sponsor has been notified by email", variant: "success" });
+        showToast({ message: "Licence granted — organisation has been notified by email", variant: "success" });
       } else {
         await updateLicenceApplicationStatus(selectedApp?.id, {
           status: actionType,
@@ -415,7 +415,7 @@ const AdminLicenceApplications = () => {
       fd.append("documentName", dispatchForm.documentName || dispatchFile.name);
       if (dispatchForm.message) fd.append("message", dispatchForm.message);
       await dispatchDocumentToSponsor(selectedApp.id, fd);
-      showToast({ message: "Document sent to sponsor successfully", variant: "success" });
+      showToast({ message: "Document sent to organisation successfully", variant: "success" });
       setShowDispatch(false);
       setDispatchFile(null);
       setDispatchForm({ documentType: "supporting_document", documentName: "", message: "" });
@@ -1045,7 +1045,7 @@ const AdminLicenceApplications = () => {
                             <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-1.5">Credential Status</p>
                             {selectedApp.governmentTracking?.credentialsSentAt ? (
                               <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                                <BadgeCheck size={10} /> Sent to sponsor
+                                <BadgeCheck size={10} /> Sent to organisation
                               </span>
                             ) : selectedApp.governmentTracking?.credentialsGeneratedAt ? (
                               <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
@@ -1114,7 +1114,7 @@ const AdminLicenceApplications = () => {
                               {adminSubmittedCreds.adminVerifiedAt ? (
                                 <div className="flex items-center gap-2 rounded-xl bg-green-50 border border-green-200 px-3 py-2 text-xs font-black text-green-700">
                                   <BadgeCheck size={14} />
-                                  Verified{adminSubmittedCreds.adminVerifiedAt ? ` on ${new Date(adminSubmittedCreds.adminVerifiedAt).toLocaleString("en-GB")}` : ""}. Sponsor notified.
+                                  Verified{adminSubmittedCreds.adminVerifiedAt ? ` on ${new Date(adminSubmittedCreds.adminVerifiedAt).toLocaleString("en-GB")}` : ""}. Organisation notified.
                                 </div>
                               ) : (
                                 <div className="flex gap-2 pt-1">
@@ -1126,7 +1126,7 @@ const AdminLicenceApplications = () => {
                                         await verifyAdminSubmittedCredentials(selectedApp.id);
                                         const res = await getAdminSubmittedCredentials(selectedApp.id).catch(() => null);
                                         setAdminSubmittedCreds(res?.data?.data || null);
-                                        showToast({ message: "Credentials verified — sponsor notified", variant: "success" });
+                                        showToast({ message: "Credentials verified — organisation notified", variant: "success" });
                                         fetchApplications();
                                       } catch { showToast({ message: "Failed to verify", variant: "danger" }); }
                                       finally { setAdminCredsActionLoading(false); }
@@ -1142,7 +1142,7 @@ const AdminLicenceApplications = () => {
                                         setAdminCredsActionLoading(true);
                                         await requestAdminCredentialsResubmission(selectedApp.id);
                                         setAdminSubmittedCreds(null);
-                                        showToast({ message: "Sponsor notified to resubmit", variant: "success" });
+                                        showToast({ message: "Organisation notified to resubmit", variant: "success" });
                                       } catch { showToast({ message: "Failed to send request", variant: "danger" }); }
                                       finally { setAdminCredsActionLoading(false); }
                                     }}
@@ -1182,7 +1182,7 @@ const AdminLicenceApplications = () => {
                     {selectedApp.ukviDecisionConfirmedAt ? (
                       <>
                         <p className="text-xs font-bold text-secondary">
-                          Sponsor confirmed the UKVI decision on {new Date(selectedApp.ukviDecisionConfirmedAt).toLocaleString("en-GB")}. You can now grant &amp; close the case.
+                          Organisation confirmed the UKVI decision on {new Date(selectedApp.ukviDecisionConfirmedAt).toLocaleString("en-GB")}. You can now grant &amp; close the case.
                         </p>
                         {selectedApp.ukviDecisionLetterPath ? (
                           <div className="mt-3 flex items-center gap-2">
@@ -1204,12 +1204,12 @@ const AdminLicenceApplications = () => {
                             </button>
                           </div>
                         ) : (
-                          <p className="mt-2 text-[11px] font-bold text-gray-400">No decision letter was attached by the sponsor.</p>
+                          <p className="mt-2 text-[11px] font-bold text-gray-400">No decision letter was attached by the organisation.</p>
                         )}
                       </>
                     ) : (
                       <p className="text-xs font-bold text-amber-800">
-                        Waiting for the sponsor to confirm they received the UKVI decision. The licence can only be granted once they confirm on their portal.
+                        Waiting for the organisation to confirm they received the UKVI decision. The licence can only be granted once they confirm on their portal.
                       </p>
                     )}
                   </div>
@@ -1223,7 +1223,7 @@ const AdminLicenceApplications = () => {
                       <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">UKVI Licence Fee Payment</p>
                     </div>
                     <p className="text-xs font-bold text-secondary">
-                      Sponsor confirmed payment on {new Date(selectedApp.ukviPaymentConfirmedAt).toLocaleString("en-GB")}.
+                      Organisation confirmed payment on {new Date(selectedApp.ukviPaymentConfirmedAt).toLocaleString("en-GB")}.
                     </p>
                     {selectedApp.ukviPaymentProofPath ? (
                       <div className="mt-3 flex items-center gap-2">
@@ -1245,7 +1245,7 @@ const AdminLicenceApplications = () => {
                         </button>
                       </div>
                     ) : (
-                      <p className="mt-2 text-[11px] font-bold text-gray-400">No payment slip was attached by the sponsor.</p>
+                      <p className="mt-2 text-[11px] font-bold text-gray-400">No payment slip was attached by the organisation.</p>
                     )}
                   </div>
                 )}
@@ -1270,7 +1270,7 @@ const AdminLicenceApplications = () => {
                     ...(selectedApp.status === "Decision Pending" && selectedApp.ukviDecisionConfirmedAt ? [
                       {
                         key: "decision-approve",
-                        label: "Sponsor confirmed the UKVI decision — grant the licence",
+                        label: "Organisation confirmed the UKVI decision — grant the licence",
                         icon: CheckCircle2,
                         urgency: "emerald",
                         actionType: "Approved",
@@ -1368,7 +1368,7 @@ const AdminLicenceApplications = () => {
                       onClick={() => setShowDispatch((v) => !v)}
                       className="w-full bg-teal-50 text-teal-700 hover:bg-teal-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2"
                     >
-                      <FileText size={18} /> Send Document to Sponsor
+                      <FileText size={18} /> Send Document to Organisation
                     </button>
                     {showDispatch && (
                       <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 space-y-3">
@@ -1392,7 +1392,7 @@ const AdminLicenceApplications = () => {
                           className="w-full bg-white border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none"
                         />
                         <textarea
-                          placeholder="Message to sponsor (optional)"
+                          placeholder="Message to organisation (optional)"
                           value={dispatchForm.message}
                           onChange={(e) => setDispatchForm((f) => ({ ...f, message: e.target.value }))}
                           rows={2}
@@ -1416,7 +1416,7 @@ const AdminLicenceApplications = () => {
                           className="w-full bg-teal-600 text-white font-black rounded-xl py-3 flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-teal-700 transition-all active:scale-95"
                         >
                           {dispatchLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                          {dispatchLoading ? "Sending…" : "Send to Sponsor"}
+                          {dispatchLoading ? "Sending…" : "Send to Organisation"}
                         </button>
                       </div>
                     )}
@@ -1425,7 +1425,7 @@ const AdminLicenceApplications = () => {
                       <button
                         onClick={() => openAction(selectedApp, "Approved")}
                         disabled={selectedApp.status !== 'Decision Pending' || !selectedApp.ukviDecisionConfirmedAt}
-                        title={selectedApp.status === 'Decision Pending' && !selectedApp.ukviDecisionConfirmedAt ? "Waiting for the sponsor to confirm the UKVI decision" : undefined}
+                        title={selectedApp.status === 'Decision Pending' && !selectedApp.ukviDecisionConfirmedAt ? "Waiting for the organisation to confirm the UKVI decision" : undefined}
                         className="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-black rounded-xl py-3 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <Check size={18} /> Grant
@@ -1601,7 +1601,7 @@ const AdminLicenceApplications = () => {
                             className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm font-black text-secondary outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-300 font-mono"
                             placeholder="e.g. 1A-TECH-2025-00142"
                           />
-                          <p className="text-[10px] text-gray-400 mt-1.5">Enter the licence number assigned by UKVI — this will appear in the grant email sent to the sponsor.</p>
+                          <p className="text-[10px] text-gray-400 mt-1.5">Enter the licence number assigned by UKVI — this will appear in the grant email sent to the organisation.</p>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>

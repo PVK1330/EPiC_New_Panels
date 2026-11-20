@@ -198,7 +198,7 @@ const Cases = () => {
           ? c.sponsor.sponsorProfile?.companyName ||
             c.sponsor.sponsorProfile?.tradingName ||
             `${c.sponsor.first_name} ${c.sponsor.last_name || ""}`.trim()
-          : "No sponsor (private client)",
+          : "No organisation (private individual)",
         visa: c.visaType?.name || "Unknown",
         status: mapApiStatus(c.status),
         legacyStatus: c.status,
@@ -498,7 +498,7 @@ const Cases = () => {
               ? sponsor.sponsorProfile?.companyName ||
                 sponsor.sponsorProfile?.tradingName ||
                 `${sponsor.first_name} ${sponsor.last_name || ""}`.trim()
-              : "No sponsor (private client)",
+              : "No organisation (private individual)",
             visa: visaType?.name || "Unknown",
             status: mapApiStatus(c.status),
             legacyStatus: c.status,
@@ -644,7 +644,7 @@ const Cases = () => {
             ? c.sponsor.sponsorProfile?.companyName ||
               c.sponsor.sponsorProfile?.tradingName ||
               `${c.sponsor.first_name} ${c.sponsor.last_name || ""}`.trim()
-            : "No sponsor (private client)",
+            : "No organisation (private individual)",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           legacyStatus: c.status,
@@ -724,7 +724,7 @@ const Cases = () => {
     const e = {};
 
     //  Required selections 
-    if (!newCaseForm.candidateId) e.candidateId = "Please select a client";
+    if (!newCaseForm.candidateId) e.candidateId = "Please select an individual";
     // Sponsor is optional (BUG-031) — private clients have no sponsor.
     if (!newCaseForm.visaTypeId) e.visaTypeId = "Please select a visa type";
 
@@ -833,7 +833,7 @@ const Cases = () => {
             ? c.sponsor.sponsorProfile?.companyName ||
               c.sponsor.sponsorProfile?.tradingName ||
               `${c.sponsor.first_name} ${c.sponsor.last_name || ""}`.trim()
-            : "No sponsor (private client)",
+            : "No organisation (private individual)",
           visa: c.visaType?.name || "Unknown",
           status: mapApiStatus(c.status),
           legacyStatus: c.status,
@@ -1447,12 +1447,12 @@ const Cases = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="text-sm font-black text-secondary mb-4">
-                Client Information
+                Individual Information
               </h4>
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">
-                    Client <span className="text-red-500">*</span>
+                    Individual <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <select
@@ -1477,7 +1477,7 @@ const Cases = () => {
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.candidateId ? "border-red-400" : "border-gray-300"}`}
                     >
-                      <option value="">Select client</option>
+                      <option value="">Select individual</option>
                       {candidates.map((c, idx) => (
                         <option key={`${c.id}-${idx}`} value={c.id}>
                           {c.first_name} {c.last_name}
@@ -1493,7 +1493,7 @@ const Cases = () => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                    Client Name
+                    Individual Name
                   </label>
                   <input
                     type="text"
@@ -1558,7 +1558,7 @@ const Cases = () => {
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">
-                    Sponsor <span className="text-gray-400 font-normal">(optional)</span>
+                    Organisation <span className="text-gray-400 font-normal">(optional)</span>
                   </label>
                   <div className="relative">
                     <select
@@ -1589,7 +1589,7 @@ const Cases = () => {
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.businessId ? "border-red-400" : "border-gray-300"}`}
                     >
-                      <option value="">No sponsor (private client)</option>
+                      <option value="">No organisation (private individual)</option>
                       {sponsors.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.sponsorProfile?.companyName ||
@@ -2170,12 +2170,12 @@ const Cases = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="text-sm font-black text-secondary mb-4">
-                Client Information
+                Individual Information
               </h4>
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">
-                    Client <span className="text-red-500">*</span>
+                    Individual <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <select
@@ -2200,7 +2200,7 @@ const Cases = () => {
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.candidateId ? "border-red-400" : "border-gray-300"}`}
                     >
-                      <option value="">Select client</option>
+                      <option value="">Select individual</option>
                       {candidates.map((c, idx) => (
                         <option key={`${c.id}-${idx}`} value={c.id}>
                           {c.first_name} {c.last_name}
@@ -2216,7 +2216,7 @@ const Cases = () => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                    Client Name
+                    Individual Name
                   </label>
                   <input
                     type="text"
@@ -2281,7 +2281,7 @@ const Cases = () => {
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">
-                    Sponsor <span className="text-gray-400 font-normal">(optional)</span>
+                    Organisation <span className="text-gray-400 font-normal">(optional)</span>
                   </label>
                   <div className="relative">
                     <select
@@ -2312,7 +2312,7 @@ const Cases = () => {
                       }}
                       className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary ${newCaseErrors.businessId ? "border-red-400" : "border-gray-300"}`}
                     >
-                      <option value="">No sponsor (private client)</option>
+                      <option value="">No organisation (private individual)</option>
                       {sponsors.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.sponsorProfile?.companyName ||

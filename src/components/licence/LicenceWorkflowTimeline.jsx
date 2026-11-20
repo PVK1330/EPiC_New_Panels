@@ -52,7 +52,7 @@ function ActorChip({ role }) {
   const m = ACTOR_META[role] || { chip: "bg-gray-50 text-gray-600 border-gray-100" };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black border ${m.chip}`}>
-      {role}
+      {role === "Sponsor" ? "Organisation" : role}
     </span>
   );
 }
@@ -171,7 +171,7 @@ export default function LicenceWorkflowTimeline({ applicationId, viewerRole = "s
                   activeActor === a ? "bg-secondary text-white border-secondary" : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
                 }`}
               >
-                {a}
+                {a === "Sponsor" ? "Organisation" : a}
               </button>
             ))}
           </div>

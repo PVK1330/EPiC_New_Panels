@@ -133,7 +133,7 @@ const ACTION_META = {
     section: "Gov. Pipeline",
   },
   credentials_requested: {
-    label: "Credentials sent to sponsor",
+    label: "Credentials sent to organisation",
     tone: "bg-violet-500",
     section: "Gov. Pipeline",
   },

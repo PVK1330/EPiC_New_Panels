@@ -54,7 +54,7 @@ const CaseDetailOverview = ({ data }) => {
         {s.hasSponsor === false ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Company Name">
-              <span className="text-gray-500 font-semibold">No sponsor (private client)</span>
+              <span className="text-gray-500 font-semibold">No organisation (private individual)</span>
             </Field>
             <Field label="Assigned Caseworker">{s.caseworker}</Field>
           </div>
@@ -89,7 +89,7 @@ const CaseDetailOverview = ({ data }) => {
               {k.visaType}
             </span>
           </div>
-          <Field label="Client's Current Visa">{k.currentVisa || "—"}</Field>
+          <Field label="Individual's Current Visa">{k.currentVisa || "—"}</Field>
           <div>
             <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Workflow stage</p>
             <CaseWorkflowBadge caseRecord={{ caseStage: k.caseStage, status: k.caseStatus }} />

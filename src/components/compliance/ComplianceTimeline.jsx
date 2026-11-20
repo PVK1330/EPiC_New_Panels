@@ -13,7 +13,7 @@ const ACTION_META = {
   approve: { icon: CheckCircle2, ring: "bg-emerald-50 text-emerald-600", label: "Approved" },
   reject: { icon: XCircle, ring: "bg-red-50 text-red-600", label: "Rejected" },
   request_info: { icon: MessageSquare, ring: "bg-orange-50 text-orange-600", label: "Information Requested" },
-  respond: { icon: RotateCcw, ring: "bg-blue-50 text-blue-500", label: "Sponsor Responded" },
+  respond: { icon: RotateCcw, ring: "bg-blue-50 text-blue-500", label: "Organisation Responded" },
   resubmit: { icon: RotateCcw, ring: "bg-blue-50 text-blue-500", label: "Re-submitted" },
 };
 

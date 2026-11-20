@@ -43,21 +43,21 @@ const BusinessPayment = () => {
         invoiceNo: p.invoiceNumber || `INV-${p.id}`,
         dueDate: p.dueDate || null,
         caseRef: p.Case?.caseId || "N/A",
-        candidateName: `${p.Case?.candidate?.first_name || ""} ${p.Case?.candidate?.last_name || ""}`.trim() || "Client",
+        candidateName: `${p.Case?.candidate?.first_name || ""} ${p.Case?.candidate?.last_name || ""}`.trim() || "Individual",
       }));
       // Licence-fee / ISC payments live in the sponsor ledger, not case_payments.
       const ledgerRows = (data.sponsorPayments || []).map((p) => ({
         id: `sp_${p.id}`,
         rawId: p.id,
         kind: "sponsor",
-        description: p.description || PAYABLE_LABEL[p.payableType] || "Sponsor payment",
+        description: p.description || PAYABLE_LABEL[p.payableType] || "Organisation payment",
         amount: Number(p.amount || 0),
         date: p.paid_at || p.created_at,
         status: p.status || "pending",
         invoiceNo: p.stripe_payment_intent_id || `SP-${p.id}`,
         dueDate: null,
         caseRef: PAYABLE_LABEL[p.payableType] || "—",
-        candidateName: PAYABLE_LABEL[p.payableType] || "Sponsor",
+        candidateName: PAYABLE_LABEL[p.payableType] || "Organisation",
       }));
       setPayments([...caseRows, ...ledgerRows]);
       // licence_fee is paid directly on the UKVI portal — exclude it from Stripe payables.
@@ -350,7 +350,7 @@ const BusinessPayment = () => {
 
             <div className="space-y-3">
               {[
-                ["Client",    selectedPayment.candidateName],
+                ["Individual",    selectedPayment.candidateName],
                 ["Case Ref",     selectedPayment.caseRef],
                 ["Amount",       money(selectedPayment.amount)],
                 ["Date",         selectedPayment.date ? formatDate(selectedPayment.date) : "N/A"],

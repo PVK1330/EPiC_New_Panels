@@ -160,7 +160,9 @@ const AdminLayout = () => {
                 const last = index === pathnames.length - 1;
                 const to = `/${pathnames.slice(0, index + 1).join("/")}`;
                 const BREADCRUMB_MAP = {
-                  candidates: "Clients",
+                  candidates: "Individuals",
+                  sponsors: "Organisations",
+                  businesses: "Organisations",
                 };
                 const name =
                   BREADCRUMB_MAP[value.toLowerCase()] ||
@@ -230,7 +232,7 @@ const AdminLayout = () => {
                     {fullName}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">
-                    {user?.role === "candidate" ? "Client" : user?.role || "Admin"}
+                    {user?.role === "candidate" ? "Individual" : user?.role || "Admin"}
                   </p>
                 </div>
               </button>

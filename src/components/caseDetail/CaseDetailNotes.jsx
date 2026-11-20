@@ -94,7 +94,7 @@ const CaseDetailNotes = ({ notes = [], loading, onAdd, onDelete }) => {
         <div>
           <h3 className="text-sm font-black text-secondary flex items-center gap-2">
             <span className="text-amber-500">●</span>
-            Case Notes (Hidden from Client &amp; Sponsor)
+            Case Notes (Hidden from Individual &amp; Organisation)
           </h3>
           <p className="text-xs text-gray-400 mt-0.5">
             Confidential — internal notes and attendance records for this case.
@@ -214,7 +214,7 @@ const CaseDetailNotes = ({ notes = [], loading, onAdd, onDelete }) => {
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Client consultation, Interview, Call"
+                placeholder="e.g. Individual consultation, Interview, Call"
                 className="w-full text-xs rounded-lg border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-secondary"
               />
             </div>
