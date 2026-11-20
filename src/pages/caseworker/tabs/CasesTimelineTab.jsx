@@ -4,7 +4,7 @@ function CasesTimelineTab({ candidate }) {
   const items = [
     { dot: "blue", title: "Document uploaded — Passport copy", time: `1 Apr 2026 · by ${candidate}`, body: null },
     { dot: "green", title: "Status changed → Documents received", time: "1 Apr 2026", body: null },
-    { dot: "blue", title: "Document uploaded — Certificate of sponsorship", time: "28 Mar 2026 · by sponsor HR", body: null },
+    { dot: "blue", title: "Document uploaded — Certificate of sponsorship", time: "28 Mar 2026 · by organisation HR", body: null },
     { dot: "yellow", title: "Task created — Request English language cert", time: "20 Mar 2026", body: "Due 10 Apr 2026" },
     { dot: "green", title: "Case created and onboarded", time: "1 Mar 2026", body: null },
   ];

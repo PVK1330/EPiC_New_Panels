@@ -5,6 +5,8 @@ const roleColors = {
   caseworker: 'bg-blue-50 text-blue-700 border-blue-200',
   client:     'bg-green-50 text-green-700 border-green-200',
   candidate:  'bg-green-50 text-green-700 border-green-200',
+  individual: 'bg-green-50 text-green-700 border-green-200',
+  organisation: 'bg-amber-50 text-amber-700 border-amber-200',
   sponsor:    'bg-amber-50 text-amber-700 border-amber-200',
   business:   'bg-amber-50 text-amber-700 border-amber-200',
   superadmin: 'bg-secondary text-white border-secondary',

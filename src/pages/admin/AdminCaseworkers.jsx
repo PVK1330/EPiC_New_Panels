@@ -808,7 +808,7 @@ export default function AdminCaseworkers() {
                   "Name",
                   "Email",
                   "Department",
-                  "Clients",
+                  "Individuals",
                   "Active Cases",
                   "Overdue",
                   "Completed",
@@ -864,7 +864,7 @@ export default function AdminCaseworkers() {
                               <RoleBadge role={displayRoleName(user)} />
                               {user.caseworkerProfile?.can_add_clients && (
                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  Can Add Clients
+                                  Can Add Individuals
                                 </span>
                               )}
                             </div>
@@ -1018,10 +1018,10 @@ export default function AdminCaseworkers() {
               <label className="flex items-center justify-between cursor-pointer">
                 <div>
                   <span className="text-xs font-black text-secondary uppercase tracking-wider block">
-                    Client Creation Authority
+                    Individual Creation Authority
                   </span>
                   <span className="text-xs text-gray-500 font-medium">
-                    Allow this caseworker to register and create new client profiles
+                    Allow this caseworker to register and create new individual profiles
                   </span>
                 </div>
                 <input
@@ -1106,10 +1106,10 @@ export default function AdminCaseworkers() {
               <label className="flex items-center justify-between cursor-pointer">
                 <div>
                   <span className="text-xs font-black text-secondary uppercase tracking-wider block">
-                    Client Creation Authority
+                    Individual Creation Authority
                   </span>
                   <span className="text-xs text-gray-500 font-medium">
-                    Allow this caseworker to register and create new client profiles
+                    Allow this caseworker to register and create new individual profiles
                   </span>
                 </div>
                 <input
@@ -1147,7 +1147,7 @@ export default function AdminCaseworkers() {
                   {displayRoleName(viewingDetails)} · {departmentLabel(viewingDetails)}
                   {viewingDetails.caseworkerProfile?.can_add_clients && (
                     <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Can Add Clients
+                      Can Add Individuals
                     </span>
                   )}
                 </p>
@@ -1219,7 +1219,7 @@ export default function AdminCaseworkers() {
                   (viewingDetails.metrics?.assignedCandidates ?? 0) > 0) && (
                   <div className="rounded-xl border border-violet-100/80 bg-violet-50/40 p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-violet-800 mb-3">
-                      Assigned clients (
+                      Assigned individuals (
                       {viewingDetails.candidates?.length ??
                         viewingDetails.metrics?.assignedCandidates ??
                         0}
@@ -1255,7 +1255,7 @@ export default function AdminCaseworkers() {
                       type="search"
                       value={caseSearch}
                       onChange={(e) => setCaseSearch(e.target.value)}
-                      placeholder="Search by client, case ID, visa type, or status…"
+                      placeholder="Search by individual, case ID, visa type, or status…"
                       className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white/80 text-sm font-medium text-secondary placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
                     />
                   </div>

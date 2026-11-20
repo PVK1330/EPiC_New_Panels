@@ -1237,7 +1237,7 @@ export default function CandidateApplicationForm({
       {embedded && variant === "admin" && (
         <p className="mb-4 text-sm font-bold text-gray-500">
           Same application fields as the candidate portal. Data is saved to the
-          client record using one shared structure.
+          individual record using one shared structure.
         </p>
       )}
 
@@ -3177,7 +3177,7 @@ export default function CandidateApplicationForm({
                         : isSubmitting
                           ? "Submitting"
                           : variant === "admin"
-                            ? "Save client"
+                            ? "Save individual"
                             : "Submit application"}
                     </button>
                   )}

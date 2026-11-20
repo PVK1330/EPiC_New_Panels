@@ -31,7 +31,7 @@ export const LICENCE_PHASES = [
 ];
 
 export const LICENCE_PHASE_LABELS = {
-  [PHASE_1_ONBOARDING]:       "Sponsor Onboarding",
+  [PHASE_1_ONBOARDING]:       "Organisation Onboarding",
   [PHASE_2_APPLICATION]:      "Licence Application",
   [PHASE_3_REVIEW]:           "Licence Review & Approval",
   [PHASE_4_COS]:              "CoS Allocation",

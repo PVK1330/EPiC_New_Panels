@@ -578,7 +578,7 @@ export default function LoginPage() {
               </Button>
             </form>
             <p className="mt-6 text-center text-sm text-gray-600">
-              New client?{" "}
+              New individual?{" "}
               <button
                 type="button"
                 onClick={() => {
@@ -596,10 +596,10 @@ export default function LoginPage() {
         {view === VIEWS.register && (
           <>
             <h1 className="text-lg font-black text-secondary text-center mb-1">
-              Client registration
+              Individual registration
             </h1>
             <p className="text-center text-xs font-bold text-gray-500 mb-6">
-              Register to access the client portal. Caseworkers and admins
+              Register to access the individual portal. Caseworkers and admins
               are invited separately.
             </p>
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
@@ -912,7 +912,7 @@ export default function LoginPage() {
               >
                 {registerLoading
                   ? "Creating account…"
-                  : "Create client account"}
+                  : "Create individual account"}
               </Button>
             </form>
             <p className="mt-5 text-center text-sm text-gray-600">

@@ -87,10 +87,10 @@ test('CW-04 — Documents page loads', async () => {
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   5. CLIENTS (Candidates & Sponsors)
+   5. INDIVIDUALS (Candidates & Organisations)
 ═══════════════════════════════════════════════════════════════ */
 
-test('CW-05 — Clients page loads', async () => {
+test('CW-05 — Individuals page loads', async () => {
   await pg.goto(`${BASE}/caseworker/clients`);
   await waitForContent(pg);
   await pg.screenshot({ path: 'test-screenshots/cw-05-clients.png' });

@@ -65,7 +65,7 @@ export default function ComplianceReviewModal({ open, action, itemTitle, onClose
                 className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm font-bold text-secondary outline-none resize-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20"
                 placeholder={
                   action === "approve"
-                    ? "Optional notes for the sponsor…"
+                    ? "Optional notes for the organisation…"
                     : action === "reject"
                     ? "Reason for rejection (required)…"
                     : "Describe the information / evidence required (required)…"
@@ -76,7 +76,7 @@ export default function ComplianceReviewModal({ open, action, itemTitle, onClose
             {danger && (
               <div className="flex items-start gap-2 text-amber-700">
                 <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-                <p className="text-xs font-bold">This will reject the item and notify the sponsor.</p>
+                <p className="text-xs font-bold">This will reject the item and notify the organisation.</p>
               </div>
             )}
 

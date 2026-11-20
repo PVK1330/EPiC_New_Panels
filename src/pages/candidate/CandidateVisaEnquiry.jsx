@@ -45,6 +45,7 @@ export default function CandidateVisaEnquiry() {
         nationality: nationality.trim() || null,
         enquiryNotes: enquiry.trim(),
         status: "submitted",
+        isEnquiry: true,
         workflowStage: DEFAULT_CASE_STAGE,
       };
       try {

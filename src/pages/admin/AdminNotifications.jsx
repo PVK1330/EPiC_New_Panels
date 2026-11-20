@@ -69,7 +69,7 @@ const INITIAL_NOTIFICATIONS = [
   {
     id: "n3",
     title: "Case Approved",
-    message: "Case #CAS-042 has been approved. Notification sent to the client.",
+    message: "Case #CAS-042 has been approved. Notification sent to the individual.",
     time: "Yesterday at 3:45 PM",
     unread: false,
     iconBg: "bg-green-100",

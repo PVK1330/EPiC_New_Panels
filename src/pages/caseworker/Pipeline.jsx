@@ -460,14 +460,14 @@ export default function Pipeline() {
                       <p className="text-sm font-semibold mt-1">{selectedCase.status || "—"}</p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Client</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Individual</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
                         <FiUser size={14} className="text-gray-400" />
                         {selectedCase.candidate ? `${selectedCase.candidate.first_name} ${selectedCase.candidate.last_name}` : '—'}
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Sponsor</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Organisation</label>
                       <p className="text-sm font-semibold mt-1 flex items-center gap-2">
                         <FiWork size={14} className="text-gray-400" />
                         {selectedCase.sponsor ? `${selectedCase.sponsor.first_name} ${selectedCase.sponsor.last_name}` : '—'}

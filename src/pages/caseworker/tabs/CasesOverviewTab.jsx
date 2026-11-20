@@ -61,10 +61,10 @@ function CasesOverviewTab({ c, userName, onStageChange, stageSaving, onRefresh }
         <Field label="Case Number">
           <span className="font-mono text-secondary">{c.caseId}</span>
         </Field>
-        <Field label="Client name">{c.candidate}</Field>
-        <Field label="Sponsor name">{c.business}</Field>
+        <Field label="Individual name">{c.candidate}</Field>
+        <Field label="Organisation name">{c.business}</Field>
         <Field label="Application type">{c.visa}</Field>
-        <Field label="Client's current visa">{c.currentVisa || <span className="text-gray-500">—</span>}</Field>
+        <Field label="Individual's current visa">{c.currentVisa || <span className="text-gray-500">—</span>}</Field>
         <Field label="Current visa expiry">
           {c.visaExpiry ? formatTarget(String(c.visaExpiry).slice(0, 10)) : <span className="text-gray-500">—</span>}
         </Field>

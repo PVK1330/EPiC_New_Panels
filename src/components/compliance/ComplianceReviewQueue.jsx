@@ -161,7 +161,7 @@ export default function ComplianceReviewQueue({ title = "Compliance Review", sub
           <Search className="absolute left-4 top-3.5 text-gray-300" size={18} />
           <input
             type="text"
-            placeholder="Search by sponsor or item..."
+            placeholder="Search by organisation or item..."
             className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-primary/20 transition-all text-sm font-bold"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -197,7 +197,7 @@ export default function ComplianceReviewQueue({ title = "Compliance Review", sub
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400">Sr No</th>
-                    {["Sponsor", "Item", "Status", "Submitted", "Reviewer", "Actions"].map((h) => (
+                    {["Organisation", "Item", "Status", "Submitted", "Reviewer", "Actions"].map((h) => (
                       <th key={h} className={`px-6 py-4 text-xs font-black uppercase tracking-wider text-gray-400 ${h === "Actions" ? "text-right" : ""}`}>
                         {h}
                       </th>
@@ -217,7 +217,7 @@ export default function ComplianceReviewQueue({ title = "Compliance Review", sub
                         </td>
                         <td className="px-6 py-4">
                         <p className="text-sm font-black text-secondary group-hover:text-primary transition-colors">
-                          {fullName(r.sponsor) || `Sponsor #${r.sponsorId}`}
+                          {fullName(r.sponsor) || `Organisation #${r.sponsorId}`}
                         </p>
                         <p className="text-xs font-bold text-gray-400 mt-0.5">{r.sponsor?.email}</p>
                       </td>
@@ -295,7 +295,7 @@ export default function ComplianceReviewQueue({ title = "Compliance Review", sub
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="text-base font-black text-secondary">
-                        {fullName(r.sponsor) || `Sponsor #${r.sponsorId}`}
+                        {fullName(r.sponsor) || `Organisation #${r.sponsorId}`}
                       </h3>
                       <p className="text-xs font-bold text-gray-400 mt-0.5">{r.sponsor?.email}</p>
                     </div>
@@ -425,7 +425,7 @@ export default function ComplianceReviewQueue({ title = "Compliance Review", sub
               {detail.record && (
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   {[
-                    ["Sponsor", fullName(detail.record.sponsor) || `#${detail.record.sponsorId}`],
+                    ["Organisation", fullName(detail.record.sponsor) || `#${detail.record.sponsorId}`],
                     ["Status", recordStatus(entity, detail.record)],
                     ["Reviewer", fullName(detail.record.reviewer) || "—"],
                     ["Detail", cfg.subtitle(detail.record)],

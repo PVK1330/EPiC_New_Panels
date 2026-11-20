@@ -98,7 +98,7 @@ const EMPTY_RESET = {
 
 function displayRoleName(row) {
   const n = row?.Role?.name;
-  if (!n) return "Sponsor";
+  if (!n) return "Organisation";
   return n.charAt(0).toUpperCase() + n.slice(1);
 }
 
@@ -300,7 +300,7 @@ export default function AdminBusinesses() {
         companyName: createForm.companyName?.trim() || null,
       });
       showToast({
-        message: res.data?.message || "Sponsor created successfully",
+        message: res.data?.message || "Organisation created successfully",
         variant: "success",
       });
       closeModal();
@@ -342,7 +342,7 @@ export default function AdminBusinesses() {
         companyName: editForm.companyName?.trim() || null,
       });
       showToast({
-        message: res.data?.message || "Sponsor updated successfully",
+        message: res.data?.message || "Organisation updated successfully",
         variant: "success",
       });
       closeModal();
@@ -425,7 +425,7 @@ export default function AdminBusinesses() {
     try {
       const res = await toggleSponsorStatus(row.id);
       showToast({
-        message: res.data?.message || "Sponsor deactivated",
+        message: res.data?.message || "Organisation deactivated",
         variant: "success",
       });
       closeModal();
@@ -484,7 +484,7 @@ export default function AdminBusinesses() {
       document.body.removeChild(a);
 
       showToast({
-        message: "Sponsors exported successfully",
+        message: "Organisations exported successfully",
         variant: "success",
       });
     } catch (e) {
@@ -573,7 +573,7 @@ export default function AdminBusinesses() {
             Businesses
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Manage sponsor accounts and business portal access
+            Manage organisation accounts and business portal access
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -605,7 +605,7 @@ export default function AdminBusinesses() {
           </button>
           <Button onClick={openCreate} className="rounded-xl shadow-sm">
             <FiPlus size={14} />
-            Add Sponsor
+            Add Organisation
           </Button>
         </div>
       </div>
@@ -619,8 +619,8 @@ export default function AdminBusinesses() {
             />
             <input
               type="text"
-              aria-label="Search sponsors"
-              placeholder="Search sponsors…"
+              aria-label="Search organisations"
+              placeholder="Search organisations…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary/30 bg-gray-50 placeholder:text-gray-400"
@@ -669,7 +669,7 @@ export default function AdminBusinesses() {
                     colSpan={10}
                     className="px-4 py-8 text-center text-sm text-gray-400"
                   >
-                    No sponsors found.
+                    No organisations found.
                   </td>
                 </tr>
               ) : (
@@ -808,7 +808,7 @@ export default function AdminBusinesses() {
         open={isFormModal}
         onClose={closeModal}
         title={
-          modal.type === "create" ? "Create Sponsor" : "Edit Sponsor"
+          modal.type === "create" ? "Create Organisation" : "Edit Organisation"
         }
         maxWidthClass="max-w-2xl"
         bodyClassName="px-5 py-5 sm:px-6"
@@ -887,7 +887,7 @@ export default function AdminBusinesses() {
             />
             <div className="sm:col-span-2 rounded-xl bg-indigo-50 border border-indigo-100 p-3 mt-1">
               <p className="text-xs text-indigo-700 font-semibold">
-                A temporary password is generated automatically and emailed to the sponsor with their login link — no password needs to be set here. Other company &amp; compliance details can be added later from the sponsor profile.
+                A temporary password is generated automatically and emailed to the organisation with their login link — no password needs to be set here. Other company &amp; compliance details can be added later from the organisation profile.
               </p>
             </div>
           </div>
@@ -961,7 +961,7 @@ export default function AdminBusinesses() {
       <Modal
         open={modal.type === "view"}
         onClose={closeModal}
-        title={modal.data ? `Sponsor ${modal.data.sponsorProfile?.companyName || fullName(modal.data)}` : ""}
+        title={modal.data ? `Organisation ${modal.data.sponsorProfile?.companyName || fullName(modal.data)}` : ""}
         maxWidthClass="max-w-4xl"
         bodyClassName="p-0"
       >
@@ -990,7 +990,7 @@ export default function AdminBusinesses() {
                     onClick={() => handleResendCredentials(b)}
                     disabled={resendId === b.id}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-black text-teal-700 hover:bg-teal-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                    title="Generate a new password and re-send EPiC portal login details to the sponsor"
+                    title="Generate a new password and re-send EPiC portal login details to the organisation"
                   >
                     {resendId === b.id ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
                     Resend portal credentials
@@ -1009,7 +1009,7 @@ export default function AdminBusinesses() {
                     onClick={() => openEdit(b)}
                     className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-secondary hover:bg-secondary/5"
                   >
-                    Edit sponsor
+                    Edit organisation
                   </button>
                 </div>
               </div>
@@ -1267,7 +1267,7 @@ export default function AdminBusinesses() {
       <Modal
         open={modal.type === "delete"}
         onClose={closeModal}
-        title="Deactivate Sponsor"
+        title="Deactivate Organisation"
         maxWidthClass="max-w-sm"
         bodyClassName="px-5 py-5 sm:px-6"
         footer={
@@ -1303,7 +1303,7 @@ export default function AdminBusinesses() {
       <Modal
         open={modal.type === "import"}
         onClose={closeModal}
-        title="Bulk Import Sponsors"
+        title="Bulk Import Organisations"
         maxWidthClass="max-w-md"
         bodyClassName="px-5 py-5 sm:px-6"
         footer={
@@ -1323,7 +1323,7 @@ export default function AdminBusinesses() {
                   Importing…
                 </>
               ) : (
-                "Import Sponsors"
+                "Import Organisations"
               )}
             </Button>
           </>

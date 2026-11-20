@@ -216,7 +216,7 @@ const CandidateDashboard = () => {
       {needsEnquiry && (
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-amber-800">Step 1 — Client enquiry</p>
+            <p className="text-xs font-black uppercase tracking-widest text-amber-800">Step 1 — Individual enquiry</p>
             <p className="text-sm font-bold text-amber-950 mt-1">Submit your visa enquiry to begin the 16-step process.</p>
           </div>
           <Button onClick={() => navigate("/candidate/visa-enquiry")}>Start visa enquiry</Button>
@@ -231,7 +231,7 @@ const CandidateDashboard = () => {
               Standard process
             </p>
             <p className="text-xl md:text-2xl font-black text-secondary mt-1 leading-tight truncate">
-              {currentStep?.title || "Client Enquiry"}
+              {currentStep?.title || "Individual Enquiry"}
             </p>
           </div>
           <span

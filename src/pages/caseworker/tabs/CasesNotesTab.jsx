@@ -131,7 +131,7 @@ function CasesNotesTab({ caseId, userName }) {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Client consultation, Interview, Call"
+              placeholder="e.g. Individual consultation, Interview, Call"
               className="w-full text-xs rounded-lg border border-gray-200 px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-secondary"
             />
           </div>

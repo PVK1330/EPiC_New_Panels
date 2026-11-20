@@ -264,7 +264,7 @@ export default function AdminDashboard() {
           to: "/admin/candidates",
         },
         {
-          label: "Sponsor Alerts",
+          label: "Organisation Alerts",
           value: (
             dashboardStats.caseStats?.sponsorExpiryAlerts || 0
           ).toString(),
@@ -368,7 +368,7 @@ export default function AdminDashboard() {
                 <table className="w-full min-w-[600px]">
                   <thead>
                     <tr className="bg-gray-50 text-left border-b border-gray-100">
-                      {["Case", "Client", "Visa Type", "Status"].map(
+                      {["Case", "Individual", "Visa Type", "Status"].map(
                         (h) => (
                           <th
                             key={h}

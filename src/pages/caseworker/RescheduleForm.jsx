@@ -190,7 +190,7 @@ const RescheduleForm = () => {
                   Case
                 </th>
                 <th className="text-left px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">
-                  Client
+                  Individual
                 </th>
                 <th className="text-left px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">
                   Field Changed

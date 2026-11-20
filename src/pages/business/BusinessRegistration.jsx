@@ -140,7 +140,7 @@ const BusinessRegistration = ({ embedded, initialForm, onSubmit }) => {
     { id: 1, label: 'Company Info' },
     { id: 2, label: 'Business Address' },
     { id: 3, label: 'Key Personnel' },
-    { id: 4, label: 'HR & Sponsor' },
+    { id: 4, label: 'HR & Organisation' },
     { id: 5, label: 'Ownership Structure' },
     { id: 6, label: 'Documents & Billing' },
   ];

@@ -48,21 +48,21 @@ const STAGE_UI = [
 ];
 
 export const IMMIGRATION_CASE_STEPS = [
-  { id: "client_enquiry", order: 1, title: "Client Enquiry", shortTitle: "Enquiry", description: "Client contacts the firm with an immigration query." },
+  { id: "client_enquiry", order: 1, title: "Individual Enquiry", shortTitle: "Enquiry", description: "Individual contacts the firm with an immigration query." },
   { id: "admin_assignment", order: 2, title: "Admin Assignment", shortTitle: "Assignment", description: "Admin assigns caseworker and sets priority." },
   { id: "initial_consultation", order: 3, title: "Initial Consultation", shortTitle: "Consultation", description: "Initial consultation to assess eligibility and visa options." },
   { id: "data_capture_initial_docs", order: 4, title: "Data Capture & Documents", shortTitle: "Data & Docs", description: "Upload Documents sent; passport, BRP/eVisa, and driving licence (if applicable) requested." },
   { id: "application_preparation", order: 5, title: "Application Preparation", shortTitle: "Preparation", description: "Application form preparation begins once documents received." },
   { id: "document_review", order: 6, title: "Document Review", shortTitle: "Doc Review", description: "Caseworker reviews documents and identifies gaps." },
-  { id: "further_information_request", order: 7, title: "Further Information", shortTitle: "Further Info", description: "Further information or documents requested from client." },
-  { id: "draft_application_review", order: 8, title: "Draft Application Review", shortTitle: "Draft App", description: "Draft application sent to the client for review and confirmation." },
+  { id: "further_information_request", order: 7, title: "Further Information", shortTitle: "Further Info", description: "Further information or documents requested from individual." },
+  { id: "draft_application_review", order: 8, title: "Draft Application Review", shortTitle: "Draft App", description: "Draft application sent to the individual for review and confirmation." },
   { id: "client_care_letter", order: 9, title: "Client Care Letter", shortTitle: "CCL", description: "CCL issued; candidate accepts and pays fees." },
   { id: "application_submitted", order: 10, title: "Application Submitted", shortTitle: "Submitted", description: "Final application submitted to the Home Office." },
   { id: "biometrics_booked", order: 11, title: "Biometrics Booked", shortTitle: "Bio Booked", description: "Biometrics appointment booked." },
-  { id: "biometrics_confirmation_sent", order: 12, title: "Confirmation Sent", shortTitle: "Bio Confirm", description: "Biometrics confirmation and instructions sent to the client." },
+  { id: "biometrics_confirmation_sent", order: 12, title: "Confirmation Sent", shortTitle: "Bio Confirm", description: "Biometrics confirmation and instructions sent to the individual." },
   { id: "documents_uploaded", order: 13, title: "Documents Uploaded", shortTitle: "Uploaded", description: "Supporting documents uploaded before biometrics." },
   { id: "awaiting_decision", order: 14, title: "Awaiting Decision", shortTitle: "Decision", description: "Monitoring application while awaiting Home Office decision." },
-  { id: "decision_communicated", order: 15, title: "Decision Communicated", shortTitle: "Decided", description: "Decision communicated to the client." },
+  { id: "decision_communicated", order: 15, title: "Decision Communicated", shortTitle: "Decided", description: "Decision communicated to the individual." },
   { id: "case_closure", order: 16, title: "Case Closure", shortTitle: "Closed", description: "Final case closure email issued." },
 ];
 
@@ -164,11 +164,11 @@ export const STAGE_GUIDANCE = {
     docs: ["All mandatory documents"],
   },
   further_information_request: {
-    actions: ["Email client for missing items", "Set follow-up date"],
+    actions: ["Email individual for missing items", "Set follow-up date"],
     docs: ["As identified in review"],
   },
   draft_application_review: {
-    actions: ["Send draft to client", "Collect written approval", "Propose CCL fees"],
+    actions: ["Send draft to individual", "Collect written approval", "Propose CCL fees"],
     docs: ["Draft application PDF"],
   },
   client_care_letter: {
@@ -181,7 +181,7 @@ export const STAGE_GUIDANCE = {
   },
   biometrics_booked: { actions: ["Book appointment", "Add to case calendar"], docs: ["Appointment letter"] },
   biometrics_confirmation_sent: {
-    actions: ["Email client instructions", "Confirm attendance"],
+    actions: ["Email individual instructions", "Confirm attendance"],
     docs: ["Biometrics confirmation email"],
   },
   documents_uploaded: {

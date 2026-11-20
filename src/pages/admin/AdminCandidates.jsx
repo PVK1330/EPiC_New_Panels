@@ -205,7 +205,7 @@ export function resolveCurrentCase(cases = []) {
   })[0];
 }
 
-const ROLE_OPTIONS = [{ value: "1", label: "Client" }];
+const ROLE_OPTIONS = [{ value: "1", label: "Individual" }];
 
 const VISA_TYPE_OPTIONS = [
   { value: "Skilled Worker", label: "Skilled Worker" },
@@ -261,7 +261,7 @@ const EMPTY_CREATE = {
 
 function displayRoleName(row) {
   const n = row?.Role?.name;
-  if (!n) return "Client";
+  if (!n) return "Individual";
   return n.charAt(0).toUpperCase() + n.slice(1);
 }
 
@@ -416,9 +416,9 @@ export default function AdminCandidates() {
     const errs = {};
     const trimmedName = sendCredForm.name?.trim();
     if (!trimmedName) {
-      errs.name = "Client Name is required";
+      errs.name = "Individual Name is required";
     } else if (trimmedName.length > 150) {
-      errs.name = "Client Name must not exceed 150 characters";
+      errs.name = "Individual Name must not exceed 150 characters";
     }
 
     const trimmedEmail = sendCredForm.email?.trim();
@@ -469,8 +469,8 @@ export default function AdminCandidates() {
       const successMsg =
         res.data?.message ||
         (isEmailOk
-          ? "Client account created successfully and login credentials have been sent to the client’s email address."
-          : "Client account created successfully, but credential email delivery failed.");
+          ? "Individual account created successfully and login credentials have been sent to the individual’s email address."
+          : "Individual account created successfully, but credential email delivery failed.");
       showToast({
         message: successMsg,
         variant: isEmailOk ? "success" : "warning",
@@ -487,7 +487,7 @@ export default function AdminCandidates() {
       fetchCandidates(page, limit, debouncedSearch.trim(), statusParam, visaParam, payParam);
     } catch (err) {
       showToast({
-        message: getApiError(err) || "Failed to send credentials to client",
+        message: getApiError(err) || "Failed to send credentials to individual",
         variant: "danger",
       });
     } finally {
@@ -624,7 +624,7 @@ export default function AdminCandidates() {
         setErrors({});
         setModal({ type: "edit", data: candidateData });
       } else {
-        showToast({ message: "Failed to load client data", variant: "danger" });
+        showToast({ message: "Failed to load individual data", variant: "danger" });
       }
     } catch (error) {
       console.error("Error fetching candidate data:", error);
@@ -647,7 +647,7 @@ export default function AdminCandidates() {
         setErrors({});
         setModal({ type: "view", data: candidateData });
       } else {
-        showToast({ message: "Failed to load client data", variant: "danger" });
+        showToast({ message: "Failed to load individual data", variant: "danger" });
       }
     } catch (error) {
       console.error("Error fetching candidate data for view:", error);
@@ -690,7 +690,7 @@ export default function AdminCandidates() {
       showToast({
         message:
           res.data?.message ||
-          (businessId ? "Client assigned to business" : "Client unassigned"),
+          (businessId ? "Individual assigned to business" : "Individual unassigned"),
         variant: "success",
       });
       closeModal();
@@ -873,7 +873,7 @@ export default function AdminCandidates() {
         );
         showToast({
           message:
-            "Draft saved on this device. It reloads when you open Add client.",
+            "Draft saved on this device. It reloads when you open Add individual.",
           variant: "success",
         });
       } catch (e) {
@@ -900,7 +900,7 @@ export default function AdminCandidates() {
       const res = await updateAdminCandidateApplication(candidateId, body);
       const updated = res.data?.data?.candidate;
       showToast({
-        message: res.data?.message || "Client updated successfully",
+        message: res.data?.message || "Individual updated successfully",
         variant: "success",
       });
       if (updated) {
@@ -932,7 +932,7 @@ export default function AdminCandidates() {
     try {
       const res = await createCandidate(data);
       showToast({
-        message: res.data?.message || "Client created successfully",
+        message: res.data?.message || "Individual created successfully",
         variant: "success",
       });
       closeModal();
@@ -1003,7 +1003,7 @@ export default function AdminCandidates() {
     try {
       const res = await toggleCandidateStatus(row.id);
       showToast({
-        message: res.data?.message || "Client deactivated",
+        message: res.data?.message || "Individual deactivated",
         variant: "success",
       });
       closeModal();
@@ -1092,7 +1092,7 @@ export default function AdminCandidates() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `client-applications_${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.download = `individual-applications_${new Date().toISOString().split("T")[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -1123,8 +1123,8 @@ export default function AdminCandidates() {
       transition={{ duration: 0.3 }}
     >
       <PageTitle
-        title="Clients"
-        subtitle="All registered clients and their case details"
+        title="Individuals"
+        subtitle="All registered individuals and their case details"
         actions={
           <>
             <Button
@@ -1155,7 +1155,7 @@ export default function AdminCandidates() {
             </Button>
             <Button onClick={openCreate} className="rounded-xl shadow-sm">
               <FiPlus size={14} />
-              Add Client
+              Add Individual
             </Button>
             <Button
               type="button"
@@ -1163,7 +1163,7 @@ export default function AdminCandidates() {
               className="rounded-xl shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600"
             >
               <FiMail size={14} />
-              Send Credentials to Client
+              Send Credentials to Individual
             </Button>
           </>
 
@@ -1180,10 +1180,10 @@ export default function AdminCandidates() {
           )}
           <div>
             <p className="text-sm font-bold text-gray-700 mb-1">
-              Built-in fields — toggle visibility for clients.
+              Built-in fields — toggle visibility for individuals.
             </p>
             <p className="text-xs text-gray-400 mb-3">
-              Hidden fields are removed from the client application form. Each badge shows which form step the field belongs to.
+              Hidden fields are removed from the individual application form. Each badge shows which form step the field belongs to.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[min(50vh,28rem)] overflow-y-auto pr-1">
               {[...applicationFieldSettings]
@@ -1283,11 +1283,11 @@ export default function AdminCandidates() {
       {/* KPI Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div className="bg-blue-50 rounded-xl p-4 border border-gray-100">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Clients</p>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Individuals</p>
           <p className="text-2xl font-black text-blue-600">{pagination.total || 0}</p>
         </div>
         <div className="bg-green-50 rounded-xl p-4 border border-gray-100">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Active Clients</p>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Active Individuals</p>
           <p className="text-2xl font-black text-green-600">{candidates.filter(c => c.status === 'active').length}</p>
         </div>
         <div className="bg-rose-50 rounded-xl p-4 border border-rose-100">
@@ -1350,8 +1350,8 @@ export default function AdminCandidates() {
         ) : candidates.length === 0 ? (
           <EmptyState
             icon={FiFolder}
-            title="No clients found"
-            subtitle="No clients match your search."
+            title="No individuals found"
+            subtitle="No individuals match your search."
           />
         ) : (
         <div className={TABLE_CLASS.scroll}>
@@ -1414,7 +1414,7 @@ export default function AdminCandidates() {
                           </div>
                           <div>
                             <p className={`${TABLE_CLASS.cellPrimary} whitespace-nowrap`}>{fullName(c)}</p>
-                            <RoleBadge role="Client" />
+                            <RoleBadge role="Individual" />
                           </div>
                         </div>
                       </Td>
@@ -1493,7 +1493,7 @@ export default function AdminCandidates() {
       <Modal
         open={isFormModal}
         onClose={closeModal}
-        title={modal.type === "create" ? "Add New Client" : "Edit Client"}
+        title={modal.type === "create" ? "Add New Individual" : "Edit Individual"}
         maxWidthClass="max-w-5xl"
         bodyClassName="px-4 py-4 sm:px-6 sm:py-5"
       >
@@ -1518,7 +1518,7 @@ export default function AdminCandidates() {
       <Modal
         open={modal.type === "view"}
         onClose={() => { closeModal(); setDetailTab("overview"); }}
-        title={modal.data ? `Client — ${fullName(modal.data)}` : ""}
+        title={modal.data ? `Individual — ${fullName(modal.data)}` : ""}
         maxWidthClass="max-w-4xl"
         bodyClassName="p-0"
       >
@@ -1562,7 +1562,7 @@ export default function AdminCandidates() {
                     onClick={async () => {
                       try {
                         const candidateId = c?.id ?? c?.userId;
-                        if (!candidateId) throw new Error("Client id not found");
+                        if (!candidateId) throw new Error("Individual id not found");
                         await downloadAdminCandidateApplicationPdf(candidateId);
                         showToast({ message: "PDF downloaded." });
                       } catch (e) {
@@ -1579,7 +1579,7 @@ export default function AdminCandidates() {
                     onClick={() => openEdit(c)}
                     className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-indigo-600 hover:bg-indigo-50 print:hidden"
                   >
-                    Edit client
+                    Edit individual
                   </button>
                 </div>
               </div>
@@ -1621,7 +1621,7 @@ export default function AdminCandidates() {
       <Modal
         open={modal.type === "delete"}
         onClose={closeModal}
-        title="Deactivate Client"
+        title="Deactivate Individual"
         maxWidthClass="max-w-sm"
         bodyClassName="px-4 py-4 sm:px-6"
         footer={
@@ -1690,8 +1690,8 @@ export default function AdminCandidates() {
               <span className="font-black text-secondary">
                 {modal.data ? fullName(modal.data) : ""}
               </span>{" "}
-              to a business. The client will appear in that business's
-              portal (My Clients / Workers).
+              to a business. The individual will appear in that business's
+              portal (My Individuals / Workers).
             </p>
           </div>
 
@@ -1823,7 +1823,7 @@ export default function AdminCandidates() {
               <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
                 <li>Download the sample template below for the correct column headers</li>
                 <li>Each row is matched by <span className="font-bold">Email</span> (required) or User ID</li>
-                <li>Existing clients are updated; new emails create accounts with a temporary password</li>
+                <li>Existing individuals are updated; new emails create accounts with a temporary password</li>
                 <li>Dates must be in <span className="font-bold">YYYY-MM-DD</span> format (e.g. 1990-05-15)</li>
                 <li>Yes/No fields accept <span className="font-bold">Yes</span> or <span className="font-bold">No</span></li>
               </ul>
@@ -1891,7 +1891,7 @@ export default function AdminCandidates() {
       <Modal
         open={sendCredModalOpen}
         onClose={closeSendCredModal}
-        title="Send Credentials to Client"
+        title="Send Credentials to Individual"
         maxWidthClass="max-w-md"
         bodyClassName="px-4 py-4 sm:px-6"
         footer={
@@ -1924,7 +1924,7 @@ export default function AdminCandidates() {
       >
         <form onSubmit={handleSendCredentialsSubmit} className="space-y-4">
           <Input
-            label="Client Name"
+            label="Individual Name"
             name="name"
             placeholder="e.g. John Doe"
             required

@@ -574,7 +574,7 @@ const AdminWorkload = () => {
                 <tr className="bg-gray-50 text-left">
                   {[
                     "Case",
-                    "Client",
+                    "Individual",
                     "Caseworker",
                     "Case Deadline",
                     "Days Remaining",

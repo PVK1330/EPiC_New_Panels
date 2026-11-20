@@ -68,7 +68,7 @@ export default function PrintClientApplicationButton({
 
   const name = candidate
     ? [candidate.first_name, candidate.last_name].filter(Boolean).join(" ")
-    : "Client";
+    : "Individual";
 
   return (
     <>
@@ -88,7 +88,7 @@ export default function PrintClientApplicationButton({
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title={candidate ? `Application — ${name}` : "Client application"}
+        title={candidate ? `Application — ${name}` : "Individual application"}
         maxWidthClass="max-w-4xl"
         bodyClassName="p-0"
       >

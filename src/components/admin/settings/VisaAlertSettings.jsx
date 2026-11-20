@@ -63,7 +63,7 @@ export default function VisaAlertSettings() {
         <div>
           <h3 className="text-base font-bold text-secondary">Visa expiry alerts</h3>
           <p className="text-xs text-gray-500">
-            How far ahead the dashboard and client list warn that a client's current visa is expiring.
+            How far ahead the dashboard and individual list warn that an individual's current visa is expiring.
             ILR and other in-country applications usually have to be made before current leave expires.
           </p>
         </div>

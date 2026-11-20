@@ -125,7 +125,7 @@ export default function AdminEnquiryInbox() {
             Enquiry Inbox
           </h1>
           <p className="text-gray-500 font-bold text-sm mt-1">
-            Review client visa enquiries, assign caseworkers, and approve or reject submissions in real-time.
+            Review individual visa enquiries, assign caseworkers, and approve or reject submissions in real-time.
           </p>
         </div>
       </div>
@@ -203,7 +203,7 @@ export default function AdminEnquiryInbox() {
           <CheckCircle className="mx-auto text-green-500 mb-3" size={44} />
           <p className="text-lg font-black text-secondary">No enquiries found</p>
           <p className="text-sm font-bold text-gray-500 mt-1">
-            No client enquiries match the selected filters or search terms.
+            No individual enquiries match the selected filters or search terms.
           </p>
         </motion.div>
       ) : (

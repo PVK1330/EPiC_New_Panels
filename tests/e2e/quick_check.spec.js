@@ -56,14 +56,14 @@ test('Candidate dashboard - fully loaded', async ({ page }) => {
   await page.screenshot({ path: 'test-screenshots/FULL-cand-dashboard.png' });
 });
 
-test('Sponsor dashboard - fully loaded', async ({ page }) => {
+test('Organisation dashboard - fully loaded', async ({ page }) => {
   await loginAndWait(page, 'sponsor@regression.local', 'Admin@123', /\/business\//);
   await page.goto(`${BASE}/business/dashboard`);
   await waitForReady(page);
   await page.screenshot({ path: 'test-screenshots/FULL-sp-dashboard.png' });
 });
 
-test('Sponsor apply licence V2 - fully loaded', async ({ page }) => {
+test('Organisation apply licence V2 - fully loaded', async ({ page }) => {
   await loginAndWait(page, 'sponsor@regression.local', 'Admin@123', /\/business\//);
   await page.goto(`${BASE}/business/apply-licence`);
   await waitForReady(page);
@@ -91,7 +91,7 @@ test('Candidate documents - fully loaded', async ({ page }) => {
   await page.screenshot({ path: 'test-screenshots/FULL-cand-documents.png' });
 });
 
-test('Sponsor compliance - fully loaded', async ({ page }) => {
+test('Organisation compliance - fully loaded', async ({ page }) => {
   await loginAndWait(page, 'sponsor@regression.local', 'Admin@123', /\/business\//);
   await page.goto(`${BASE}/business/compliance`);
   await waitForReady(page);

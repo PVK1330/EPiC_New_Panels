@@ -63,7 +63,7 @@ const CaseDetailPayments = ({ payments, onReload }) => {
       await sendCclPaymentRequest(caseRef, {
         requestedAmount: payReqAmount || undefined,
       });
-      showToast({ message: "Client Care Letter and payment request sent to client." });
+      showToast({ message: "Client Care Letter and payment request sent to individual." });
       setPayReqAmount("");
       onReload?.();
     } catch (err) {
@@ -285,7 +285,7 @@ const CaseDetailPayments = ({ payments, onReload }) => {
                 className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 text-white px-5 py-2 text-xs font-black shadow-md shadow-emerald-600/20 hover:bg-emerald-700 transition-all disabled:opacity-50"
               >
                 <CheckCircle2 size={15} strokeWidth={2.5} />
-                {loading ? "Processing…" : "Approve & send CCL to client"}
+                {loading ? "Processing…" : "Approve & send CCL to individual"}
               </button>
             </div>
           </div>
@@ -321,7 +321,7 @@ const CaseDetailPayments = ({ payments, onReload }) => {
                 CCL issued — payment still outstanding
                 {outstanding > 0 ? ` (£${outstanding.toFixed(2)})` : ""}.
                 {paymentReqSent ? " Resend" : " Send"} the Client Care Letter with
-                a payment request to the client.
+                a payment request to the individual.
               </p>
               {paymentReqSent && (
                 <span className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2 py-1 text-[11px] font-bold text-green-700">

@@ -217,7 +217,7 @@ const BusinessSidebar = ({ isOpen, onClose }) => {
                 {fullName}
               </p>
               <p className="text-[9px] font-black text-primary tracking-wider">
-                Sponsor Admin
+                Organisation Admin
               </p>
             </div>
             <button

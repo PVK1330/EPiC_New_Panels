@@ -39,7 +39,7 @@ const statusBadge = {
   Processed: "bg-green-100 text-green-800",
 };
 
-const TABLE_COLS = ["Transaction ID", "Client", "Case", "Amount", "Type", "Status", "Date", "Actions"];
+const TABLE_COLS = ["Transaction ID", "Individual", "Case", "Amount", "Type", "Status", "Date", "Actions"];
 
 const newItem = () => ({ id: `${Date.now()}`, description: "", quantity: 1, rate: 0, amount: 0 });
 
@@ -196,9 +196,9 @@ export default function AdminFinance() {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.clientName.trim())  newErrors.clientName  = "Client name is required";
+    if (!formData.clientName.trim())  newErrors.clientName  = "Individual name is required";
     if (!formData.clientEmail.trim()) {
-      newErrors.clientEmail = "Client email is required";
+      newErrors.clientEmail = "Individual email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.clientEmail)) {
       newErrors.clientEmail = "Please enter a valid email address";
     }
@@ -503,7 +503,7 @@ export default function AdminFinance() {
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                 <div>
                   <h3 className="text-lg font-black text-secondary">Generate Invoice</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Create a new invoice for client billing</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Create a new invoice for individual billing</p>
                 </div>
                 <button
                   onClick={closeModal}
@@ -516,25 +516,25 @@ export default function AdminFinance() {
               <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
                 {/* Client Information */}
                 <div>
-                  <h4 className="text-sm font-black text-secondary mb-4">Client Information</h4>
+                  <h4 className="text-sm font-black text-secondary mb-4">Individual Information</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input
-                      label="Client Name"
+                      label="Individual Name"
                       name="clientName"
                       value={formData.clientName}
                       onChange={handleInputChange}
                       error={errors.clientName}
-                      placeholder="Enter client name"
+                      placeholder="Enter individual name"
                       required
                     />
                     <Input
-                      label="Client Email"
+                      label="Individual Email"
                       name="clientEmail"
                       type="email"
                       value={formData.clientEmail}
                       onChange={handleInputChange}
                       error={errors.clientEmail}
-                      placeholder="Enter client email"
+                      placeholder="Enter individual email"
                       required
                     />
                     <Input
@@ -764,7 +764,7 @@ export default function AdminFinance() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
                 {[
-                  ["Client", selectedTxn.client],
+                  ["Individual", selectedTxn.client],
                   ["Case", selectedTxn.caseId],
                   ["Invoice number", selectedTxn.invoiceNumber],
                   ["Transaction ref", selectedTxn.transactionRef],

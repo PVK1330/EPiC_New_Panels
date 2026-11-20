@@ -420,7 +420,7 @@ const AdminCaseDetail = () => {
           business?.sponsor?.sponsorProfile?.companyName ||
           (business?.sponsor
             ? `${business.sponsor.first_name} ${business.sponsor.last_name}`.trim()
-            : "No sponsor (private client)"),
+            : "No organisation (private individual)"),
         licenceNo: business?.sponsor?.sponsorProfile?.sponsorLicenceNumber || "N/A",
         licenceStatus: business?.sponsor?.sponsorProfile?.licenceStatus || "N/A",
         licenceExpiry: business?.sponsor?.sponsorProfile?.licenceExpiryDate
@@ -589,14 +589,14 @@ const AdminCaseDetail = () => {
           instructions: payload.biometricInstructions,
         });
         showToast({
-          message: "Confirmation sent — client notified by email & in-app",
+          message: "Confirmation sent — individual notified by email & in-app",
           variant: "success",
         });
       } else {
         // biometrics_booked — uses pipeline stage API
         await updatePipelineStage(cleanId, "biometrics_booked", payload);
         showToast({
-          message: "Biometrics booked — client notified",
+          message: "Biometrics booked — individual notified",
           variant: "success",
         });
       }

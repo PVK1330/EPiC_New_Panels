@@ -196,7 +196,7 @@ function LinkEntityModal({ onClose, onLinked }) {
         )}
 
         {!searching && query.trim().length >= 2 && results.length === 0 && !success && (
-          <p className="mt-4 text-center text-sm text-slate-400">No matching sponsors found.</p>
+          <p className="mt-4 text-center text-sm text-slate-400">No matching organisations found.</p>
         )}
       </motion.div>
     </div>
